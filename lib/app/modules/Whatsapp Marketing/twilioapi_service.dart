@@ -3,8 +3,6 @@
 // import 'package:flutter/foundation.dart';
 
 // class TwilioWhatsAppService {
-//   static const String accountSid = "";
-//   static const String authToken = "";
 //   static const String fromWhatsAppNumber = "whatsapp:+14155238886";
 
 //   /// Send a single WhatsApp message with detailed logging
