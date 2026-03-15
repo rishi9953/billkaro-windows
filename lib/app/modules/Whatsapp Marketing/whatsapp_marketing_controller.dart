@@ -148,135 +148,135 @@ Visit us soon! ❤️''';
   }
 
   // Send bulk WhatsApp messages
-  Future<void> sendBulkWhatsAppMessages(String templateType) async {
-    // Validation
-    if (restaurantNameController.text.trim().isEmpty) {
-      showError(description: 'Please enter restaurant name');
-      return;
-    }
+  // Future<void> sendBulkWhatsAppMessages(String templateType) async {
+  //   // Validation
+  //   if (restaurantNameController.text.trim().isEmpty) {
+  //     showError(description: 'Please enter restaurant name');
+  //     return;
+  //   }
 
-    if (templateType == 'discount' &&
-        discountValueController.text.trim().isEmpty) {
-      showError(description: 'Please enter discount value');
-      return;
-    }
+  //   if (templateType == 'discount' &&
+  //       discountValueController.text.trim().isEmpty) {
+  //     showError(description: 'Please enter discount value');
+  //     return;
+  //   }
 
-    // Get customer phone numbers
-    final phoneNumbers = getCustomerPhoneNumbers();
+  //   // Get customer phone numbers
+  //   final phoneNumbers = getCustomerPhoneNumbers();
 
-    if (phoneNumbers.isEmpty) {
-      showError(description: 'No customers found to send messages');
-      return;
-    }
+  //   if (phoneNumbers.isEmpty) {
+  //     showError(description: 'No customers found to send messages');
+  //     return;
+  //   }
 
-    // Show confirmation dialog
-    final confirm = await Get.dialog<bool>(
-      AlertDialog(
-        title: const Text('Confirm Bulk Message'),
-        content: Text(
-          'Do you want to send WhatsApp messages to ${phoneNumbers.length} customers?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Get.back(result: true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text('Send'),
-          ),
-        ],
-      ),
-    );
+  //   // Show confirmation dialog
+  //   final confirm = await Get.dialog<bool>(
+  //     AlertDialog(
+  //       title: const Text('Confirm Bulk Message'),
+  //       content: Text(
+  //         'Do you want to send WhatsApp messages to ${phoneNumbers.length} customers?',
+  //       ),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Get.back(result: false),
+  //           child: const Text('Cancel'),
+  //         ),
+  //         ElevatedButton(
+  //           onPressed: () => Get.back(result: true),
+  //           style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+  //           child: const Text('Send'),
+  //         ),
+  //       ],
+  //     ),
+  //   );
 
-    if (confirm != true) return;
+  //   if (confirm != true) return;
 
-    // Start sending
-    isSending.value = true;
-    sendingProgress.value = 0;
-    totalMessages.value = phoneNumbers.length;
+  //   // Start sending
+  //   isSending.value = true;
+  //   sendingProgress.value = 0;
+  //   totalMessages.value = phoneNumbers.length;
 
-    try {
-      // Generate message
-      final message = generateMessage(templateType);
+  //   try {
+  //     // Generate message
+  //     final message = generateMessage(templateType);
 
-      // Format phone numbers
-      final formattedNumbers = phoneNumbers
-          .map((num) => TwilioWhatsAppService.formatPhoneNumber(num))
-          .toList();
+  //     // Format phone numbers
+  //     final formattedNumbers = phoneNumbers
+  //         .map((num) => TwilioWhatsAppService.formatPhoneNumber(num))
+  //         .toList();
 
-      // Show progress dialog
-      Get.dialog(
-        PopScope(
-          canPop: false,
-          child: AlertDialog(
-            title: const Text('Sending Messages'),
-            content: Obx(
-              () => Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(
-                    value: totalMessages.value > 0
-                        ? sendingProgress.value / totalMessages.value
-                        : 0,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    '${sendingProgress.value} / ${totalMessages.value}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text('Please wait...'),
-                ],
-              ),
-            ),
-          ),
-        ),
-        barrierDismissible: false,
-      );
+  //     // Show progress dialog
+  //     Get.dialog(
+  //       PopScope(
+  //         canPop: false,
+  //         child: AlertDialog(
+  //           title: const Text('Sending Messages'),
+  //           content: Obx(
+  //             () => Column(
+  //               mainAxisSize: MainAxisSize.min,
+  //               children: [
+  //                 CircularProgressIndicator(
+  //                   value: totalMessages.value > 0
+  //                       ? sendingProgress.value / totalMessages.value
+  //                       : 0,
+  //                 ),
+  //                 const SizedBox(height: 16),
+  //                 Text(
+  //                   '${sendingProgress.value} / ${totalMessages.value}',
+  //                   style: const TextStyle(
+  //                     fontSize: 18,
+  //                     fontWeight: FontWeight.bold,
+  //                   ),
+  //                 ),
+  //                 const SizedBox(height: 8),
+  //                 const Text('Please wait...'),
+  //               ],
+  //             ),
+  //           ),
+  //         ),
+  //       ),
+  //       barrierDismissible: false,
+  //     );
 
-      // Send bulk messages
-      final result = await TwilioWhatsAppService.sendBulkMessages(
-        phoneNumbers: formattedNumbers,
-        message: message,
-        delayBetweenMessages: const Duration(seconds: 2),
-        onProgress: (current, total) {
-          sendingProgress.value = current;
-        },
-      );
+  //     // Send bulk messages
+  //     final result = await TwilioWhatsAppService.sendBulkMessages(
+  //       phoneNumbers: formattedNumbers,
+  //       message: message,
+  //       delayBetweenMessages: const Duration(seconds: 2),
+  //       onProgress: (current, total) {
+  //         sendingProgress.value = current;
+  //       },
+  //     );
 
-      // Close progress dialog
-      Get.back();
+  //     // Close progress dialog
+  //     Get.back();
 
-      // Show result
-      if (result['success'] == true) {
-        showSuccess(
-          description: 'Successfully sent ${result['successCount']} messages',
-        );
-      } else {
-        showError(
-          description:
-              'Sent: ${result['successCount']}, Failed: ${result['failureCount']}',
-        );
-      }
+  //     // Show result
+  //     if (result['success'] == true) {
+  //       showSuccess(
+  //         description: 'Successfully sent ${result['successCount']} messages',
+  //       );
+  //     } else {
+  //       showError(
+  //         description:
+  //             'Sent: ${result['successCount']}, Failed: ${result['failureCount']}',
+  //       );
+  //     }
 
-      // Show detailed results dialog
-      showResultsDialog(result);
-    } catch (e) {
-      // Close progress dialog if it's still open
-      if (Get.isDialogOpen == true) {
-        Get.back();
-      }
-      showError(description: 'Failed to send messages: $e');
-      debugPrint("Error sending messages: $e");
-    } finally {
-      isSending.value = false;
-    }
-  }
+  //     // Show detailed results dialog
+  //     showResultsDialog(result);
+  //   } catch (e) {
+  //     // Close progress dialog if it's still open
+  //     if (Get.isDialogOpen == true) {
+  //       Get.back();
+  //     }
+  //     showError(description: 'Failed to send messages: $e');
+  //     debugPrint("Error sending messages: $e");
+  //   } finally {
+  //     isSending.value = false;
+  //   }
+  // }
 
   // Show results dialog
   void showResultsDialog(Map<String, dynamic> result) {
