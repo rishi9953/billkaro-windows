@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:billkaro/app/Database/app_database.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/date_util.dart';
 
 class BusinessOverviewController extends BaseController {
   var todayTotalSales = 0.0.obs;
@@ -141,9 +142,8 @@ class BusinessOverviewController extends BaseController {
   // ---------------------------------------------------------------------------
 
   void calculateTodayYesterday() {
-    DateTime now = DateTime.now();
-    DateTime today = DateTime(now.year, now.month, now.day);
-    DateTime yesterday = today.subtract(Duration(days: 1));
+    DateTime today = todayIstDateOnly();
+    DateTime yesterday = today.subtract(const Duration(days: 1));
 
     double todaySales = 0;
     int todayOrders = 0;
@@ -152,9 +152,7 @@ class BusinessOverviewController extends BaseController {
     int yOrders = 0;
 
     for (var order in allOrders) {
-      DateTime date = DateTime.parse(order.createdAt);
-
-      DateTime orderDay = DateTime(date.year, date.month, date.day);
+      DateTime orderDay = orderCreatedAtToIstDateOnly(order.createdAt);
 
       if (orderDay == today) {
         todaySales += (order.totalAmount ?? 0);
@@ -177,11 +175,13 @@ class BusinessOverviewController extends BaseController {
   // ---------------------------------------------------------------------------
 
   void calculateMonthlyAverages() {
-    DateTime now = DateTime.now();
+    final istToday = todayIstDateOnly();
 
-    DateTime startThisMonth = DateTime(now.year, now.month, 1);
-    DateTime startLastMonth = DateTime(now.year, now.month - 1, 1);
-    DateTime endLastMonth = DateTime(now.year, now.month, 0);
+    final startThisMonth = DateTime(istToday.year, istToday.month, 1);
+    final startLastMonth = istToday.month == 1
+        ? DateTime(istToday.year - 1, 12, 1)
+        : DateTime(istToday.year, istToday.month - 1, 1);
+    final endLastMonth = DateTime(istToday.year, istToday.month, 0);
 
     double thisMonthSale = 0;
     int thisMonthCount = 0;
@@ -190,20 +190,21 @@ class BusinessOverviewController extends BaseController {
     int lastMonthCount = 0;
 
     for (var order in allOrders) {
-      DateTime date = DateTime.parse(order.createdAt);
+      final orderIst = orderCreatedAtToIstDateOnly(order.createdAt);
 
-      if (date.isAfter(startThisMonth)) {
+      if (orderIst.year == istToday.year && orderIst.month == istToday.month) {
         thisMonthSale += (order.totalAmount ?? 0);
         thisMonthCount++;
       }
 
-      if (date.isAfter(startLastMonth) && date.isBefore(endLastMonth)) {
+      if (orderIst.year == startLastMonth.year &&
+          orderIst.month == startLastMonth.month) {
         lastMonthSale += (order.totalAmount ?? 0);
         lastMonthCount++;
       }
     }
 
-    int daysThisMonth = now.day;
+    int daysThisMonth = istToday.day;
     int daysLastMonth = endLastMonth.day;
 
     thisMonthAvgDailySale.value = thisMonthSale / daysThisMonth;
@@ -220,16 +221,16 @@ class BusinessOverviewController extends BaseController {
   void calculateMostSelling() {
     int days = selectedTab.value == 0 ? 7 : 30;
 
-    DateTime now = DateTime.now();
-    DateTime startDate = now.subtract(Duration(days: days));
+    final cutoffUtc =
+        DateTime.now().toUtc().subtract(Duration(days: days));
 
     // name → qty + price
     Map<String, Map<String, dynamic>> itemMap = {};
 
     for (var order in allOrders) {
-      DateTime date = DateTime.parse(order.createdAt);
+      final orderUtc = DateTime.parse(order.createdAt).toUtc();
 
-      if (date.isAfter(startDate)) {
+      if (orderUtc.isAfter(cutoffUtc)) {
         for (var item in order.items ?? []) {
           String name = item.itemName ?? "Unknown";
           int qty = item.quantity ?? 0;

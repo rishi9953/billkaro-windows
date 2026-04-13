@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
+import 'package:billkaro/app/services/Modals/businessType/businesst_type_response.dart';
 import 'package:billkaro/app/services/Modals/login_response.dart';
 import 'package:billkaro/app/services/uploadFile.dart';
 import 'package:billkaro/config/config.dart';
@@ -29,6 +30,46 @@ class BusinessDetailsController extends BaseController {
 
   final Rx<File?> businessLogo = Rx<File?>(null);
   final Rx<OutletData?> selectedOutlet = Rx<OutletData?>(null);
+  final RxList<BusinessType> businessTypesList = <BusinessType>[].obs;
+
+  static const _fallbackBusinessTypeOptions = [
+    'none',
+    'retail',
+    'service',
+    'manufacturing',
+    'other',
+  ];
+
+  /// Values used by the business type dropdown (API when loaded, else fallback).
+  List<String> get businessTypeOptions {
+    if (businessTypesList.isEmpty) {
+      return _fallbackBusinessTypeOptions;
+    }
+    final active = businessTypesList.where((e) => e.active).toList();
+    final values = <String>['none'];
+    for (final e in active) {
+      final v = e.value.trim().toLowerCase();
+      if (v.isEmpty || values.contains(v)) continue;
+      values.add(v);
+    }
+    return values;
+  }
+
+  void _ensureBusinessTypeSelection() {
+    final opts = businessTypeOptions;
+    final cur = selectedBusinessType.value.toLowerCase();
+    if (!opts.contains(cur)) {
+      selectedBusinessType.value = opts.first;
+    } else if (selectedBusinessType.value != cur) {
+      selectedBusinessType.value = cur;
+    }
+  }
+
+  /// Seating capacity applies only to cafe and restaurant outlets.
+  bool get showSeatingCapacityField {
+    final t = selectedBusinessType.value.toLowerCase();
+    return t == 'cafe' || t == 'restaurant';
+  }
 
   // ---------------- OPTIONS ----------------
   final taxSlabOptions = const ['None', '5%', '12%', '18%', '28%'];
@@ -41,7 +82,14 @@ class BusinessDetailsController extends BaseController {
     {'label': 'More than 100', 'value': '100+'},
   ];
 
-  static const _seatingValueKeys = ['0', '0-10', '10-20', '20-50', '50-100', '100+'];
+  static const _seatingValueKeys = [
+    '0',
+    '0-10',
+    '10-20',
+    '20-50',
+    '50-100',
+    '100+',
+  ];
   static String _seatingCapacityToValue(String? raw) {
     if (raw == null || raw.trim().isEmpty) return '0';
     final t = raw.trim();
@@ -56,13 +104,6 @@ class BusinessDetailsController extends BaseController {
     return '0';
   }
 
-  final businessTypeOptions = const [
-    'none',
-    'retail',
-    'service',
-    'manufacturing',
-    'other',
-  ];
   final businessCategoryOptions = const [
     'None',
     'Fine Dining',
@@ -74,17 +115,73 @@ class BusinessDetailsController extends BaseController {
 
   // ---------------- LIFECYCLE ----------------
   @override
+  void onInit() {
+    super.onInit();
+    final outlet = appPref.selectedOutlet;
+    selectedOutlet.value = outlet;
+    imageUrl.value = outlet?.logo?.trim() ?? '';
+  }
+
+  @override
   void onReady() {
     super.onReady();
+    getBusinessTypes();
     getUserDetails();
+  }
+
+  Future<void> getBusinessTypes() async {
+    final response = await callApi(
+      apiClient.getBusinessTypes(true),
+      showLoader: false,
+    );
+    if (response != null && response.status == 'success') {
+      businessTypesList.assignAll(response.data);
+      _ensureBusinessTypeSelection();
+    }
   }
 
   // ---------------- IMAGE PICKER ----------------
   Future<void> pickImage() async {
-    final image = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final image = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 1600,
+      maxHeight: 1600,
+    );
     if (image != null) {
       businessLogo.value = File(image.path);
     }
+  }
+
+  /// Sync form fields from [appPref.selectedOutlet] after user switches outlet elsewhere (no API).
+  void syncOutletFromAppPref() {
+    final outlet = appPref.selectedOutlet;
+    selectedOutlet.value = outlet;
+    if (outlet == null) return;
+
+    businessNameController.text = outlet.businessName ?? '';
+    phoneController.text = appPref.user?.mobile ?? '';
+
+    selectedBusinessType.value = outlet.businessType?.toLowerCase() ?? 'none';
+    selectedTaxSlab.value = outlet.taxSlab?.isNotEmpty == true
+        ? outlet.taxSlab!
+        : 'None';
+    selectedSeatingCapacity.value = _seatingCapacityToValue(
+      outlet.seatingCapacity,
+    );
+    selectedBusinessCategory.value = outlet.businessCategory?.isNotEmpty == true
+        ? outlet.businessCategory!
+        : 'None';
+    imageUrl.value = outlet.logo ?? '';
+    outletAddressController.text = outlet.outletAddress ?? '';
+    upiIdController.text = outlet.upiId ?? '';
+    fssaiController.text = outlet.fssaiNumber ?? '';
+    gstinController.text = outlet.gstinNumber ?? '';
+    googleProfileController.text = outlet.googleProfileLink ?? '';
+    swiggyLinkController.text = outlet.swiggyLink ?? '';
+    zomatoLinkController.text = outlet.zomatoLink ?? '';
+    businessAddressController.text = appPref.user!.address ?? '';
+    _ensureBusinessTypeSelection();
   }
 
   // ---------------- FETCH USER & OUTLET ----------------
@@ -129,7 +226,9 @@ class BusinessDetailsController extends BaseController {
       selectedTaxSlab.value = outlet.taxSlab?.isNotEmpty == true
           ? outlet.taxSlab!
           : 'None';
-      selectedSeatingCapacity.value = _seatingCapacityToValue(outlet.seatingCapacity);
+      selectedSeatingCapacity.value = _seatingCapacityToValue(
+        outlet.seatingCapacity,
+      );
       selectedBusinessCategory.value =
           outlet.businessCategory?.isNotEmpty == true
           ? outlet.businessCategory!
@@ -154,6 +253,7 @@ class BusinessDetailsController extends BaseController {
       businessAddressController.text = appPref.user!.address ?? '';
 
       debugPrint('✅ Form populated with outlet: ${outlet.businessName}');
+      _ensureBusinessTypeSelection();
     } catch (e) {
       debugPrint('❌ getUserDetails error: $e');
       showError(description: 'Failed to load business details');
@@ -195,6 +295,7 @@ class BusinessDetailsController extends BaseController {
 
       // ✅ CRITICAL: Refresh ALL data from server to avoid stale data
       await getUserDetails();
+      businessLogo.value = null;
 
       // ✅ Sync with HomeScreenController
       if (Get.isRegistered<HomeScreenController>()) {

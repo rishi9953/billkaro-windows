@@ -1,4 +1,5 @@
 import 'package:billkaro/app/Database/app_database.dart';
+import 'package:billkaro/app/modules/Theme/theme_controller.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:dio/dio.dart';
 
@@ -226,6 +227,7 @@ class NetworkModule {
 
       // Clear all SharedPreferences data
       await appPref.clearAllData();
+      await ThemeController.resetAfterLogout();
 
       debugPrint('User data cleared, showing session expired dialog...');
 

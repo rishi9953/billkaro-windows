@@ -170,22 +170,26 @@ class $AssetsSvgGen {
 class Assets {
   const Assets._();
 
+  static const String aEnv = '.env';
   static const AssetGenImage dineIn = AssetGenImage('assets/Dine In.png');
   static const AssetGenImage takeaway = AssetGenImage('assets/Takeaway.png');
   static const AssetGenImage delivery = AssetGenImage('assets/delivery.png');
   static const AssetGenImage logo = AssetGenImage('assets/logo.jpeg');
   static const $AssetsLottieGen lottie = $AssetsLottieGen();
   static const AssetGenImage pdf = AssetGenImage('assets/pdf.png');
+  static const AssetGenImage plan = AssetGenImage('assets/plan.png');
   static const AssetGenImage printer = AssetGenImage('assets/printer.png');
   static const $AssetsSvgGen svg = $AssetsSvgGen();
 
   /// List of all assets
-  static List<AssetGenImage> get values => [
+  static List<dynamic> get values => [
+    aEnv,
     dineIn,
     takeaway,
     delivery,
     logo,
     pdf,
+    plan,
     printer,
   ];
 }

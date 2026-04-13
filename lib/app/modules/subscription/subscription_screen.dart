@@ -1,101 +1,168 @@
 // Main Screen
 import 'dart:math' as math;
+import 'dart:ui' show PaintingStyle;
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/subscription/subscription_controller.dart';
 import 'package:billkaro/app/services/Modals/Subscriptions/subscription_response.dart';
 import 'package:billkaro/app/services/Modals/login_response.dart'
     hide SubscriptionPlan;
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
 class SubscriptionScreen extends StatelessWidget {
   const SubscriptionScreen({super.key});
 
+  static const double _windowsMaxContentWidth = 1120;
+
+  bool _isWindowsDesktop(BuildContext context) =>
+      Theme.of(context).platform == TargetPlatform.windows;
+
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(SubscriptionController());
+    final isWindowsDesktop = _isWindowsDesktop(context);
 
     return Scaffold(
       backgroundColor: AppColor.backGroundColor,
       appBar: AppBar(
         title: const Text('Subscription Plans'),
+        elevation: isWindowsDesktop ? 0 : null,
+        scrolledUnderElevation: isWindowsDesktop ? 0 : null,
+        surfaceTintColor: isWindowsDesktop ? Colors.transparent : null,
+        toolbarHeight: isWindowsDesktop ? 48 : kToolbarHeight,
         actions: [
           IconButton(
-            icon: const Icon(Icons.headset_mic),
+            icon: const Icon(Icons.headset_mic_outlined),
             onPressed: () => controller.showSupportBottomSheet(),
             tooltip: 'Support',
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          // Background decorative paint
-          Positioned.fill(
-            child: CustomPaint(painter: BackgroundDecorationPainter()),
-          ),
-          SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header Section
-                _buildHeaderSection(),
-                const SizedBox(height: 24),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxW = isWindowsDesktop
+              ? _windowsMaxContentWidth
+              : double.infinity;
 
-                // Subscription Plans
-                Obx(() {
-                  final plans = controller.subscriptionPlans;
-                  if (plans.isEmpty) return _buildEmptyState();
+          return Stack(
+            children: [
+              if (!isWindowsDesktop)
+                Positioned.fill(
+                  child: CustomPaint(painter: BackgroundDecorationPainter()),
+                )
+              else
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: AppColor.backGroundColor,
+                      border: Border(
+                        top: BorderSide(color: Colors.black.withOpacity(0.06)),
+                      ),
+                    ),
+                  ),
+                ),
+              SingleChildScrollView(
+                physics: isWindowsDesktop
+                    ? const ClampingScrollPhysics()
+                    : const BouncingScrollPhysics(),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isWindowsDesktop ? 28 : 16,
+                  vertical: isWindowsDesktop ? 20 : 16,
+                ),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: maxW),
+                    child: LayoutBuilder(
+                      builder: (context, inner) {
+                        final contentWidth = inner.maxWidth;
 
-                  // Only hide plans when outlet has an *active* subscription (not expired)
-                  final outlet = controller.appPref.selectedOutlet;
-                  final currentPlanIds = _activeSubscriptionPlanIds(outlet);
-
-                  return ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: plans.length,
-                    itemBuilder: (context, index) {
-                      final plan = plans[index];
-                      if (currentPlanIds.contains(plan.id)) {
-                        return const SizedBox.shrink();
-                      }
-                      return _buildPlanCard(
-                        title: plan.title,
-                        badge: null,
-                        // isPopular ? 'Most Popular' : null,
-                        originalPrice: plan.price,
-                        price: plan.discountedPrice,
-                        subtitle: plan.subtitle,
-                        duration: plan.duration,
-                        features: plan.bulletPoints,
-                        printerFeatures: (plan.withPrinter)
-                            ? [
-                                'Free Home Delivery',
-                                'Bluetooth + USB Support',
-                                '1 Year Warranty',
-                              ]
-                            : null,
-                        showPrinterImage: plan.withPrinter,
-                        printerNote: plan.withPrinter
-                            ? null
-                            : 'Printer not included in this plan.',
-                        onBuyNow: () =>
-                            controller.buyNow(plan.id, plan.discountedPrice),
-                        isPopular: false,
-                        plan: plan,
-                      );
-                    },
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 16),
-                  );
-                }),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
-        ],
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildHeaderSection(
+                              isWindowsStyle: isWindowsDesktop,
+                            ),
+                            SizedBox(height: isWindowsDesktop ? 20 : 24),
+                            Obx(
+                              () => _buildPlansSection(
+                                controller: controller,
+                                isWindowsStyle: isWindowsDesktop,
+                                isWide: isWindowsDesktop && contentWidth >= 960,
+                                columnWidth: contentWidth,
+                              ),
+                            ),
+                            SizedBox(height: isWindowsDesktop ? 24 : 16),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
+    );
+  }
+
+  Widget _buildPlansSection({
+    required SubscriptionController controller,
+    required bool isWindowsStyle,
+    required bool isWide,
+    required double columnWidth,
+  }) {
+    final plans = controller.subscriptionPlans;
+    if (plans.isEmpty) return _buildEmptyState(isWindowsStyle: isWindowsStyle);
+
+    final outlet = controller.appPref.selectedOutlet;
+    final activePlanIds = _activeSubscriptionPlanIds(outlet);
+    final visible = plans;
+
+    final gap = isWindowsStyle ? 20.0 : 16.0;
+    final useTwoColumns = isWide && visible.length > 1;
+    final cardWidth = useTwoColumns ? (columnWidth - gap) / 2 : columnWidth;
+
+    Widget cardFor(SubscriptionPlan plan) => _buildPlanCard(
+      title: plan.title,
+      badge: null,
+      originalPrice: plan.price,
+      price: plan.discountedPrice,
+      subtitle: plan.subtitle,
+      duration: plan.duration,
+      features: plan.bulletPoints,
+      printerFeatures: plan.withPrinter
+          ? ['Free Home Delivery', 'Bluetooth + USB Support', '1 Year Warranty']
+          : null,
+      showPrinterImage: plan.withPrinter,
+      printerNote: plan.withPrinter
+          ? null
+          : 'Printer not included in this plan.',
+      onBuyNow: () => controller.buyNow(plan.id, plan.discountedPrice),
+      isPopular: false,
+      plan: plan,
+      isWindowsStyle: isWindowsStyle,
+      isCurrentPlan: activePlanIds.contains(plan.id),
+    );
+
+    if (isWide) {
+      return Wrap(
+        spacing: gap,
+        runSpacing: gap,
+        children: visible
+            .map((plan) => SizedBox(width: cardWidth, child: cardFor(plan)))
+            .toList(),
+      );
+    }
+
+    return Column(
+      children: [
+        for (int i = 0; i < visible.length; i++) ...[
+          if (i > 0) SizedBox(height: gap),
+          cardFor(visible[i]),
+        ],
+      ],
     );
   }
 
@@ -105,59 +172,67 @@ class SubscriptionScreen extends StatelessWidget {
     return activeSubscriptionPlanIdsFromOutlet(outlet);
   }
 
-  Widget _buildHeaderSection() {
+  Widget _buildHeaderSection({required bool isWindowsStyle}) {
+    final radius = isWindowsStyle ? 8.0 : 16.0;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isWindowsStyle ? 18 : 20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [AppColor.primary, AppColor.primary.withOpacity(0.8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(radius),
+        border: isWindowsStyle
+            ? Border.all(color: Colors.black.withOpacity(0.12))
+            : null,
         boxShadow: [
           BoxShadow(
-            color: AppColor.primary.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: isWindowsStyle
+                ? Colors.black.withOpacity(0.08)
+                : AppColor.primary.withOpacity(0.3),
+            blurRadius: isWindowsStyle ? 8 : 12,
+            offset: Offset(0, isWindowsStyle ? 2 : 4),
           ),
         ],
       ),
       child: Stack(
         children: [
-          // Decorative paint overlay
-          Positioned.fill(
-            child: CustomPaint(painter: HeaderDecorationPainter()),
-          ),
+          if (!isWindowsStyle)
+            Positioned.fill(
+              child: CustomPaint(painter: HeaderDecorationPainter()),
+            ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(isWindowsStyle ? 10 : 12),
                     decoration: BoxDecoration(
                       color: AppColor.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(
+                        isWindowsStyle ? 8 : 12,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.workspace_premium,
+                    child: Icon(
+                      Icons.workspace_premium_outlined,
                       color: AppColor.white,
-                      size: 28,
+                      size: isWindowsStyle ? 26 : 28,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: isWindowsStyle ? 14 : 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'BillKaro Premium',
                           style: TextStyle(
                             color: AppColor.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
+                            fontSize: isWindowsStyle ? 22 : 24,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: isWindowsStyle ? 0.2 : 0.5,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -165,7 +240,7 @@ class SubscriptionScreen extends StatelessWidget {
                           'Unlock all features and boost your business',
                           style: TextStyle(
                             color: AppColor.white.withOpacity(0.9),
-                            fontSize: 14,
+                            fontSize: isWindowsStyle ? 13 : 14,
                             fontWeight: FontWeight.w400,
                           ),
                         ),
@@ -181,30 +256,44 @@ class SubscriptionScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState({required bool isWindowsStyle}) {
     return Center(
       child: Container(
-        padding: const EdgeInsets.all(40),
+        padding: EdgeInsets.symmetric(
+          horizontal: isWindowsStyle ? 32 : 40,
+          vertical: isWindowsStyle ? 48 : 40,
+        ),
+        decoration: isWindowsStyle
+            ? BoxDecoration(
+                color: AppColor.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.black.withOpacity(0.08)),
+              )
+            : null,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               Icons.inventory_2_outlined,
-              size: 64,
+              size: isWindowsStyle ? 56 : 64,
               color: Colors.grey.shade400,
             ),
             const SizedBox(height: 16),
             Text(
               'No plans available',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: isWindowsStyle ? 16 : 18,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey.shade600,
+                color: Colors.grey.shade700,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Please check back later',
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+              style: TextStyle(
+                fontSize: isWindowsStyle ? 13 : 14,
+                color: Colors.grey.shade600,
+              ),
             ),
           ],
         ),
@@ -226,35 +315,43 @@ class SubscriptionScreen extends StatelessWidget {
     required VoidCallback onBuyNow,
     bool isPopular = false,
     required SubscriptionPlan plan,
+    bool isWindowsStyle = false,
+    bool isCurrentPlan = false,
   }) {
     final discount = ((originalPrice - price) / originalPrice * 100).round();
+    final cardRadius = isWindowsStyle ? 8.0 : 16.0;
+    final innerPadding = isWindowsStyle ? 18.0 : 20.0;
 
     return Container(
       decoration: BoxDecoration(
         color: AppColor.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(cardRadius),
         border: Border.all(
-          color: isPopular ? AppColor.secondaryPrimary : Colors.grey.shade200,
+          color: isPopular
+              ? AppColor.secondaryPrimary
+              : (isWindowsStyle
+                    ? Colors.black.withOpacity(0.10)
+                    : Colors.grey.shade200),
           width: isPopular ? 2 : 1,
         ),
         boxShadow: [
           BoxShadow(
             color: isPopular
                 ? AppColor.secondaryPrimary.withOpacity(0.15)
-                : Colors.black.withOpacity(0.05),
-            blurRadius: isPopular ? 12 : 8,
-            offset: const Offset(0, 4),
+                : Colors.black.withOpacity(isWindowsStyle ? 0.06 : 0.05),
+            blurRadius: isPopular ? 12 : (isWindowsStyle ? 6 : 8),
+            offset: Offset(0, isWindowsStyle ? 2 : 4),
           ),
         ],
       ),
       child: Stack(
         children: [
-          // Decorative paint overlay for cards
-          Positioned.fill(
-            child: CustomPaint(
-              painter: CardDecorationPainter(isPopular: isPopular),
+          if (!isWindowsStyle)
+            Positioned.fill(
+              child: CustomPaint(
+                painter: CardDecorationPainter(isPopular: isPopular),
+              ),
             ),
-          ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -265,9 +362,9 @@ class SubscriptionScreen extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   decoration: BoxDecoration(
                     color: AppColor.secondaryPrimary,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(cardRadius),
+                      topRight: Radius.circular(cardRadius),
                     ),
                   ),
                   child: Text(
@@ -283,7 +380,7 @@ class SubscriptionScreen extends StatelessWidget {
                 ),
 
               Padding(
-                padding: const EdgeInsets.all(20),
+                padding: EdgeInsets.all(innerPadding),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -291,33 +388,35 @@ class SubscriptionScreen extends StatelessWidget {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: EdgeInsets.all(isWindowsStyle ? 7 : 8),
                           decoration: BoxDecoration(
                             color: AppColor.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(
+                              isWindowsStyle ? 6 : 8,
+                            ),
                           ),
                           child: Icon(
-                            Icons.workspace_premium,
+                            Icons.workspace_premium_outlined,
                             color: AppColor.primary,
-                            size: 20,
+                            size: isWindowsStyle ? 18 : 20,
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             title,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppColor.black87,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.3,
+                              fontSize: isWindowsStyle ? 18 : 20,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: isWindowsStyle ? 0.15 : 0.3,
                             ),
                           ),
                         ),
                       ],
                     ),
 
-                    const SizedBox(height: 16),
+                    SizedBox(height: isWindowsStyle ? 14 : 16),
 
                     // Pricing
                     Row(
@@ -337,7 +436,7 @@ class SubscriptionScreen extends StatelessWidget {
                           '₹$price',
                           style: TextStyle(
                             color: AppColor.primary,
-                            fontSize: 32,
+                            fontSize: isWindowsStyle ? 28 : 32,
                             fontWeight: FontWeight.bold,
                             letterSpacing: -0.5,
                           ),
@@ -380,13 +479,15 @@ class SubscriptionScreen extends StatelessWidget {
 
                     // Duration Badge
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isWindowsStyle ? 10 : 12,
+                        vertical: isWindowsStyle ? 5 : 6,
                       ),
                       decoration: BoxDecoration(
                         color: AppColor.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(
+                          isWindowsStyle ? 6 : 8,
+                        ),
                         border: Border.all(
                           color: AppColor.primary.withOpacity(0.3),
                           width: 1,
@@ -413,23 +514,29 @@ class SubscriptionScreen extends StatelessWidget {
                       ),
                     ),
 
-                    const SizedBox(height: 20),
-                    const Divider(height: 1),
+                    SizedBox(height: isWindowsStyle ? 16 : 20),
+                    Divider(
+                      height: 1,
+                      thickness: isWindowsStyle ? 1 : null,
+                      color: isWindowsStyle
+                          ? Colors.black.withOpacity(0.08)
+                          : null,
+                    ),
 
-                    const SizedBox(height: 16),
+                    SizedBox(height: isWindowsStyle ? 14 : 16),
 
                     // Features Section
-                    const Text(
+                    Text(
                       'What\'s Included',
                       style: TextStyle(
                         color: AppColor.black87,
-                        fontSize: 16,
+                        fontSize: isWindowsStyle ? 15 : 16,
                         fontWeight: FontWeight.w600,
-                        letterSpacing: 0.2,
+                        letterSpacing: isWindowsStyle ? 0.1 : 0.2,
                       ),
                     ),
 
-                    const SizedBox(height: 12),
+                    SizedBox(height: isWindowsStyle ? 10 : 12),
 
                     // Features List
                     ...features.map(
@@ -471,14 +578,18 @@ class SubscriptionScreen extends StatelessWidget {
 
                     // Printer Features
                     if (printerFeatures != null) ...[
-                      const SizedBox(height: 16),
+                      SizedBox(height: isWindowsStyle ? 14 : 16),
                       Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: EdgeInsets.all(isWindowsStyle ? 14 : 16),
                         decoration: BoxDecoration(
                           color: AppColor.backGroundColor,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(
+                            isWindowsStyle ? 8 : 12,
+                          ),
                           border: Border.all(
-                            color: Colors.grey.shade200,
+                            color: isWindowsStyle
+                                ? Colors.black.withOpacity(0.08)
+                                : Colors.grey.shade200,
                             width: 1,
                           ),
                         ),
@@ -573,12 +684,14 @@ class SubscriptionScreen extends StatelessWidget {
 
                     // Printer Note
                     if (printerNote != null) ...[
-                      const SizedBox(height: 12),
+                      SizedBox(height: isWindowsStyle ? 10 : 12),
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: EdgeInsets.all(isWindowsStyle ? 10 : 12),
                         decoration: BoxDecoration(
                           color: AppColor.primary.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(
+                            isWindowsStyle ? 6 : 8,
+                          ),
                           border: Border.all(color: AppColor.primary, width: 1),
                         ),
                         child: Row(
@@ -604,58 +717,93 @@ class SubscriptionScreen extends StatelessWidget {
                       ),
                     ],
 
-                    const SizedBox(height: 20),
+                    SizedBox(height: isWindowsStyle ? 16 : 20),
 
-                    // Buy Now Button
                     SizedBox(
                       width: double.infinity,
-                      child: ElevatedButton(
-                        // onPressed: onBuyNow,
-                        onPressed: () {
-                          final ctrl = Get.find<SubscriptionController>();
-                          final outlet = ctrl.appPref.selectedOutlet;
-                          final activeIds = _activeSubscriptionPlanIds(outlet);
-                          if (activeIds.isNotEmpty) {
-                            showError(
-                              title: 'Already Subscribed',
-                              description:
-                                  'This outlet already has an active subscription.',
-                            );
-                            return;
-                          }
-                          if (plan.withPrinter) {
-                            Get.toNamed(
-                              AppRoute.subscriptionForm,
-                              arguments: {'subscription': plan},
-                            );
-                          } else {
-                            Get.toNamed(
-                              AppRoute.subscriptionReview,
-                              arguments: {'subscription': plan},
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isPopular
-                              ? AppColor.secondaryPrimary
-                              : AppColor.primary,
-                          foregroundColor: AppColor.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          'Buy Now',
-                          style: TextStyle(
-                            color: AppColor.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
+                      child: isCurrentPlan
+                          ? OutlinedButton(
+                              onPressed: null,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColor.primary,
+                                disabledForegroundColor: AppColor.primary
+                                    .withOpacity(0.75),
+                                side: BorderSide(
+                                  color: AppColor.primary.withOpacity(0.35),
+                                ),
+                                padding: EdgeInsets.symmetric(
+                                  vertical: isWindowsStyle ? 14 : 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    isWindowsStyle ? 6 : 12,
+                                  ),
+                                ),
+                              ),
+                              child: Text(
+                                'Current plan',
+                                style: TextStyle(
+                                  fontSize: isWindowsStyle ? 14 : 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            )
+                          : ElevatedButton(
+                              onPressed: () {
+                                final ctrl = Get.find<SubscriptionController>();
+                                final outlet = ctrl.appPref.selectedOutlet;
+                                final activeIds = _activeSubscriptionPlanIds(
+                                  outlet,
+                                );
+                                // if (activeIds.isNotEmpty) {
+                                //   showError(
+                                //     title: 'Already Subscribed',
+                                //     description:
+                                //         'This outlet already has an active subscription.',
+                                //   );
+                                //   return;
+                                // }
+                                if (plan.withPrinter) {
+                                  Modular.to.pushNamed(
+                                    HomeMainRoutes.subscriptionForm,
+                                    arguments: {'subscription': plan},
+                                  );
+                                  // Get.toNamed(
+                                  //   AppRoute.subscriptionForm,
+                                  //   arguments: {'subscription': plan},
+                                  // );
+                                } else {
+                                  Get.toNamed(
+                                    AppRoute.subscriptionReview,
+                                    arguments: {'subscription': plan},
+                                  );
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isPopular
+                                    ? AppColor.secondaryPrimary
+                                    : AppColor.primary,
+                                foregroundColor: AppColor.white,
+                                padding: EdgeInsets.symmetric(
+                                  vertical: isWindowsStyle ? 14 : 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    isWindowsStyle ? 6 : 12,
+                                  ),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: Text(
+                                'Buy Now',
+                                style: TextStyle(
+                                  color: AppColor.white,
+                                  fontSize: isWindowsStyle ? 14 : 16,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: isWindowsStyle ? 0.25 : 0.5,
+                                ),
+                              ),
+                            ),
                     ),
                   ],
                 ),
@@ -853,18 +1001,20 @@ class CardDecorationPainter extends CustomPainter {
     }
 
     // Draw decorative dots
-    final dotPaint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = AppColor.primary.withOpacity(0.05);
+    // Use explicit assignments (not cascades ending in `.fill`) so the Dart
+    // compiler does not treat `.fill` / loop vars as enum dot-shorthands (GD798B012).
+    final dotPaint = Paint();
+    dotPaint.style = PaintingStyle.fill;
+    dotPaint.color = AppColor.primary.withOpacity(0.05);
 
-    final dots = [
+    final List<Offset> dots = [
       Offset(size.width * 0.1, size.height * 0.15),
       Offset(size.width * 0.2, size.height * 0.85),
       Offset(size.width * 0.9, size.height * 0.25),
     ];
 
-    for (final dot in dots) {
-      canvas.drawCircle(dot, 4, dotPaint);
+    for (final Offset dotCenter in dots) {
+      canvas.drawCircle(dotCenter, 4, dotPaint);
     }
   }
 

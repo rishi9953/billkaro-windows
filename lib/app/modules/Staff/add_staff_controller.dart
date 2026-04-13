@@ -25,13 +25,29 @@ class AddStaffController extends BaseController {
   }
 
   void showRolePicker() {
-    Get.bottomSheet(
-      _RolePickerBottomSheet(controller: this),
-      isScrollControlled: true,
-    );
+    final context = Get.context!;
+    final isWindows = Theme.of(context).platform == TargetPlatform.windows;
+    if (isWindows) {
+      Get.dialog(
+        Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: _RolePickerBottomSheet(controller: this, isDialog: true),
+          ),
+        ),
+      );
+    } else {
+      Get.bottomSheet(
+        _RolePickerBottomSheet(controller: this),
+        isScrollControlled: true,
+      );
+    }
   }
 
-  void sendInvite() {
+  Future<void> sendInvite() async {
     final name = userNameController.text.trim();
     final email = emailController.text.trim();
     final phone = phoneNumberController.text.trim();
@@ -62,22 +78,109 @@ class AddStaffController extends BaseController {
       return;
     }
 
-    // TODO: Call invite API when backend is ready
-    // await apiClient.post(...);
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null || outletId.isEmpty) {
+      showError(description: 'No outlet selected');
+      return;
+    }
+
+    final role = selectedRole.value == 'Secondary Admin'
+        ? 'secondary_admin'
+        : 'biller';
+
+    final response = await callApi(
+      apiClient.addStaff(outletId, {
+        'userName': name,
+        'email': email,
+        'userPhoneNumber': '+91$phone',
+        'userRole': role,
+      }),
+    );
+
+    if (response == null) return;
     showSuccess(description: 'Invite sent successfully');
     Get.back();
   }
 }
 
 class _RolePickerBottomSheet extends StatelessWidget {
-  const _RolePickerBottomSheet({required this.controller});
+  const _RolePickerBottomSheet({
+    required this.controller,
+    this.isDialog = false,
+  });
   final AddStaffController controller;
+  final bool isDialog;
 
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
     return Obx(() {
       final currentRole = controller.selectedRole.value;
+      final roleTiles = AddStaffController.roleOptions.map((role) {
+        final selected = currentRole == role;
+        return ListTile(
+          selected: selected,
+          tileColor: selected ? null : Colors.transparent,
+          selectedTileColor: AppColor.primary.withValues(alpha: 0.15),
+          title: Text(
+            role == 'Secondary Admin'
+                ? loc.secondary_admin
+                : role == 'Biller'
+                ? loc.biller
+                : role,
+            style: TextStyle(
+              fontWeight: selected ? FontWeight.w600 : null,
+              color: selected ? AppColor.primary : null,
+            ),
+          ),
+          trailing: selected
+              ? Icon(Icons.check_circle, color: AppColor.primary, size: 22)
+              : null,
+          onTap: () => controller.selectRole(role),
+        );
+      }).toList();
+
+      if (isDialog) {
+        return Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: Text(
+                          'Select ${loc.user_role}',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Get.back(),
+                      icon: Icon(Icons.close, color: Colors.grey.shade700),
+                      tooltip: MaterialLocalizations.of(
+                        context,
+                      ).closeButtonTooltip,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                ...roleTiles,
+              ],
+            ),
+          ),
+        );
+      }
+
       return Material(
         color: Colors.white,
         shape: const RoundedRectangleBorder(
@@ -110,33 +213,7 @@ class _RolePickerBottomSheet extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              ...AddStaffController.roleOptions.map((role) {
-                final selected = currentRole == role;
-                return ListTile(
-                  selected: selected,
-                  tileColor: selected ? null : Colors.transparent,
-                  selectedTileColor: AppColor.primary.withOpacity(0.15),
-                  title: Text(
-                    role == 'Secondary Admin'
-                        ? loc.secondary_admin
-                        : role == 'Biller'
-                        ? loc.biller
-                        : role,
-                    style: TextStyle(
-                      fontWeight: selected ? FontWeight.w600 : null,
-                      color: selected ? AppColor.primary : null,
-                    ),
-                  ),
-                  trailing: selected
-                      ? Icon(
-                          Icons.check_circle,
-                          color: AppColor.primary,
-                          size: 22,
-                        )
-                      : null,
-                  onTap: () => controller.selectRole(role),
-                );
-              }),
+              ...roleTiles,
             ],
           ),
         ),

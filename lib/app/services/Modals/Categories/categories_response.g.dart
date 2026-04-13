@@ -22,6 +22,7 @@ CategoryData _$CategoryDataFromJson(Map<String, dynamic> json) => CategoryData(
   userId: json['userId'] as String,
   outletId: json['outletId'] as String,
   categoryName: json['categoryName'] as String,
+  imageURL: json['imageURL'] as String,
   createdAt: DateTime.parse(json['createdAt'] as String),
   updatedAt: DateTime.parse(json['updatedAt'] as String),
 );
@@ -32,6 +33,7 @@ Map<String, dynamic> _$CategoryDataToJson(CategoryData instance) =>
       'userId': instance.userId,
       'outletId': instance.outletId,
       'categoryName': instance.categoryName,
+      'imageURL': instance.imageURL,
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt.toIso8601String(),
     };

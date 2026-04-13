@@ -2,7 +2,11 @@ import 'package:billkaro/app/services/Modals/login_response.dart';
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/Modals/orders/split_payment.dart';
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
+import 'package:billkaro/app/services/Modals/tables/tables_response.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:flutter_modular/flutter_modular.dart';
+import 'package:flutter/material.dart';
 
 class OrderDetailsController extends BaseController {
   final formKey = GlobalKey<FormState>();
@@ -27,6 +31,14 @@ class OrderDetailsController extends BaseController {
   double? totalAmount; // Will be set from order details
 
   final RxBool isLoading = true.obs;
+  final RxList<TableModel> availableTables = <TableModel>[].obs;
+
+  String _normalizePaymentMethod(dynamic value) {
+    final method = (value ?? '').toString().trim().toLowerCase();
+    return (method == 'cash' || method == 'card' || method == 'upi')
+        ? method
+        : 'cash';
+  }
 
   /// All orders from API
   final RxList<OrderModel> allOrders = <OrderModel>[].obs;
@@ -37,26 +49,26 @@ class OrderDetailsController extends BaseController {
   OrderModel? orderDetails;
 
   /// Save Order Details
-  Future<void> saveOrderDetails() async {
+  Future<CreateorderRequest?> buildOrderDetails() async {
     final loc = AppLocalizations.of(Get.context!)!;
 
     // Validate bill number is not empty
     if (billNumber.text.trim().isEmpty) {
       showError(description: loc.bill_number_required);
-      return;
+      return null;
     }
 
     // Validate bill number is an integer
     if (!_isValidIntegerBillNumber(billNumber.text.trim())) {
       showError(description: loc.bill_number_invalid);
-      return;
+      return null;
     }
 
     // Check if bill number already exists
     final isDuplicate = await _checkBillNumberExists(billNumber.text.trim());
     if (isDuplicate) {
       showError(description: loc.bill_number_duplicate(billNumber.text.trim()));
-      return;
+      return null;
     }
 
     // Validate split payments if enabled
@@ -68,7 +80,7 @@ class OrderDetailsController extends BaseController {
 
       if (splitPayments.isEmpty) {
         showError(description: 'Please add at least one payment method');
-        return;
+        return null;
       }
 
       if (totalAmount != null && (splitTotal - totalAmount!).abs() > 0.01) {
@@ -76,13 +88,16 @@ class OrderDetailsController extends BaseController {
           description:
               'Split payment total (₹${splitTotal.toStringAsFixed(2)}) does not match order total (₹${totalAmount!.toStringAsFixed(2)})',
         );
-        return;
+        return null;
       }
     }
 
-    final orderDetails = CreateorderRequest(
+    return CreateorderRequest(
       billNumber: billNumber.text.trim(),
-      tableNumber: isDineIn ? tableNumber.text : '',
+      tableNumber:
+          (isDineIn && HomeMainRoutes.outletShowsTables())
+              ? tableNumber.text
+              : '',
       customerName: customerName.text,
       phoneNumber: phoneNumber.text,
       discount: double.tryParse(discount.text) ?? 0.0,
@@ -93,8 +108,26 @@ class OrderDetailsController extends BaseController {
           : null,
       status: 'pending',
     );
+  }
 
-    Get.back(result: orderDetails);
+  Future<void> saveOrderDetailsAndClose(BuildContext context) async {
+    final result = await buildOrderDetails();
+    if (result == null) return;
+
+    // Pop using the local Navigator first (most reliable).
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop(result);
+      return;
+    }
+
+    // Fallbacks (in case the screen was opened differently).
+    if (Modular.to.canPop()) {
+      Modular.to.pop(result);
+      return;
+    }
+
+    Modular.to.pop(result);
+    // Get.back(result: result);
   }
 
   /// Check if bill number already exists (in both API and local database)
@@ -139,7 +172,12 @@ class OrderDetailsController extends BaseController {
   /// On Screen Load
   @override
   void onInit() {
-    final args = Get.arguments as Map<String, dynamic>?;
+    // Read route args from Modular first, fallback to Get.arguments.
+    final dynamic modularArgs = Modular.args.data;
+    final args =
+        (modularArgs is Map<String, dynamic>)
+        ? modularArgs
+        : (Get.arguments as Map<String, dynamic>?);
 
     if (args != null) {
       orderFrom.value = args['orderFrom'] ?? '';
@@ -149,26 +187,67 @@ class OrderDetailsController extends BaseController {
       discount.text = '${args['discount'] ?? 0.0}';
       serviceCharge.text = '${args['serviceCharge'] ?? 0.0}';
       status.value = args['status'] ?? '';
-      paymentRecieved.value = args['paymentReceivedIn'] ?? 'cash';
+      paymentRecieved.value = _normalizePaymentMethod(args['paymentReceivedIn']);
       totalAmount = args['totalAmount']?.toDouble();
 
       // Load split payments if available
       if (args['splitPayments'] != null && args['splitPayments'] is List) {
         final List<dynamic> splitList = args['splitPayments'];
-        splitPayments.value = splitList
-            .map((json) => SplitPayment.fromJson(json as Map<String, dynamic>))
-            .toList();
+        splitPayments.value = splitList.map((json) {
+          final p = SplitPayment.fromJson(json as Map<String, dynamic>);
+          final method = p.paymentMethod.trim().toLowerCase();
+          // Normalize legacy / API values like "Cash" / "UPI" to expected keys.
+          final normalized =
+              (method == 'cash' || method == 'card' || method == 'upi')
+              ? method
+              : 'cash';
+          return SplitPayment(paymentMethod: normalized, amount: p.amount);
+        }).toList();
         useSplitPayment.value = splitPayments.isNotEmpty;
       }
       // billNumber.text = args['billNumber'] ?? '';
     }
 
-    // Ensure table number isn't accidentally kept for non-dine-in orders.
-    if (!isDineIn) {
+    // Ensure table number isn't kept when not dine-in or outlet has no seating.
+    if (!isDineIn || !HomeMainRoutes.outletShowsTables()) {
       tableNumber.text = '';
     }
 
     super.onInit();
+  }
+
+  Future<void> loadAvailableTables() async {
+    if (!isDineIn || !HomeMainRoutes.outletShowsTables()) {
+      availableTables.clear();
+      return;
+    }
+
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null) {
+      availableTables.clear();
+      return;
+    }
+
+    try {
+      final response = await callApi(
+        apiClient.getOutletTables(outletId),
+        showLoader: false,
+      );
+
+      if (response?.status == 'success') {
+        final tables = response!.data
+            .map((e) => TableModel.fromTableData(e))
+            .where((t) => t.isAvailableFromApi)
+            .toList();
+
+        availableTables.assignAll(tables);
+        return;
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to load available tables: $e');
+    }
+
+    availableTables.clear();
   }
 
   /// Fetch orders & set latest bill number
@@ -277,7 +356,9 @@ class OrderDetailsController extends BaseController {
         }
       }
 
-      final nextFromOrders = maxOrderBillNumber > 0 ? maxOrderBillNumber + 1 : 1;
+      final nextFromOrders = maxOrderBillNumber > 0
+          ? maxOrderBillNumber + 1
+          : 1;
       final nextBillNumber = outletBillNumber > nextFromOrders
           ? outletBillNumber
           : nextFromOrders;
@@ -406,6 +487,7 @@ class OrderDetailsController extends BaseController {
 
   @override
   void onReady() {
+    loadAvailableTables();
     getOrderList();
     super.onReady();
   }

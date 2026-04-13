@@ -3,6 +3,7 @@ import 'package:billkaro/app/modules/Regular%20customer/CustomerList/cutomer_lis
 import 'package:billkaro/app/services/Modals/customer/customerRequest.dart';
 import 'package:billkaro/app/services/Modals/customer/customerResponse.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -268,10 +269,11 @@ class AddCustomerController extends BaseController {
   }
 
   void toggleEdit() {
-    final args = Get.arguments;
+    final dynamic rawArgs = Get.arguments ?? Modular.args.data;
+    final args = rawArgs is Map ? rawArgs : null;
     if (args != null && args['isEdit'] == true) {
       isEdit.value = true;
-      var customer = args['customerData'] as CustomerData;
+      final customer = args['customerData'] as CustomerData;
       // Store only 10 digits (strip +91 if present)
       final digits = customer.phoneNumber.replaceAll(RegExp(r'\D'), '');
       phoneController.text = digits.length >= 10

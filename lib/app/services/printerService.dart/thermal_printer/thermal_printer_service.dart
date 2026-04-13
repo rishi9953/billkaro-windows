@@ -1,6 +1,6 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:ui' as ui;
-import 'dart:typed_data';
 
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
 import 'package:billkaro/app/services/PrinterService2/printer_service2.dart';
@@ -9,8 +9,12 @@ import 'package:billkaro/config/config.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_thermal_printer/flutter_thermal_printer.dart';
 import 'package:flutter_thermal_printer/utils/printer.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 import 'package:permission_handler/permission_handler.dart';
+import 'package:printing/printing.dart' hide Printer;
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:billkaro/utils/app_snackbar.dart';
 import 'helpers/storage_helper.dart';
 import 'helpers/bluetooth_helper.dart';
 import 'builders/print_builder.dart';
@@ -47,8 +51,23 @@ class ThermalPrinterService extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    // FlutterBluePlus on Windows uses WinRT; startup listeners / auto-scan have
+    // triggered native `abort()` in debug builds on some setups. USB thermal
+    // printing does not need BLE here.
+    if (kIsWeb || Platform.isWindows) {
+      debugPrint(
+        'ℹ️ [ThermalPrinter] Skipping BLE listener/auto-connect on '
+        '${kIsWeb ? "web" : "Windows"}',
+      );
+      return;
+    }
     BluetoothHelper.listenToConnectionState(this);
     _initAutoConnect();
+  }
+
+  bool _shouldAutoConnectPrinter() {
+    if (!Get.isRegistered<AppPref>()) return false;
+    return Get.find<AppPref>().isLogin;
   }
 
   @override
@@ -59,13 +78,30 @@ class ThermalPrinterService extends GetxController {
 
   // Public API - Permissions
   Future<void> requestPermissions() async {
-    await Permission.bluetoothScan.request();
-    await Permission.bluetoothConnect.request();
-    await Permission.location.request();
+    // `permission_handler` only meaningfully applies on mobile platforms.
+    // On desktop (Windows/macOS/Linux) these permissions are not used and can
+    // cause confusing failures or no-ops.
+    if (kIsWeb) return;
+    if (Platform.isAndroid) {
+      await Permission.bluetoothScan.request();
+      await Permission.bluetoothConnect.request();
+      await Permission.location.request();
+      return;
+    }
+    if (Platform.isIOS) {
+      // iOS does not use the Android 12+ Bluetooth permissions; scanning is gated
+      // by system prompts/Info.plist.
+      return;
+    }
   }
 
   // Public API - Bluetooth Scanning
   Future<void> startScan() async {
+    if (kIsWeb || Platform.isWindows) {
+      debugPrint('ℹ️ [ThermalPrinter] BLE scan not available on this platform');
+      isScanning.value = false;
+      return;
+    }
     try {
       isScanning.value = true;
       scanResults.clear();
@@ -82,6 +118,10 @@ class ThermalPrinterService extends GetxController {
   }
 
   Future<void> stopScan() async {
+    if (kIsWeb || Platform.isWindows) {
+      isScanning.value = false;
+      return;
+    }
     await FlutterBluePlus.stopScan();
     isScanning.value = false;
   }
@@ -91,9 +131,13 @@ class ThermalPrinterService extends GetxController {
   StreamSubscription<List<Printer>>? _devicesStreamSubscription;
 
   Future<void> checkForUsbPermission() async {
-    final status = await Permission.storage.status;
-    if (!status.isGranted) {
-      await Permission.storage.request();
+    // USB printer discovery does not require storage permission on desktop.
+    if (kIsWeb) return;
+    if (Platform.isAndroid) {
+      final status = await Permission.storage.status;
+      if (!status.isGranted) {
+        await Permission.storage.request();
+      }
     }
   }
 
@@ -104,31 +148,42 @@ class ThermalPrinterService extends GetxController {
       isUsbScanning.value = true;
       usbPrinters.clear();
 
+      // Trigger discovery
       await FlutterThermalPrinter.instance.getPrinters(
         connectionTypes: [ConnectionType.USB],
       );
 
+      // IMPORTANT:
+      // The plugin reports devices asynchronously via `devicesStream`.
+      // The previous implementation checked `printers` immediately (still empty),
+      // so it often showed "No USB printers found" even when devices existed.
+      List<Printer> discovered = const [];
+      try {
+        discovered = await FlutterThermalPrinter.instance.devicesStream.first
+            .timeout(const Duration(seconds: 4));
+      } on TimeoutException {
+        discovered = const [];
+      }
+
+      printers = discovered.toList();
+      printers.removeWhere((p) => (p.name ?? '').trim().isEmpty);
+
+      // Some Windows USB printers report generic names; don't aggressively filter.
+      usbPrinters.assignAll(printers);
+      debugPrint('Found ${usbPrinters.length} USB printer(s)');
+
+      // Keep subscription to reflect late-arriving devices (optional but useful)
       _devicesStreamSubscription = FlutterThermalPrinter.instance.devicesStream
           .listen((List<Printer> event) {
-            printers = event;
-            printers.removeWhere(
-              (element) =>
-                  element.name == null ||
-                  element.name == '' ||
-                  element.name!.toLowerCase().contains("print") == false,
-            );
+            final list = event.toList()
+              ..removeWhere((p) => (p.name ?? '').trim().isEmpty);
+            usbPrinters.assignAll(list);
           });
-      if (printers.isNotEmpty) {
-        usbPrinters.value = printers;
-        debugPrint('Found ${printers.length} USB printer(s)');
-      } else {
-        debugPrint('No USB printers found');
-      }
     } catch (e) {
       debugPrint('USB Scan Error: $e');
-      Get.snackbar(
-        'USB Scan Error',
-        'Failed to scan for USB printers: $e',
+      AppSnackbar.show(
+        title: 'USB Scan Error',
+        message: 'Failed to scan for USB printers: $e',
         snackPosition: SnackPosition.BOTTOM,
       );
     } finally {
@@ -152,12 +207,6 @@ class ThermalPrinterService extends GetxController {
         // Save USB printer info for auto-connect
         await StorageHelper.saveUsbPrinter(printer.name ?? '');
 
-        Get.snackbar(
-          'Success',
-          'USB printer connected successfully',
-          snackPosition: SnackPosition.BOTTOM,
-        );
-
         return true;
       } else {
         connectionStatus.value = 'Failed to connect USB printer';
@@ -166,9 +215,9 @@ class ThermalPrinterService extends GetxController {
     } catch (e) {
       debugPrint('USB Connect Error: $e');
       connectionStatus.value = 'USB connection error: $e';
-      Get.snackbar(
-        'Connection Error',
-        'Failed to connect to USB printer: $e',
+      AppSnackbar.show(
+        title: 'Connection Error',
+        message: 'Failed to connect to USB printer: $e',
         snackPosition: SnackPosition.BOTTOM,
       );
       return false;
@@ -184,9 +233,9 @@ class ThermalPrinterService extends GetxController {
         isConnected.value = false;
         connectionStatus.value = 'USB printer disconnected';
 
-        Get.snackbar(
-          'Disconnected',
-          'USB printer disconnected',
+        AppSnackbar.show(
+          title: 'Disconnected',
+          message: 'USB printer disconnected',
           snackPosition: SnackPosition.BOTTOM,
         );
       }
@@ -197,6 +246,7 @@ class ThermalPrinterService extends GetxController {
 
   // Public API - Bluetooth Connection
   Future<bool> connectToDevice(BluetoothDevice device) async {
+    if (kIsWeb || Platform.isWindows) return false;
     return await BluetoothHelper.connectToDevice(device, this);
   }
 
@@ -204,6 +254,23 @@ class ThermalPrinterService extends GetxController {
     // Check if already connected (Bluetooth or USB)
     if (isConnected.value) {
       return true;
+    }
+
+    // Windows: BLE stack is not registered; use USB only.
+    if (!kIsWeb && Platform.isWindows) {
+      await scanUsbPrinters();
+      if (usbPrinters.isNotEmpty) {
+        await Get.dialog(
+          PrinterConnectionDialog(printerService: this),
+          barrierDismissible: true,
+        );
+      } else {
+        showError(
+          title: 'No USB printer',
+          description: 'Connect a USB thermal printer and use the USB tab.',
+        );
+      }
+      return isConnected.value;
     }
 
     // 1️⃣ Check Bluetooth status
@@ -249,7 +316,7 @@ class ThermalPrinterService extends GetxController {
   // Public API - Auto-Connect
   Future<void> enableAutoConnect(bool enable) async {
     await StorageHelper.setAutoConnect(enable);
-    if (enable && !isConnected.value) {
+    if (enable && !isConnected.value && _shouldAutoConnectPrinter()) {
       await tryAutoConnect();
     }
   }
@@ -259,6 +326,8 @@ class ThermalPrinterService extends GetxController {
   Future<void> clearSavedDevice() => StorageHelper.clearAll();
 
   Future<bool> tryAutoConnect() async {
+    if (!_shouldAutoConnectPrinter()) return false;
+    if (isConnected.value) return true;
     // Try Bluetooth auto-connect first
     final bluetoothConnected = await BluetoothHelper.tryAutoConnect(this);
     if (bluetoothConnected) return true;
@@ -267,7 +336,9 @@ class ThermalPrinterService extends GetxController {
     final savedUsbPrinter = await StorageHelper.getSavedUsbPrinter();
     if (savedUsbPrinter != null && savedUsbPrinter.isNotEmpty) {
       await scanUsbPrinters();
-      final printer = usbPrinters.firstWhereOrNull((p) => p == savedUsbPrinter);
+      final printer = usbPrinters.firstWhereOrNull(
+        (p) => (p.name ?? '') == savedUsbPrinter,
+      );
       if (printer != null) {
         return await connectUsbPrinter(printer);
       }
@@ -277,6 +348,42 @@ class ThermalPrinterService extends GetxController {
   }
 
   String _roleKey(PrintRole role) => role == PrintRole.bill ? 'bill' : 'kot';
+
+  int _detectReceiptWidth() {
+    // Prefer best-effort inference from connected device/printer name.
+    final name =
+        (connectedUsbPrinter?.name ??
+                connectedDevice?.platformName ??
+                connectedDevice?.advName ??
+                '')
+            .toLowerCase();
+
+    // Heuristics: many models advertise 80/58 or 3inch/2inch in the name.
+    if (name.contains('80') ||
+        name.contains('3 inch') ||
+        name.contains('3inch') ||
+        name.contains('80mm')) {
+      return 48;
+    }
+    if (name.contains('58') ||
+        name.contains('2 inch') ||
+        name.contains('2inch') ||
+        name.contains('58mm')) {
+      return 32;
+    }
+
+    // Default to 32 for safety (less clipping).
+    return 32;
+  }
+
+  ({int w, int item, int qty, int price, int amount}) _invoiceColumns(int w) {
+    if (w >= 48) {
+      // 80mm
+      return (w: w, item: 24, qty: 6, price: 8, amount: 10);
+    }
+    // 58mm
+    return (w: w, item: 12, qty: 4, price: 8, amount: 8);
+  }
 
   Future<bool> ensureConnectedForRole(PrintRole role) async {
     // 1) If role printer saved, connect/switch to it.
@@ -302,6 +409,9 @@ class ThermalPrinterService extends GetxController {
     }
 
     if (type == 'bluetooth') {
+      if (!kIsWeb && Platform.isWindows) {
+        // BLE not available on Windows desktop build; fall through to dialog.
+      } else {
       final savedId = await StorageHelper.getRoleSavedDeviceId(roleKey);
       if (savedId != null && savedId.isNotEmpty) {
         // Already connected to the right device
@@ -336,6 +446,7 @@ class ThermalPrinterService extends GetxController {
         }
       }
       // Fall through to interactive connect
+      }
     }
 
     // 2) No role printer saved (or not found): use existing connection UI
@@ -380,10 +491,34 @@ class ThermalPrinterService extends GetxController {
     required String specialInstructions,
     required int totalQuantity,
   }) async {
+    // Windows default: use OS print dialog (PDF).
+    // BUT if a BLE printer is connected (writeCharacteristic available), send raw ESC/POS bytes.
+    final hasBlePrinter =
+        isConnected.value &&
+        connectedDevice != null &&
+        writeCharacteristic != null;
+    if (!kIsWeb && Platform.isWindows && !hasBlePrinter) {
+      await _printKotWindowsPdf(
+        kotNumber: kotNumber,
+        businessName: businessName,
+        orderFrom: orderFrom,
+        tableNumber: tableNumber,
+        customerName: customerName,
+        waiterName: waiterName,
+        date: date,
+        time: time,
+        items: items,
+        specialInstructions: specialInstructions,
+        totalQuantity: totalQuantity,
+      );
+      return;
+    }
+
     final ok = await ensureConnectedForRole(PrintRole.kot);
     if (!ok) throw Exception('No KOT printer connected');
 
-    final builder = PrintBuilder();
+    final receiptW = _detectReceiptWidth();
+    final builder = PrintBuilder(receiptWidth: receiptW);
 
     // Header
     builder
@@ -426,18 +561,29 @@ class ThermalPrinterService extends GetxController {
     builder.line();
 
     // Items
-    builder.bold(
-      TextHelper.padRight('Item', 36) + TextHelper.padLeft('Qty', 12) + '\n',
-    );
+    if (receiptW >= 48) {
+      builder.bold(
+        TextHelper.padRight('Item', 36) + TextHelper.padLeft('Qty', 12) + '\n',
+      );
+    } else {
+      builder.bold(
+        TextHelper.padRight('Item', 20) + TextHelper.padLeft('Qty', 12) + '\n',
+      );
+    }
     builder.line();
 
     for (var item in items) {
-      String itemName = item.itemName.length > 34
-          ? item.itemName.substring(0, 34)
+      final itemMax = receiptW >= 48 ? 34 : 20;
+      String itemName = item.itemName.length > itemMax
+          ? item.itemName.substring(0, itemMax)
           : item.itemName;
       String qty = 'x${item.quantity}';
       builder.text(
-        TextHelper.padRight(itemName, 36) + TextHelper.padLeft(qty, 12) + '\n',
+        (receiptW >= 48
+                ? TextHelper.padRight(itemName, 36)
+                : TextHelper.padRight(itemName, 20)) +
+            TextHelper.padLeft(qty, 12) +
+            '\n',
       );
 
       if (item.category.isNotEmpty) {
@@ -512,25 +658,63 @@ class ThermalPrinterService extends GetxController {
     bool isBluetooth = false,
     String? upiId,
   }) async {
+    // Windows default: use OS print dialog (PDF).
+    // BUT if a BLE printer is connected (writeCharacteristic available), send raw ESC/POS bytes.
+    final hasBlePrinter =
+        isConnected.value &&
+        connectedDevice != null &&
+        writeCharacteristic != null;
+    if (!kIsWeb && Platform.isWindows && !hasBlePrinter) {
+      await _printInvoiceWindowsPdf(
+        brandName: brandName,
+        businessName: businessName,
+        address: address,
+        city: city,
+        zipcode: zipcode,
+        state: state,
+        gstinNumber: gstinNumber,
+        fssaiNumber: fssaiNumber,
+        phoneNumber: phoneNumber,
+        orderFrom: orderFrom,
+        customerName: customerName,
+        paymentMode: paymentMode,
+        date: date,
+        time: time,
+        invoiceNo: invoiceNo,
+        items: items,
+        subtotal: subtotal,
+        totalTax: totalTax,
+        serviceCharge: serviceCharge,
+        discount: discount,
+        totalAmount: totalAmount,
+        upiId: upiId,
+      );
+      return;
+    }
+
     debugPrint('Printer is ${PrinterService2.to.isConnected.value}');
 
     // final ok = await ensureConnectedForRole(PrintRole.bill);
     // if (!ok) throw Exception('No bill printer connected');
 
-    final builder = PrintBuilder();
+    final receiptW = _detectReceiptWidth();
+    final cols = _invoiceColumns(receiptW);
+    final builder = PrintBuilder(receiptWidth: receiptW);
     // Header
     builder
       ..center()
       ..boldDoubleHeight('$brandName\n')
       ..boldNormal('')
       ..text('$businessName\n')
-      ..text('$address\n')
-      ..text('$city, $zipcode\n')
-      ..text('$state\n');
+      ..text('$address\n');
 
-    if (gstinNumber != null) builder.text('GSTIN: $gstinNumber\n');
-    if (fssaiNumber != null) builder.text('FSSAI: $fssaiNumber\n');
-    if (phoneNumber != null) builder.text('Ph: $phoneNumber\n');
+    final gst = (gstinNumber ?? '').trim();
+    final fssai = (fssaiNumber ?? '').trim();
+    final phone = (phoneNumber ?? '').trim();
+
+    if (gst.isNotEmpty) builder.text('GSTIN: $gst\n');
+    if (fssai.isNotEmpty) builder.text('FSSAI: $fssai\n');
+    if (phone.isNotEmpty) builder.text('Ph: $phone\n');
 
     builder.line()
       ..bold('INVOICE\n')
@@ -540,7 +724,7 @@ class ThermalPrinterService extends GetxController {
       ..left();
 
     // Bill details (Bill To and Date on separate lines to avoid overlap with long names)
-    final w = PrintBuilder.receiptWidth;
+    final w = cols.w;
     final billToLine = 'Bill To: $customerName';
     builder.bold(
       '${billToLine.length <= w ? billToLine : billToLine.substring(0, w)}\n',
@@ -555,26 +739,26 @@ class ThermalPrinterService extends GetxController {
 
     // Items header (32 chars total for 2" / 58mm paper)
     final itemHeader =
-        TextHelper.padRight('Item', 12) +
-        TextHelper.padRight('Qty', 4) +
-        TextHelper.padRight('Price', 8) +
-        TextHelper.padLeft('Amount', 8);
+        TextHelper.padRight('Item', cols.item) +
+        TextHelper.padRight('Qty', cols.qty) +
+        TextHelper.padRight('Price', cols.price) +
+        TextHelper.padLeft('Amount', cols.amount);
     builder.bold('$itemHeader\n');
 
     // Items
     for (var item in items) {
-      String itemName = item.itemName.length > 12
-          ? item.itemName.substring(0, 12)
+      String itemName = item.itemName.length > cols.item
+          ? item.itemName.substring(0, cols.item)
           : item.itemName;
       String qty = 'x${item.quantity}';
       String price = item.salePrice.toStringAsFixed(0);
       String amount = (item.quantity * item.salePrice).toStringAsFixed(2);
 
       String row =
-          TextHelper.padRight(itemName, 12) +
-          TextHelper.padRight(qty, 4) +
-          TextHelper.padRight(price, 8) +
-          TextHelper.padLeft(amount, 8);
+          TextHelper.padRight(itemName, cols.item) +
+          TextHelper.padRight(qty, cols.qty) +
+          TextHelper.padRight(price, cols.price) +
+          TextHelper.padLeft(amount, cols.amount);
       builder.text('$row\n');
     }
 
@@ -653,6 +837,510 @@ class ThermalPrinterService extends GetxController {
     await _printBytes(builder.bytes);
   }
 
+  Future<void> _printInvoiceWindowsPdf({
+    required String brandName,
+    required String businessName,
+    required String address,
+    required String city,
+    required String zipcode,
+    required String state,
+    String? gstinNumber,
+    String? fssaiNumber,
+    String? phoneNumber,
+    required String orderFrom,
+    required String customerName,
+    required String paymentMode,
+    required String date,
+    required String time,
+    required String invoiceNo,
+    required List<OrderItem> items,
+    required double subtotal,
+    required double totalTax,
+    required double serviceCharge,
+    required double discount,
+    required double totalAmount,
+    String? upiId,
+  }) async {
+    final doc = pw.Document();
+
+    // IMPORTANT:
+    // `pdf` requires a finite page height for `pw.MultiPage`.
+    // Use a receipt-like width with a standard finite height; MultiPage will
+    // paginate automatically for longer receipts.
+    // Many Windows thermal printer drivers have non‑printable margins.
+    // If we render at full 80mm width, right-aligned text can get clipped.
+    // Use a slightly narrower effective page width + smaller margins.
+    final pageFormat = PdfPageFormat(
+      76 * PdfPageFormat.mm,
+      297 * PdfPageFormat.mm, // finite height; MultiPage paginates
+      marginAll: 4 * PdfPageFormat.mm,
+    );
+
+    pw.TextStyle t({double s = 9, bool b = false}) =>
+        pw.TextStyle(fontSize: s, fontWeight: b ? pw.FontWeight.bold : null);
+
+    doc.addPage(
+      pw.MultiPage(
+        pageFormat: pageFormat,
+        build: (_) => [
+          pw.Center(child: pw.Text(brandName, style: t(s: 13, b: true))),
+          if (businessName.isNotEmpty)
+            pw.Center(child: pw.Text(businessName, style: t(b: true))),
+          if (address.isNotEmpty)
+            pw.Center(child: pw.Text(address, style: t())),
+          // pw.Center(child: pw.Text('$city, $zipcode', style: t())),
+          // pw.Center(child: pw.Text(state, style: t())),
+          if ((gstinNumber ?? '').trim().isNotEmpty)
+            pw.Center(
+              child: pw.Text('GSTIN: ${gstinNumber!.trim()}', style: t()),
+            ),
+          if ((fssaiNumber ?? '').trim().isNotEmpty)
+            pw.Center(
+              child: pw.Text('FSSAI: ${fssaiNumber!.trim()}', style: t()),
+            ),
+          if ((phoneNumber ?? '').trim().isNotEmpty)
+            pw.Center(child: pw.Text('Ph: ${phoneNumber!.trim()}', style: t())),
+          pw.SizedBox(height: 6),
+          pw.Divider(),
+          pw.Center(child: pw.Text('INVOICE', style: t(b: true))),
+          pw.Center(child: pw.Text(orderFrom, style: t(b: true))),
+          pw.Divider(),
+          pw.Text('Bill To: $customerName', style: t(b: true)),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text('Payment: $paymentMode', style: t()),
+              pw.Text('Date: $date', style: t()),
+            ],
+          ),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text('Invoice: $invoiceNo', style: t()),
+              pw.Text('Time: $time', style: t()),
+            ],
+          ),
+          pw.SizedBox(height: 6),
+          pw.Table(
+            // Give right-side numbers more space to avoid clipping.
+            columnWidths: const {
+              0: pw.FlexColumnWidth(6.5), // Item
+              1: pw.FlexColumnWidth(1.5), // Qty
+              2: pw.FlexColumnWidth(2.0), // Price
+              3: pw.FlexColumnWidth(2.0), // Amount
+            },
+            border: pw.TableBorder(
+              horizontalInside: pw.BorderSide(
+                width: 0.4,
+                color: PdfColors.grey,
+              ),
+              top: pw.BorderSide(width: 0.6),
+              bottom: pw.BorderSide(width: 0.6),
+            ),
+            children: [
+              pw.TableRow(
+                children: [
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 4),
+                    child: pw.Text('Item', style: t(b: true)),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 4),
+                    child: pw.Align(
+                      alignment: pw.Alignment.center,
+                      child: pw.Text('Qty', style: t(b: true)),
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 4),
+                    child: pw.Align(
+                      alignment: pw.Alignment.centerRight,
+                      child: pw.Text('Price', style: t(b: true)),
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 4),
+                    child: pw.Align(
+                      alignment: pw.Alignment.centerRight,
+                      child: pw.Text('Amt', style: t(b: true)),
+                    ),
+                  ),
+                ],
+              ),
+              ...items.map((it) {
+                final qty = it.quantity;
+                final price = it.salePrice;
+                final amt = qty * price;
+                return pw.TableRow(
+                  children: [
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                      child: pw.Text(it.itemName, style: t()),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                      child: pw.Align(
+                        alignment: pw.Alignment.center,
+                        child: pw.Text('x$qty', style: t()),
+                      ),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                      child: pw.Align(
+                        alignment: pw.Alignment.centerRight,
+                        child: pw.Text(price.toStringAsFixed(2), style: t()),
+                      ),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                      child: pw.Align(
+                        alignment: pw.Alignment.centerRight,
+                        child: pw.Text(amt.toStringAsFixed(2), style: t()),
+                      ),
+                    ),
+                  ],
+                );
+              }),
+            ],
+          ),
+          pw.SizedBox(height: 6),
+          pw.Divider(),
+          _totRow('Subtotal', subtotal, t),
+          if (totalTax > 0) _totRow('Tax (GST)', totalTax, t),
+          if (serviceCharge > 0) _totRow('Service Charge', serviceCharge, t),
+          if (discount > 0) _totRow('Discount', -discount, t),
+          pw.Divider(),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text('TOTAL', style: t(s: 11, b: true)),
+              pw.Text(totalAmount.toStringAsFixed(2), style: t(s: 11, b: true)),
+            ],
+          ),
+          pw.SizedBox(height: 10),
+          pw.Center(
+            child: pw.Text('Thank you for doing business with us.', style: t()),
+          ),
+          if ((upiId ?? '').trim().isNotEmpty)
+            pw.Center(child: pw.Text('UPI: ${upiId!.trim()}', style: t(s: 8))),
+        ],
+      ),
+    );
+
+    // If UPI is present, generate QR bytes before final layout and inject a page
+    // overlay by rebuilding doc content with the QR image.
+    if ((upiId ?? '').trim().isNotEmpty) {
+      try {
+        final qrBytes = await generateUpiQrImage(
+          upiId: upiId!.trim(),
+          amount: totalAmount,
+          payeeName: businessName.isNotEmpty ? businessName : 'Payment',
+          note: 'Invoice: $invoiceNo',
+        );
+
+        final withQr = pw.Document();
+        withQr.addPage(
+          pw.MultiPage(
+            pageFormat: pageFormat,
+            build: (_) => [
+              pw.Center(child: pw.Text(brandName, style: t(s: 13, b: true))),
+              if (businessName.isNotEmpty)
+                pw.Center(child: pw.Text(businessName, style: t(b: true))),
+              if (address.isNotEmpty)
+                pw.Center(child: pw.Text(address, style: t())),
+              if ((gstinNumber ?? '').trim().isNotEmpty)
+                pw.Center(
+                  child: pw.Text('GSTIN: ${gstinNumber!.trim()}', style: t()),
+                ),
+              if ((fssaiNumber ?? '').trim().isNotEmpty)
+                pw.Center(
+                  child: pw.Text('FSSAI: ${fssaiNumber!.trim()}', style: t()),
+                ),
+              if ((phoneNumber ?? '').trim().isNotEmpty)
+                pw.Center(
+                  child: pw.Text('Ph: ${phoneNumber!.trim()}', style: t()),
+                ),
+              pw.SizedBox(height: 6),
+              pw.Divider(),
+              pw.Center(child: pw.Text('INVOICE', style: t(b: true))),
+              pw.Center(child: pw.Text(orderFrom, style: t(b: true))),
+              pw.Divider(),
+              pw.Text('Bill To: $customerName', style: t(b: true)),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Payment: $paymentMode', style: t()),
+                  pw.Text('Date: $date', style: t()),
+                ],
+              ),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Invoice: $invoiceNo', style: t()),
+                  pw.Text('Time: $time', style: t()),
+                ],
+              ),
+              pw.SizedBox(height: 6),
+              pw.Table(
+                columnWidths: const {
+                  0: pw.FlexColumnWidth(6),
+                  1: pw.FlexColumnWidth(2),
+                  2: pw.FlexColumnWidth(2),
+                  3: pw.FlexColumnWidth(2),
+                },
+                border: pw.TableBorder(
+                  horizontalInside: pw.BorderSide(
+                    width: 0.4,
+                    color: PdfColors.grey,
+                  ),
+                  top: pw.BorderSide(width: 0.6),
+                  bottom: pw.BorderSide(width: 0.6),
+                ),
+                children: [
+                  pw.TableRow(
+                    children: [
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.symmetric(vertical: 4),
+                        child: pw.Text('Item', style: t(b: true)),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.symmetric(vertical: 4),
+                        child: pw.Align(
+                          alignment: pw.Alignment.center,
+                          child: pw.Text('Qty', style: t(b: true)),
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.symmetric(vertical: 4),
+                        child: pw.Align(
+                          alignment: pw.Alignment.centerRight,
+                          child: pw.Text('Price', style: t(b: true)),
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.symmetric(vertical: 4),
+                        child: pw.Align(
+                          alignment: pw.Alignment.centerRight,
+                          child: pw.Text('Amt', style: t(b: true)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  ...items.map((it) {
+                    final qty = it.quantity;
+                    final price = it.salePrice;
+                    final amt = qty * price;
+                    return pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                          child: pw.Text(it.itemName, style: t()),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                          child: pw.Align(
+                            alignment: pw.Alignment.center,
+                            child: pw.Text('x$qty', style: t()),
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                          child: pw.Align(
+                            alignment: pw.Alignment.centerRight,
+                            child: pw.Text(
+                              price.toStringAsFixed(2),
+                              style: t(),
+                            ),
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                          child: pw.Align(
+                            alignment: pw.Alignment.centerRight,
+                            child: pw.Text(amt.toStringAsFixed(2), style: t()),
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
+                ],
+              ),
+              pw.SizedBox(height: 6),
+              pw.Divider(),
+              _totRow('Subtotal', subtotal, t),
+              if (totalTax > 0) _totRow('Tax (GST)', totalTax, t),
+              if (serviceCharge > 0)
+                _totRow('Service Charge', serviceCharge, t),
+              if (discount > 0) _totRow('Discount', -discount, t),
+              pw.Divider(),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('TOTAL', style: t(s: 11, b: true)),
+                  pw.Text(
+                    totalAmount.toStringAsFixed(2),
+                    style: t(s: 11, b: true),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 10),
+              pw.Center(
+                child: pw.Text(
+                  'Thank you for doing business with us.',
+                  style: t(),
+                ),
+              ),
+              pw.SizedBox(height: 8),
+              pw.Center(child: pw.Text('Scan to Pay', style: t(b: true))),
+              pw.SizedBox(height: 6),
+              pw.Center(
+                child: pw.Image(pw.MemoryImage(qrBytes), width: 90, height: 90),
+              ),
+              pw.SizedBox(height: 6),
+              pw.Center(child: pw.Text('UPI: ${upiId.trim()}', style: t(s: 8))),
+            ],
+          ),
+        );
+
+        await Printing.layoutPdf(onLayout: (_) async => withQr.save());
+        return;
+      } catch (e) {
+        debugPrint('⚠️ Failed to render UPI QR in PDF: $e');
+      }
+    }
+
+    await Printing.layoutPdf(onLayout: (_) async => doc.save());
+  }
+
+  pw.Widget _totRow(
+    String label,
+    double value,
+    pw.TextStyle Function({double s, bool b}) t,
+  ) {
+    return pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      children: [
+        pw.Text(label, style: t()),
+        pw.Text(value.toStringAsFixed(2), style: t()),
+      ],
+    );
+  }
+
+  Future<void> _printKotWindowsPdf({
+    required String kotNumber,
+    required String businessName,
+    required String orderFrom,
+    required String tableNumber,
+    required String customerName,
+    required String waiterName,
+    required String date,
+    required String time,
+    required List<OrderItem> items,
+    required String specialInstructions,
+    required int totalQuantity,
+  }) async {
+    final doc = pw.Document();
+    final pageFormat = PdfPageFormat(
+      76 * PdfPageFormat.mm,
+      297 * PdfPageFormat.mm, // finite height; MultiPage paginates if needed
+      marginAll: 4 * PdfPageFormat.mm,
+    );
+
+    pw.TextStyle t({double s = 9, bool b = false}) =>
+        pw.TextStyle(fontSize: s, fontWeight: b ? pw.FontWeight.bold : null);
+
+    doc.addPage(
+      pw.MultiPage(
+        pageFormat: pageFormat,
+        build: (_) => [
+          pw.Center(child: pw.Text('KOT', style: t(s: 14, b: true))),
+          if (businessName.isNotEmpty)
+            pw.Center(child: pw.Text(businessName, style: t(b: true))),
+          pw.Divider(),
+          pw.Text('KOT No: $kotNumber', style: t(b: true)),
+          pw.Text('Date: $date', style: t()),
+          pw.Text('Time: $time', style: t()),
+          if (tableNumber.isNotEmpty)
+            pw.Text('Table: $tableNumber', style: t()),
+          if (waiterName.isNotEmpty) pw.Text('Staff: $waiterName', style: t()),
+          if (orderFrom.isNotEmpty)
+            pw.Center(
+              child: pw.Text(orderFrom.toUpperCase(), style: t(b: true)),
+            ),
+          if (customerName.isNotEmpty)
+            pw.Text('Customer: $customerName', style: t()),
+          pw.Divider(),
+          pw.Table(
+            columnWidths: const {
+              0: pw.FlexColumnWidth(8),
+              1: pw.FlexColumnWidth(4),
+            },
+            border: pw.TableBorder(
+              horizontalInside: pw.BorderSide(
+                width: 0.4,
+                color: PdfColors.grey,
+              ),
+              top: pw.BorderSide(width: 0.6),
+              bottom: pw.BorderSide(width: 0.6),
+            ),
+            children: [
+              pw.TableRow(
+                children: [
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 4),
+                    child: pw.Text('Item', style: t(b: true)),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 4),
+                    child: pw.Align(
+                      alignment: pw.Alignment.centerRight,
+                      child: pw.Text('Qty', style: t(b: true)),
+                    ),
+                  ),
+                ],
+              ),
+              ...items.map(
+                (it) => pw.TableRow(
+                  children: [
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                      child: pw.Text(it.itemName, style: t()),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                      child: pw.Align(
+                        alignment: pw.Alignment.centerRight,
+                        child: pw.Text('x${it.quantity}', style: t()),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 6),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text('Total Items', style: t(b: true)),
+              pw.Text('$totalQuantity', style: t(b: true)),
+            ],
+          ),
+          if (specialInstructions.isNotEmpty) ...[
+            pw.SizedBox(height: 6),
+            pw.Divider(),
+            pw.Text('SPECIAL INSTRUCTIONS', style: t(b: true)),
+            pw.Text(specialInstructions, style: t()),
+          ],
+          pw.SizedBox(height: 10),
+          pw.Center(child: pw.Text('--- End of KOT ---', style: t())),
+        ],
+      ),
+    );
+
+    await Printing.layoutPdf(onLayout: (_) async => doc.save());
+  }
+
   // Private helper - Universal print method for both Bluetooth and USB
   Future<void> _printBytes(List<int> bytes) async {
     try {
@@ -674,25 +1362,43 @@ class ThermalPrinterService extends GetxController {
 
   // Private helper - Bluetooth specific write
   Future<void> _writeBluetoothBytes(List<int> bytes) async {
+    // BLE path (Windows/macOS/Linux + Android BLE)
+    final dev = connectedDevice;
+    final ch = writeCharacteristic;
+    if (isConnected.value && dev != null && ch != null) {
+      final withoutResponse = ch.properties.writeWithoutResponse;
+
+      // Keep chunks conservative for broad BLE printer compatibility.
+      const int chunkSize = 180;
+      for (var i = 0; i < bytes.length; i += chunkSize) {
+        final end = (i + chunkSize < bytes.length)
+            ? i + chunkSize
+            : bytes.length;
+        final chunk = bytes.sublist(i, end);
+        await ch.write(chunk, withoutResponse: withoutResponse);
+      }
+      return;
+    }
+
+    // Classic BT / legacy path (Android)
     final printerservice2 = PrinterService2.to;
     if (!printerservice2.isConnected.value) {
       throw Exception('No Bluetooth printer connected');
     }
-
-    printerservice2.connection!.output.add(Uint8List.fromList(bytes));
-    await printerservice2.connection!.output.allSent;
+    await printerservice2.sendBytes(bytes);
   }
 
   Future<void> _initAutoConnect() async {
+    if (!_shouldAutoConnectPrinter()) return;
     final autoConnectEnabled = await StorageHelper.isAutoConnectEnabled();
     if (autoConnectEnabled) await tryAutoConnect();
   }
 
   // Utility method to show error dialogs
   void showError({required String title, required String description}) {
-    Get.snackbar(
-      title,
-      description,
+    AppSnackbar.show(
+      title: title,
+      message: description,
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
       colorText: Get.theme.colorScheme.onError,

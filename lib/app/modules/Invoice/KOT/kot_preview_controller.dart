@@ -4,6 +4,8 @@ import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_req
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/date_util.dart';
+import 'package:billkaro/utils/download_path_util.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -47,11 +49,12 @@ class KOTPreviewController extends BaseController {
   }
 
   void getKOTDetails() {
-    var args = Get.arguments;
+    final args = (Get.arguments ?? Modular.args.data);
 
     if (args != null) {
       // Get order data
-      var orderData = args['invoice'] as CreateorderRequest?;
+      final map = args is Map ? args : null;
+      final orderData = map?['invoice'] as CreateorderRequest?;
 
       if (orderData != null) {
         itemList.value = orderData.items ?? [];
@@ -60,9 +63,10 @@ class KOTPreviewController extends BaseController {
       }
 
       // Get additional KOT specific details
-      orderFrom.value = args['orderFrom'] ?? '';
-      tableNumber.value = args['tableNumber'] ?? '';
-      specialInstructions.value = args['specialInstructions'] ?? '';
+      orderFrom.value = (map?['orderFrom'] ?? '').toString();
+      tableNumber.value = (map?['tableNumber'] ?? '').toString();
+      specialInstructions.value = (map?['specialInstructions'] ?? '')
+          .toString();
     }
 
     debugPrint('KOT Items: ${itemList.length}');
@@ -566,23 +570,9 @@ class KOTPreviewController extends BaseController {
 
   Future<void> _saveKOT(pw.Document pdf) async {
     try {
-      List<String> possiblePaths = [
-        '/storage/emulated/0/Download',
-        '/storage/emulated/0/Downloads',
-        '/sdcard/Download',
-        '/sdcard/Downloads',
-      ];
-
-      String? savePath;
-      for (String path in possiblePaths) {
-        final dir = Directory(path);
-        if (await dir.exists()) {
-          savePath = path;
-          break;
-        }
-      }
-
-      savePath ??= possiblePaths.first;
+      final savePath = await DownloadPathUtil.resolveSaveDirectory(
+        preferredPath: appPref.downloadPath,
+      );
       await Directory(savePath).create(recursive: true);
 
       final filePath =

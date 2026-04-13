@@ -1,7 +1,10 @@
 // ignore_for_file: deprecated_member_use
 
+import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Printer/printer_controller.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:get/get.dart';
 
 class PrinterScreen extends GetView<PrinterController> {
   const PrinterScreen({super.key});
@@ -306,10 +309,14 @@ class PrinterScreen extends GetView<PrinterController> {
             ),
             SizedBox(height: 12),
             Obx(() {
+              if (Get.isRegistered<HomeScreenController>()) {
+                Get.find<HomeScreenController>().selectedOutlet.value;
+              }
               final bill = controller.savedBillPrinterName.value;
               final kot = controller.savedKotPrinterName.value;
+              final showKot = HomeMainRoutes.outletIsCafeOrRestaurant();
               if ((bill == null || bill.isEmpty) &&
-                  (kot == null || kot.isEmpty)) {
+                  (!showKot || kot == null || kot.isEmpty)) {
                 return const SizedBox.shrink();
               }
               return Padding(
@@ -322,7 +329,7 @@ class PrinterScreen extends GetView<PrinterController> {
                         'Bill Printer: $bill',
                         style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                       ),
-                    if (kot != null && kot.isNotEmpty)
+                    if (showKot && kot != null && kot.isNotEmpty)
                       Text(
                         'KOT Printer: $kot',
                         style: TextStyle(fontSize: 12, color: Colors.grey[700]),
@@ -332,6 +339,10 @@ class PrinterScreen extends GetView<PrinterController> {
               );
             }),
             Obx(() {
+              if (Get.isRegistered<HomeScreenController>()) {
+                Get.find<HomeScreenController>().selectedOutlet.value;
+              }
+              final showKot = HomeMainRoutes.outletIsCafeOrRestaurant();
               final connected =
                   controller.printerService.isConnected.value ||
                   controller.printerService.isUsbConnected.value;
@@ -344,13 +355,15 @@ class PrinterScreen extends GetView<PrinterController> {
                       child: const Text('Set as Bill Printer'),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: controller.setCurrentAsKotPrinter,
-                      child: const Text('Set as KOT Printer'),
+                  if (showKot) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: controller.setCurrentAsKotPrinter,
+                        child: const Text('Set as KOT Printer'),
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               );
             }),

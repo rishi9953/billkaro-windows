@@ -65,95 +65,102 @@ class SignupController extends BaseController {
     Get.dialog(
       Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with close button
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Select Business Type',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.close, size: 20),
-                    onPressed: () => Get.back(),
-                    padding: EdgeInsets.zero,
-                    constraints: BoxConstraints(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Divider(),
-              const SizedBox(height: 8),
-
-              // Business type options
-              ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(Get.context!).size.height * 0.5,
+        child: Container(
+          width: MediaQuery.of(Get.context!).size.width * 0.35,
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with close button
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Select Business Type',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, size: 20),
+                      onPressed: () => Get.back(),
+                      padding: EdgeInsets.zero,
+                      constraints: BoxConstraints(),
+                    ),
+                  ],
                 ),
-                child: Obx(
-                  () => SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    child: Column(
-                      children: businessTypeOptions.map((opt) {
-                        return InkWell(
-                          onTap: () {
-                            selectedBusinessType.value = opt.value;
-                            Get.back();
-                          },
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 12,
-                            ),
-                            margin: const EdgeInsets.only(bottom: 4),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              color: selectedBusinessType.value == opt.value
-                                  ? AppColor.primary.withOpacity(0.1)
-                                  : Colors.transparent,
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  selectedBusinessType.value == opt.value
-                                      ? Icons.radio_button_checked
-                                      : Icons.radio_button_unchecked,
-                                  color: selectedBusinessType.value == opt.value
-                                      ? AppColor.primary
-                                      : Colors.grey,
-                                  size: 22,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    opt.display,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight:
-                                          selectedBusinessType.value ==
-                                              opt.value
-                                          ? FontWeight.w500
-                                          : FontWeight.w400,
+                const SizedBox(height: 8),
+                Divider(),
+                const SizedBox(height: 8),
+
+                // Business type options
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(Get.context!).size.height * 0.5,
+                  ),
+                  child: Obx(
+                    () => SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        children: businessTypeOptions.map((opt) {
+                          return InkWell(
+                            onTap: () {
+                              selectedBusinessType.value = opt.value;
+                              Get.back();
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                              margin: const EdgeInsets.only(bottom: 4),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                color: selectedBusinessType.value == opt.value
+                                    ? AppColor.primary.withOpacity(0.1)
+                                    : Colors.transparent,
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    selectedBusinessType.value == opt.value
+                                        ? Icons.radio_button_checked
+                                        : Icons.radio_button_unchecked,
+                                    color:
+                                        selectedBusinessType.value == opt.value
+                                        ? AppColor.primary
+                                        : Colors.grey,
+                                    size: 22,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      opt.display,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight:
+                                            selectedBusinessType.value ==
+                                                opt.value
+                                            ? FontWeight.w500
+                                            : FontWeight.w400,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                        );
-                      }).toList(),
+                          );
+                        }).toList(),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

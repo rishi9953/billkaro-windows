@@ -1,10 +1,35 @@
-import 'package:billkaro/app/modules/Items/item_details_screen.dart';
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_item_controller.dart';
 import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/responsive.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 import 'package:shimmer/shimmer.dart';
+
+String? _resolveItemImageUrl(String raw) {
+  final trimmed = raw.trim();
+  if (trimmed.isEmpty || trimmed.toLowerCase() == 'null') return null;
+
+  // If already absolute, just ensure it's safely encoded.
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    try {
+      return Uri.encodeFull(trimmed);
+    } catch (_) {
+      return trimmed;
+    }
+  }
+
+  // Build an absolute URL from the API base origin.
+  // baseURL example: https://65.2.81.212/api/
+  final origin = Uri.parse(baseURL).replace(path: '').toString();
+  final joined = trimmed.startsWith('/') ? '$origin$trimmed' : '$origin/$trimmed';
+  try {
+    return Uri.encodeFull(joined);
+  } catch (_) {
+    return joined;
+  }
+}
 
 class MenuItemScreen extends StatefulWidget {
   MenuItemScreen({super.key});
@@ -54,6 +79,8 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
     final loc = AppLocalizations.of(context)!;
     final isTablet = Responsive.isTablet(context);
     final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth >= 950;
+    final contentMaxWidth = isDesktop ? 1100.0 : double.infinity;
 
     return Obx(() {
       // Show loader until first fetch completes
@@ -116,29 +143,346 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
             ),
           ),
         ),
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Search Bar - Always visible
-            _buildSearchBar(loc, isTablet),
-            // Category Filter Chips
-            _buildCategoryFilters(loc, isTablet, screenWidth),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: isTablet ? 20 : 16),
-              child: Text(
-                'Note: Hold category chip to edit.',
-                style: TextStyle(color: Colors.grey[600]),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: contentMaxWidth),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (isDesktop)
+                  _buildDesktopToolbar(loc)
+                else ...[
+                  // Search Bar - Always visible
+                  _buildSearchBar(loc, isTablet),
+                  // Category Filter Chips
+                  _buildCategoryFilters(loc, isTablet, screenWidth),
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isTablet ? 20 : 16,
+                    ),
+                    child: Text(
+                      'Note: Hold category chip to edit.',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ),
+                  // Add New Item Button
+                  _buildAddButton(loc, isTablet),
+                ],
+
+                // Items
+                Expanded(
+                  child: isDesktop
+                      ? _buildDesktopContent(loc, screenWidth)
+                      : _buildItemsList(loc, isTablet, screenWidth),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildDesktopToolbar(AppLocalizations loc) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: 44,
+              child: Obx(
+                () => TextField(
+                  controller: controller.searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search dishes',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: controller.searchQuery.value.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () => controller.clearSearch(),
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: AppColor.primary,
+                        width: 2,
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                  ),
+                  onChanged: (value) =>
+                      controller.filterItemsBySearch(value.trim()),
+                ),
               ),
             ),
-            // Add New Item Button
-            _buildAddButton(loc, isTablet),
+          ),
+          const SizedBox(width: 12),
+          SizedBox(
+            height: 44,
+            child: ElevatedButton.icon(
+              onPressed: () => Modular.to.pushNamed(
+                HomeMainRoutes.addItem,
+                arguments: {'isEdit': false},
+              ),
+              icon: const Icon(Icons.add),
+              label: const Text('Add item'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColor.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-            // Items List
-            Expanded(child: _buildItemsList(loc, isTablet, screenWidth)),
+  Widget _buildDesktopContent(AppLocalizations loc, double screenWidth) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 260, child: _buildDesktopCategories(loc)),
+          const SizedBox(width: 16),
+          Expanded(child: _buildItemsGrid(loc, screenWidth)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopCategories(AppLocalizations loc) {
+    return Obx(() {
+      final categoriesList = controller.categories;
+      final selectedId = controller.selectedCategoryId.value;
+      final selectedCategory = (selectedId == null || selectedId == 'none')
+          ? null
+          : categoriesList
+                .where(
+                  (c) =>
+                      c.categoryName.toLowerCase() == selectedId.toLowerCase(),
+                )
+                .firstOrNull;
+
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Categories',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.grey.shade800,
+                  ),
+                ),
+                const Spacer(),
+                Tooltip(
+                  message: selectedCategory == null
+                      ? 'Select a category to edit'
+                      : 'Edit selected category',
+                  child: IconButton(
+                    onPressed: selectedCategory == null
+                        ? null
+                        : () {
+                            final appPref = Get.find<AppPref>();
+                            if (!hasTrialOrSubscription(appPref)) {
+                              checkSubscription();
+                              return;
+                            }
+                            Modular.to.pushNamed(
+                              HomeMainRoutes.category,
+                              arguments: {
+                                'screen': 'item',
+                                'isEdit': true,
+                                'category': selectedCategory,
+                              },
+                            );
+                          },
+                    icon: const Icon(Icons.edit_outlined),
+                    iconSize: 18,
+                    visualDensity: VisualDensity.compact,
+                    splashRadius: 18,
+                    color: AppColor.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  final appPref = Get.find<AppPref>();
+                  if (!hasTrialOrSubscription(appPref)) {
+                    checkSubscription();
+                    return;
+                  }
+                  Modular.to.pushNamed(
+                    HomeMainRoutes.category,
+                    arguments: {'screen': 'item', 'isEdit': false},
+                  );
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('Add category'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColor.primary,
+                  side: BorderSide(color: AppColor.primary),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: Scrollbar(
+                thumbVisibility: true,
+                child: ListView(
+                  children: [
+                    _DesktopCategoryTile(
+                      title: loc.all,
+                      selected: selectedId == 'none',
+                      onTap: () => controller.selectCategory('none'),
+                    ),
+                    const SizedBox(height: 6),
+                    ...categoriesList.map((category) {
+                      final id = category.categoryName.toLowerCase();
+                      final isSelected = selectedId == id;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: _DesktopCategoryTile(
+                          title:
+                              category.categoryName.capitalize ??
+                              category.categoryName,
+                          selected: isSelected,
+                          onTap: () => controller.selectCategory(id),
+                          onLongPress: () {
+                            final appPref = Get.find<AppPref>();
+                            if (!hasTrialOrSubscription(appPref)) {
+                              checkSubscription();
+                              return;
+                            }
+                            Modular.to.pushNamed(
+                              HomeMainRoutes.category,
+                              arguments: {
+                                'screen': 'item',
+                                'isEdit': true,
+                                'category': category,
+                              },
+                            );
+                          },
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Tip: Right-click / long-press a category to edit.',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
           ],
         ),
       );
     });
+  }
+
+  Widget _buildItemsGrid(AppLocalizations loc, double screenWidth) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
+        // Keep tiles wide enough so row contents (image + text + switch) never overflow.
+        final int computedColumns = (availableWidth / 360).floor().clamp(1, 4);
+
+        return Obx(() {
+          final displayItems = controller.items;
+          final searchQuery = controller.searchQuery.value;
+
+          if (displayItems.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.inventory_2_outlined,
+                    size: 72,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No items found',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    searchQuery.isNotEmpty
+                        ? 'Try a different search term'
+                        : 'Add items to this category',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return Scrollbar(
+            thumbVisibility: true,
+            child: RefreshIndicator(
+              onRefresh: () => controller.getItems(forceApiRefresh: true),
+              child: GridView.builder(
+                controller: scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: computedColumns,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  // Slightly wider tiles than before to avoid any edge-case overflow.
+                  childAspectRatio: 3.0,
+                ),
+                itemCount: displayItems.length + 1,
+                itemBuilder: (context, index) {
+                  if (index == displayItems.length) {
+                    return _buildBottomLoader(false);
+                  }
+                  final item = displayItems[index];
+                  return _ItemCard(item: item, isTablet: true);
+                },
+              ),
+            ),
+          );
+        });
+      },
+    );
   }
 
   // ---------------- SEARCH BAR ----------------
@@ -234,10 +578,14 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                   checkSubscription();
                   return;
                 }
-                Get.toNamed(
-                  AppRoute.addCategory,
-                  arguments: {'screen': 'item'},
+                Modular.to.pushNamed(
+                  HomeMainRoutes.category,
+                  arguments: {'screen': 'item', 'isEdit': false},
                 );
+                // Get.toNamed(
+                //   AppRoute.addCategory,
+                //   arguments: {'screen': 'item'},
+                // );
               },
               isTablet: isTablet,
             ),
@@ -311,7 +659,10 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => Get.toNamed(AppRoute.addMenuItem),
+          onTap: () => Modular.to.pushNamed(
+            HomeMainRoutes.addItem,
+            arguments: {'isEdit': false},
+          ),
           borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
           child: Container(
             width: double.infinity,
@@ -471,6 +822,76 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
   }
 }
 
+class _DesktopCategoryTile extends StatelessWidget {
+  const _DesktopCategoryTile({
+    required this.title,
+    required this.selected,
+    required this.onTap,
+    this.onLongPress,
+  });
+
+  final String title;
+  final bool selected;
+  final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppColor.primary.withOpacity(0.10)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: selected
+                  ? AppColor.primary.withOpacity(0.35)
+                  : Colors.grey.shade200,
+            ),
+          ),
+          child: Row(
+            children: [
+              if (selected)
+                Icon(
+                  Icons.check_circle,
+                  size: 16,
+                  color: AppColor.primary,
+                )
+              else
+                Icon(
+                  Icons.circle_outlined,
+                  size: 16,
+                  color: Colors.grey.shade500,
+                ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                    color: selected ? AppColor.primary : Colors.grey.shade800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // =====================================================
 // ===================== CATEGORY CHIP =====================
 // =====================================================
@@ -602,13 +1023,14 @@ class _ItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<MenuItemController>();
+    final imageUrl = _resolveItemImageUrl(item.itemImage);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => Get.toNamed(
-          AppRoute.addMenuItem,
-          arguments: {'isEdit': true, 'item': item},
+        onTap: () => Modular.to.pushNamed(
+          HomeMainRoutes.addItem,
+          arguments: {'item': item, 'isEdit': true},
         ),
         borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
         child: Container(
@@ -637,24 +1059,25 @@ class _ItemCard extends StatelessWidget {
                     width: isTablet ? 80 : 70,
                     height: isTablet ? 80 : 70,
                     color: Colors.grey[200],
-                    child: item.itemImage.isNotEmpty
+                    child: imageUrl != null
                         ? CachedNetworkImage(
-                            imageUrl: item.itemImage,
+                            imageUrl: imageUrl,
                             fit: BoxFit.cover,
+                            memCacheWidth: (isTablet ? 160 : 140),
+                            memCacheHeight: (isTablet ? 160 : 140),
+                            fadeInDuration: const Duration(milliseconds: 150),
                             placeholder: (context, url) => Shimmer.fromColors(
                               baseColor: Colors.grey[300]!,
                               highlightColor: Colors.grey[100]!,
-                              child: Icon(
-                                Icons.image,
-                                size: isTablet ? 32 : 28,
-                                color: Colors.grey[400],
-                              ),
+                              child: Container(color: Colors.grey[300]),
                             ),
                             errorWidget: (context, url, error) => Container(
+                              color: Colors.grey[200],
+                              alignment: Alignment.center,
                               child: Icon(
-                                Icons.image,
+                                Icons.image_not_supported_outlined,
                                 size: isTablet ? 32 : 28,
-                                color: Colors.grey[400],
+                                color: Colors.grey[500],
                               ),
                             ),
                           )
@@ -662,9 +1085,9 @@ class _ItemCard extends StatelessWidget {
                             color: Colors.grey[200],
                             alignment: Alignment.center,
                             child: Icon(
-                              Icons.image,
+                              Icons.image_outlined,
                               size: isTablet ? 32 : 28,
-                              color: Colors.grey[400],
+                              color: Colors.grey[500],
                             ),
                           ),
                   ),
@@ -706,21 +1129,64 @@ class _ItemCard extends StatelessWidget {
 
                 SizedBox(width: isTablet ? 12 : 8),
 
-                // Toggle Switch - Orange, centered vertically
+                // Actions (Edit menu) + Availability toggle
                 SizedBox(
+                  width: isTablet ? 72 : 64,
                   height: isTablet ? 80 : 70, // Match image height
-                  child: Center(
-                    child: Obx(() {
-                      final isAvailable = controller.isItemAvailable(item.id);
-                      return Switch(
-                        value: isAvailable,
-                        onChanged: (value) {
-                          controller.toggleItemAvailability(item.id);
-                        },
-                        activeColor: AppColor.primary.withOpacity(0.9),
-                        activeTrackColor: AppColor.primary.withOpacity(0.2),
-                      );
-                    }),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      SizedBox(
+                        height: isTablet ? 34 : 30,
+                        width: isTablet ? 40 : 36,
+                        child: PopupMenuButton<String>(
+                          tooltip: 'More',
+                          padding: EdgeInsets.zero,
+                          iconSize: isTablet ? 22 : 20,
+                          icon: Icon(
+                            Icons.more_vert,
+                            color: Colors.grey.shade700,
+                          ),
+                          onSelected: (value) {
+                            if (value == 'edit') {
+                              Modular.to.pushNamed(
+                                HomeMainRoutes.addItem,
+                                arguments: {'item': item, 'isEdit': true},
+                              );
+                            }
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(
+                              value: 'edit',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit_outlined, size: 18),
+                                  SizedBox(width: 10),
+                                  Text('Edit'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Obx(() {
+                          final isAvailable = controller.isItemAvailable(item.id);
+                          return Switch(
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            value: isAvailable,
+                            onChanged: (value) {
+                              controller.toggleItemAvailability(item.id);
+                            },
+                            activeColor: AppColor.primary.withOpacity(0.9),
+                            activeTrackColor: AppColor.primary.withOpacity(0.2),
+                          );
+                        }),
+                      ),
+                    ],
                   ),
                 ),
               ],

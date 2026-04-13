@@ -9,9 +9,13 @@ abstract class AppColor {
   static const black87 = Colors.black87;
   static const transparent = Color(0x00000000);
 
-  static const primary = Color(0xff083c6b);
+  static Color primary = const Color(0xFF0F172A);
   static const secondaryPrimary = Color(0xffef8819);
   static const lightgreen = Color(0xFF00BF6F);
   static const backGroundColor = Color(0xFFE8EEF7);
   static const grey = Colors.grey;
+
+  static void updatePrimary(Color color) {
+    primary = color;
+  }
 }

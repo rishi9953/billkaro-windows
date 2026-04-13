@@ -150,7 +150,7 @@ class QuickAddItemBottomSheet extends StatelessWidget {
       hintStyle: TextStyle(color: Colors.grey[400]),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColor.primary, width: 2),
+        borderSide: BorderSide(color: AppColor.primary, width: 2),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -158,7 +158,7 @@ class QuickAddItemBottomSheet extends StatelessWidget {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColor.primary, width: 2),
+        borderSide: BorderSide(color: AppColor.primary, width: 2),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     );

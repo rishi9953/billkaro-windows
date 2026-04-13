@@ -1,13 +1,17 @@
 import 'dart:async';
 import 'package:billkaro/app/Database/app_database.dart';
 import 'package:billkaro/app/modules/Home/Widgets/outlet_bottomsheet.dart';
+import 'package:billkaro/app/services/outlet_scope_refresh.dart';
 import 'package:billkaro/app/modules/Home/payment_controller.dart';
 import 'package:billkaro/app/services/Modals/login_response.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/PrinterService2/printer_service2.dart';
 import 'package:billkaro/app/modules/AddOrder/add_order_controller.dart';
+import 'package:billkaro/app/modules/Theme/theme_controller.dart';
 import 'package:billkaro/app/modules/OrderPrefrences/order_prefrences_controller.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/date_util.dart';
+import 'package:billkaro/utils/app_snackbar.dart';
 
 // Chart period filter enum (must be top-level)
 enum ChartPeriod { weekly, monthly, quarterly, yearly }
@@ -21,6 +25,7 @@ class HomeScreenController extends BaseController {
   final RxList<OrderModel> allOrders = <OrderModel>[].obs;
   final RxList<OrderModel> ordersL = <OrderModel>[].obs;
   final printerservice2 = PrinterService2.to;
+  final Map<String, String> _itemImageById = <String, String>{};
 
   // Chart period filter
   final Rx<ChartPeriod> selectedChartPeriod = ChartPeriod.weekly.obs;
@@ -33,6 +38,7 @@ class HomeScreenController extends BaseController {
 
   /// Category-wise sales for today (based on order items: quantity * salePrice)
   final RxList<CategorySales> todayCategorySales = <CategorySales>[].obs;
+  final RxList<TopSellingItem> topSellingItems = <TopSellingItem>[].obs;
 
   // Add this observable for selected outlet
   final Rx<OutletData?> selectedOutlet = Rx<OutletData?>(null);
@@ -204,6 +210,7 @@ class HomeScreenController extends BaseController {
       /// ===============================
       /// 📊 COMMON CALCULATIONS
       /// ===============================
+      await _loadItemImageMap(outletId);
       _calculateSalesData();
       _calculateChartSalesData();
 
@@ -220,8 +227,7 @@ class HomeScreenController extends BaseController {
   }
 
   void _calculateSalesData() {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+    final today = todayIstDateOnly();
     final yesterday = today.subtract(const Duration(days: 1));
 
     double todaySalesTotal = 0.0;
@@ -230,23 +236,53 @@ class HomeScreenController extends BaseController {
     int yesterdayOrdersCount = 0;
 
     final Map<String, CategorySales> todayByCategory = {};
+    final Map<String, TopSellingItem> allTimeByItem = {};
 
     for (var order in allOrders) {
-      DateTime? orderDate;
-
+      late final DateTime orderDateOnly;
       try {
-        orderDate = DateTime.parse(order.createdAt.toString());
+        orderDateOnly = orderCreatedAtToIstDateOnly(order.createdAt.toString());
       } catch (e) {
         debugPrint('Error parsing date for order: $e');
         continue;
       }
-
-      final orderDateOnly = DateTime(
-        orderDate.year,
-        orderDate.month,
-        orderDate.day,
-      );
       final orderTotal = order.totalAmount;
+
+      for (final item in order.items) {
+        final itemName = item.itemName.trim().isEmpty
+            ? 'Unnamed Item'
+            : item.itemName.trim();
+        final amount = item.salePrice * item.quantity;
+        final itemKey = item.itemId.trim().isEmpty ? itemName : item.itemId;
+        final imageUrl = _itemImageById[item.itemId] ?? '';
+        final category = item.category.trim().isEmpty
+            ? 'Uncategorized'
+            : item.category.trim();
+        final existingItem = allTimeByItem[itemKey];
+        if (existingItem == null) {
+          allTimeByItem[itemKey] = TopSellingItem(
+            itemId: item.itemId,
+            name: itemName,
+            category: category,
+            imageUrl: imageUrl,
+            quantity: item.quantity,
+            amount: amount,
+          );
+        } else {
+          allTimeByItem[itemKey] = TopSellingItem(
+            itemId: existingItem.itemId,
+            name: existingItem.name,
+            category: existingItem.category.isEmpty
+                ? category
+                : existingItem.category,
+            imageUrl: existingItem.imageUrl.isEmpty
+                ? imageUrl
+                : existingItem.imageUrl,
+            quantity: existingItem.quantity + item.quantity,
+            amount: existingItem.amount + amount,
+          );
+        }
+      }
 
       if (orderDateOnly == today) {
         todaySalesTotal += orderTotal;
@@ -289,6 +325,14 @@ class HomeScreenController extends BaseController {
       ..sort((a, b) => b.amount.compareTo(a.amount));
     todayCategorySales.value = sorted;
 
+    final sortedItems = allTimeByItem.values.toList()
+      ..sort((a, b) {
+        final quantityCompare = b.quantity.compareTo(a.quantity);
+        if (quantityCompare != 0) return quantityCompare;
+        return b.amount.compareTo(a.amount);
+      });
+    topSellingItems.value = sortedItems;
+
     debugPrint('📊 Today: ₹$todaySalesTotal ($todayOrdersCount orders)');
     debugPrint(
       '📊 Yesterday: ₹$yesterdaySalesTotal ($yesterdayOrdersCount orders)',
@@ -313,8 +357,7 @@ class HomeScreenController extends BaseController {
   }
 
   void _calculateWeeklySalesData() {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+    final today = todayIstDateOnly();
 
     // Initialize weekly sales array (last 7 days)
     List<double> weeklySales = List.filled(7, 0.0);
@@ -329,18 +372,12 @@ class HomeScreenController extends BaseController {
 
     // Calculate sales for each of the last 7 days
     for (var order in allOrders) {
-      DateTime? orderDate;
+      late final DateTime orderDateOnly;
       try {
-        orderDate = DateTime.parse(order.createdAt.toString());
+        orderDateOnly = orderCreatedAtToIstDateOnly(order.createdAt.toString());
       } catch (e) {
         continue;
       }
-
-      final orderDateOnly = DateTime(
-        orderDate.year,
-        orderDate.month,
-        orderDate.day,
-      );
       final daysDifference = today.difference(orderDateOnly).inDays;
 
       if (daysDifference >= 0 && daysDifference < 7) {
@@ -354,7 +391,7 @@ class HomeScreenController extends BaseController {
   }
 
   void _calculateMonthlySalesData() {
-    final now = DateTime.now();
+    final ist = todayIstDateOnly();
 
     // Last 12 months
     List<double> monthlySales = List.filled(12, 0.0);
@@ -377,7 +414,7 @@ class HomeScreenController extends BaseController {
     ];
 
     for (int i = 11; i >= 0; i--) {
-      final date = DateTime(now.year, now.month - i, 1);
+      final date = DateTime(ist.year, ist.month - i, 1);
       if (date.month <= 0) {
         labels.add(monthNames[date.month + 12 - 1]);
       } else {
@@ -386,15 +423,15 @@ class HomeScreenController extends BaseController {
     }
 
     for (var order in allOrders) {
-      DateTime? orderDate;
+      late final DateTime orderIst;
       try {
-        orderDate = DateTime.parse(order.createdAt.toString());
+        orderIst = orderCreatedAtToIstDateOnly(order.createdAt.toString());
       } catch (e) {
         continue;
       }
 
       final monthsAgo =
-          (now.year - orderDate.year) * 12 + (now.month - orderDate.month);
+          (ist.year - orderIst.year) * 12 + (ist.month - orderIst.month);
 
       if (monthsAgo >= 0 && monthsAgo < 12) {
         monthlySales[11 - monthsAgo] += order.totalAmount;
@@ -406,7 +443,7 @@ class HomeScreenController extends BaseController {
   }
 
   void _calculateQuarterlySalesData() {
-    final now = DateTime.now();
+    final ist = todayIstDateOnly();
 
     // Last 4 quarters
     List<double> quarterlySales = List.filled(4, 0.0);
@@ -414,23 +451,23 @@ class HomeScreenController extends BaseController {
 
     // Generate quarter labels
     for (int i = 3; i >= 0; i--) {
-      final quarterDate = DateTime(now.year, now.month - (i * 3), 1);
+      final quarterDate = DateTime(ist.year, ist.month - (i * 3), 1);
       final quarter = ((quarterDate.month - 1) ~/ 3) + 1;
       labels.add('Q$quarter ${quarterDate.year.toString().substring(2)}');
     }
 
     for (var order in allOrders) {
-      DateTime? orderDate;
+      late final DateTime orderIst;
       try {
-        orderDate = DateTime.parse(order.createdAt.toString());
+        orderIst = orderCreatedAtToIstDateOnly(order.createdAt.toString());
       } catch (e) {
         continue;
       }
 
-      final orderQuarter = ((orderDate.month - 1) ~/ 3) + 1;
-      final orderYear = orderDate.year;
-      final currentQuarter = ((now.month - 1) ~/ 3) + 1;
-      final currentYear = now.year;
+      final orderQuarter = ((orderIst.month - 1) ~/ 3) + 1;
+      final orderYear = orderIst.year;
+      final currentQuarter = ((ist.month - 1) ~/ 3) + 1;
+      final currentYear = ist.year;
 
       int quartersAgo =
           (currentYear - orderYear) * 4 + (currentQuarter - orderQuarter);
@@ -445,7 +482,7 @@ class HomeScreenController extends BaseController {
   }
 
   void _calculateYearlySalesData() {
-    final now = DateTime.now();
+    final ist = todayIstDateOnly();
 
     // Last 5 years
     List<double> yearlySales = List.filled(5, 0.0);
@@ -453,19 +490,19 @@ class HomeScreenController extends BaseController {
 
     // Generate year labels
     for (int i = 4; i >= 0; i--) {
-      final year = now.year - i;
+      final year = ist.year - i;
       labels.add(year.toString());
     }
 
     for (var order in allOrders) {
-      DateTime? orderDate;
+      late final DateTime orderIst;
       try {
-        orderDate = DateTime.parse(order.createdAt.toString());
+        orderIst = orderCreatedAtToIstDateOnly(order.createdAt.toString());
       } catch (e) {
         continue;
       }
 
-      final yearsAgo = now.year - orderDate.year;
+      final yearsAgo = ist.year - orderIst.year;
 
       if (yearsAgo >= 0 && yearsAgo < 5) {
         yearlySales[4 - yearsAgo] += order.totalAmount;
@@ -481,8 +518,26 @@ class HomeScreenController extends BaseController {
     _calculateChartSalesData();
   }
 
+  Future<void> _loadItemImageMap(String outletId) async {
+    try {
+      final db = AppDatabase();
+      final items = await db.getItems(outletId: outletId);
+      _itemImageById.clear();
+      for (final item in items) {
+        final id = item.id.trim();
+        final image = item.itemImage.trim();
+        if (id.isNotEmpty && image.isNotEmpty) {
+          _itemImageById[id] = image;
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to load item image map: $e');
+      _itemImageById.clear();
+    }
+  }
+
   /// Select an outlet
-  void selectOutlet(OutletData outlet) {
+  void selectOutlet(OutletData outlet, {bool closeSheet = true}) {
     final previousOutlet = appPref.selectedOutlet;
 
     appPref.selectedOutlet = outlet;
@@ -493,27 +548,36 @@ class HomeScreenController extends BaseController {
     if (previousOutlet?.id != outlet.id) {
       onOutletChanged();
     }
-    Get.back();
+    if (closeSheet) {
+      Get.back();
+    }
   }
 
   /// Called when outlet changes - reload all outlet-specific data
   void onOutletChanged() {
-    // debugPrint('🔄 Outlet changed, reloading data...');
+    // Stay on current route; restarting home route here re-creates ModularApp
+    // and can trigger "Module ... is already started" exceptions.
+    allOrders.clear();
+    todaySales.value = 0.0;
+    yesterdaySales.value = 0.0;
+    todayOrders.value = 0;
+    yesterdayOrders.value = 0;
+    chartSalesData.value = List.filled(7, 0.0);
+    todayCategorySales.clear();
+    topSellingItems.clear();
+    _hasLoadedFromApi = false;
 
-    // // Reset data
-    // allOrders.clear();
-    // todaySales.value = 0.0;
-    // yesterdaySales.value = 0.0;
-    // todayOrders.value = 0;
-    // yesterdayOrders.value = 0;
-    // weeklySalesData.value = List.filled(7, 0.0);
-
-    // // Reload orders for new outlet
-    // getOrderList();
-
-    Get.offAllNamed(AppRoute.homeMain);
-
+    getOrderList(forceApiRefresh: true);
     update(); // Update GetBuilder widgets
+
+    // Other shell routes keep their GetX controllers alive — refresh cached outlet data.
+    // AddOrder reload runs here (not in outlet_scope_refresh) to avoid an import cycle with add_order_controller.
+    unawaited(() async {
+      await refreshOutletScopedControllers();
+      if (Get.isRegistered<AddOrderController>()) {
+        await Get.find<AddOrderController>().reloadForOutletChange();
+      }
+    }());
   }
 
   /// Refresh outlets from server
@@ -567,14 +631,15 @@ class HomeScreenController extends BaseController {
       final db = AppDatabase();
       await db.clearAllData(); // Clear all database data
       await appPref.clearAllData(); // Clear all SharedPreferences data
+      await ThemeController.resetAfterLogout();
 
       // hideLoading();
 
       Get.offAllNamed(AppRoute.login); // Navigate to login screen
 
-      Get.snackbar(
-        'Logged Out',
-        'You have been successfully logged out',
+      AppSnackbar.show(
+        title: 'Logged Out',
+        message: 'You have been successfully logged out',
         snackPosition: SnackPosition.BOTTOM,
         duration: Duration(seconds: 2),
       );
@@ -610,5 +675,23 @@ class CategorySales {
     required this.category,
     required this.amount,
     required this.quantity,
+  });
+}
+
+class TopSellingItem {
+  final String itemId;
+  final String name;
+  final String category;
+  final String imageUrl;
+  final int quantity;
+  final double amount;
+
+  const TopSellingItem({
+    required this.itemId,
+    required this.name,
+    required this.category,
+    required this.imageUrl,
+    required this.quantity,
+    required this.amount,
   });
 }

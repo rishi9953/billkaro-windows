@@ -19,6 +19,8 @@ Map<String, dynamic> _$LoginResponseToJson(LoginResponse instance) =>
     };
 
 User _$UserFromJson(Map<String, dynamic> json) => User(
+  createdAt: _readOutletCreatedAt(json, 'createdAt') as String?,
+  updatedAt: _readOutletUpdatedAt(json, 'updatedAt') as String?,
   id: json['id'] as String?,
   brandName: json['brandName'] as String?,
   email: json['email'] as String?,
@@ -31,13 +33,15 @@ User _$UserFromJson(Map<String, dynamic> json) => User(
   lastName: json['lastName'] as String?,
   title: json['title'] as String?,
   mobile: json['mobile'] as String?,
-  isTrial: json['isTrial'] as bool?,
+  isTrial: _readUserIsTrial(json, 'isTrial') as bool?,
   outletData: (json['outletData'] as List<dynamic>?)
       ?.map((e) => OutletData.fromJson(e as Map<String, dynamic>))
       .toList(),
 );
 
 Map<String, dynamic> _$UserToJson(User instance) => <String, dynamic>{
+  'createdAt': instance.createdAt,
+  'updatedAt': instance.updatedAt,
   'id': instance.id,
   'brandName': instance.brandName,
   'email': instance.email,
@@ -51,7 +55,7 @@ Map<String, dynamic> _$UserToJson(User instance) => <String, dynamic>{
   'title': instance.title,
   'mobile': instance.mobile,
   'isTrial': instance.isTrial,
-  'outletData': instance.outletData,
+  'outletData': instance.outletData?.map((e) => e.toJson()).toList(),
 };
 
 OutletData _$OutletDataFromJson(Map<String, dynamic> json) =>
@@ -70,8 +74,8 @@ OutletData _$OutletDataFromJson(Map<String, dynamic> json) =>
         fssaiNumber: json['fssaiNumber'] as String?,
         outletAge: json['outletAge'] as String?,
         logo: json['logo'] as String?,
-        createdAt: json['createdAt'] as String?,
-        updatedAt: json['updatedAt'] as String?,
+        createdAt: _readOutletCreatedAt(json, 'createdAt') as String?,
+        updatedAt: _readOutletUpdatedAt(json, 'updatedAt') as String?,
         phoneNumber: json['phoneNumber'] as String?,
         seatingCapacity: json['seatingCapacity'] as String?,
         billNumber: (json['billNumber'] as num?)?.toInt(),
@@ -101,7 +105,7 @@ Map<String, dynamic> _$OutletDataToJson(OutletData instance) =>
       'phoneNumber': instance.phoneNumber,
       'seatingCapacity': instance.seatingCapacity,
       'billNumber': instance.billNumber,
-      'subscriptions': instance.subscriptions,
+      'subscriptions': instance.subscriptions?.map((e) => e.toJson()).toList(),
     };
 
 OutletSubscription _$OutletSubscriptionFromJson(Map<String, dynamic> json) =>
@@ -123,7 +127,7 @@ Map<String, dynamic> _$OutletSubscriptionToJson(OutletSubscription instance) =>
       'startDate': instance.startDate,
       'endDate': instance.endDate,
       'paymentId': instance.paymentId,
-      'subscription': instance.subscription,
+      'subscription': instance.subscription?.toJson(),
     };
 
 SubscriptionPlan _$SubscriptionPlanFromJson(Map<String, dynamic> json) =>

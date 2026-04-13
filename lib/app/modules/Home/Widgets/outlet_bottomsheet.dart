@@ -1,7 +1,9 @@
 // outlet_bottomsheet.dart
 
+import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/Widgets/logout_dialog.dart';
 import 'package:billkaro/config/config.dart';
@@ -18,6 +20,9 @@ class _OutletBottomSheetState extends State<OutletBottomSheet> {
   final TextEditingController _searchCtrl = TextEditingController();
 
   static const double _radius = 18;
+  /// Approximate height of header + search so the list can cap its height and
+  /// avoid a tall empty strip below the footer (logout) when there are few outlets.
+  static const double _headerSearchHeightEstimate = 208;
 
   @override
   void dispose() {
@@ -27,6 +32,8 @@ class _OutletBottomSheetState extends State<OutletBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isWindowsUi =
+        !kIsWeb && Theme.of(context).platform == TargetPlatform.windows;
     final authLabel =
         controller.appPref.user?.mobile ??
         controller.appPref.user?.email ??
@@ -35,9 +42,9 @@ class _OutletBottomSheetState extends State<OutletBottomSheet> {
     return DraggableScrollableSheet(
       // Don't force the sheet to fill the available height when content is short.
       expand: false,
-      initialChildSize: 0.66,
-      minChildSize: 0.40,
-      maxChildSize: 0.90,
+      initialChildSize: isWindowsUi ? 0.82 : 0.66,
+      minChildSize: isWindowsUi ? 0.55 : 0.40,
+      maxChildSize: isWindowsUi ? 0.95 : 0.90,
       builder: (context, scrollController) {
         return ClipRRect(
           borderRadius: const BorderRadius.only(
@@ -48,54 +55,101 @@ class _OutletBottomSheetState extends State<OutletBottomSheet> {
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.92),
+                color: isWindowsUi
+                    ? const Color(0xFFF8F9FB)
+                    : Colors.white.withOpacity(0.92),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(_radius),
                   topRight: Radius.circular(_radius),
                 ),
-                border: Border.all(color: Colors.white.withOpacity(0.35)),
+                border: Border.all(
+                  color: isWindowsUi
+                      ? Colors.black.withOpacity(0.08)
+                      : Colors.white.withOpacity(0.35),
+                ),
               ),
               child: SafeArea(
                 top: false,
-                child: Column(
-                  children: [
+                bottom: false,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final maxH = constraints.maxHeight.isFinite
+                        ? constraints.maxHeight
+                        : MediaQuery.sizeOf(context).height *
+                            (isWindowsUi ? 0.82 : 0.66);
+                    final maxListHeight = math.max(
+                      120.0,
+                      maxH - _headerSearchHeightEstimate,
+                    );
+
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                     // Header
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(16, 12, 10, 14),
+                      padding: EdgeInsets.fromLTRB(
+                        isWindowsUi ? 18 : 16,
+                        isWindowsUi ? 10 : 12,
+                        10,
+                        isWindowsUi ? 12 : 14,
+                      ),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [AppColor.primary, AppColor.secondaryPrimary],
-                        ),
+                        color: isWindowsUi ? Colors.white : null,
+                        gradient: isWindowsUi
+                            ? null
+                            : LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  AppColor.primary,
+                                  AppColor.secondaryPrimary,
+                                ],
+                              ),
+                        border: isWindowsUi
+                            ? Border(
+                                bottom: BorderSide(
+                                  color: Colors.black.withOpacity(0.08),
+                                ),
+                              )
+                            : null,
                       ),
                       child: Column(
                         children: [
-                          Container(
-                            width: 42,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.55),
-                              borderRadius: BorderRadius.circular(999),
+                          if (!isWindowsUi) ...[
+                            Container(
+                              width: 42,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.55),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 10),
+                            const SizedBox(height: 10),
+                          ],
                           Row(
                             children: [
                               Container(
                                 width: 40,
                                 height: 40,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.18),
-                                  borderRadius: BorderRadius.circular(14),
+                                  color: isWindowsUi
+                                      ? AppColor.primary.withOpacity(0.10)
+                                      : Colors.white.withOpacity(0.18),
+                                  borderRadius: BorderRadius.circular(
+                                    isWindowsUi ? 10 : 14,
+                                  ),
                                   border: Border.all(
-                                    color: Colors.white.withOpacity(0.22),
+                                    color: isWindowsUi
+                                        ? AppColor.primary.withOpacity(0.18)
+                                        : Colors.white.withOpacity(0.22),
                                   ),
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.storefront,
-                                  color: Colors.white,
+                                  color: isWindowsUi
+                                      ? AppColor.primary
+                                      : Colors.white,
                                   size: 20,
                                 ),
                               ),
@@ -104,12 +158,14 @@ class _OutletBottomSheetState extends State<OutletBottomSheet> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
+                                    Text(
                                       'Select Outlet',
                                       style: TextStyle(
                                         fontSize: 18,
-                                        fontWeight: FontWeight.w900,
-                                        color: Colors.white,
+                                        fontWeight: FontWeight.w800,
+                                        color: isWindowsUi
+                                            ? Colors.black87
+                                            : Colors.white,
                                         height: 1.1,
                                       ),
                                     ),
@@ -121,7 +177,9 @@ class _OutletBottomSheetState extends State<OutletBottomSheet> {
                                       style: TextStyle(
                                         fontSize: 12.5,
                                         fontWeight: FontWeight.w600,
-                                        color: Colors.white.withOpacity(0.85),
+                                        color: isWindowsUi
+                                            ? Colors.grey.shade700
+                                            : Colors.white.withOpacity(0.85),
                                       ),
                                     ),
                                   ],
@@ -129,19 +187,23 @@ class _OutletBottomSheetState extends State<OutletBottomSheet> {
                               ),
                               IconButton(
                                 tooltip: 'Refresh',
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.refresh,
-                                  color: Colors.white,
+                                  color: isWindowsUi
+                                      ? Colors.black87
+                                      : Colors.white,
                                 ),
                                 onPressed: controller.refreshOutlets,
                               ),
                               IconButton(
                                 tooltip: 'Close',
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.close,
-                                  color: Colors.white,
+                                  color: isWindowsUi
+                                      ? Colors.black87
+                                      : Colors.white,
                                 ),
-                                onPressed: () => Get.back(),
+                                onPressed: () => Navigator.of(context).pop(),
                               ),
                             ],
                           ),
@@ -155,20 +217,29 @@ class _OutletBottomSheetState extends State<OutletBottomSheet> {
                       child: Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.06),
-                              blurRadius: 14,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
+                          borderRadius: BorderRadius.circular(
+                            isWindowsUi ? 10 : 16,
+                          ),
+                          border: isWindowsUi
+                              ? Border.all(
+                                  color: Colors.black.withOpacity(0.10),
+                                )
+                              : null,
+                          boxShadow: isWindowsUi
+                              ? null
+                              : [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.06),
+                                    blurRadius: 14,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
                         ),
                         child: TextField(
                           controller: _searchCtrl,
                           onChanged: (_) => setState(() {}),
                           decoration: InputDecoration(
-                            hintText: 'Search outlets…',
+                            hintText: 'Search outlets...',
                             prefixIcon: const Icon(Icons.search),
                             suffixIcon: _searchCtrl.text.isEmpty
                                 ? null
@@ -186,7 +257,9 @@ class _OutletBottomSheetState extends State<OutletBottomSheet> {
                               vertical: 12,
                             ),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(
+                                isWindowsUi ? 10 : 16,
+                              ),
                               borderSide: BorderSide.none,
                             ),
                           ),
@@ -194,8 +267,9 @@ class _OutletBottomSheetState extends State<OutletBottomSheet> {
                       ),
                     ),
 
-                    // List
-                    Expanded(
+                    // List (shrink-wraps when content is short so no huge gap below Logout)
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: maxListHeight),
                       child: Obx(() {
                         final outlets = controller.appPref.allOutlets;
                         final selectedOutlet = controller.selectedOutlet.value;
@@ -213,7 +287,8 @@ class _OutletBottomSheetState extends State<OutletBottomSheet> {
                         if (outlets.isEmpty) {
                           return ListView(
                             controller: scrollController,
-                            padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+                            shrinkWrap: true,
+                            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
                             children: [
                               const SizedBox(height: 12),
                               Container(
@@ -255,7 +330,10 @@ class _OutletBottomSheetState extends State<OutletBottomSheet> {
                                 ),
                               ),
                               const SizedBox(height: 14),
-                              _OutletSheetActions(parentContext: context),
+                              _OutletSheetActions(
+                                parentContext: context,
+                                isWindowsUi: isWindowsUi,
+                              ),
                             ],
                           );
                         }
@@ -263,7 +341,8 @@ class _OutletBottomSheetState extends State<OutletBottomSheet> {
                         if (filtered.isEmpty) {
                           return ListView(
                             controller: scrollController,
-                            padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+                            shrinkWrap: true,
+                            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
                             children: [
                               const SizedBox(height: 12),
                               Container(
@@ -304,16 +383,22 @@ class _OutletBottomSheetState extends State<OutletBottomSheet> {
                                 ),
                               ),
                               const SizedBox(height: 14),
-                              _OutletSheetActions(parentContext: context),
+                              _OutletSheetActions(
+                                parentContext: context,
+                                isWindowsUi: isWindowsUi,
+                              ),
                             ],
                           );
                         }
 
                         return ListView.builder(
                           controller: scrollController,
-                          physics: BouncingScrollPhysics(),
+                          shrinkWrap: true,
+                          physics: isWindowsUi
+                              ? const ClampingScrollPhysics()
+                              : const BouncingScrollPhysics(),
 
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                           itemCount: filtered.length + 1,
                           itemBuilder: (context, index) {
                             if (index == filtered.length) {
@@ -321,6 +406,7 @@ class _OutletBottomSheetState extends State<OutletBottomSheet> {
                                 padding: const EdgeInsets.only(top: 10),
                                 child: _OutletSheetActions(
                                   parentContext: context,
+                                  isWindowsUi: isWindowsUi,
                                 ),
                               );
                             }
@@ -343,11 +429,16 @@ class _OutletBottomSheetState extends State<OutletBottomSheet> {
                                     ? outlet.phoneNumber
                                     : null,
                                 isSelected: isSelected,
+                                isWindowsUi: isWindowsUi,
                                 onTap: () {
                                   if (!isSelected) {
-                                    controller.selectOutlet(outlet);
+                                    Navigator.of(context).pop();
+                                    controller.selectOutlet(
+                                      outlet,
+                                      closeSheet: false,
+                                    );
                                   } else {
-                                    Get.back();
+                                    Navigator.of(context).pop();
                                   }
                                 },
                               ),
@@ -356,7 +447,9 @@ class _OutletBottomSheetState extends State<OutletBottomSheet> {
                         );
                       }),
                     ),
-                  ],
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -372,12 +465,14 @@ class _OutletCard extends StatelessWidget {
   final String? subtitleLeft;
   final String? subtitleRight;
   final bool isSelected;
+  final bool isWindowsUi;
   final VoidCallback onTap;
 
   const _OutletCard({
     required this.title,
     required this.isSelected,
     required this.onTap,
+    required this.isWindowsUi,
     this.subtitleLeft,
     this.subtitleRight,
   });
@@ -387,26 +482,28 @@ class _OutletCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(isWindowsUi ? 12 : 18),
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(isWindowsUi ? 12 : 18),
             border: Border.all(
               color: isSelected
                   ? AppColor.primary.withOpacity(0.35)
-                  : Colors.black.withOpacity(0.06),
+                  : Colors.black.withOpacity(isWindowsUi ? 0.10 : 0.06),
               width: isSelected ? 1.6 : 1,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 14,
-                offset: const Offset(0, 6),
-              ),
-            ],
+            boxShadow: isWindowsUi
+                ? null
+                : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
           ),
           child: Row(
             children: [
@@ -414,13 +511,18 @@ class _OutletCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColor.primary.withOpacity(0.16),
-                      AppColor.secondaryPrimary.withOpacity(0.10),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
+                  color: isWindowsUi
+                      ? AppColor.primary.withOpacity(0.10)
+                      : null,
+                  gradient: isWindowsUi
+                      ? null
+                      : LinearGradient(
+                          colors: [
+                            AppColor.primary.withOpacity(0.16),
+                            AppColor.secondaryPrimary.withOpacity(0.10),
+                          ],
+                        ),
+                  borderRadius: BorderRadius.circular(isWindowsUi ? 10 : 16),
                 ),
                 child: Center(
                   child: Assets.svg.smallShop.svg(
@@ -537,13 +639,18 @@ class _OutletCard extends StatelessWidget {
 
 class _OutletSheetActions extends StatelessWidget {
   final BuildContext parentContext;
+  final bool isWindowsUi;
 
-  const _OutletSheetActions({required this.parentContext});
+  const _OutletSheetActions({
+    required this.parentContext,
+    this.isWindowsUi = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).padding.bottom;
     return Container(
-      padding: const EdgeInsets.only(top: 10),
+      padding: EdgeInsets.only(top: 10, bottom: bottomInset > 0 ? 8 : 0),
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: Colors.black.withOpacity(0.06))),
       ),
@@ -558,7 +665,7 @@ class _OutletSheetActions extends StatelessWidget {
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(isWindowsUi ? 10 : 16),
                 ),
               ),
               child: const Text(
@@ -582,7 +689,7 @@ class _OutletSheetActions extends StatelessWidget {
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(isWindowsUi ? 10 : 16),
                 ),
                 side: BorderSide(color: Colors.black.withOpacity(0.12)),
               ),

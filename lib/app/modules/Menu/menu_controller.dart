@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:billkaro/app/Database/app_database.dart';
+import 'package:billkaro/app/modules/Theme/theme_controller.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -30,6 +31,7 @@ class MenusController extends BaseController {
 
     // Clear all SharedPreferences data
     await appPref.clearAllData();
+    await ThemeController.resetAfterLogout();
 
     // Navigate to main screen (or wherever you want after manual logout)
     Get.offAllNamed(AppRoute.main);

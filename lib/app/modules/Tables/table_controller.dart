@@ -1,7 +1,9 @@
 import 'package:billkaro/app/Database/app_database.dart' as dbs;
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/Modals/tables/tables_response.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
 enum TableStatus { available, occupied, billing }
 
@@ -303,36 +305,104 @@ class TableController extends BaseController {
       return true;
     }
 
-    showError(description: response?['message'] ?? 'Failed to reset all tables');
+    showError(
+      description: response?['message'] ?? 'Failed to reset all tables',
+    );
     return false;
   }
 
   Future<void> onTableTap(TableWithStatus tws) async {
     if (tws.isAvailable) {
-      await Get.toNamed(
-        AppRoute.addOrder,
+      Modular.to.pushNamed(
+        HomeMainRoutes.createOrder,
         arguments: {
           'orderFrom': 'Dine In',
           'tableNumber': tws.table.displayName,
         },
       );
+      // await Get.toNamed(
+      //   AppRoute.addOrder,
+      //   arguments: {
+      //     'orderFrom': 'Dine In',
+      //     'tableNumber': tws.table.displayName,
+      //   },
+      // );
       await loadTables();
       return;
     }
 
     if (tws.currentOrder != null) {
-      await Get.toNamed(
-        AppRoute.addOrder,
+      Modular.to.pushNamed(
+        HomeMainRoutes.createOrder,
         arguments: {'order': tws.currentOrder, 'isEdit': true},
       );
+      // await Get.toNamed(
+      //   AppRoute.addOrder,
+      //   arguments: {'order': tws.currentOrder, 'isEdit': true},
+      // );
       await loadTables();
       return;
     }
 
-    showError(description: 'No active order details found for this table');
+    // Table marked Occupied/Billing but we don't have an active local order.
+    // This happens when orders aren't synced to local DB yet (common on fresh
+    // launch, multi-device usage, or after reconnect). Try a quick sync, then
+    // fall back to allowing a new order instead of blocking the user.
+    final synced = await _trySyncOrdersForOutlet();
+    if (synced) {
+      await loadTables();
+      final updated = tables.firstWhereOrNull(
+        (t) => t.table.id == tws.table.id,
+      );
+      if (updated?.currentOrder != null) {
+        await Modular.to.pushNamed(
+          HomeMainRoutes.createOrder,
+          arguments: {'order': updated!.currentOrder, 'isEdit': true},
+        );
+        await loadTables();
+        return;
+      }
+    }
+
+    await Modular.to.pushNamed(
+      HomeMainRoutes.createOrder,
+      arguments: {'orderFrom': 'Dine In', 'tableNumber': tws.table.displayName},
+    );
+    await loadTables();
   }
 
   Future<void> refresh() => loadTables();
+
+  Future<bool> _trySyncOrdersForOutlet() async {
+    final outletId = appPref.selectedOutlet?.id;
+    final userId = appPref.user?.id;
+    if (outletId == null || userId == null) return false;
+
+    try {
+      final response = await callApi(
+        apiClient.getOrders(
+          userId,
+          outletId,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+        ),
+        showLoader: false,
+      );
+      if (response?.status != 'success') return false;
+
+      final orders = response?.data ?? <OrderModel>[];
+      if (orders.isEmpty) return false;
+
+      await db.insertOrders(orders, outletId, isSyncedFromApi: true);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 
   List<TableModel> _defaultTables() {
     return List.generate(

@@ -1,5 +1,6 @@
 import 'package:billkaro/app/services/Network/api_handler.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
+import 'package:billkaro/utils/app_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -416,9 +417,9 @@ class _PrinterPageState extends State<PrinterPage> {
 
                     await _loadSettings();
                   } else {
-                    Get.snackbar(
-                      'Connection Failed',
-                      'Unable to connect to printer',
+                    AppSnackbar.show(
+                      title: 'Connection Failed',
+                      message: 'Unable to connect to printer',
                       backgroundColor: Colors.red,
                       colorText: Colors.white,
                       snackPosition: SnackPosition.BOTTOM,
@@ -506,9 +507,9 @@ class _PrinterPageState extends State<PrinterPage> {
                             upiId: "demo@upi",
                           );
 
-                          Get.snackbar(
-                            'Success',
-                            'Test invoice printed successfully',
+                          AppSnackbar.show(
+                            title: 'Success',
+                            message: 'Test invoice printed successfully',
                             backgroundColor: Colors.green,
                             colorText: Colors.white,
                             snackPosition: SnackPosition.BOTTOM,
@@ -519,9 +520,9 @@ class _PrinterPageState extends State<PrinterPage> {
                             ),
                           );
                         } catch (e) {
-                          Get.snackbar(
-                            'Print Error',
-                            'Failed to print: $e',
+                          AppSnackbar.show(
+                            title: 'Print Error',
+                            message: 'Failed to print: $e',
                             backgroundColor: Colors.red,
                             colorText: Colors.white,
                             snackPosition: SnackPosition.BOTTOM,

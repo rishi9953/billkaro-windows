@@ -143,6 +143,9 @@ abstract class ApiClient {
     @Body() Map<String, dynamic> orderRequest,
   );
 
+  @DELETE('$orders/{id}')
+  Future<dynamic> deleteOrder(@Path('id') String id);
+
   // -------------------- Outlet --------------------
   @POST('$user/{id}/outlet')
   Future<dynamic> addOutlet(
@@ -166,7 +169,9 @@ abstract class ApiClient {
   //== ------------------ Subscriptions --------------------
 
   @GET(subscriptions)
-  Future<SubscriptionResponse> getSubscription();
+  Future<SubscriptionResponse> getSubscription(
+    @Query('platform') String? platform,
+  );
 
   //== ------------------ Payment --------------------
 
@@ -204,8 +209,22 @@ abstract class ApiClient {
   Future<dynamic> resetAllTable(@Path('outletId') String outletId);
 
   @POST(printerOrder)
-
   Future<dynamic> printerOrderRequest(
     @Body() PrinterOrderRequest printerOrderRequest,
+  );
+
+  @POST('outlets/{outletId}/$staff')
+  Future<dynamic> addStaff(
+    @Path('outletId') String outletId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @GET('outlets/{outletId}/$staff')
+  Future<dynamic> getStaffList(@Path('outletId') String outletId);
+
+  @DELETE('outlets/{outletId}/$staff/{staffId}')
+  Future<dynamic> deleteStaff(
+    @Path('outletId') String outletId,
+    @Path('staffId') String staffId,
   );
 }

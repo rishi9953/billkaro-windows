@@ -1,59 +1,309 @@
 import 'package:billkaro/app/modules/AddOrder/OrderDetails/order_details_controller.dart';
+import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/Modals/orders/split_payment.dart';
 import 'package:billkaro/config/config.dart';
 
-class OrderDetailsScreen extends StatelessWidget {
+class OrderDetailsScreen extends StatefulWidget {
   const OrderDetailsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final c = Get.put(OrderDetailsController());
+  State<OrderDetailsScreen> createState() => _OrderDetailsScreenState();
+}
 
+class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
+  late final OrderDetailsController c;
+
+  static const double _desktopBreakpoint = 980;
+  static const Set<String> _allowedPaymentMethods = {'cash', 'card', 'upi'};
+
+  String _normalizePaymentMethod(String value) {
+    final v = value.trim().toLowerCase();
+    return _allowedPaymentMethods.contains(v) ? v : 'cash';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (Get.isRegistered<OrderDetailsController>()) {
+      Get.delete<OrderDetailsController>(force: true);
+    }
+    c = Get.put(OrderDetailsController());
+  }
+
+  @override
+  void dispose() {
+    if (Get.isRegistered<OrderDetailsController>()) {
+      Get.delete<OrderDetailsController>(force: true);
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text(loc.order_details)),
+      appBar: AppBar(title: Text(loc.order_details), centerTitle: false),
       body: Form(
         key: c.formKey,
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(16),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isDesktop = constraints.maxWidth >= _desktopBreakpoint;
+            final pagePadding = EdgeInsets.symmetric(
+              horizontal: isDesktop ? 28 : 16,
+              vertical: isDesktop ? 24 : 16,
+            );
+
+            final orderCard = _sectionCard(
+              title: 'Order',
+              icon: Icons.receipt_long,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Bill Number - Prominent Display
                   _buildBillNumberDisplay(c, loc),
-                  if (c.isDineIn) _buildTableNumberField(c, loc),
-                  _buildField(
-                    loc.customer_name,
-                    c.customerName,
-                    TextInputType.name,
-                    cap: TextCapitalization.words,
-                    loc: loc,
-                  ),
-                  _buildField(
-                    loc.phone_number_field,
-                    c.phoneNumber,
-                    TextInputType.phone,
-                    max: 10,
-                    validator: (v) => _phoneVal(v, loc),
-                    loc: loc,
-                  ),
-                  _buildDiscount(c, loc),
+                  Obx(() {
+                    c.orderFrom.value;
+                    if (Get.isRegistered<HomeScreenController>()) {
+                      Get.find<HomeScreenController>().selectedOutlet.value;
+                    }
+                    if (!c.isDineIn || !HomeMainRoutes.outletShowsTables()) {
+                      return const SizedBox.shrink();
+                    }
+                    return _buildTableNumberField(c, loc);
+                  }),
+                ],
+              ),
+            );
+
+            final customerCard = _sectionCard(
+              title: 'Customer',
+              icon: Icons.person_outline,
+              child: isDesktop
+                  ? Row(
+                      children: [
+                        Expanded(
+                          child: _buildField(
+                            loc.customer_name,
+                            c.customerName,
+                            TextInputType.name,
+                            cap: TextCapitalization.words,
+                            loc: loc,
+                            prefixIcon: Icons.person_outline,
+                            bottomGap: 0,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildField(
+                            loc.phone_number_field,
+                            c.phoneNumber,
+                            TextInputType.phone,
+                            max: 10,
+                            validator: (v) => _phoneVal(v, loc),
+                            loc: loc,
+                            prefixIcon: Icons.phone_outlined,
+                            bottomGap: 0,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildField(
+                          loc.customer_name,
+                          c.customerName,
+                          TextInputType.name,
+                          cap: TextCapitalization.words,
+                          loc: loc,
+                          prefixIcon: Icons.person_outline,
+                          bottomGap: 16,
+                        ),
+                        _buildField(
+                          loc.phone_number_field,
+                          c.phoneNumber,
+                          TextInputType.phone,
+                          max: 10,
+                          validator: (v) => _phoneVal(v, loc),
+                          loc: loc,
+                          prefixIcon: Icons.phone_outlined,
+                          bottomGap: 0,
+                        ),
+                      ],
+                    ),
+            );
+
+            final chargesCard = _sectionCard(
+              title: 'Charges',
+              icon: Icons.percent,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildDiscount(c, loc, bottomGap: 16),
                   _buildField(
                     loc.service_charge,
                     c.serviceCharge,
                     TextInputType.number,
                     loc: loc,
+                    prefixIcon: Icons.add_circle_outline,
+                    bottomGap: 0,
                   ),
-                  _buildPayment(c, loc),
-                  _buildSplitPayment(c, loc),
                 ],
               ),
+            );
+
+            final paymentCard = _sectionCard(
+              title: 'Payment',
+              icon: Icons.payments_outlined,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [_buildPayment(c, loc), _buildSplitPayment(c, loc)],
+              ),
+            );
+
+            final content = Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1100),
+                child: Padding(
+                  padding: pagePadding,
+                  child: isDesktop
+                      ? Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  orderCard,
+                                  const SizedBox(height: 16),
+                                  chargesCard,
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  customerCard,
+                                  const SizedBox(height: 16),
+                                  paymentCard,
+                                ],
+                              ),
+                            ),
+                          ],
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            orderCard,
+                            const SizedBox(height: 16),
+                            customerCard,
+                            const SizedBox(height: 16),
+                            chargesCard,
+                            const SizedBox(height: 16),
+                            paymentCard,
+                          ],
+                        ),
+                ),
+              ),
+            );
+
+            return Column(
+              children: [
+                Expanded(
+                  child: Scrollbar(
+                    thumbVisibility: isDesktop,
+                    child: SingleChildScrollView(child: content),
+                  ),
+                ),
+                _buildSaveButton(context, c, isWide: isDesktop),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionCard({
+    required String title,
+    required IconData icon,
+    required Widget child,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black.withOpacity(0.06)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: AppColor.primary.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, size: 18, color: AppColor.primary),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
             ),
-            _buildSaveButton(c),
+            const SizedBox(height: 14),
+            child,
           ],
         ),
       ),
+    );
+  }
+
+  InputDecoration _fieldDecoration({
+    required String hintText,
+    IconData? prefixIcon,
+    Widget? suffixIcon,
+  }) {
+    return InputDecoration(
+      hintText: hintText,
+      filled: true,
+      fillColor: Colors.grey.withOpacity(0.06),
+      prefixIcon: prefixIcon == null
+          ? null
+          : Icon(prefixIcon, size: 18, color: Colors.grey[700]),
+      suffixIcon: suffixIcon,
+      counterText: '',
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.black.withOpacity(0.10)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.black.withOpacity(0.10)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppColor.primary.withOpacity(0.65)),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
     );
   }
 
@@ -63,7 +313,7 @@ class OrderDetailsScreen extends StatelessWidget {
     AppLocalizations loc,
   ) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -72,13 +322,13 @@ class OrderDetailsScreen extends StatelessWidget {
           Obx(
             () => Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
               decoration: BoxDecoration(
                 color: AppColor.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: AppColor.primary.withOpacity(0.3),
-                  width: 2,
+                  width: 1.5,
                 ),
               ),
               child: Row(
@@ -120,25 +370,41 @@ class OrderDetailsScreen extends StatelessWidget {
     AppLocalizations loc,
   ) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _label(loc.table_number),
           const SizedBox(height: 8),
-          TextFormField(
-            controller: c.tableNumber,
-            keyboardType: TextInputType.number,
-            validator: (v) => v?.isEmpty ?? true ? loc.required : null,
-            decoration: InputDecoration(
-              hintText: loc.enter_table_number,
-              counterText: '',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+          Obx(() {
+            final tables = c.availableTables;
+            final selectedTable = c.tableNumber.text.trim();
+            final dropdownValue = selectedTable.isEmpty
+                ? null
+                : tables.any((t) => t.displayName == selectedTable)
+                ? selectedTable
+                : null;
+
+            return DropdownButtonFormField<String>(
+              value: dropdownValue,
+              items: tables
+                  .map(
+                    (table) => DropdownMenuItem<String>(
+                      value: table.displayName,
+                      child: Text(table.displayName),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) => c.tableNumber.text = value ?? '',
+              validator: (v) => v?.isEmpty ?? true ? loc.required : null,
+              decoration: _fieldDecoration(
+                hintText: tables.isEmpty
+                    ? 'No available tables'
+                    : loc.enter_table_number,
+                prefixIcon: Icons.table_restaurant_outlined,
               ),
-              contentPadding: const EdgeInsets.all(16),
-            ),
-          ),
+            );
+          }),
         ],
       ),
     );
@@ -153,6 +419,8 @@ class OrderDetailsScreen extends StatelessWidget {
     bool enabled = true,
     String? Function(String?)? validator,
     required AppLocalizations loc,
+    double bottomGap = 24,
+    IconData? prefixIcon,
   }) {
     String hintText = '';
     if (label == loc.table_number) {
@@ -170,7 +438,7 @@ class OrderDetailsScreen extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: EdgeInsets.only(bottom: bottomGap),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -184,13 +452,9 @@ class OrderDetailsScreen extends StatelessWidget {
             maxLength: max,
             validator:
                 validator ?? (v) => v?.isEmpty ?? true ? loc.required : null,
-            decoration: InputDecoration(
+            decoration: _fieldDecoration(
               hintText: hintText,
-              counterText: '',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              contentPadding: const EdgeInsets.all(16),
+              prefixIcon: prefixIcon,
             ),
           ),
         ],
@@ -198,71 +462,44 @@ class OrderDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDiscount(OrderDetailsController c, AppLocalizations loc) {
+  Widget _buildDiscount(
+    OrderDetailsController c,
+    AppLocalizations loc, {
+    double bottomGap = 24,
+  }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: EdgeInsets.only(bottom: bottomGap),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _label(loc.discount),
           const SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[300]!),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: c.discount,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      hintText: loc.enter_discount,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.all(16),
-                    ),
-                    validator: (v) => v?.isEmpty ?? true ? loc.required : null,
-                  ),
-                ),
-                InkWell(
-                  onTap: () => c.discountType.value =
-                      c.discountType.value == loc.percentage
+          Obx(() {
+            final isPercent = c.discountType.value == loc.percentage;
+            return TextFormField(
+              controller: c.discount,
+              keyboardType: TextInputType.number,
+              validator: (v) => v?.isEmpty ?? true ? loc.required : null,
+              decoration: _fieldDecoration(
+                hintText: loc.enter_discount,
+                prefixIcon: isPercent ? Icons.percent : Icons.currency_rupee,
+                suffixIcon: TextButton(
+                  onPressed: () => c.discountType.value = isPercent
                       ? loc.amount
                       : loc.percentage,
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        left: BorderSide(color: Colors.grey[300]!),
-                      ),
-                    ),
-                    child: Obx(
-                      () => Row(
-                        children: [
-                          Icon(
-                            c.discountType.value == loc.percentage
-                                ? Icons.percent
-                                : Icons.currency_rupee,
-                            color: AppColor.primary,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            c.discountType.value,
-                            style: const TextStyle(
-                              color: AppColor.primary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: AppColor.primary,
+                  ),
+                  child: Text(
+                    c.discountType.value,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -301,13 +538,12 @@ class OrderDetailsScreen extends StatelessWidget {
                 DropdownMenuItem(value: 'upi', child: Text(loc.upi)),
               ],
               onChanged: (v) => c.paymentRecieved.value = v!,
-              decoration: InputDecoration(
-                contentPadding: const EdgeInsets.all(16),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+              decoration: _fieldDecoration(
+                hintText: '',
+                prefixIcon: Icons.payments_outlined,
               ),
             ),
+          const SizedBox(height: 12),
         ],
       ),
     );
@@ -359,59 +595,60 @@ class OrderDetailsScreen extends StatelessWidget {
                     return _buildSplitPaymentItem(c, loc, index, payment);
                   }),
                   const SizedBox(height: 8),
-                  Obx(
-                    () => c.remainingAmount != null
-                        ? Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: c.remainingAmount! < 0
-                                  ? Colors.red[50]
-                                  : c.remainingAmount! > 0.01
-                                  ? Colors.orange[50]
-                                  : Colors.green[50],
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: c.remainingAmount! < 0
-                                    ? Colors.red[300]!
-                                    : c.remainingAmount! > 0.01
-                                    ? Colors.orange[300]!
-                                    : Colors.green[300]!,
+                  Builder(
+                    builder: (context) {
+                      final remaining = c.remainingAmount;
+                      if (remaining == null) return const SizedBox.shrink();
+
+                      final bg = remaining < 0
+                          ? Colors.red[50]
+                          : remaining > 0.01
+                          ? Colors.orange[50]
+                          : Colors.green[50];
+                      final border = remaining < 0
+                          ? Colors.red[300]!
+                          : remaining > 0.01
+                          ? Colors.orange[300]!
+                          : Colors.green[300]!;
+                      final fg = remaining < 0
+                          ? Colors.red[900]
+                          : remaining > 0.01
+                          ? Colors.orange[900]
+                          : Colors.green[900];
+
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: bg,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: border),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              remaining < 0
+                                  ? 'Excess:'
+                                  : remaining > 0.01
+                                  ? 'Remaining:'
+                                  : 'Complete!',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: fg,
                               ),
                             ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  c.remainingAmount! < 0
-                                      ? 'Excess:'
-                                      : c.remainingAmount! > 0.01
-                                      ? 'Remaining:'
-                                      : 'Complete!',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: c.remainingAmount! < 0
-                                        ? Colors.red[900]
-                                        : c.remainingAmount! > 0.01
-                                        ? Colors.orange[900]
-                                        : Colors.green[900],
-                                  ),
-                                ),
-                                Text(
-                                  '₹${(c.remainingAmount ?? 0).abs().toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: c.remainingAmount! < 0
-                                        ? Colors.red[900]
-                                        : c.remainingAmount! > 0.01
-                                        ? Colors.orange[900]
-                                        : Colors.green[900],
-                                  ),
-                                ),
-                              ],
+                            Text(
+                              '₹${remaining.abs().toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: fg,
+                              ),
                             ),
-                          )
-                        : SizedBox.shrink(),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
                   ElevatedButton.icon(
@@ -441,6 +678,7 @@ class OrderDetailsScreen extends StatelessWidget {
     int index,
     dynamic payment,
   ) {
+    final safeMethod = _normalizePaymentMethod(payment.paymentMethod);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
@@ -452,7 +690,7 @@ class OrderDetailsScreen extends StatelessWidget {
         children: [
           Expanded(
             child: DropdownButtonFormField<String>(
-              value: payment.paymentMethod,
+              value: safeMethod,
               decoration: InputDecoration(
                 labelText: 'Payment Method',
                 border: OutlineInputBorder(
@@ -471,7 +709,7 @@ class OrderDetailsScreen extends StatelessWidget {
               onChanged: (value) {
                 if (value != null) {
                   c.splitPayments[index] = SplitPayment(
-                    paymentMethod: value,
+                    paymentMethod: _normalizePaymentMethod(value),
                     amount: payment.amount,
                   );
                 }
@@ -576,30 +814,41 @@ class OrderDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSaveButton(OrderDetailsController c) {
+  Widget _buildSaveButton(
+    BuildContext context,
+    OrderDetailsController c, {
+    required bool isWide,
+  }) {
     final loc = AppLocalizations.of(Get.context!);
     return Container(
-      padding: const EdgeInsets.all(16),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: () {
-            if (c.formKey.currentState?.validate() ?? false) {
-              c.saveOrderDetails();
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+      padding: EdgeInsets.symmetric(horizontal: isWide ? 24 : 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Colors.grey.withOpacity(0.15))),
+      ),
+      child: Align(
+        alignment: isWide ? Alignment.centerRight : Alignment.center,
+        child: SizedBox(
+          width: isWide ? 260 : double.infinity,
+          child: ElevatedButton(
+            onPressed: () {
+              if (c.formKey.currentState?.validate() ?? false) {
+                c.saveOrderDetailsAndClose(context);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-          ),
-          child: Text(
-            loc?.save_order_details ?? 'Save order details',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
+            child: Text(
+              loc?.save_order_details ?? 'Save order details',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
             ),
           ),
         ),
@@ -607,8 +856,14 @@ class OrderDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _label(String text) =>
-      Text(text, style: const TextStyle(fontSize: 14, color: Colors.grey));
+  Widget _label(String text) => Text(
+    text,
+    style: TextStyle(
+      fontSize: 12.5,
+      color: Colors.grey[700],
+      fontWeight: FontWeight.w700,
+    ),
+  );
 
   String? _phoneVal(String? v, AppLocalizations loc) {
     if (v == null || v.isEmpty) return loc.required;

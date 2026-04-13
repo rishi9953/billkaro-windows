@@ -2,25 +2,94 @@ import 'package:billkaro/app/modules/Order/ClosedOrders/closed_orders_controller
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart'
     hide OrderItem;
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/config.dart';
-import 'package:intl/intl.dart';
+import 'package:billkaro/utils/date_util.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
-class ClosedOrdersScreen extends StatefulWidget {
+class ClosedOrdersScreen extends StatelessWidget {
   const ClosedOrdersScreen({super.key});
 
+  void _goBack() {
+    if (Modular.to.canPop()) {
+      Modular.to.pop();
+      return;
+    }
+
+    Modular.to.navigate(HomeMainRoutes.home);
+  }
+
   @override
-  State<ClosedOrdersScreen> createState() => _ClosedOrdersScreenState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColor.backGroundColor,
+      appBar: AppBar(
+        leading: IconButton(
+          onPressed: _goBack,
+          icon: const Icon(Icons.arrow_back),
+        ),
+        elevation: 0,
+        title: const Text(
+          'Closed Orders',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.3,
+          ),
+        ),
+        actions: [_buildAddOrderButton(), const SizedBox(width: 8)],
+      ),
+      body: const ClosedOrdersContent(),
+    );
+  }
+
+  Widget _buildAddOrderButton() {
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: TextButton.icon(
+        onPressed: () => Modular.to.navigate(HomeMainRoutes.createOrder),
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text(
+          'Add Order',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        style: TextButton.styleFrom(
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          minimumSize: const Size(0, 0),
+        ),
+      ),
+    );
+  }
 }
 
-class _ClosedOrdersScreenState extends State<ClosedOrdersScreen> {
-  final ClosedOrdersController controller = Get.put(ClosedOrdersController());
+class ClosedOrdersContent extends StatefulWidget {
+  const ClosedOrdersContent({super.key});
+
+  @override
+  State<ClosedOrdersContent> createState() => _ClosedOrdersContentState();
+}
+
+class _ClosedOrdersContentState extends State<ClosedOrdersContent> {
+  final ClosedOrdersController controller =
+      Get.isRegistered<ClosedOrdersController>()
+      ? Get.find<ClosedOrdersController>()
+      : Get.put(ClosedOrdersController());
   final ScrollController scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _setupScrollListener();
+    // Always refresh when this screen is opened from dashboard/navigation.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.refreshOrders();
+    });
   }
 
   void _setupScrollListener() {
@@ -40,69 +109,87 @@ class _ClosedOrdersScreenState extends State<ClosedOrdersScreen> {
   void dispose() {
     scrollController.removeListener(_onScroll);
     scrollController.dispose();
+    if (Get.isRegistered<ClosedOrdersController>()) {
+      Get.delete<ClosedOrdersController>();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColor.backGroundColor,
-      appBar: AppBar(
-        elevation: 0,
-        title: const Text(
-          'Closed Orders',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.3,
-          ),
-        ),
+    return SafeArea(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Keep content readable on desktop by limiting max width.
+          final maxWidth = constraints.maxWidth > 1100
+              ? 1100.0
+              : (constraints.maxWidth > 720 ? 900.0 : constraints.maxWidth);
+
+          return Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildFilterSection(),
+                  Expanded(child: _buildOrdersList()),
+                ],
+              ),
+            ),
+          );
+        },
       ),
-      body: Column(
-        children: [
-          _buildFilterSection(),
-          Expanded(child: _buildOrdersList()),
-        ],
-      ),
-      floatingActionButton: _buildAddOrderButton(),
     );
   }
 
-  // ---------------- FILTER SECTION ----------------
   Widget _buildFilterSection() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
-      child: Obx(
-        () => Row(
-          children: [
-            Expanded(
-              child: _FilterChip(
-                label: 'All Time',
-                isSelected: controller.selectedFilter.value == 'all',
-                onTap: () => controller.setFilter('all'),
+      child: Obx(() {
+        final isAll = controller.selectedFilter.value == 'all';
+        final isLast60 = controller.selectedFilter.value == 'last60';
+
+        return ToggleButtons(
+          isSelected: [isAll, isLast60],
+          borderRadius: BorderRadius.circular(10),
+          borderColor: Colors.grey.shade300,
+          selectedBorderColor: AppColor.primary,
+          fillColor: AppColor.primary.withOpacity(0.10),
+          color: Colors.grey.shade700,
+          selectedColor: AppColor.primary,
+          constraints: const BoxConstraints(minHeight: 44, minWidth: 160),
+          onPressed: (index) {
+            controller.setFilter(index == 0 ? 'all' : 'last60');
+          },
+          children: const [
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                'All Time',
+                style: TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _FilterChip(
-                label: 'Last 60 Min',
-                isSelected: controller.selectedFilter.value == 'last60',
-                onTap: () => controller.setFilter('last60'),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                'Last 60 Min',
+                style: TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
           ],
-        ),
-      ),
+        );
+      }),
     );
   }
 
@@ -118,13 +205,13 @@ class _ClosedOrdersScreenState extends State<ClosedOrdersScreen> {
       return RefreshIndicator(
         onRefresh: controller.refreshOrders,
         child: ListView.separated(
-          physics: BouncingScrollPhysics(),
+          physics: const ClampingScrollPhysics(),
           controller: scrollController,
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           itemCount: orders.length + 1, // +1 for loading indicator
           separatorBuilder: (_, index) {
             if (index >= orders.length) return const SizedBox.shrink();
-            return const SizedBox(height: 12);
+            return const SizedBox(height: 14);
           },
           itemBuilder: (context, index) {
             // Loading indicator at the bottom
@@ -204,23 +291,6 @@ class _ClosedOrdersScreenState extends State<ClosedOrdersScreen> {
       ),
     );
   }
-
-  // ---------------- ADD ORDER BUTTON ----------------
-  Widget _buildAddOrderButton() {
-    return FloatingActionButton.extended(
-      onPressed: () => Get.toNamed(AppRoute.addOrder),
-      backgroundColor: AppColor.primary,
-      icon: const Icon(Icons.add, color: Colors.white),
-      label: const Text(
-        'Add Order',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
 }
 
 // =====================================================
@@ -233,19 +303,21 @@ class _OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final time = DateFormat(
-      'MMM dd, hh:mm a',
-    ).format(DateTime.parse(order.createdAt.toString()));
+    final time = formatDate(
+      order.createdAt.toString(),
+      format: 'MMM dd, hh:mm a',
+    );
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -261,6 +333,7 @@ class _OrderCard extends StatelessWidget {
             _viewOrderDetails(order);
           },
           borderRadius: BorderRadius.circular(16),
+          hoverColor: AppColor.primary.withOpacity(0.06),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -332,8 +405,8 @@ class _OrderCard extends StatelessWidget {
                     Text(
                       '₹${order.totalAmount.toStringAsFixed(2)}',
                       style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w900,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
                         color: Colors.black87,
                         letterSpacing: -0.5,
                       ),
@@ -443,24 +516,18 @@ class _OrderCard extends StatelessWidget {
                       ),
                     ),
                     // Print Button
-                    Container(
-                      decoration: BoxDecoration(
-                        color: AppColor.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => _printOrder(order),
-                          borderRadius: BorderRadius.circular(10),
-                          child: Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: Icon(
-                              Icons.print_outlined,
-                              size: 20,
-                              color: AppColor.primary,
-                            ),
+                    Tooltip(
+                      message: 'Print',
+                      child: IconButton(
+                        onPressed: () => _printOrder(order),
+                        icon: const Icon(Icons.print_outlined, size: 20),
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppColor.primary.withOpacity(0.10),
+                          foregroundColor: AppColor.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
+                          padding: const EdgeInsets.all(10),
                         ),
                       ),
                     ),
@@ -508,8 +575,8 @@ class _OrderCard extends StatelessWidget {
   }
 
   void _viewOrderDetails(OrderModel order) {
-    Get.toNamed(
-      AppRoute.pdfPreview,
+    Modular.to.pushNamed(
+      HomeMainRoutes.invoiceScreen,
       arguments: {
         'invoice': CreateorderRequest(
           billNumber: order.billNumber,
@@ -548,52 +615,4 @@ class _OrderCard extends StatelessWidget {
   }
 }
 
-// =====================================================
-// ================== FILTER CHIP ==================
-// =====================================================
-
-class _FilterChip extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _FilterChip({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? AppColor.primary.withOpacity(0.1)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected ? AppColor.primary : Colors.grey[300]!,
-              width: isSelected ? 2 : 1,
-            ),
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? AppColor.primary : Colors.grey[700],
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
+// (Old chip-based filter UI removed in favor of ToggleButtons)

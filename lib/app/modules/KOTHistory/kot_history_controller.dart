@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:billkaro/app/Database/app_database.dart';
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart'
     as create_req;
@@ -10,42 +12,69 @@ import 'package:get/get.dart';
 
 class KotHistoryController extends BaseController {
   final isLoading = false.obs;
+  final isLoadingMore = false.obs;
+  final hasMoreData = true.obs;
   final search = ''.obs;
 
-  final RxList<OrderModel> all = <OrderModel>[].obs;
+  final RxList<OrderModel> orders = <OrderModel>[].obs;
 
-  List<OrderModel> get filtered {
-    final q = search.value.trim().toLowerCase();
-    if (q.isEmpty) return all;
-    return all.where((o) {
-      return o.billNumber.toLowerCase().contains(q) ||
-          (o.tableNumber ?? '').toLowerCase().contains(q) ||
-          (o.customerName ?? '').toLowerCase().contains(q) ||
-          (o.phoneNumber ?? '').toLowerCase().contains(q) ||
-          o.orderFrom.toLowerCase().contains(q);
-    }).toList(growable: false);
-  }
+  final int itemsPerPage = 20;
+
+  Timer? _searchDebounce;
 
   Future<void> load() async {
+    if (isLoading.value) return;
+    isLoading.value = true;
     try {
-      isLoading.value = true;
       final outletId = appPref.selectedOutlet?.id;
       if (outletId == null) {
-        all.clear();
+        orders.clear();
+        hasMoreData.value = false;
         return;
       }
       final db = AppDatabase();
-      final orders = await db.getAllOrders(outletId: outletId);
-
-      // Treat each order as a printable KOT history entry.
-      // Show newest first.
-      orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      all.value = orders;
+      final page = await db.getOrdersPage(
+        outletId: outletId,
+        offset: 0,
+        limit: itemsPerPage,
+        searchQuery: search.value.trim().isEmpty ? null : search.value.trim(),
+      );
+      orders.assignAll(page.items);
+      hasMoreData.value = page.hasMore;
     } catch (e) {
       debugPrint('❌ KOT history load failed: $e');
     } finally {
       isLoading.value = false;
     }
+  }
+
+  Future<void> loadMore() async {
+    if (isLoadingMore.value || !hasMoreData.value || isLoading.value) return;
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null) return;
+
+    isLoadingMore.value = true;
+    try {
+      final db = AppDatabase();
+      final page = await db.getOrdersPage(
+        outletId: outletId,
+        offset: orders.length,
+        limit: itemsPerPage,
+        searchQuery: search.value.trim().isEmpty ? null : search.value.trim(),
+      );
+      orders.addAll(page.items);
+      hasMoreData.value = page.hasMore;
+    } catch (e) {
+      debugPrint('❌ KOT history load more failed: $e');
+    } finally {
+      isLoadingMore.value = false;
+    }
+  }
+
+  void onSearchChanged(String value) {
+    search.value = value;
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 400), load);
   }
 
   create_req.CreateorderRequest toKOTRequest(OrderModel o) {
@@ -89,7 +118,9 @@ class KotHistoryController extends BaseController {
       final dateStr = formatDate(now);
       final timeStr = formatTime(now);
 
-      final items = o.items.where((i) => i.quantity > 0).toList(growable: false);
+      final items = o.items
+          .where((i) => i.quantity > 0)
+          .toList(growable: false);
       final totalQty = items.fold<int>(0, (sum, i) => sum + i.quantity);
 
       await printerService.printKOT(
@@ -131,14 +162,10 @@ class KotHistoryController extends BaseController {
     load();
     super.onReady();
   }
+
+  @override
+  void onClose() {
+    _searchDebounce?.cancel();
+    super.onClose();
+  }
 }
-
-
-
-
-
-
-
-
-
-

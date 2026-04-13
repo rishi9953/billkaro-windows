@@ -2,6 +2,7 @@
 #include <flutter/flutter_view_controller.h>
 #include <windows.h>
 
+#include <bitsdojo_window_windows/bitsdojo_window_plugin.h>
 #include "flutter_window.h"
 #include "utils.h"
 
@@ -25,9 +26,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
   FlutterWindow window(project);
+  [[maybe_unused]] auto bdw = bitsdojo_window_configure(
+      BDW_CUSTOM_FRAME | BDW_HIDE_ON_STARTUP);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
-  if (!window.Create(L"billkaro_windows", origin, size)) {
+  if (!window.Create(L"Billkaro ChillKaro", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);

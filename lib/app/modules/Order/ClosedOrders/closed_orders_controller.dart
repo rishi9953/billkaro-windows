@@ -191,12 +191,12 @@ class ClosedOrdersController extends BaseController {
     if (selectedFilter.value == 'all') {
       filtered = List.from(allOrders);
     } else {
-      final now = DateTime.now();
-      final sixtyMinsAgo = now.subtract(const Duration(minutes: 60));
+      final nowUtc = DateTime.now().toUtc();
+      final sixtyMinsAgoUtc = nowUtc.subtract(const Duration(minutes: 60));
 
       filtered = allOrders.where((order) {
-        final orderDateTime = _parseOrderDate(order.createdAt);
-        return orderDateTime.isAfter(sixtyMinsAgo);
+        final orderUtc = DateTime.parse(order.createdAt.toString()).toUtc();
+        return orderUtc.isAfter(sixtyMinsAgoUtc);
       }).toList();
     }
 

@@ -3,10 +3,13 @@ import 'dart:ui';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/Home/showcase_controller.dart';
 import 'package:billkaro/app/modules/Home/Widgets/payment_summary_widget.dart';
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Items/voice_add_menu_items_bottomsheet.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart' as m;
+import 'package:flutter_modular/flutter_modular.dart';
 import 'package:showcaseview/showcaseview.dart';
 
 import 'package:flutter_animate/flutter_animate.dart';
@@ -23,6 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final showcaseController = Get.put(ShowcaseController());
   final PageController _pageController = PageController();
   final RxInt _currentPage = 0.obs;
+  final ScrollController _scrollController = ScrollController();
   Timer? _autoScrollTimer;
 
   static const double _pageHMargin = 16;
@@ -73,6 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _autoScrollTimer?.cancel();
     _pageController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -147,35 +152,117 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.only(top: 14, bottom: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _printerStatusBanner(),
-              const SizedBox(height: _sectionGap),
-              _quickActions(loc),
-              const SizedBox(height: _sectionGap),
-              _businessOverview(loc),
-              const SizedBox(height: _sectionGap),
-              const PaymentSummaryWidget(),
-              const SizedBox(height: _sectionGap),
-              _weeklySalesChart(loc),
-              const SizedBox(height: _sectionGap),
-              _featuresSection(loc),
-              const SizedBox(height: 22),
-              _testimonialsCarousel(loc),
-              const SizedBox(height: 22),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: _pageHMargin),
-                child: footerSection(),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isDesktop = constraints.maxWidth >= 900;
+
+          final content = SafeArea(
+            top: false,
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.only(
+                top: isDesktop ? 24 : 14,
+                bottom: isDesktop ? 28 : 20,
+                left: isDesktop ? 32 : 0,
+                right: isDesktop ? 32 : 0,
               ),
-            ],
-          ),
-        ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1360),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (isDesktop) ...[
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: _pageHMargin,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Dashboard',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.grey[900],
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Overview of your sales, orders and quick tools.',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: _sectionGap),
+                      ],
+                      _printerStatusBanner(),
+                      const SizedBox(height: _sectionGap),
+                      _quickActions(loc, isDesktop: isDesktop),
+                      const SizedBox(height: _sectionGap),
+                      if (isDesktop)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: _pageHMargin,
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: _businessOverview(loc),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              const Expanded(child: PaymentSummaryWidget()),
+                            ],
+                          ),
+                        )
+                      else ...[
+                        _businessOverview(loc),
+                        const SizedBox(height: _sectionGap),
+                        const PaymentSummaryWidget(),
+                      ],
+                      const SizedBox(height: _sectionGap),
+                      _weeklySalesChart(loc),
+                      const SizedBox(height: _sectionGap),
+                      _topSellingItemsSection(),
+                      const SizedBox(height: _sectionGap),
+                      _featuresSection(loc),
+                      const SizedBox(height: 22),
+                      _testimonialsCarousel(loc),
+                      const SizedBox(height: 22),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: _pageHMargin,
+                        ),
+                        child: footerSection(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          if (!isDesktop) return content;
+
+          return Scrollbar(
+            controller: _scrollController,
+            thumbVisibility: true,
+            thickness: 8,
+            radius: const Radius.circular(12),
+            child: content,
+          );
+        },
       ),
       floatingActionButton: Tooltip(
         message: 'AI Voice add items',
@@ -296,7 +383,7 @@ class _HomeScreenState extends State<HomeScreen> {
         tooltipBackgroundColor: AppColor.primary,
         textColor: Colors.white,
         child: GestureDetector(
-          onTap: () => Get.toNamed(AppRoute.businessDetails),
+          onTap: () => Modular.to.navigate(HomeMainRoutes.profile),
           child: (selectedOutlet.logo?.isNotEmpty ?? false)
               ? CircleAvatar(
                   radius: 18,
@@ -485,7 +572,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Widget _quickActions(AppLocalizations loc) {
+  Widget _quickActions(AppLocalizations loc, {bool isDesktop = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -513,33 +600,41 @@ class _HomeScreenState extends State<HomeScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: _pageHMargin),
           child: Obx(() {
-            final isKOT = controller.isKOT.value;
+            final kotVisible =
+                controller.isKOT.value &&
+                HomeMainRoutes.outletIsCafeOrRestaurant();
+            controller.selectedOutlet.value;
+            final showTables = HomeMainRoutes.outletShowsTables();
             final actions = <Map<String, dynamic>>[
               {
                 'icon': Icons.check_circle_outline,
                 'label': loc.closedOrders,
-                'onTap': () => Get.toNamed(AppRoute.closedOrders),
+                'onTap': () {
+                  Modular.to.pushNamed(HomeMainRoutes.closedOrders);
+                },
               },
               {
                 'icon': Icons.schedule_outlined,
                 'label': loc.onHoldOrders,
-                'onTap': () => Get.toNamed(AppRoute.holdOrders),
+                'onTap': () => Modular.to.pushNamed(HomeMainRoutes.holdOrders),
               },
-              {
-                'icon': Icons.table_restaurant_outlined,
-                'label': 'Tables',
-                'onTap': () => Get.toNamed(AppRoute.tables),
-              },
+              if (showTables)
+                {
+                  'icon': Icons.table_restaurant_outlined,
+                  'label': 'Tables',
+                  'onTap': () => Modular.to.navigate(HomeMainRoutes.tables),
+                },
               {
                 'icon': Icons.add_shopping_cart_outlined,
                 'label': loc.addItems,
-                'onTap': () => Get.toNamed(AppRoute.addMenuItem),
+                'onTap': () => Modular.to.pushNamed(HomeMainRoutes.addItem),
               },
-              if (isKOT)
+              if (kotVisible)
                 {
                   'icon': Icons.receipt_long_outlined,
                   'label': 'KOT History',
-                  'onTap': () => Get.toNamed(AppRoute.kotHistory),
+                  'onTap': () =>
+                      Modular.to.pushNamed(HomeMainRoutes.kotHistory),
                 },
             ];
 
@@ -548,10 +643,12 @@ class _HomeScreenState extends State<HomeScreen> {
               physics: const NeverScrollableScrollPhysics(),
               itemCount: actions.length,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: Get.width >= 480 ? 4 : 2,
+                crossAxisCount: isDesktop ? 5 : (Get.width >= 480 ? 4 : 2),
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
-                childAspectRatio: Get.width >= 480 ? 1.2 : 1.6,
+                childAspectRatio: isDesktop
+                    ? 1.4
+                    : (Get.width >= 480 ? 1.2 : 1.6),
               ),
               itemBuilder: (context, index) {
                 final item = actions[index];
@@ -705,7 +802,8 @@ class _HomeScreenState extends State<HomeScreen> {
           loc.businessOverview,
           subtitle: 'Today vs yesterday',
           trailing: TextButton(
-            onPressed: () => Get.toNamed(AppRoute.businessOverView),
+            onPressed: () =>
+                Modular.to.pushNamed(HomeMainRoutes.businessOverview),
             style: TextButton.styleFrom(
               foregroundColor: AppColor.primary,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -742,7 +840,8 @@ class _HomeScreenState extends State<HomeScreen> {
             child: _GlassContainer(
               padding: const EdgeInsets.all(18),
               child: InkWell(
-                onTap: () => Get.toNamed(AppRoute.businessOverView),
+                onTap: () =>
+                    Modular.to.pushNamed(HomeMainRoutes.businessOverview),
                 borderRadius: BorderRadius.circular(_cardRadius),
                 child: Obx(() {
                   return Column(
@@ -1070,6 +1169,7 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }),
         const SizedBox(height: 12),
+
         // Filter buttons
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: _pageHMargin),
@@ -1138,8 +1238,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     : Column(
                         key: ValueKey(dataKey),
                         children: [
-                          SizedBox(
-                                height: 220,
+                          LayoutBuilder(
+                            builder: (context, c) {
+                              final rowMode = c.maxWidth >= 860;
+                              final pieTitle = switch (period) {
+                                ChartPeriod.weekly => 'Weekly distribution',
+                                ChartPeriod.monthly => 'Monthly distribution',
+                                ChartPeriod.quarterly =>
+                                  'Quarterly distribution',
+                                ChartPeriod.yearly => 'Yearly distribution',
+                              };
+                              final line = SizedBox(
+                                height: rowMode ? 260 : 220,
                                 child: LineChart(
                                   LineChartData(
                                     gridData: FlGridData(
@@ -1416,10 +1526,56 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                   ),
                                 ),
-                              )
-                              .animate()
-                              .fadeIn(duration: 420.ms)
-                              .slideY(begin: 0.08, end: 0, duration: 420.ms),
+                              );
+
+                              final pie =
+                                  _buildSalesPie(data, labels, title: pieTitle)
+                                      .animate()
+                                      .fadeIn(duration: 420.ms, delay: 80.ms)
+                                      .slideY(
+                                        begin: 0.06,
+                                        end: 0,
+                                        duration: 420.ms,
+                                      );
+
+                              if (!rowMode) {
+                                // Narrow: stack
+                                return Column(
+                                  children: [
+                                    line
+                                        .animate()
+                                        .fadeIn(duration: 420.ms)
+                                        .slideY(
+                                          begin: 0.08,
+                                          end: 0,
+                                          duration: 420.ms,
+                                        ),
+                                    const SizedBox(height: 14),
+                                    pie,
+                                  ],
+                                );
+                              }
+
+                              // Wide: show both charts in a row
+                              return Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: line
+                                        .animate()
+                                        .fadeIn(duration: 420.ms)
+                                        .slideY(
+                                          begin: 0.08,
+                                          end: 0,
+                                          duration: 420.ms,
+                                        ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  SizedBox(width: 320, child: pie),
+                                ],
+                              );
+                            },
+                          ),
                           const SizedBox(height: 14),
                           Container(
                                 padding: const EdgeInsets.all(12),
@@ -1475,6 +1631,161 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSalesPie(
+    List<double> data,
+    List<String> labels, {
+    required String title,
+  }) {
+    final total = data.fold<double>(0, (sum, v) => sum + v);
+    if (total <= 0) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.55),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.black.withOpacity(0.05)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w900,
+                color: Colors.grey[900],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              height: 210,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.55),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.black.withOpacity(0.06)),
+              ),
+              child: Text(
+                'No sales in this period',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[700],
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final colors = <Color>[
+      const Color(0xFF22D3EE), // cyan
+      const Color(0xFF8B5CF6), // purple
+      const Color(0xFFEC4899), // pink
+      const Color(0xFFF59E0B), // amber
+      const Color(0xFF10B981), // green
+      const Color(0xFF3B82F6), // blue
+      const Color(0xFFEF4444), // red
+    ];
+
+    final sections = <PieChartSectionData>[];
+    for (var i = 0; i < data.length; i++) {
+      final v = data[i];
+      if (v <= 0) continue;
+      final pct = (v / total) * 100;
+      sections.add(
+        PieChartSectionData(
+          value: v,
+          color: colors[i % colors.length],
+          radius: 48,
+          title: pct >= 8 ? '${pct.toStringAsFixed(0)}%' : '',
+          titleStyle: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+          ),
+        ),
+      );
+    }
+
+    final pie = SizedBox(
+      width: double.infinity,
+      height: 210,
+      child: PieChart(
+        PieChartData(
+          sections: sections,
+          sectionsSpace: 2,
+          centerSpaceRadius: 38,
+          startDegreeOffset: -90,
+          borderData: FlBorderData(show: false),
+          pieTouchData: PieTouchData(enabled: true),
+        ),
+      ),
+    );
+
+    final legend = Wrap(
+      spacing: 10,
+      runSpacing: 8,
+      children: List.generate(data.length, (i) {
+        final v = data[i];
+        if (v <= 0) return const SizedBox.shrink();
+        final pct = (v / total) * 100;
+        final label = (i >= 0 && i < labels.length) ? labels[i] : 'Day';
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: colors[i % colors.length],
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '$label • ₹${v.toStringAsFixed(0)} (${pct.toStringAsFixed(0)}%)',
+              style: TextStyle(
+                fontSize: 11.5,
+                color: Colors.grey[800],
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        );
+      }).whereType<Widget>().toList(),
+    );
+
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w900,
+            color: Colors.grey[900],
+          ),
+        ),
+        const SizedBox(height: 10),
+        pie,
+        const SizedBox(height: 10),
+        legend,
+      ],
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.55),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.black.withOpacity(0.05)),
+      ),
+      child: content,
     );
   }
 
@@ -1553,6 +1864,162 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _topSellingItemsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionHeader(
+          'Top Selling Items',
+          subtitle: 'Best performers (all time)',
+        ),
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: _pageHMargin),
+          child: _GlassContainer(
+            padding: const EdgeInsets.all(16),
+            child: Obx(() {
+              final topItems = controller.topSellingItems.take(5).toList();
+              if (topItems.isEmpty) {
+                return Container(
+                  height: 90,
+                  alignment: Alignment.center,
+                  child: Text(
+                    'No item sales yet',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: Colors.grey[700],
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                );
+              }
+
+              return Column(
+                children: List.generate(topItems.length, (index) {
+                  final item = topItems[index];
+                  return Container(
+                    margin: EdgeInsets.only(
+                      bottom: index == topItems.length - 1 ? 0 : 10,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.55),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.black.withOpacity(0.05)),
+                    ),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: item.imageUrl.isNotEmpty
+                              ? m.Image.network(
+                                  item.imageUrl,
+                                  width: 40,
+                                  height: 40,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) {
+                                    return _itemPlaceholder();
+                                  },
+                                )
+                              : _itemPlaceholder(),
+                        ),
+                        const SizedBox(width: 10),
+                        Container(
+                          width: 24,
+                          height: 24,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: AppColor.primary.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '${index + 1}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColor.primary,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.name.capitalizeFirst ?? item.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey[900],
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                item.category.capitalizeFirst ?? item.category,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'x${item.quantity}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[700],
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          '₹${item.amount.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: AppColor.primary,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              );
+            }),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _itemPlaceholder() {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.black.withOpacity(0.06)),
+      ),
+      child: Icon(
+        Icons.fastfood_rounded,
+        size: 18,
+        color: Colors.grey[500],
+      ),
+    );
+  }
+
   Widget _featuresSection(AppLocalizations loc) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1580,28 +2047,76 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: 12),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: _pageHMargin),
-          child: Column(
-            children: [
-              _buildFeatureListTile(
-                title: loc.addStaffSecurely_title,
-                description: loc.addStaffSecurely_desc,
-                icon: Icons.people_outline,
-                onTap: () => Get.toNamed(AppRoute.staffDetailsScreen),
-              ),
-              const SizedBox(height: 12),
-              Obx(() {
-                if (controller.isKOT.value) return const SizedBox.shrink();
-                return _buildFeatureListTile(
-                  title: loc.printKOT_title,
-                  description: loc.printKOT_desc,
-                  icon: Icons.print_outlined,
-                  onTap: () {
-                    controller.setKotMode(true);
-                  },
-                  badgeText: 'New',
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth >= 700;
+
+              return Obx(() {
+                final List<Widget> tiles = [];
+
+                tiles.add(
+                  Expanded(
+                    child: _buildFeatureListTile(
+                      title: loc.addStaffSecurely_title,
+                      description: loc.addStaffSecurely_desc,
+                      icon: Icons.people_outline,
+                      onTap: () => Modular.to.navigate(HomeMainRoutes.staff),
+                    ),
+                  ),
                 );
-              }),
-            ],
+
+                if (HomeMainRoutes.outletIsCafeOrRestaurant() &&
+                    !controller.isKOT.value) {
+                  tiles.add(const SizedBox(width: 12, height: 12));
+                  tiles.add(
+                    Expanded(
+                      child: _buildFeatureListTile(
+                        title: loc.printKOT_title,
+                        description: loc.printKOT_desc,
+                        icon: Icons.print_outlined,
+                        onTap: () {
+                          controller.setKotMode(true);
+                        },
+                        badgeText: 'New',
+                      ),
+                    ),
+                  );
+                }
+
+                if (isWide) {
+                  // Show tiles in a single row on wide screens
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: tiles,
+                  );
+                }
+
+                // Stack tiles vertically on small screens
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildFeatureListTile(
+                      title: loc.addStaffSecurely_title,
+                      description: loc.addStaffSecurely_desc,
+                      icon: Icons.people_outline,
+                      onTap: () => Get.toNamed(AppRoute.staffDetailsScreen),
+                    ),
+                    const SizedBox(height: 12),
+                    if (HomeMainRoutes.outletIsCafeOrRestaurant() &&
+                        !controller.isKOT.value)
+                      _buildFeatureListTile(
+                        title: loc.printKOT_title,
+                        description: loc.printKOT_desc,
+                        icon: Icons.print_outlined,
+                        onTap: () {
+                          controller.setKotMode(true);
+                        },
+                        badgeText: 'New',
+                      ),
+                  ],
+                );
+              });
+            },
           ),
         ),
       ],

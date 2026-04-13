@@ -1,3 +1,4 @@
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:showcaseview/showcaseview.dart';
 
@@ -43,6 +44,16 @@ class ShowcaseController extends BaseController {
   GlobalKey get bottomNavMenuKey => _bottomNavMenuKey;
   GlobalKey get bottomNavMicKey => _bottomNavMicKey;
 
+  /// Set true after [HomeMainShell] starts a showcase run; cleared when user
+  /// chooses "Show onboarding again" so the tour can replay.
+  bool _shellShowcaseArmConsumed = false;
+
+  bool get shellShowcaseArmConsumed => _shellShowcaseArmConsumed;
+
+  void markShellShowcaseStarted() {
+    _shellShowcaseArmConsumed = true;
+  }
+
   /// Check if showcase should be shown
   bool shouldShowShowcase() {
     return !appPref.isShowcaseCompleted;
@@ -68,7 +79,7 @@ class ShowcaseController extends BaseController {
             _closedOrdersKey,
             _holdOrdersKey,
             _addItemsKey,
-            if (appPref.isKOT) _kotHistoryKey,
+            if (HomeMainRoutes.kotFeatureEnabled()) _kotHistoryKey,
             _businessOverviewKey,
             _salesChartKey,
             _featuresKey,
@@ -91,7 +102,12 @@ class ShowcaseController extends BaseController {
 
   /// Reset showcase (for testing or re-showing)
   void resetShowcase() {
+    resetShowcaseForReplay();
+  }
+
+  void resetShowcaseForReplay() {
     appPref.isShowcaseCompleted = false;
+    _shellShowcaseArmConsumed = false;
   }
 }
 

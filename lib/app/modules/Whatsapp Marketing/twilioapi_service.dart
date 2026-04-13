@@ -4,8 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 
 class TwilioWhatsAppService {
-  static String get accountSid =>
-      dotenv.env['TWILIO_ACCOUNT_SID'] ?? '';
+  static String get accountSid => dotenv.env['TWILIO_ACCOUNT_SID'] ?? '';
   static String get authToken => dotenv.env['TWILIO_AUTH_TOKEN'] ?? '';
   static String get fromWhatsAppNumber =>
       dotenv.env['TWILIO_WHATSAPP_NUMBER'] ?? 'whatsapp:+14155238886';
@@ -16,7 +15,9 @@ class TwilioWhatsAppService {
     required String message,
   }) async {
     if (accountSid.isEmpty || authToken.isEmpty) {
-      debugPrint('❌ Twilio credentials missing. Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN in .env');
+      debugPrint(
+        '❌ Twilio credentials missing. Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN in .env',
+      );
       return {
         'success': false,
         'error': 'Twilio credentials not configured',

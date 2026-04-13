@@ -3,6 +3,7 @@ import 'package:billkaro/app/services/Modals/PrinterOrderRequest/printer_order_r
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/app/services/razorpay/razorpay_service.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/app_snackbar.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 class SubscriptionReviewController extends BaseController {
@@ -90,17 +91,17 @@ class SubscriptionReviewController extends BaseController {
     final code = couponCode.value.trim();
 
     if (code.isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Please enter a coupon code',
+      AppSnackbar.show(
+        title: 'Error',
+        message: 'Please enter a coupon code',
         snackPosition: SnackPosition.BOTTOM,
       );
       return;
     }
 
-    Get.snackbar(
-      'Coupon Applied',
-      'Coupon "$code" applied successfully',
+    AppSnackbar.show(
+      title: 'Coupon Applied',
+      message: 'Coupon "$code" applied successfully',
       snackPosition: SnackPosition.BOTTOM,
     );
   }
@@ -383,9 +384,9 @@ class SubscriptionReviewController extends BaseController {
   /// -------------------------------
   Future<void> processPayment() async {
     if (gstin.value.isNotEmpty && gstin.value.length != 15) {
-      Get.snackbar(
-        'Invalid GSTIN',
-        'GSTIN must be exactly 15 characters',
+      AppSnackbar.show(
+        title: 'Invalid GSTIN',
+        message: 'GSTIN must be exactly 15 characters',
         snackPosition: SnackPosition.BOTTOM,
       );
       return;

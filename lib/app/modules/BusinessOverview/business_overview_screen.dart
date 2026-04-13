@@ -1,6 +1,7 @@
 import 'package:billkaro/app/modules/BusinessOverview/business_overview_controller.dart';
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/config/config.dart';
-import 'dart:ui';
+import 'package:flutter_modular/flutter_modular.dart';
 
 class BusinessOverviewScreen extends StatelessWidget {
   const BusinessOverviewScreen({super.key});
@@ -11,6 +12,7 @@ class BusinessOverviewScreen extends StatelessWidget {
       BusinessOverviewController(),
     );
     var loc = AppLocalizations.of(Get.context!)!;
+    final bool isDesktop = MediaQuery.of(context).size.width >= 900;
 
     return Scaffold(
       backgroundColor: AppColor.backGroundColor,
@@ -20,7 +22,7 @@ class BusinessOverviewScreen extends StatelessWidget {
           loc.businessOverview,
           style: TextStyle(
             color: AppColor.white,
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -30,20 +32,34 @@ class BusinessOverviewScreen extends StatelessWidget {
         onRefresh: () async {
           // await controller.refreshData();
         },
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildSalesCard(controller, loc),
-                const SizedBox(height: 16),
-                _buildTrendsCard(controller, loc),
-                const SizedBox(height: 16),
-                _buildMostSellingCard(controller, loc),
-                const SizedBox(height: 16),
-              ],
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1240),
+            child: SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (isDesktop)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: _buildSalesCard(controller, loc)),
+                        const SizedBox(width: 20),
+                        Expanded(child: _buildTrendsCard(controller, loc)),
+                      ],
+                    )
+                  else ...[
+                    _buildSalesCard(controller, loc),
+                    const SizedBox(height: 16),
+                    _buildTrendsCard(controller, loc),
+                  ],
+                  const SizedBox(height: 20),
+                  _buildMostSellingCard(controller, loc),
+                  const SizedBox(height: 16),
+                ],
+              ),
             ),
           ),
         ),
@@ -77,7 +93,7 @@ class BusinessOverviewScreen extends StatelessWidget {
               Text(
                 loc.sales,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 17,
                   fontWeight: FontWeight.w700,
                   color: Colors.black87,
                 ),
@@ -117,7 +133,7 @@ class BusinessOverviewScreen extends StatelessWidget {
           _buildSimpleButton(
             text: loc.view_Order_Reports,
             icon: Icons.arrow_forward_ios,
-            onTap: () => Get.toNamed(AppRoute.orderReports),
+            onTap: () => Modular.to.pushNamed(HomeMainRoutes.orderReport),
           ),
         ],
       ),
@@ -150,7 +166,7 @@ class BusinessOverviewScreen extends StatelessWidget {
               Text(
                 loc.trends,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 17,
                   fontWeight: FontWeight.w700,
                   color: Colors.black87,
                 ),
@@ -217,7 +233,7 @@ class BusinessOverviewScreen extends StatelessWidget {
               Text(
                 loc.most_Selling_Items,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 17,
                   fontWeight: FontWeight.w700,
                   color: Colors.black87,
                 ),
@@ -257,7 +273,7 @@ class BusinessOverviewScreen extends StatelessWidget {
           _buildSimpleButton(
             text: loc.view_Item_Reports,
             icon: Icons.arrow_forward_ios,
-            onTap: () => Get.toNamed(AppRoute.itemReports),
+            onTap: () => Modular.to.pushNamed(HomeMainRoutes.itemsReport),
           ),
         ],
       ),
@@ -268,14 +284,18 @@ class BusinessOverviewScreen extends StatelessWidget {
     BusinessOverviewController controller,
     AppLocalizations loc,
   ) {
+    if (controller.mostSellingItems.isEmpty) {
+      return _buildEmptyState(loc);
+    }
+
     return SizedBox(
-      height: 200,
+      height: 220,
       child: ListView.builder(
-        physics: BouncingScrollPhysics(),
+        physics: const ClampingScrollPhysics(),
         scrollDirection: Axis.horizontal,
         itemCount: controller.mostSellingItems.length,
         itemBuilder: (context, index) => InkWell(
-          onTap: () => Get.toNamed(AppRoute.itemReports),
+          onTap: () => Modular.to.pushNamed(HomeMainRoutes.itemsReport),
           child: _sellingCard(controller.mostSellingItems[index], index + 1),
         ),
       ),
@@ -285,20 +305,21 @@ class BusinessOverviewScreen extends StatelessWidget {
   Widget _sellingCard(Map<String, dynamic> item, int rank) {
     //List<Map<String, dynamic>> item, int rank) {
     return Container(
-      width: 150,
-      margin: const EdgeInsets.only(right: 18),
+      width: 190,
+      margin: const EdgeInsets.only(right: 14),
       child: Stack(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               color: Colors.white,
+              border: Border.all(color: Colors.grey.shade300),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.shade300,
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
@@ -307,13 +328,13 @@ class BusinessOverviewScreen extends StatelessWidget {
               children: [
                 Text(
                   "QTY ${item["qty"]}",
-                  style: const TextStyle(fontSize: 14),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   "₹ ${item["price"]}",
-                  style: const TextStyle(
-                    fontSize: 16,
+                  style: TextStyle(
+                    fontSize: 18,
                     fontWeight: FontWeight.w600,
                     color: AppColor.primary,
                   ),
@@ -322,12 +343,14 @@ class BusinessOverviewScreen extends StatelessWidget {
                 Text(
                   item["name"],
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.w500,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const Spacer(),
-                const Align(
+                Align(
                   alignment: Alignment.bottomRight,
                   child: Icon(
                     Icons.north_east,
@@ -373,7 +396,7 @@ class BusinessOverviewScreen extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 13,
             color: Colors.grey[600],
             fontWeight: FontWeight.w500,
           ),
@@ -382,13 +405,13 @@ class BusinessOverviewScreen extends StatelessWidget {
         Text(
           value,
           style: TextStyle(
-            fontSize: 24,
+            fontSize: 28,
             fontWeight: FontWeight.w700,
             color: color,
           ),
         ),
         const SizedBox(height: 4),
-        Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+        Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
       ],
     );
   }
@@ -401,12 +424,12 @@ class BusinessOverviewScreen extends StatelessWidget {
     bool isHighlighted = false,
   }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: isHighlighted
             ? AppColor.secondaryPrimary.withOpacity(0.08)
             : Colors.grey.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isHighlighted
               ? AppColor.secondaryPrimary.withOpacity(0.3)
@@ -419,7 +442,7 @@ class BusinessOverviewScreen extends StatelessWidget {
           Text(
             title,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w700,
               color: isHighlighted
                   ? AppColor.secondaryPrimary
@@ -459,14 +482,14 @@ class BusinessOverviewScreen extends StatelessWidget {
               Text(
                 value,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 18,
                   fontWeight: FontWeight.w700,
                   color: Colors.black87,
                 ),
               ),
               Text(
                 label,
-                style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
               ),
             ],
           ),
@@ -484,23 +507,25 @@ class BusinessOverviewScreen extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(8),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? AppColor.primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
+            color: isSelected
+                ? AppColor.primary.withOpacity(0.12)
+                : Colors.white,
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isSelected ? AppColor.primary : Colors.grey[300]!,
+              color: isSelected ? AppColor.primary : Colors.grey.shade300,
             ),
           ),
           child: Text(
             text,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: isSelected ? Colors.white : Colors.grey[700],
+              color: isSelected ? AppColor.primary : Colors.grey[700],
             ),
           ),
         ),
@@ -517,13 +542,20 @@ class BusinessOverviewScreen extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           decoration: BoxDecoration(
-            color: AppColor.primary.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColor.primary.withOpacity(0.2)),
+            color: AppColor.primary,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColor.primary),
+            boxShadow: [
+              BoxShadow(
+                color: AppColor.primary.withOpacity(0.25),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -531,13 +563,13 @@ class BusinessOverviewScreen extends StatelessWidget {
               Text(
                 text,
                 style: TextStyle(
-                  fontSize: 13,
-                  color: AppColor.primary,
+                  fontSize: 14,
+                  color: Colors.white,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(width: 6),
-              Icon(icon, color: AppColor.primary, size: 14),
+              Icon(icon, color: Colors.white, size: 14),
             ],
           ),
         ),
@@ -582,31 +614,22 @@ class _GlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.7),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.3),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
-          child: child,
-        ),
+        ],
       ),
+      child: child,
     );
   }
 }

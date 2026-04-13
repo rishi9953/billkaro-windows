@@ -1,6 +1,33 @@
 import 'package:json_annotation/json_annotation.dart';
 part 'login_response.g.dart';
 
+Object? _readOutletCreatedAt(Map json, String key) {
+  final v = json['createdAt'] ?? json['created_at'];
+  if (v == null) return null;
+  if (v is String) return v;
+  if (v is DateTime) return v.toIso8601String();
+  return v.toString();
+}
+
+Object? _readOutletUpdatedAt(Map json, String key) {
+  final v = json['updatedAt'] ?? json['updated_at'];
+  if (v == null) return null;
+  if (v is String) return v;
+  if (v is DateTime) return v.toIso8601String();
+  return v.toString();
+}
+
+Object? _readUserIsTrial(Map json, String key) {
+  final v = json['isTrial'] ?? json['is_trial'];
+  if (v is bool) return v;
+  if (v is int) return v != 0;
+  if (v is String) {
+    final s = v.toLowerCase();
+    return s == 'true' || s == '1' || s == 'yes';
+  }
+  return null;
+}
+
 @JsonSerializable()
 class LoginResponse {
   @JsonKey(name: 'access_token')
@@ -15,8 +42,12 @@ class LoginResponse {
   Map<String, dynamic> toJson() => _$LoginResponseToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class User {
+  @JsonKey(readValue: _readOutletCreatedAt)
+  final String? createdAt;
+  @JsonKey(readValue: _readOutletUpdatedAt)
+  final String? updatedAt;
   final String? id;
   final String? brandName;
   final String? email;
@@ -29,10 +60,13 @@ class User {
   final String? lastName;
   final String? title;
   final String? mobile;
+  @JsonKey(readValue: _readUserIsTrial)
   final bool? isTrial;
   final List<OutletData>? outletData;
 
   User({
+    this.createdAt,
+    this.updatedAt,
     this.id,
     this.brandName,
     this.email,
@@ -54,7 +88,7 @@ class User {
   Map<String, dynamic> toJson() => _$UserToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class OutletData {
   final String? id;
   final String? businessName;
@@ -70,12 +104,14 @@ class OutletData {
   final String? fssaiNumber;
   final String? outletAge;
   final String? logo;
+  @JsonKey(readValue: _readOutletCreatedAt)
   final String? createdAt;
+  @JsonKey(readValue: _readOutletUpdatedAt)
   final String? updatedAt;
   final String? phoneNumber;
   final String? seatingCapacity;
   final int? billNumber;
-   List<OutletSubscription>? subscriptions;
+  List<OutletSubscription>? subscriptions;
 
   OutletData({
     this.id,
@@ -105,7 +141,7 @@ class OutletData {
   Map<String, dynamic> toJson() => _$OutletDataToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class OutletSubscription {
   final String? id;
   final String? startDate;

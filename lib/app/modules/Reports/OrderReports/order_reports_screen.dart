@@ -1,9 +1,10 @@
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Reports/OrderReports/order_reports_controller.dart';
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/config.dart';
-import 'package:billkaro/utils/date_util.dart';
-import 'package:intl/intl.dart';
+import 'package:billkaro/utils/date_util.dart' as date_util;
+import 'package:flutter_modular/flutter_modular.dart';
 
 class OrderReportsScreen extends StatefulWidget {
   const OrderReportsScreen({super.key});
@@ -59,7 +60,7 @@ class _OrderReportsScreenState extends State<OrderReportsScreen> {
       } else {
         return loc.invalid_date;
       }
-      return formatDate(date.toString());
+      return date_util.formatDate(date.toString());
     } catch (e) {
       debugPrint('❌ Error formatting date: $e');
       return loc.invalid_date;
@@ -110,48 +111,69 @@ class _OrderReportsScreenState extends State<OrderReportsScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: Obx(() {
-        if (controller.isLoading.value) {
-          return const Center(child: CircularProgressIndicator());
-        }
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // Keep desktop layout readable by limiting width.
+            final maxWidth = constraints.maxWidth > 1100
+                ? 1100.0
+                : (constraints.maxWidth > 720 ? 900.0 : constraints.maxWidth);
 
-        return Column(
-          children: [
-            // Filters Section
-            _buildFiltersSection(loc),
+            return Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxWidth),
+                child: Obx(() {
+                  if (controller.isLoading.value) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-            // Summary Cards
-            _buildSummaryCards(loc),
+                  return Column(
+                    children: [
+                      // Filters Section
+                      _buildFiltersSection(loc),
 
-            // Orders List (show loader in list only when changing category or payment type)
-            Expanded(
-              child: controller.isLoadingListOnly.value
-                  ? const Center(
-                      child: SizedBox(
-                        height: 40,
-                        width: 40,
-                        child: CircularProgressIndicator(strokeWidth: 2.5),
+                      // Summary Cards
+                      _buildSummaryCards(loc),
+
+                      // Orders List (show loader in list only when changing category or payment type)
+                      Expanded(
+                        child: controller.isLoadingListOnly.value
+                            ? const Center(
+                                child: SizedBox(
+                                  height: 40,
+                                  width: 40,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                  ),
+                                ),
+                              )
+                            : _buildOrdersList(loc),
                       ),
-                    )
-                  : _buildOrdersList(loc),
-            ),
-          ],
-        );
-      }),
+                    ],
+                  );
+                }),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 
   // ---------------- FILTERS SECTION ----------------
   Widget _buildFiltersSection(AppLocalizations loc) {
     return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -521,11 +543,11 @@ class _OrderReportsScreenState extends State<OrderReportsScreen> {
       return RefreshIndicator(
         onRefresh: () async => controller.getOrderList(),
         child: ListView.separated(
-          physics: const BouncingScrollPhysics(),
+          physics: const ClampingScrollPhysics(),
           controller: scrollController,
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           itemCount: orders.length + (isLoadingMore || hasMore ? 1 : 0),
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          separatorBuilder: (_, __) => const SizedBox(height: 14),
           itemBuilder: (context, index) {
             // ✅ Show loading indicator at the bottom when loading more
             if (index >= orders.length) {
@@ -546,14 +568,17 @@ class _OrderReportsScreenState extends State<OrderReportsScreen> {
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   child: Center(
-                    child: OutlinedButton.icon(
+                    child: ElevatedButton.icon(
                       onPressed: () => controller.loadMoreOrders(),
                       icon: const Icon(Icons.refresh, size: 18),
-                      label: Text('Load More'),
-                      style: OutlinedButton.styleFrom(
+                      label: const Text('Load More'),
+                      style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
                           vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
                     ),
@@ -649,11 +674,12 @@ class _SummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -720,7 +746,8 @@ class _OrderCard extends StatelessWidget {
   static String _getPaymentReceivedIn(dynamic order, AppLocalizations loc) {
     if (order == null) return loc.cash;
     try {
-      final v = order.paymentReceivedIn ??
+      final v =
+          order.paymentReceivedIn ??
           (order is Map
               ? (order['paymentReceivedIn'] ?? order['payment_received_in'])
               : null);
@@ -733,19 +760,21 @@ class _OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final time = DateFormat(
-      'MMM dd, hh:mm a',
-    ).format(DateTime.parse(order.createdAt.toString()));
+    final time = date_util.formatDate(
+      order.createdAt.toString(),
+      format: 'MMM dd, hh:mm a',
+    );
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -761,6 +790,7 @@ class _OrderCard extends StatelessWidget {
             _viewOrderDetails(order);
           },
           borderRadius: BorderRadius.circular(16),
+          hoverColor: AppColor.primary.withOpacity(0.06),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -832,9 +862,9 @@ class _OrderCard extends StatelessWidget {
                       '₹${order.totalAmount.toStringAsFixed(2)}',
                       style: const TextStyle(
                         fontSize: 22,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w800,
                         color: Colors.black87,
-                        letterSpacing: -0.5,
+                        letterSpacing: -0.3,
                       ),
                     ),
                     const Spacer(),
@@ -844,8 +874,12 @@ class _OrderCard extends StatelessWidget {
                       icon: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.grey[100],
+                          color: Colors.grey.shade50,
                           borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.grey.shade200,
+                            width: 1,
+                          ),
                         ),
                         child: const Icon(
                           Icons.more_vert,
@@ -988,8 +1022,8 @@ class _OrderCard extends StatelessWidget {
   void _viewOrderDetails(dynamic order) {
     final loc = AppLocalizations.of(Get.context!)!;
     final paymentReceivedIn = _getPaymentReceivedIn(order, loc);
-    Get.toNamed(
-      AppRoute.pdfPreview,
+    Modular.to.pushNamed(
+      HomeMainRoutes.invoiceScreen,
       arguments: {
         'invoice': CreateorderRequest(
           billNumber: order.billNumber,
@@ -1033,6 +1067,51 @@ class _OrderCard extends StatelessWidget {
         'orderFrom': order.orderFrom,
       },
     );
+    // Get.toNamed(
+    //   AppRoute.pdfPreview,
+    //   arguments: {
+    //     'invoice': CreateorderRequest(
+    //       billNumber: order.billNumber,
+    //       tableNumber: order.tableNumber,
+    //       customerName: order.customerName,
+    //       phoneNumber: order.phoneNumber,
+    //       discount: order.discount,
+    //       serviceCharge: order.serviceCharge,
+    //       paymentReceivedIn: paymentReceivedIn,
+    //       status: order.status,
+    //       subtotal: order.subtotal,
+    //       totalAmount: order.totalAmount,
+    //       userId: order.userId,
+    //       orderFrom: order.orderFrom,
+    //       totalTax: order.totalTax,
+    //       items: List<OrderItem>.from(
+    //         (order.items ?? <dynamic>[]).map(
+    //           (e) => OrderItem(
+    //             itemId: e.itemId is String
+    //                 ? e.itemId as String
+    //                 : e.itemId.toString(),
+    //             itemName: e.itemName is String
+    //                 ? e.itemName as String
+    //                 : e.itemName.toString(),
+    //             category: e.category is String
+    //                 ? e.category as String
+    //                 : e.category.toString(),
+    //             quantity: e.quantity is int
+    //                 ? e.quantity as int
+    //                 : (e.quantity as num).toInt(),
+    //             salePrice: e.salePrice is double
+    //                 ? e.salePrice as double
+    //                 : (e.salePrice as num).toDouble(),
+    //             gst: e.gst is double
+    //                 ? e.gst as double
+    //                 : (e.gst as num).toDouble(),
+    //           ),
+    //         ),
+    //       ),
+    //     ),
+    //     'orderFrom': order.orderFrom,
+    //   },
+    // );
   }
 }
 

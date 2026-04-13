@@ -1,5 +1,6 @@
 import 'package:billkaro/app/Database/app_database.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/date_util.dart';
 import 'package:get/get.dart';
 
 class PaymentController extends BaseController {
@@ -40,13 +41,17 @@ class PaymentController extends BaseController {
         order.status.toLowerCase() == 'closed'
       ).toList();
 
-      // Calculate today's date range
-      final now = DateTime.now();
-      final todayStart = DateTime(now.year, now.month, now.day);
-      final todayEnd = todayStart.add(const Duration(days: 1));
-      final yesterdayStart = todayStart.subtract(const Duration(days: 1));
-      final weekStart = now.subtract(Duration(days: now.weekday - 1));
-      final monthStart = DateTime(now.year, now.month, 1);
+      // IST calendar boundaries as UTC instants for order comparison
+      final todayIst = todayIstDateOnly();
+      final todayStartUtc = startOfIstDayAsUtcInstant(todayIst);
+      final todayEndUtc = endOfIstDayExclusiveUtc(todayIst);
+      final yesterdayStartUtc =
+          startOfIstDayAsUtcInstant(todayIst.subtract(const Duration(days: 1)));
+      final weekStartUtc =
+          startOfIstDayAsUtcInstant(istMondayOfWeek(todayIst));
+      final monthStartUtc = startOfIstDayAsUtcInstant(
+        DateTime(todayIst.year, todayIst.month, 1),
+      );
 
       // Initialize breakdown maps
       final breakdown = <String, double>{};
@@ -60,7 +65,7 @@ class PaymentController extends BaseController {
 
       for (final order in paidOrders) {
         try {
-          final orderDate = DateTime.parse(order.createdAt);
+          final orderUtc = DateTime.parse(order.createdAt).toUtc();
           final orderAmount = order.totalAmount;
 
           // Check if order has split payments
@@ -74,21 +79,24 @@ class PaymentController extends BaseController {
               breakdown[method] = (breakdown[method] ?? 0.0) + amount;
 
               // Add to today's breakdown if applicable
-              if (orderDate.isAfter(todayStart) && orderDate.isBefore(todayEnd)) {
+              if (!orderUtc.isBefore(todayStartUtc) &&
+                  orderUtc.isBefore(todayEndUtc)) {
                 todayBreakdown[method] = (todayBreakdown[method] ?? 0.0) + amount;
                 todayTotal += amount;
               }
 
               // Add to period totals
-              if (orderDate.isAfter(todayStart) && orderDate.isBefore(todayEnd)) {
+              if (!orderUtc.isBefore(todayStartUtc) &&
+                  orderUtc.isBefore(todayEndUtc)) {
                 todayTotal += amount;
-              } else if (orderDate.isAfter(yesterdayStart) && orderDate.isBefore(todayStart)) {
+              } else if (!orderUtc.isBefore(yesterdayStartUtc) &&
+                  orderUtc.isBefore(todayStartUtc)) {
                 yesterdayTotal += amount;
               }
-              if (orderDate.isAfter(weekStart)) {
+              if (!orderUtc.isBefore(weekStartUtc)) {
                 weekTotal += amount;
               }
-              if (orderDate.isAfter(monthStart)) {
+              if (!orderUtc.isBefore(monthStartUtc)) {
                 monthTotal += amount;
               }
             }
@@ -100,36 +108,41 @@ class PaymentController extends BaseController {
             breakdown[method] = (breakdown[method] ?? 0.0) + orderAmount;
 
             // Add to today's breakdown if applicable
-            if (orderDate.isAfter(todayStart) && orderDate.isBefore(todayEnd)) {
+            if (!orderUtc.isBefore(todayStartUtc) &&
+                orderUtc.isBefore(todayEndUtc)) {
               todayBreakdown[method] = (todayBreakdown[method] ?? 0.0) + orderAmount;
             }
 
             // Add to period totals
-            if (orderDate.isAfter(todayStart) && orderDate.isBefore(todayEnd)) {
+            if (!orderUtc.isBefore(todayStartUtc) &&
+                orderUtc.isBefore(todayEndUtc)) {
               todayTotal += orderAmount;
-            } else if (orderDate.isAfter(yesterdayStart) && orderDate.isBefore(todayStart)) {
+            } else if (!orderUtc.isBefore(yesterdayStartUtc) &&
+                orderUtc.isBefore(todayStartUtc)) {
               yesterdayTotal += orderAmount;
             }
-            if (orderDate.isAfter(weekStart)) {
+            if (!orderUtc.isBefore(weekStartUtc)) {
               weekTotal += orderAmount;
             }
-            if (orderDate.isAfter(monthStart)) {
+            if (!orderUtc.isBefore(monthStartUtc)) {
               monthTotal += orderAmount;
             }
           } else {
             // No payment method specified, treat as cash
             breakdown['cash'] = (breakdown['cash'] ?? 0.0) + orderAmount;
 
-            if (orderDate.isAfter(todayStart) && orderDate.isBefore(todayEnd)) {
+            if (!orderUtc.isBefore(todayStartUtc) &&
+                orderUtc.isBefore(todayEndUtc)) {
               todayBreakdown['cash'] = (todayBreakdown['cash'] ?? 0.0) + orderAmount;
               todayTotal += orderAmount;
-            } else if (orderDate.isAfter(yesterdayStart) && orderDate.isBefore(todayStart)) {
+            } else if (!orderUtc.isBefore(yesterdayStartUtc) &&
+                orderUtc.isBefore(todayStartUtc)) {
               yesterdayTotal += orderAmount;
             }
-            if (orderDate.isAfter(weekStart)) {
+            if (!orderUtc.isBefore(weekStartUtc)) {
               weekTotal += orderAmount;
             }
-            if (orderDate.isAfter(monthStart)) {
+            if (!orderUtc.isBefore(monthStartUtc)) {
               monthTotal += orderAmount;
             }
           }

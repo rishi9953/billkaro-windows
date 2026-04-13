@@ -1,8 +1,7 @@
 import 'package:billkaro/app/services/common_function.dart';
-import 'package:intl/intl.dart';
 import 'package:billkaro/app/Database/app_database.dart' as dbs;
-import 'package:billkaro/app/modules/AddOrder/confirm_order_bottomsheet.dart';
 import 'package:billkaro/app/modules/AddOrder/quick_addItem_bottomsheet.dart';
+import 'package:billkaro/app/modules/BusinessOverview/business_overview_controller.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_item_controller.dart';
 import 'package:billkaro/app/modules/Order/HoldOrders/hold_orders_controller.dart';
@@ -14,12 +13,16 @@ import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_req
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart'
     as api;
 import 'package:billkaro/app/services/Modals/orders/split_payment.dart';
+import 'package:billkaro/app/Widgets/desktop_camera_capture_dialog.dart';
 import 'package:billkaro/app/services/ai/menu_ai_scanner.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/utils/date_util.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:billkaro/config/config.dart';
+import 'package:flutter_modular/flutter_modular.dart';
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
+import 'package:billkaro/app/modules/Invoice/invoice_controller.dart';
 
 class AddOrderController extends BaseController {
   // Controllers
@@ -64,8 +67,14 @@ class AddOrderController extends BaseController {
   final RxDouble gstRate = 0.0.obs;
   api.OrderModel? orders;
   RxBool isKOT = false.obs;
+
+  /// KOT UI and printing only for cafe/restaurant when preference is on.
+  bool get isKotFeatureActive =>
+      isKOT.value && HomeMainRoutes.outletIsCafeOrRestaurant();
   final RxBool isEdit = false.obs;
   RxBool isListView = false.obs;
+  late final RxBool showAddDetailsOnCreateOrder;
+  final RxBool isFromTableScreen = false.obs;
 
   var selectedCategory = 'none'.obs;
   String category = 'none';
@@ -78,8 +87,28 @@ class AddOrderController extends BaseController {
     'Zomato',
   ];
   Map<String, dynamic> orderDetails = {};
+  // Trigger UI rebuilds when non-reactive orderDetails map changes.
+  final RxInt orderDetailsVersion = 0.obs;
 
   Timer? _searchDebounce;
+
+  void setOrderDetails(Map<String, dynamic> details) {
+    orderDetails = details;
+    orderDetailsVersion.value++;
+    calculateTotals();
+  }
+
+  void clearOrderDraft() {
+    itemQuantities.clear();
+    orderDetails.clear();
+    orders = null;
+    isEdit.value = false;
+    selectedOrderSource.value = '';
+    subtotal.value = 0.0;
+    totalTax.value = 0.0;
+    totalAmount.value = 0.0;
+    orderDetailsVersion.value++;
+  }
 
   @override
   void onInit() {
@@ -89,13 +118,22 @@ class AddOrderController extends BaseController {
     }
     menuItemController = Get.find<MenuItemController>();
 
-    final args = Get.arguments as Map<String, dynamic>?;
+    // Prefer Modular route args for Modular navigation flows (pushNamed/navigate),
+    // and fall back to Get.arguments for legacy GetX navigations.
+    final dynamic modularArgs = Modular.args.data;
+    final args = (modularArgs is Map<String, dynamic>)
+        ? modularArgs
+        : (Get.arguments as Map<String, dynamic>?);
     isKOT.value = appPref.isKOT;
     isListView.value = appPref.isListView;
+    showAddDetailsOnCreateOrder = appPref.showAddDetailsOnCreateOrder.obs;
 
     if (args != null) {
       isEdit.value = args['isEdit'] ?? false;
       orders = args['order'];
+      isFromTableScreen.value =
+          !isEdit.value &&
+          (args['tableNumber']?.toString().trim().isNotEmpty ?? false);
 
       if (orders != null) {
         selectedOrderSource.value = orders!.orderFrom ?? '';
@@ -136,9 +174,14 @@ class AddOrderController extends BaseController {
     if (isEdit.value && orders != null) {
       _loadOrderForEdit();
     } else {
-      // Only show dialog if order source is not already set (e.g., from table screen)
+      // Only show dialog if order source is not already set (e.g., from table screen).
+      // Cafe / restaurant: user picks channel; other outlets: default without blocking.
       if (selectedOrderSource.value.isEmpty) {
-        _showOrderSourceDialog();
+        if (HomeMainRoutes.outletIsCafeOrRestaurant()) {
+          _showOrderSourceDialog();
+        } else {
+          selectedOrderSource.value = 'Takeaway';
+        }
       }
     }
   }
@@ -223,6 +266,19 @@ class AddOrderController extends BaseController {
     hasMoreItems.value = true;
   }
 
+  /// Reload categories/items after the global outlet changes (other tabs stay mounted).
+  Future<void> reloadForOutletChange() async {
+    clearOrderDraft();
+    resetPagination();
+    allItemsMap.clear();
+    categories.clear();
+    selectedCategoryId.value = 'none';
+    selectedCategory.value = 'none';
+    searchQuery.value = '';
+    await getCategories();
+    await getItems();
+  }
+
   // --------------------
   // Quantity management
   // --------------------
@@ -240,6 +296,11 @@ class AddOrderController extends BaseController {
     } else {
       itemQuantities[itemId] = current - 1;
     }
+    calculateTotals();
+  }
+
+  void removeItemCompletely(String itemId) {
+    itemQuantities.remove(itemId);
     calculateTotals();
   }
 
@@ -261,7 +322,7 @@ class AddOrderController extends BaseController {
   // --------------------
   String formatOrderTime(String isoTime) {
     final dateTime = DateTime.tryParse(isoTime) ?? DateTime.now();
-    return DateFormat('dd MMM yyyy, hh:mm a').format(dateTime);
+    return formatDateTimeForDisplay(dateTime, 'dd MMM yyyy, hh:mm a');
   }
 
   Widget showIcon() {
@@ -294,90 +355,95 @@ class AddOrderController extends BaseController {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.grey[300]!),
+            child: SizedBox(
+              width: MediaQuery.of(Get.context!).size.width * 0.4,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: Colors.grey[300]!),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'New Order',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            // Close the dialog...
+                            Get.back();
+                            // ...and always return to the Home tab in the shell.
+                            Modular.to.navigate(HomeMainRoutes.home);
+                          },
+                          child: const Icon(Icons.close, size: 24),
+                        ),
+                      ],
                     ),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'New Order',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          Get.back();
-                          Get.back();
-                        },
-                        child: const Icon(Icons.close, size: 24),
-                      ),
-                    ],
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final itemWidth = (constraints.maxWidth - 12) / 2;
+                        return Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: ordersList.map((source) {
+                            Widget iconData;
+                            switch (source) {
+                              case 'Delivery':
+                                iconData = Assets.delivery.image(
+                                  width: 24,
+                                  height: 24,
+                                );
+                                break;
+                              case 'Dine In':
+                                iconData = Assets.dineIn.image(
+                                  width: 24,
+                                  height: 24,
+                                );
+                                break;
+                              case 'Swiggy':
+                                iconData = Assets.svg.swiggy.svg(
+                                  width: 24,
+                                  height: 24,
+                                );
+                                break;
+                              case 'Takeaway':
+                                iconData = Assets.takeaway.image(
+                                  width: 24,
+                                  height: 24,
+                                );
+                                break;
+                              case 'Zomato':
+                                iconData = Assets.svg.zomato.svg(
+                                  width: 24,
+                                  height: 24,
+                                );
+                                break;
+                              default:
+                                iconData = const Icon(Icons.help_outline);
+                            }
+                            return SizedBox(
+                              width: itemWidth,
+                              child: _buildOrderSourceOption(source, iconData),
+                            );
+                          }).toList(),
+                        );
+                      },
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final itemWidth = (constraints.maxWidth - 12) / 2;
-                      return Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        children: ordersList.map((source) {
-                          Widget iconData;
-                          switch (source) {
-                            case 'Delivery':
-                              iconData = Assets.delivery.image(
-                                width: 24,
-                                height: 24,
-                              );
-                              break;
-                            case 'Dine In':
-                              iconData = Assets.dineIn.image(
-                                width: 24,
-                                height: 24,
-                              );
-                              break;
-                            case 'Swiggy':
-                              iconData = Assets.svg.swiggy.svg(
-                                width: 24,
-                                height: 24,
-                              );
-                              break;
-                            case 'Takeaway':
-                              iconData = Assets.takeaway.image(
-                                width: 24,
-                                height: 24,
-                              );
-                              break;
-                            case 'Zomato':
-                              iconData = Assets.svg.zomato.svg(
-                                width: 24,
-                                height: 24,
-                              );
-                              break;
-                            default:
-                              iconData = const Icon(Icons.help_outline);
-                          }
-                          return SizedBox(
-                            width: itemWidth,
-                            child: _buildOrderSourceOption(source, iconData),
-                          );
-                        }).toList(),
-                      );
-                    },
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -431,15 +497,31 @@ class AddOrderController extends BaseController {
       final imageSource = await _showImageSourceDialog();
       if (imageSource == null) return;
 
-      // Pick image
-      final XFile? image = await _imagePicker.pickImage(
-        source: imageSource,
-        maxWidth: 1800,
-        maxHeight: 1800,
-        imageQuality: 85,
-      );
+      String? capturedPath;
+      if (imageSource == ImageSource.camera) {
+        if (!kIsWeb &&
+            (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+          capturedPath = await showDesktopCameraCaptureDialog();
+        } else {
+          final XFile? image = await _imagePicker.pickImage(
+            source: ImageSource.camera,
+            maxWidth: 1800,
+            maxHeight: 1800,
+            imageQuality: 85,
+          );
+          capturedPath = image?.path;
+        }
+      } else {
+        final XFile? image = await _imagePicker.pickImage(
+          source: ImageSource.gallery,
+          maxWidth: 1800,
+          maxHeight: 1800,
+          imageQuality: 85,
+        );
+        capturedPath = image?.path;
+      }
 
-      if (image == null) return;
+      if (capturedPath == null) return;
 
       // Show loading
       isScanningAI.value = true;
@@ -447,7 +529,7 @@ class AddOrderController extends BaseController {
 
       // Scan with AI
       debugPrint('🤖 [AI] Starting AI scan for quick add...');
-      final result = await _aiScanner.scanMenuFromPhoto(File(image.path));
+      final result = await _aiScanner.scanMenuFromPhoto(File(capturedPath));
 
       dismissAppLoader();
       isScanningAI.value = false;
@@ -490,88 +572,106 @@ class AddOrderController extends BaseController {
 
   /// Show dialog to select image source (camera or gallery)
   Future<ImageSource?> _showImageSourceDialog() async {
+    final bool isWindowsDesktop = Platform.isWindows;
+    final double screenWidth = MediaQuery.of(Get.context!).size.width;
+    final double dialogWidth = isWindowsDesktop
+        ? (screenWidth * 0.35).clamp(320.0, 480.0)
+        : (screenWidth * 0.9).clamp(280.0, 420.0);
     return await Get.dialog<ImageSource>(
       Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Select Image Source',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // Camera option
-                  GestureDetector(
-                    onTap: () => Get.back(result: ImageSource.camera),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColor.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColor.primary, width: 2),
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.camera_alt,
-                            size: 32,
-                            color: AppColor.primary,
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Camera',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
+        child: SizedBox(
+          width: dialogWidth,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Select Image Source',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    GestureDetector(
+                      onTap: () => Get.back(result: ImageSource.camera),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColor.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColor.primary, width: 2),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.camera_alt,
+                              size: 32,
+                              color: AppColor.primary,
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Camera',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            if (isWindowsDesktop) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'USB / webcam',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  // Gallery option
-                  GestureDetector(
-                    onTap: () => Get.back(result: ImageSource.gallery),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColor.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColor.primary, width: 2),
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.photo_library,
-                            size: 32,
-                            color: AppColor.primary,
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Gallery',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
+                    GestureDetector(
+                      onTap: () => Get.back(result: ImageSource.gallery),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColor.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColor.primary, width: 2),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(
+                              isWindowsDesktop
+                                  ? Icons.folder_open_outlined
+                                  : Icons.photo_library,
+                              size: 32,
+                              color: AppColor.primary,
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 8),
+                            Text(
+                              isWindowsDesktop ? 'Browse Files' : 'Gallery',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              TextButton(
-                onPressed: () => Get.back(),
-                child: const Text('Cancel'),
-              ),
-            ],
+                  ],
+                ),
+                const SizedBox(height: 20),
+                TextButton(
+                  onPressed: () => Get.back(),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -595,30 +695,46 @@ class AddOrderController extends BaseController {
     );
   }
 
-  /// Opens the confirmation bottom sheet to review items, then Save & Hold or Save & Bill.
-  void showConfirmOrderBottomSheet() {
-    final loc = AppLocalizations.of(Get.context!)!;
+  /// Opens a simple confirmation prompt before placing the order.
+  void showConfirmOrderBottomSheet(String status) {
+    final context = Get.context!;
+    final loc = AppLocalizations.of(context)!;
     if (itemQuantities.isEmpty) {
       showError(description: loc.add_items);
       return;
     }
-    if (orderDetails.isEmpty) {
+    if (appPref.showAddDetailsOnCreateOrder && orderDetails.isEmpty) {
       showError(description: 'Please enter the order details');
       return;
     }
-    final appPref = Get.find<AppPref>();
     if (!hasTrialOrSubscription(appPref)) {
       checkSubscription();
       return;
     }
-    showModalBottomSheet(
-      context: Get.context!,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    final isBilling = status == 'closed';
+    final actionLabel = isBilling
+        ? (isKotFeatureActive ? 'KOT & Bill' : loc.save_and_bill)
+        : (isKotFeatureActive ? loc.kot_and_hold : loc.save_and_hold);
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Confirm Order'),
+        content: Text('Are you sure you want to $actionLabel?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(dialogCtx).pop();
+              saveAndBill(status);
+            },
+            child: const Text('Confirm'),
+          ),
+        ],
       ),
-      builder: (_) => const ConfirmOrderBottomSheet(),
     );
   }
 
@@ -699,7 +815,10 @@ class AddOrderController extends BaseController {
   // --------------------
   // Fetch data with pagination
   // --------------------
-  Future<void> getItems({bool append = false, bool isFromSearch = false}) async {
+  Future<void> getItems({
+    bool append = false,
+    bool isFromSearch = false,
+  }) async {
     final db = AppDatabase();
 
     try {
@@ -913,7 +1032,7 @@ class AddOrderController extends BaseController {
       showError(description: loc.please_add_items_to_order);
       return;
     }
-    if (orderDetails.isEmpty) {
+    if (appPref.showAddDetailsOnCreateOrder && orderDetails.isEmpty) {
       showError(description: loc.please_add_details_to_order);
       return;
     }
@@ -949,7 +1068,7 @@ class AddOrderController extends BaseController {
                     child: Text(loc.print_kot),
                   ),
                   ElevatedButton(
-                    onPressed: () => saveAndBill('billing'),
+                    onPressed: () => saveAndBill('closed'),
                     child: Text(loc.print_bill),
                   ),
                 ],
@@ -1018,8 +1137,8 @@ class AddOrderController extends BaseController {
       totalTax: totalTax.value,
     );
 
-    Get.toNamed(
-      AppRoute.KOTInvoice,
+    Modular.to.pushNamed(
+      HomeMainRoutes.kotReceipt,
       arguments: {
         'invoice': kotRequest,
         'orderFrom': selectedOrderSource.value,
@@ -1033,13 +1152,15 @@ class AddOrderController extends BaseController {
   }
 
   Future<void> _maybeAutoPrintKOT(CreateorderRequest request) async {
-    if (!isKOT.value) return;
+    if (!isKotFeatureActive) return;
 
     try {
       final printerService = ThermalPrinterService.instance;
       // Route KOT to the KOT printer (if configured), otherwise user will be
       // prompted to connect and it will be saved as KOT printer automatically.
-      final connected = await printerService.ensureConnectedForRole(PrintRole.kot);
+      final connected = await printerService.ensureConnectedForRole(
+        PrintRole.kot,
+      );
       if (!connected) return;
 
       final now = DateTime.now().toString();
@@ -1075,6 +1196,112 @@ class AddOrderController extends BaseController {
     }
   }
 
+  /// Opens invoice preview from current cart and order details (no save/API).
+  Future<void> viewInvoicePreview() async {
+    final loc = AppLocalizations.of(Get.context!)!;
+    if (itemQuantities.isEmpty) {
+      showError(description: loc.please_add_items_to_order);
+      return;
+    }
+
+    if (_requiresDineInTable()) {
+      final tableNumber = (orderDetails['tableNumber'] ?? '').toString().trim();
+      if (tableNumber.isEmpty) {
+        showError(description: 'Please select a table for Dine In order');
+        return;
+      }
+    }
+
+    final List<OrderItem> payload = [];
+
+    for (final e in itemQuantities.entries) {
+      final item = allItemsMap[e.key];
+      if (item == null) continue;
+
+      payload.add(
+        OrderItem(
+          itemId: item.id,
+          itemName: item.itemName,
+          category: item.category,
+          quantity: e.value,
+          salePrice: item.salePrice,
+          gst: item.gst.toDouble(),
+        ),
+      );
+    }
+
+    if (payload.isEmpty) {
+      showError(description: loc.please_add_items_to_order);
+      return;
+    }
+
+    String? finalBillNumber;
+    if (isEdit.value) {
+      finalBillNumber = orderDetails['billNumber']?.toString();
+    } else {
+      if (orderDetails['billNumber'] != null &&
+          orderDetails['billNumber'].toString().isNotEmpty) {
+        finalBillNumber = orderDetails['billNumber'].toString();
+      } else {
+        finalBillNumber = await _generateNextIntegerBillNumber();
+      }
+
+      final billStr = finalBillNumber;
+      final billNumInt = int.tryParse(billStr);
+      if (billNumInt == null) {
+        finalBillNumber = await _generateNextIntegerBillNumber();
+      } else {
+        final isUnique = await _isBillNumberUnique(billStr);
+        if (!isUnique) {
+          finalBillNumber = await _generateNextIntegerBillNumber();
+        }
+      }
+    }
+
+    List<SplitPayment>? splitPaymentsList;
+    if (orderDetails['splitPayments'] != null) {
+      if (orderDetails['splitPayments'] is List) {
+        final List<dynamic> splitList = orderDetails['splitPayments'];
+        splitPaymentsList = splitList
+            .map((json) => SplitPayment.fromJson(json as Map<String, dynamic>))
+            .toList();
+      }
+    }
+
+    final request = CreateorderRequest(
+      billNumber: finalBillNumber,
+      userId: appPref.user!.id,
+      outletId: appPref.selectedOutlet!.id!,
+      tableNumber: orderDetails['tableNumber'] ?? '',
+      customerName: orderDetails['customerName'] ?? '',
+      phoneNumber: orderDetails['phoneNumber'] ?? '',
+      discount: (orderDetails['discount'] ?? 0).toDouble(),
+      serviceCharge: (orderDetails['serviceCharge'] ?? 0).toDouble(),
+      paymentReceivedIn: orderDetails['paymentReceivedIn'],
+      splitPayments: splitPaymentsList,
+      status: 'pending',
+      orderFrom: selectedOrderSource.value,
+      subtotal: subtotal.value,
+      totalTax: totalTax.value,
+      totalAmount: totalAmount.value,
+      items: payload,
+    );
+
+    if (Get.isRegistered<InvoicePreviewController>()) {
+      Get.delete<InvoicePreviewController>(force: true);
+    }
+
+    await Modular.to.pushNamed(
+      HomeMainRoutes.invoiceScreen,
+      arguments: {
+        'invoice': request,
+        'orderFrom': selectedOrderSource.value,
+        'isEdit': isEdit.value,
+        'isOffline': false,
+      },
+    );
+  }
+
   // --------------------
   // Save & Bill (with Edit support)
   // --------------------
@@ -1082,6 +1309,9 @@ class AddOrderController extends BaseController {
   Future<void> saveAndBill(String status) async {
     final loc = AppLocalizations.of(Get.context!)!;
     final normalizedStatus = status.trim().toLowerCase();
+    // API expects 'pending' for billing flow, but the app UI/table status relies on
+    // local order status. So keep a separate local status for correct table state.
+    final localStatusForUi = normalizedStatus;
     final orderStatusForApi = normalizedStatus == 'billing'
         ? 'pending'
         : normalizedStatus;
@@ -1090,7 +1320,7 @@ class AddOrderController extends BaseController {
       return;
     }
 
-    if (_isDineInOrder()) {
+    if (_requiresDineInTable()) {
       final tableNumber = (orderDetails['tableNumber'] ?? '').toString().trim();
       if (tableNumber.isEmpty) {
         showError(description: 'Please select a table for Dine In order');
@@ -1191,6 +1421,7 @@ class AddOrderController extends BaseController {
         final orderModel = _mapToOrderModel(
           request,
           response['data']?['id'] ?? orderDetails['id'],
+          statusOverride: localStatusForUi,
         );
 
         await db.insertOrders(
@@ -1204,15 +1435,23 @@ class AddOrderController extends BaseController {
           tableNumber: request.tableNumber,
         );
 
-        await homeController.getOrderList();
+        await homeController.getOrderList(forceApiRefresh: true);
+        if (Get.isRegistered<BusinessOverviewController>()) {
+          await Get.find<BusinessOverviewController>().getOrderList(
+            forceApiRefresh: true,
+          );
+        }
 
         final loc = AppLocalizations.of(Get.context!)!;
         showSuccess(description: loc.order_saved);
 
         await _maybeAutoPrintKOT(request);
 
-        final result = await Get.toNamed(
-          AppRoute.pdfPreview,
+        // Clear local draft state before showing invoice preview.
+        clearOrderDraft();
+
+        await Modular.to.pushNamed(
+          HomeMainRoutes.invoiceScreen,
           arguments: {
             'invoice': request,
             'orderFrom': selectedOrderSource.value,
@@ -1220,18 +1459,15 @@ class AddOrderController extends BaseController {
             'isOffline': false,
           },
         );
-
-        if (result == true) {
-          showSuccess(
-            description: isEdit.value
-                ? loc.order_updated_successfully
-                : loc.order_created_successfully,
-          );
-
-          orderDetails.clear();
-          itemQuantities.clear();
-          Get.back();
-        }
+        // await Get.toNamed(
+        //   AppRoute.pdfPreview,
+        //   arguments: {
+        //     'invoice': request,
+        //     'orderFrom': selectedOrderSource.value,
+        //     'isEdit': isEdit.value,
+        //     'isOffline': false,
+        //   },
+        // );
       } else {
         showError(description: loc.order_failed);
       }
@@ -1239,7 +1475,11 @@ class AddOrderController extends BaseController {
       try {
         final tempOrderId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
 
-        final orderModel = _mapToOrderModel(request, tempOrderId);
+        final orderModel = _mapToOrderModel(
+          request,
+          tempOrderId,
+          statusOverride: localStatusForUi,
+        );
 
         await db.insertOrders(
           [orderModel],
@@ -1247,15 +1487,23 @@ class AddOrderController extends BaseController {
           isSyncedFromApi: false,
         );
 
-        await homeController.getOrderList();
+        await homeController.getOrderList(forceApiRefresh: true);
+        if (Get.isRegistered<BusinessOverviewController>()) {
+          await Get.find<BusinessOverviewController>().getOrderList(
+            forceApiRefresh: true,
+          );
+        }
 
         final loc = AppLocalizations.of(Get.context!)!;
         showSuccess(description: loc.order_saved_offline);
 
         await _maybeAutoPrintKOT(request);
 
-        final result = await Get.toNamed(
-          AppRoute.pdfPreview,
+        // Clear local draft state before showing invoice preview.
+        clearOrderDraft();
+
+        await Modular.to.pushNamed(
+          HomeMainRoutes.invoiceScreen,
           arguments: {
             'invoice': request,
             'orderFrom': selectedOrderSource.value,
@@ -1263,18 +1511,6 @@ class AddOrderController extends BaseController {
             'isOffline': true,
           },
         );
-
-        if (result == true) {
-          showSuccess(
-            description: isEdit.value
-                ? loc.order_updated_successfully
-                : loc.order_created_successfully,
-          );
-
-          orderDetails.clear();
-          itemQuantities.clear();
-          Get.back();
-        }
       } catch (e) {
         showError(description: loc.failed_to_save_order_offline);
       }
@@ -1433,7 +1669,11 @@ class AddOrderController extends BaseController {
     }
   }
 
-  api.OrderModel _mapToOrderModel(CreateorderRequest r, String id) {
+  api.OrderModel _mapToOrderModel(
+    CreateorderRequest r,
+    String id, {
+    String? statusOverride,
+  }) {
     return api.OrderModel(
       outletId: r.outletId!,
       id: id,
@@ -1449,7 +1689,7 @@ class AddOrderController extends BaseController {
       totalAmount: r.totalAmount!,
       paymentReceivedIn: r.paymentReceivedIn,
       splitPayments: r.splitPayments,
-      status: r.status!,
+      status: (statusOverride ?? r.status!),
       orderFrom: r.orderFrom!,
       createdAt: DateTime.now().toIso8601String(),
       updatedAt: DateTime.now().toIso8601String(),
@@ -1518,6 +1758,10 @@ class AddOrderController extends BaseController {
 
   bool _isDineInOrder() =>
       selectedOrderSource.value.trim().toLowerCase() == 'dine in';
+
+  /// Table is mandatory for Dine In only when the Add Details flow is available.
+  bool _requiresDineInTable() =>
+      _isDineInOrder() && appPref.showAddDetailsOnCreateOrder;
 
   String _normalizeTableNumber(String value) {
     var normalized = value.trim().toLowerCase();
@@ -1592,14 +1836,17 @@ class AddOrderController extends BaseController {
   }
 
   void openSettings() async {
-    await Get.toNamed(AppRoute.orderPreferences);
+    // await Get.toNamed(AppRoute.orderPreferences);
+    await Modular.to.pushNamed(HomeMainRoutes.orderSettings);
 
     // Sync from preferences when returning
     isListView.value = appPref.isListView;
     isKOT.value = appPref.isKOT;
+    showAddDetailsOnCreateOrder.value = appPref.showAddDetailsOnCreateOrder;
     // Force Obx to rebuild even if value didn't change (same view re-selected)
     isListView.refresh();
     isKOT.refresh();
+    showAddDetailsOnCreateOrder.refresh();
   }
 
   @override

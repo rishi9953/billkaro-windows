@@ -1,6 +1,7 @@
+import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/OrderPrefrences/order_prefrences_controller.dart';
 import 'package:billkaro/config/config.dart';
-import 'package:flutter/material.dart';
 
 class OrderPreferencesScreen extends StatelessWidget {
   OrderPreferencesScreen({super.key});
@@ -19,41 +20,63 @@ class OrderPreferencesScreen extends StatelessWidget {
         }
       },
       child: Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        title: Text(
-          loc.order_preferences,
-          style: TextStyle(
-            color: AppColor.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-      body: Column(
-        children: [
-          const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                // KOT Mode Section
-                _buildPreferenceItem(
-                  title: loc.kot_mode,
-                  subtitle: loc.how_does_this_work,
-                  value: controller.kotModeEnabled,
-                  onChanged: controller.toggleKotMode,
-                  subtitleColor: AppColor.primary,
-                  onSubtitleTap: controller.showKotModeBottomSheet,
-                ),
-                Gap(10),
-                _billingView(),
-              ],
+        appBar: AppBar(
+          elevation: 0,
+          title: Text(
+            loc.order_preferences,
+            style: TextStyle(
+              color: AppColor.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
             ),
           ),
-        ],
+        ),
+        body: Column(
+          children: [
+            const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  if (Get.isRegistered<HomeScreenController>())
+                    Obx(() {
+                      Get.find<HomeScreenController>().selectedOutlet.value;
+                      if (!HomeMainRoutes.outletIsCafeOrRestaurant()) {
+                        return const SizedBox.shrink();
+                      }
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildPreferenceItem(
+                            title: loc.kot_mode,
+                            subtitle: loc.how_does_this_work,
+                            value: controller.kotModeEnabled,
+                            onChanged: controller.toggleKotMode,
+                            subtitleColor: AppColor.primary,
+                            onSubtitleTap: controller.showKotModeBottomSheet,
+                          ),
+                          Gap(10),
+                        ],
+                      );
+                    })
+                  else if (HomeMainRoutes.outletIsCafeOrRestaurant()) ...[
+                    _buildPreferenceItem(
+                      title: loc.kot_mode,
+                      subtitle: loc.how_does_this_work,
+                      value: controller.kotModeEnabled,
+                      onChanged: controller.toggleKotMode,
+                      subtitleColor: AppColor.primary,
+                      onSubtitleTap: controller.showKotModeBottomSheet,
+                    ),
+                    Gap(10),
+                  ],
+                  _billingView(),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
     );
   }
 

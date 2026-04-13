@@ -2,12 +2,19 @@
 
 import 'dart:io';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/app_snackbar.dart';
 import 'package:dio/dio.dart';
 
 typedef ApiErrorHandler = Future<bool> Function(DioException error);
 typedef Json = Map<String, dynamic>;
 
-Future<T?> callApi<T>(Future<T> request, {bool showLoader = true, double? loaderTopPadding, ApiErrorHandler? apiErrorHandler, bool rethrowError = false}) async {
+Future<T?> callApi<T>(
+  Future<T> request, {
+  bool showLoader = true,
+  double? loaderTopPadding,
+  ApiErrorHandler? apiErrorHandler,
+  bool rethrowError = false,
+}) async {
   try {
     if (showLoader) showAppLoader(loaderTopPadding: loaderTopPadding);
     debugPrint('callApi :: Starting request');
@@ -20,7 +27,9 @@ Future<T?> callApi<T>(Future<T> request, {bool showLoader = true, double? loader
   } on DioException catch (dioError, stack) {
     debugPrint('callApi :: DioException -> ${dioError.type}');
     debugPrint('callApi :: Error Response Data -> ${dioError.response?.data}');
-    debugPrint('callApi :: Error Response Status -> ${dioError.response?.statusCode}');
+    debugPrint(
+      'callApi :: Error Response Status -> ${dioError.response?.statusCode}',
+    );
     debugPrint('callApi :: Stack -> $stack');
     if (showLoader) dismissAppLoader();
 
@@ -48,11 +57,17 @@ Future<T?> callApi<T>(Future<T> request, {bool showLoader = true, double? loader
 
 void onResponseError(DioException error) {
   debugPrint('onResponseError: Status Code: ${error.response?.statusCode}');
-  debugPrint('onResponseError: Response Data: ${error.response?.statusMessage}');
+  debugPrint(
+    'onResponseError: Response Data: ${error.response?.statusMessage}',
+  );
 
   // Handle network errors
-  if (error.type == DioExceptionType.unknown && error.error is SocketException) {
-    showError(title: 'Connection Error', description: 'Please check your internet connection and try again.');
+  if (error.type == DioExceptionType.unknown &&
+      error.error is SocketException) {
+    showError(
+      title: 'Connection Error',
+      description: 'Please check your internet connection and try again.',
+    );
     return;
   }
 
@@ -103,31 +118,66 @@ List<String> _processErrorResponse(dynamic errorData) {
   return errors;
 }
 
-void _showRawSnackBar({String? description, String? title, Widget? icon, bool closeAllSnackbars = false, bool? isTop = false}) {
+void _showRawSnackBar({
+  String? description,
+  String? title,
+  Widget? icon,
+  bool closeAllSnackbars = false,
+  bool? isTop = false,
+}) async {
   if (closeAllSnackbars) {
     Get.closeAllSnackbars();
   }
-  Get.rawSnackbar(
+
+  // Prevent loader/snackbar overlap from leaving a stale loader on screen.
+  dismissAllAppLoader();
+  await Future<void>.delayed(const Duration(milliseconds: 50));
+
+  AppSnackbar.showRaw(
     backgroundColor: AppColor.primary,
-    titleText: title != null ? AppText.bold(title, color: AppColor.white) : null,
+    titleText: title != null
+        ? AppText.bold(title, color: AppColor.white)
+        : null,
     messageText: description == null
         ? null
         : title == null
         ? AppText.regular(description, color: AppColor.white)
         : AppText.regular(description, size: 12, color: AppColor.white),
-    icon: icon ?? const Icon(Icons.error_outline_rounded, color: AppColor.white),
-    // backgroundColor: bgColor ?? (Get.context?.theme.colorScheme.tertiary ?? AppColor.primary),
-    padding: const EdgeInsets.all(20),
+    icon:
+        icon ?? const Icon(Icons.error_outline_rounded, color: AppColor.white),
     snackPosition: isTop == true ? SnackPosition.TOP : SnackPosition.BOTTOM,
     duration: const Duration(milliseconds: 3000),
-    snackStyle: SnackStyle.GROUNDED,
   );
 }
 
-void showError({required String? description, String? title, Widget? icon, bool closeAllSnackbars = false, bool isTop = false}) {
-  _showRawSnackBar(description: description, title: title, icon: icon, closeAllSnackbars: closeAllSnackbars, isTop: isTop);
+void showError({
+  required String? description,
+  String? title,
+  Widget? icon,
+  bool closeAllSnackbars = false,
+  bool isTop = false,
+}) {
+  _showRawSnackBar(
+    description: description,
+    title: title,
+    icon: icon,
+    closeAllSnackbars: closeAllSnackbars,
+    isTop: isTop,
+  );
 }
 
-void showSuccess({required String? description, String? title, Widget? icon, bool closeAllSnackbars = false, bool isTop = false}) {
-  _showRawSnackBar(description: description, title: title, icon: icon, closeAllSnackbars: closeAllSnackbars, isTop: isTop);
+void showSuccess({
+  required String? description,
+  String? title,
+  Widget? icon,
+  bool closeAllSnackbars = false,
+  bool isTop = false,
+}) {
+  _showRawSnackBar(
+    description: description,
+    title: title,
+    icon: icon,
+    closeAllSnackbars: closeAllSnackbars,
+    isTop: isTop,
+  );
 }

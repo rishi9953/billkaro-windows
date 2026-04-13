@@ -1,14 +1,16 @@
 import 'dart:typed_data';
+import 'dart:io' show Platform;
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
-import 'package:flutter_bluetooth_serial_plus/flutter_bluetooth_serial_plus.dart';
+import 'package:flutter_bluetooth_classic_serial/flutter_bluetooth_classic.dart';
 
 class PrinterService2 extends GetxService {
   static PrinterService2 get to => Get.find();
 
-  BluetoothConnection? connection;
+  final FlutterBluetoothClassic _bluetooth = FlutterBluetoothClassic();
 
   /// 🔁 Reactive selected printer
   final Rx<BluetoothDevice?> selectedPrinter = Rx<BluetoothDevice?>(null);
@@ -20,11 +22,43 @@ class PrinterService2 extends GetxService {
   final isConnecting = false.obs;
   final isScanning = false.obs;
 
+  bool _pluginAvailable = true;
+
+  // `flutter_bluetooth_classic_serial` exposes Android (Classic BT/SPP) APIs.
+  // On desktop platforms (Windows/macOS/Linux) it won’t have a native
+  // implementation, so calling it throws MissingPluginException.
+  bool get _bluetoothSupported =>
+      !kIsWeb && _pluginAvailable && Platform.isAndroid;
+
   /// 🔥 INIT SERVICE (call once at app start)
   Future<PrinterService2> init() async {
+    if (!_bluetoothSupported) {
+      debugPrint(
+        'ℹ️ [PRINTER] Bluetooth printing not supported on this platform.',
+      );
+      return this;
+    }
+
     try {
-      await _enableBluetooth();
+      final supported = await _bluetooth.isBluetoothSupported();
+      if (!supported) {
+        debugPrint('⚠️ [PRINTER] Bluetooth adapter not supported.');
+        return this;
+      }
+
+      final enabled = await _bluetooth.isBluetoothEnabled();
+      if (!enabled) {
+        await _enableBluetooth();
+      }
     } catch (e) {
+      if (e is MissingPluginException) {
+        _pluginAvailable = false;
+        debugPrint(
+          '⚠️ [PRINTER] Bluetooth plugin not registered (MissingPluginException). '
+          'On Windows, you must do a full rebuild after adding the plugin.',
+        );
+        return this;
+      }
       debugPrint('⚠️ [PRINTER] Failed to enable Bluetooth: $e');
       // Continue without Bluetooth
     }
@@ -32,6 +66,14 @@ class PrinterService2 extends GetxService {
     try {
       await _autoConnectPrinter();
     } catch (e) {
+      if (e is MissingPluginException) {
+        _pluginAvailable = false;
+        debugPrint(
+          '⚠️ [PRINTER] Bluetooth plugin not registered (MissingPluginException). '
+          'Skipping auto-connect.',
+        );
+        return this;
+      }
       debugPrint('⚠️ [PRINTER] Failed to auto-connect printer: $e');
       // Continue without auto-connect
     }
@@ -41,13 +83,14 @@ class PrinterService2 extends GetxService {
 
   /// Enable bluetooth
   Future<void> _enableBluetooth() async {
-    await FlutterBluetoothSerial.instance.requestEnable();
+    if (!_bluetoothSupported) return;
+    await _bluetooth.enableBluetooth();
   }
 
   /// Auto detect printer
   BluetoothDevice? _findPrinter(List<BluetoothDevice> devices) {
     for (final d in devices) {
-      final name = d.name?.toLowerCase() ?? '';
+      final name = d.name.toLowerCase();
       if (name.contains('printer') ||
           name.contains('pos') ||
           name.contains('thermal') ||
@@ -60,9 +103,10 @@ class PrinterService2 extends GetxService {
 
   /// Auto connect printer
   Future<void> _autoConnectPrinter() async {
+    if (!_bluetoothSupported) return;
     if (isConnected.value || isConnecting.value) return;
 
-    final bonded = await FlutterBluetoothSerial.instance.getBondedDevices();
+    final bonded = await _bluetooth.getPairedDevices();
     final printer = _findPrinter(bonded);
 
     if (printer != null) {
@@ -72,14 +116,33 @@ class PrinterService2 extends GetxService {
 
   /// Manual connect
   Future<void> connect(BluetoothDevice device) async {
-    if (isConnected.value || isConnecting.value) return;
+    if (!_bluetoothSupported) {
+      debugPrint(
+        '⚠️ [PRINTER] Bluetooth connect not supported on this platform.',
+      );
+      return;
+    }
+    if (isConnecting.value) return;
 
     isConnecting.value = true;
 
     try {
-      connection = await BluetoothConnection.toAddress(device.address);
+      // If we're already connected to some device, disconnect first to avoid
+      // stale sockets / "already connected" failures (common on Windows).
+      if (isConnected.value) {
+        try {
+          await _bluetooth.disconnect();
+        } catch (_) {}
+        selectedPrinter.value = null;
+        isConnected.value = false;
+      }
+
+      final ok = await _bluetooth.connect(device.address);
       selectedPrinter.value = device;
-      isConnected.value = true;
+      isConnected.value = ok;
+      if (!ok) {
+        selectedPrinter.value = null;
+      }
     } catch (e) {
       isConnected.value = false;
       selectedPrinter.value = null;
@@ -90,13 +153,28 @@ class PrinterService2 extends GetxService {
 
   /// 🔍 SCAN FOR DEVICES (PAIRED)
   Future<void> scanForDevices() async {
+    if (!_bluetoothSupported) {
+      availableDevices.clear();
+      debugPrint(
+        'ℹ️ [PRINTER] Bluetooth scan not supported on this platform.',
+      );
+      return;
+    }
     if (isScanning.value) return;
 
     isScanning.value = true;
     try {
-      final devices = await FlutterBluetoothSerial.instance.getBondedDevices();
+      final devices = await _bluetooth.getPairedDevices();
       availableDevices.assignAll(devices);
     } catch (e) {
+      if (e is MissingPluginException) {
+        _pluginAvailable = false;
+        availableDevices.clear();
+        debugPrint(
+          '⚠️ [PRINTER] Bluetooth plugin not registered (MissingPluginException).',
+        );
+        return;
+      }
       availableDevices.clear();
     } finally {
       isScanning.value = false;
@@ -129,7 +207,7 @@ class PrinterService2 extends GetxService {
     String? upiId,
     PaperSize paperSize = PaperSize.mm80, // Add paperSize parameter
   }) async {
-    if (connection == null || !isConnected.value) {
+    if (!isConnected.value) {
       await _autoConnectPrinter();
       if (!isConnected.value) return;
     }
@@ -308,13 +386,31 @@ class PrinterService2 extends GetxService {
     bytes += gen.feed(3);
     bytes += gen.cut();
 
-    connection!.output.add(Uint8List.fromList(bytes));
+    await sendBytes(bytes);
+  }
+
+  Future<void> sendBytes(List<int> bytes) async {
+    if (!_bluetoothSupported) {
+      throw Exception('Bluetooth not supported on this platform');
+    }
+    if (!isConnected.value) {
+      throw Exception('No Bluetooth printer connected');
+    }
+    try {
+      await _bluetooth.sendData(Uint8List.fromList(bytes));
+    } on MissingPluginException {
+      _pluginAvailable = false;
+      throw Exception(
+        'Bluetooth plugin not registered. Please do a full rebuild.',
+      );
+    }
   }
 
   /// Disconnect
-  void disconnect() {
-    connection?.finish();
-    connection = null;
+  Future<void> disconnect() async {
+    try {
+      await _bluetooth.disconnect();
+    } catch (_) {}
     selectedPrinter.value = null;
     isConnected.value = false;
   }

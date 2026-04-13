@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:billkaro/app/Database/app_database.dart';
 import 'package:billkaro/app/services/Synchronisatioin/synchronisation.dart';
 import 'package:billkaro/app/services/Network/api_client.dart';
 import 'package:billkaro/app/services/Network/network_module.dart';
 import 'package:billkaro/app/services/notification/sync_notification_service.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:workmanager/workmanager.dart';
 
 /// Sync Manager - Coordinates all synchronization activities
@@ -19,6 +21,7 @@ class SyncManager {
   StreamSubscription<bool>? _connectivitySubscription;
   bool _isSyncing = false;
   Timer? _retryTimer;
+  Timer? _foregroundPeriodicTimer;
 
   /// Unique task names for WorkManager
   static const String periodicSyncTask = 'periodicSyncTask';
@@ -48,6 +51,28 @@ class SyncManager {
 
   /// Register periodic background sync task
   Future<void> _registerPeriodicSync() async {
+    // workmanager is only implemented on Android/iOS. On Windows/macOS/Linux/Web,
+    // we run periodic sync only while the app is open.
+    final supportsWorkmanager =
+        !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+
+    if (!supportsWorkmanager) {
+      _foregroundPeriodicTimer?.cancel();
+      // Small initial delay to avoid impacting startup.
+      Timer(const Duration(minutes: 1), () {
+        triggerSync(immediate: true);
+      });
+      _foregroundPeriodicTimer = Timer.periodic(
+        const Duration(minutes: 15),
+        (_) => triggerSync(immediate: true),
+      );
+      debugPrint(
+        'ℹ️ [SYNC MANAGER] Workmanager not supported on this platform; '
+        'using foreground periodic sync only',
+      );
+      return;
+    }
+
     try {
       await Workmanager().registerPeriodicTask(
         periodicSyncTask,
@@ -113,6 +138,14 @@ class SyncManager {
       // Sync immediately in foreground
       await _performSync();
     } else {
+      final supportsWorkmanager =
+          !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+      if (!supportsWorkmanager) {
+        // No background scheduler on this platform; do it now.
+        await _performSync();
+        return;
+      }
+
       // Schedule via WorkManager (background)
       try {
         await Workmanager().registerOneOffTask(
@@ -195,9 +228,14 @@ class SyncManager {
   /// Cancel all sync operations
   void cancelSync() {
     _retryTimer?.cancel();
+    _foregroundPeriodicTimer?.cancel();
     _connectivitySubscription?.cancel();
-    Workmanager().cancelByUniqueName(periodicSyncTask);
-    Workmanager().cancelByUniqueName(immediateSyncTask);
+    final supportsWorkmanager =
+        !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+    if (supportsWorkmanager) {
+      Workmanager().cancelByUniqueName(periodicSyncTask);
+      Workmanager().cancelByUniqueName(immediateSyncTask);
+    }
     debugPrint('🛑 [SYNC MANAGER] All sync operations cancelled');
   }
 

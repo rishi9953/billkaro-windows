@@ -1,6 +1,8 @@
 import 'package:billkaro/app/modules/AddOrder/add_order_controller.dart';
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:dotted_border/dotted_border.dart';
 
@@ -204,8 +206,8 @@ class _AddOrderListScreenState extends State<AddOrderListScreen> {
                               checkSubscription();
                               return;
                             }
-                            await Get.toNamed(
-                              AppRoute.addCategory,
+                            await Modular.to.pushNamed(
+                              HomeMainRoutes.category,
                               arguments: {
                                 'voiceCallback':
                                     widget.controller.getCategories,
@@ -279,10 +281,9 @@ class _AddOrderListScreenState extends State<AddOrderListScreen> {
                                   item.id,
                                 ),
                                 onDelete: () {
-                                  widget.controller.itemQuantities.remove(
+                                  widget.controller.removeItemCompletely(
                                     item.id,
                                   );
-                                  widget.controller.calculateTotals();
                                 },
                                 onIncrement: () {
                                   widget.controller.incrementItemQuantity(

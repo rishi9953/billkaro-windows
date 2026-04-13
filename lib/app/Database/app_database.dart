@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:billkaro/app/Database/categoreis_table.dart';
 import 'package:billkaro/app/Database/menu_item_table.dart';
 import 'package:billkaro/app/Database/order_tables.dart';
@@ -9,15 +10,17 @@ import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/Modals/orders/split_payment.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:drift_flutter/drift_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:sqlite3/sqlite3.dart';
 
 part 'app_database.g.dart';
 
 @DriftDatabase(tables: [Orders, OrderItems, Items, CategoriesTable])
 class AppDatabase extends _$AppDatabase {
-  AppDatabase._internal() : super(_openConnection());
+  AppDatabase._internal() : super(_executorForPlatform());
   static final AppDatabase _instance = AppDatabase._internal();
   factory AppDatabase() => _instance;
 
@@ -120,6 +123,45 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  Future<OrderModel> _orderRowToModel(Order order) async {
+    final itemRows = await (select(
+      orderItems,
+    )..where((tbl) => tbl.orderId.equals(order.id))).get();
+
+    return OrderModel(
+      id: order.id,
+      outletId: order.outletId,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+      billNumber: order.billNumber,
+      userId: order.userId,
+      tableNumber: order.tableNumber,
+      customerName: order.customerName,
+      phoneNumber: order.phoneNumber,
+      subtotal: order.subtotal,
+      totalTax: order.totalTax,
+      discount: order.discount,
+      serviceCharge: order.serviceCharge,
+      totalAmount: order.totalAmount,
+      paymentReceivedIn: order.paymentReceivedIn,
+      splitPayments: _deserializeSplitPayments(order.splitPayments),
+      status: order.status,
+      orderFrom: order.orderFrom,
+      items: itemRows
+          .map(
+            (e) => OrderItem(
+              itemId: e.itemId,
+              itemName: e.itemName,
+              category: e.category,
+              quantity: e.quantity,
+              salePrice: e.salePrice,
+              gst: e.gst,
+            ),
+          )
+          .toList(),
+    );
+  }
+
   /// 🔹 GET ALL ORDERS (FILTER BY OUTLET)
   Future<List<OrderModel>> getAllOrders({String? outletId}) async {
     final query = select(orders);
@@ -133,51 +175,49 @@ class AppDatabase extends _$AppDatabase {
     final List<OrderModel> result = [];
 
     for (final order in orderRows) {
-      final itemRows =
-          await (select(orderItems)..where((tbl) {
-                debugPrint('📦 Order Status:${order.id} ${order.isSync}');
-                return tbl.orderId.equals(order.id);
-              }))
-              .get();
-
-      result.add(
-        OrderModel(
-          id: order.id,
-          outletId: order.outletId,
-          createdAt: order.createdAt,
-          updatedAt: order.updatedAt,
-          billNumber: order.billNumber,
-          userId: order.userId,
-          tableNumber: order.tableNumber,
-          customerName: order.customerName,
-          phoneNumber: order.phoneNumber,
-          subtotal: order.subtotal,
-          totalTax: order.totalTax,
-          discount: order.discount,
-          serviceCharge: order.serviceCharge,
-          totalAmount: order.totalAmount,
-          paymentReceivedIn: order.paymentReceivedIn,
-          splitPayments: _deserializeSplitPayments(order.splitPayments),
-          status: order.status,
-          orderFrom: order.orderFrom,
-          items: itemRows
-              .map(
-                (e) => OrderItem(
-                  itemId: e.itemId,
-                  itemName: e.itemName,
-                  category: e.category,
-                  quantity: e.quantity,
-                  salePrice: e.salePrice,
-                  gst: e.gst,
-                ),
-              )
-              .toList(),
-        ),
-      );
+      debugPrint('📦 Order Status:${order.id} ${order.isSync}');
+      result.add(await _orderRowToModel(order));
     }
 
     debugPrint('✅ Orders loaded: ${result.length}');
     return result;
+  }
+
+  /// Paginated orders (newest first). Optional search matches bill, table, customer, phone, source.
+  Future<({List<OrderModel> items, bool hasMore})> getOrdersPage({
+    required String outletId,
+    required int limit,
+    int offset = 0,
+    String? searchQuery,
+  }) async {
+    final query = select(orders)..where((tbl) => tbl.outletId.equals(outletId));
+
+    final trimmed = searchQuery?.trim();
+    if (trimmed != null && trimmed.isNotEmpty) {
+      final pattern = '%$trimmed%';
+      query.where(
+        (tbl) =>
+            tbl.billNumber.like(pattern) |
+            tbl.orderFrom.like(pattern) |
+            (tbl.tableNumber.isNotNull() & tbl.tableNumber.like(pattern)) |
+            (tbl.customerName.isNotNull() & tbl.customerName.like(pattern)) |
+            (tbl.phoneNumber.isNotNull() & tbl.phoneNumber.like(pattern)),
+      );
+    }
+
+    query
+      ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+      ..limit(limit + 1, offset: offset);
+
+    final orderRows = await query.get();
+    final hasMore = orderRows.length > limit;
+    final slice = hasMore ? orderRows.sublist(0, limit) : orderRows;
+
+    final List<OrderModel> items = [];
+    for (final order in slice) {
+      items.add(await _orderRowToModel(order));
+    }
+    return (items: items, hasMore: hasMore);
   }
 
   Future<List<OrderModel>> getPendingOrders() async {
@@ -352,6 +392,7 @@ class AppDatabase extends _$AppDatabase {
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
             outletId: item.outletId,
+            imageURL: item.imageURL,
           ),
         )
         .toList();
@@ -373,11 +414,31 @@ class AppDatabase extends _$AppDatabase {
   }
 }
 
-/// 🔹 DATABASE CONNECTION
-LazyDatabase _openConnection() {
-  return LazyDatabase(() async {
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dir.path, 'billkaro.db'));
-    return NativeDatabase(file);
-  });
+/// Drift’s default Flutter executor runs SQLite in a background isolate. That
+/// isolate never inherits `sqlite3.tempDirectory` from the UI isolate; missing
+/// temp config is a common source of native `abort()` on Windows. We set
+/// [isolateSetup] for non-Windows platforms, and on Windows use a main-isolate
+/// [NativeDatabase] with an explicit app temp directory.
+QueryExecutor _executorForPlatform() {
+  if (!kIsWeb && Platform.isWindows) {
+    return LazyDatabase(() async {
+      final dir = await getApplicationDocumentsDirectory();
+      final tmp = await getTemporaryDirectory();
+      sqlite3.tempDirectory = tmp.path;
+      return NativeDatabase(File(p.join(dir.path, 'billkaro.db')));
+    });
+  }
+
+  return driftDatabase(
+    name: 'billkaro',
+    native: DriftNativeOptions(
+      databasePath: () async {
+        final dir = await getApplicationDocumentsDirectory();
+        return p.join(dir.path, 'billkaro.db');
+      },
+      isolateSetup: () {
+        sqlite3.tempDirectory = Directory.systemTemp.path;
+      },
+    ),
+  );
 }

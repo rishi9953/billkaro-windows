@@ -2,18 +2,21 @@ class PrintBuilder {
   final List<int> bytes = [];
   static const int paperWidth = 48;
 
-  /// Receipt row width for 2" thermal (58mm ≈ 32 chars). Use for formatRow.
-  static const int receiptWidth = 32;
-
-  /// Width for separator line (same as receiptWidth so line doesn't wrap)
-  static const int _lineWidth = 32;
+  /// Receipt row width for monospace ESC/POS text.
+  /// Common defaults:
+  /// - 58mm (2"): ~32 chars
+  /// - 80mm (3"): ~48 chars
+  final int receiptWidth;
+  final int _lineWidth;
 
   // ESC/POS Commands
   static const _ESC = 0x1B;
   static const _GS = 0x1D;
   static const _LF = 0x0A;
 
-  PrintBuilder() {
+  PrintBuilder({int receiptWidth = 32})
+    : receiptWidth = receiptWidth,
+      _lineWidth = receiptWidth {
     bytes.addAll([_ESC, 0x40]); // Initialize printer
   }
 

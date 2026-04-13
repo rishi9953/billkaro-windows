@@ -3,7 +3,9 @@ import 'dart:ui' as ui;
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/date_util.dart';
+import 'package:billkaro/utils/download_path_util.dart';
 import 'package:billkaro/utils/extensions.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -29,21 +31,15 @@ class InvoicePreviewController extends BaseController {
   pw.ImageProvider? qrCodeImageProvider;
 
   double get subtotal => itemList.fold(0.0, (sum, item) {
-    final price = (item.salePrice is num)
-        ? (item.salePrice as num).toDouble()
-        : double.tryParse(item.salePrice.toString()) ?? 0.0;
+    final price = (item.salePrice ?? 0).toDouble();
     final quantity = item.quantity ?? 1;
     return sum + (price * quantity);
   });
 
   double get totalTax => itemList.fold(0.0, (sum, item) {
-    final price = (item.salePrice is num)
-        ? (item.salePrice as num).toDouble()
-        : double.tryParse(item.salePrice.toString()) ?? 0.0;
+    final price = (item.salePrice ?? 0).toDouble();
     final quantity = item.quantity ?? 1;
-    final gstRate = (item.gst is num)
-        ? (item.gst as num).toDouble()
-        : double.tryParse(item.gst.toString()) ?? 0.0;
+    final gstRate = (item.gst ?? 0).toDouble();
     final lineTotal = price * quantity;
     return sum + (lineTotal * gstRate / 100.0);
   });
@@ -169,9 +165,7 @@ class InvoicePreviewController extends BaseController {
                 pw.SizedBox(height: 10),
                 ...itemList.map((item) {
                   final quantity = item.quantity ?? 1;
-                  final price = (item.salePrice is num)
-                      ? (item.salePrice as num).toDouble()
-                      : double.tryParse(item.salePrice.toString()) ?? 0.0;
+                  final price = (item.salePrice ?? 0).toDouble();
                   final amount = price * quantity;
                   return pw.Padding(
                     padding: const pw.EdgeInsets.symmetric(vertical: 4),
@@ -180,7 +174,7 @@ class InvoicePreviewController extends BaseController {
                         pw.Expanded(
                           flex: 3,
                           child: pw.Text(
-                            item.itemName?.toString() ?? '',
+                            item.itemName ?? '',
                             style: const pw.TextStyle(fontSize: 12),
                           ),
                         ),
@@ -412,16 +406,30 @@ class InvoicePreviewController extends BaseController {
   }
 
   void getItemList() {
-    final args = Get.arguments['invoice'] as CreateorderRequest?;
-    if (args != null) {
-      itemList.value = args.items ?? [];
-      invoiceNo.value = args.billNumber ?? '';
-      discount.value = args.discount ?? 0.0;
-      serviceCharge.value = args.serviceCharge ?? 0.0;
-      orderFrom.value = Get.arguments['orderFrom'];
-      customerName.value = args.customerName ?? '';
-      paymentMode.value = args.paymentReceivedIn ?? '';
+    final rawArgs = Get.arguments ?? Modular.args.data;
+    final map = rawArgs is Map ? rawArgs : null;
+
+    final invoice = map?['invoice'] as CreateorderRequest?;
+    if (invoice == null) {
+      // Screen opened without required arguments; keep UI alive instead of crashing.
+      itemList.clear();
+      invoiceNo.value = '';
+      discount.value = 0.0;
+      serviceCharge.value = 0.0;
+      orderFrom.value = '';
+      customerName.value = '';
+      paymentMode.value = '';
+      _generateQRCode();
+      return;
     }
+
+    itemList.value = invoice.items ?? [];
+    invoiceNo.value = invoice.billNumber ?? '';
+    discount.value = invoice.discount ?? 0.0;
+    serviceCharge.value = invoice.serviceCharge ?? 0.0;
+    orderFrom.value = (map?['orderFrom'] ?? '').toString();
+    customerName.value = invoice.customerName ?? '';
+    paymentMode.value = invoice.paymentReceivedIn ?? '';
     _generateQRCode();
   }
 
@@ -509,6 +517,8 @@ class InvoicePreviewController extends BaseController {
         paymentMode: paymentMode.value,
         date: date.value,
         time: time.value,
+        fssaiNumber: appPref.selectedOutlet!.fssaiNumber ?? '',
+        gstinNumber: appPref.selectedOutlet!.gstinNumber ?? '',
         invoiceNo: invoiceNo.value,
         items: itemList,
         subtotal: subtotal,
@@ -520,6 +530,7 @@ class InvoicePreviewController extends BaseController {
       );
       showSuccess(description: 'Invoice printed successfully');
     } catch (e) {
+      debugPrint('Failed to print PDF: $e');
       showError(description: 'Failed to print PDF: $e');
     }
   }
@@ -531,20 +542,9 @@ class InvoicePreviewController extends BaseController {
         showError(description: 'PDF generation failed - empty document');
         return;
       }
-      const paths = [
-        '/storage/emulated/0/Download',
-        '/storage/emulated/0/Downloads',
-        '/sdcard/Download',
-        '/sdcard/Downloads',
-      ];
-      String? savePath;
-      for (final p in paths) {
-        if (await Directory(p).exists()) {
-          savePath = p;
-          break;
-        }
-      }
-      final dir = savePath ?? paths.first;
+      final dir = await DownloadPathUtil.resolveSaveDirectory(
+        preferredPath: appPref.downloadPath,
+      );
       await Directory(dir).create(recursive: true);
       final name = _sanitizeFileName(invoiceNo.value);
       final filePath =

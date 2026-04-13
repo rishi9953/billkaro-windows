@@ -391,8 +391,8 @@ class _AddOrderImageViewScreenState extends State<AddOrderImageViewScreen> {
                                         quantity: widget.controller
                                             .getItemQuantity(item.id),
                                         onDelete: () {
-                                          widget.controller.itemQuantities
-                                              .remove(item.id);
+                                          widget.controller
+                                              .removeItemCompletely(item.id);
                                         },
                                         onIncrement: () {
                                           widget.controller
@@ -575,8 +575,8 @@ class _AddOrderImageViewScreenState extends State<AddOrderImageViewScreen> {
                                           quantity: widget.controller
                                               .getItemQuantity(item.id),
                                           onDelete: () {
-                                            widget.controller.itemQuantities
-                                                .remove(item.id);
+                                            widget.controller
+                                                .removeItemCompletely(item.id);
                                           },
                                           onIncrement: () {
                                             widget.controller
@@ -654,7 +654,7 @@ class _AddOrderImageViewScreenState extends State<AddOrderImageViewScreen> {
                                     item.id,
                                   ),
                                   onDelete: () {
-                                    widget.controller.itemQuantities.remove(
+                                    widget.controller.removeItemCompletely(
                                       item.id,
                                     );
                                   },

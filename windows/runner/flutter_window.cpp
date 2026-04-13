@@ -1,6 +1,8 @@
 #include "flutter_window.h"
 
 #include <optional>
+#include <exception>
+#include <string>
 
 #include "flutter/generated_plugin_registrant.h"
 
@@ -24,7 +26,16 @@ bool FlutterWindow::OnCreate() {
   if (!flutter_controller_->engine() || !flutter_controller_->view()) {
     return false;
   }
-  RegisterPlugins(flutter_controller_->engine());
+  // Some Windows plugins may throw C++ exceptions during registration on
+  // specific machines (missing runtimes/devices/COM mode mismatch). Guarding
+  // registration prevents a hard native abort() dialog from killing the app.
+  try {
+    RegisterPlugins(flutter_controller_->engine());
+  } catch (const std::exception& e) {
+    OutputDebugStringA(("Plugin registration failed: " + std::string(e.what()) + "\n").c_str());
+  } catch (...) {
+    OutputDebugStringA("Plugin registration failed with unknown exception.\n");
+  }
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {

@@ -8,6 +8,10 @@ class ItemReportsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var loc = AppLocalizations.of(Get.context!)!;
+    final isWindows = Theme.of(context).platform == TargetPlatform.windows;
+    final scrollPhysics = isWindows
+        ? const ClampingScrollPhysics()
+        : const BouncingScrollPhysics();
     return Scaffold(
       backgroundColor: AppColor.backGroundColor,
       appBar: AppBar(
@@ -34,33 +38,48 @@ class ItemReportsScreen extends StatelessWidget {
           const SizedBox(width: 8),
         ],
       ),
-      body: Column(
-        children: [
-          // Filters Section
-          _buildFiltersSection(loc),
-
-          // Summary Cards
-          _buildSummaryCards(loc),
-
-          // Items List
-          Expanded(child: _buildItemsList(loc)),
-        ],
+      body: SafeArea(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1080),
+            child: Column(
+              children: [
+                // Filters Section
+                _buildFiltersSection(loc, isWindows),
+                // Summary Cards
+                _buildSummaryCards(loc, isWindows),
+                // Items List
+                Expanded(
+                  child: _buildItemsList(
+                    loc,
+                    isWindows: isWindows,
+                    scrollPhysics: scrollPhysics,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
 
   // ---------------- FILTERS SECTION ----------------
 
-  Widget _buildFiltersSection(AppLocalizations loc) {
+  Widget _buildFiltersSection(AppLocalizations loc, bool isWindows) {
     return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
+        borderRadius: BorderRadius.circular(isWindows ? 12 : 0),
+        border: Border.all(color: Colors.black.withOpacity(0.05)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.025),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -90,12 +109,12 @@ class ItemReportsScreen extends StatelessWidget {
           _buildFilterLabel(loc.period),
           const SizedBox(height: 6),
           Container(
-            height: 48,
+            height: 46,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[300]!),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey[350] ?? Colors.grey[300]!),
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
@@ -140,12 +159,12 @@ class ItemReportsScreen extends StatelessWidget {
         GestureDetector(
           onTap: controller.selectCustomDateRange,
           child: Container(
-            height: 48,
+            height: 46,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[300]!),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey[350] ?? Colors.grey[300]!),
             ),
             child: Obx(
               () => Row(
@@ -187,12 +206,12 @@ class ItemReportsScreen extends StatelessWidget {
           _buildFilterLabel('Category'),
           const SizedBox(height: 6),
           Container(
-            height: 48,
+            height: 46,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[300]!),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey[350] ?? Colors.grey[300]!),
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
@@ -238,13 +257,16 @@ class ItemReportsScreen extends StatelessWidget {
 
   // ---------------- SUMMARY CARDS ----------------
 
-  Widget _buildSummaryCards(AppLocalizations loc) {
+  Widget _buildSummaryCards(AppLocalizations loc, bool isWindows) {
     return Container(
       padding: const EdgeInsets.all(16),
       child: Obx(
-        () => Row(
+        () => Wrap(
+          spacing: 12,
+          runSpacing: 12,
           children: [
-            Expanded(
+            SizedBox(
+              width: isWindows ? 300 : null,
               child: _SummaryCard(
                 icon: Icons.inventory_2,
                 iconColor: AppColor.primary,
@@ -252,8 +274,8 @@ class ItemReportsScreen extends StatelessWidget {
                 label: 'Total Items',
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
+            SizedBox(
+              width: isWindows ? 300 : null,
               child: _SummaryCard(
                 icon: Icons.currency_rupee,
                 iconColor: const Color(0xFF10B981),
@@ -269,7 +291,11 @@ class ItemReportsScreen extends StatelessWidget {
 
   // ---------------- ITEMS LIST ----------------
 
-  Widget _buildItemsList(AppLocalizations loc) {
+  Widget _buildItemsList(
+    AppLocalizations loc, {
+    required bool isWindows,
+    required ScrollPhysics scrollPhysics,
+  }) {
     return Obx(() {
       if (controller.isLoading.value) {
         return const Center(child: CircularProgressIndicator());
@@ -283,41 +309,44 @@ class ItemReportsScreen extends StatelessWidget {
       Map<String, Map<String, dynamic>> groupedItems = {};
 
       for (var item in controller.filteredItemsList) {
-        String itemName = item.itemName ?? loc.unknown_item;
+        String itemName = item.itemName;
 
         if (groupedItems.containsKey(itemName)) {
-          groupedItems[itemName]!['quantity'] += item.quantity ?? 0;
+          groupedItems[itemName]!['quantity'] += item.quantity;
           groupedItems[itemName]!['totalAmount'] +=
-              (item.quantity ?? 0) * (item.salePrice ?? 0);
+              item.quantity * item.salePrice;
         } else {
           groupedItems[itemName] = {
-            'quantity': item.quantity ?? 0,
-            'totalAmount': (item.quantity ?? 0) * (item.salePrice ?? 0),
-            'category': item.category ?? '',
+            'quantity': item.quantity,
+            'totalAmount': item.quantity * item.salePrice,
+            'category': item.category,
           };
         }
       }
 
+      final list = ListView.separated(
+        physics: scrollPhysics,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        itemCount: groupedItems.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          String itemName = groupedItems.keys.elementAt(index);
+          var itemData = groupedItems[itemName]!;
+          return _ItemCard(
+            index: index,
+            itemName: itemName,
+            quantity: itemData['quantity'],
+            totalAmount: itemData['totalAmount'],
+            category: itemData['category'].toString().capitalizeFirst ?? '',
+            loc: loc,
+            compact: isWindows,
+          );
+        },
+      );
+
       return RefreshIndicator(
         onRefresh: () async => controller.getItemsList(forceApiRefresh: true),
-        child: ListView.separated(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          itemCount: groupedItems.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            String itemName = groupedItems.keys.elementAt(index);
-            var itemData = groupedItems[itemName]!;
-            return _ItemCard(
-              index: index,
-              itemName: itemName,
-              quantity: itemData['quantity'],
-              totalAmount: itemData['totalAmount'],
-              category: itemData['category'].toString().capitalizeFirst ?? '',
-              loc: loc,
-            );
-          },
-        ),
+        child: Scrollbar(thumbVisibility: isWindows, child: list),
       );
     });
   }
@@ -384,12 +413,13 @@ class _SummaryCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black.withOpacity(0.05)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -446,6 +476,7 @@ class _ItemCard extends StatelessWidget {
   final double totalAmount;
   final String category;
   final AppLocalizations loc;
+  final bool compact;
 
   const _ItemCard({
     required this.index,
@@ -454,6 +485,7 @@ class _ItemCard extends StatelessWidget {
     required this.totalAmount,
     required this.category,
     required this.loc,
+    this.compact = false,
   });
 
   @override
@@ -461,12 +493,13 @@ class _ItemCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black.withOpacity(0.05)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -538,7 +571,7 @@ class _ItemCard extends StatelessWidget {
             Text(
               itemName.capitalizeFirst ?? itemName,
               style: const TextStyle(
-                fontSize: 18,
+                fontSize: 17,
                 fontWeight: FontWeight.w700,
                 color: Colors.black87,
                 letterSpacing: -0.3,
@@ -559,6 +592,7 @@ class _ItemCard extends StatelessWidget {
                     label: loc.order_quantity,
                     value: '$quantity',
                     iconColor: AppColor.primary,
+                    compact: compact,
                   ),
                 ),
                 // Amount
@@ -568,6 +602,7 @@ class _ItemCard extends StatelessWidget {
                     label: loc.order_amount,
                     value: '₹${totalAmount.toStringAsFixed(2)}',
                     iconColor: const Color(0xFF10B981),
+                    compact: compact,
                   ),
                 ),
               ],
@@ -588,12 +623,14 @@ class _InfoItem extends StatelessWidget {
   final String label;
   final String value;
   final Color iconColor;
+  final bool compact;
 
   const _InfoItem({
     required this.icon,
     required this.label,
     required this.value,
     required this.iconColor,
+    this.compact = false,
   });
 
   @override
@@ -622,7 +659,7 @@ class _InfoItem extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            fontSize: 16,
+            fontSize: compact ? 15 : 16,
             fontWeight: FontWeight.w700,
             color: Colors.grey[900],
           ),

@@ -5,13 +5,14 @@ import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:open_file/open_file.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:printing/printing.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:syncfusion_flutter_xlsio/xlsio.dart' hide Column;
+import 'package:syncfusion_flutter_xlsio/xlsio.dart' hide Column, Row, Border;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:billkaro/utils/date_util.dart';
+import 'package:billkaro/utils/download_path_util.dart';
 import 'package:intl/intl.dart';
 
 class ItemReportsController extends BaseController {
@@ -127,12 +128,8 @@ class ItemReportsController extends BaseController {
   }
 
   Future<void> selectCustomDateRange() async {
-    final picked = await Get.dialog<DateTimeRange>(
-      DateRangePickerDialog(
-        initialDateRange: selectedDateRange.value,
-        firstDate: DateTime(2020),
-        lastDate: DateTime.now(),
-      ),
+    final picked = await _showAdaptiveDateRangePicker(
+      initialDateRange: selectedDateRange.value,
     );
 
     if (picked != null) {
@@ -156,6 +153,47 @@ class ItemReportsController extends BaseController {
         forceApiRefresh: true,
       ); // Refetch with startDate/endDate
     }
+  }
+
+  Future<DateTimeRange?> _showAdaptiveDateRangePicker({
+    DateTimeRange? initialDateRange,
+  }) async {
+    final context = Get.context;
+    if (context == null) return null;
+
+    final isWindows = Theme.of(context).platform == TargetPlatform.windows;
+    return showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      initialDateRange: initialDateRange,
+      initialEntryMode: DatePickerEntryMode.calendarOnly,
+      builder: (dialogContext, child) {
+        if (child == null) return const SizedBox.shrink();
+        if (!isWindows) return child;
+
+        final theme = Theme.of(dialogContext);
+        return Theme(
+          data: theme.copyWith(
+            dialogTheme: DialogThemeData(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            colorScheme: theme.colorScheme.copyWith(
+              primary: AppColor.primary,
+              surface: Colors.white,
+            ),
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 760, maxHeight: 660),
+              child: child,
+            ),
+          ),
+        );
+      },
+    );
   }
 
   String get formattedDateRange {
@@ -215,18 +253,17 @@ class ItemReportsController extends BaseController {
   void applyAllFilters() {
     List<OrderModel> filtered = List.from(allOrders);
 
-    // Filter by date range
+    // Filter by date range (IST calendar days vs UTC order timestamps)
     if (selectedDateRange.value != null) {
-      filtered = filtered.where((order) {
-        DateTime? orderDate = _parseOrderDate(order.createdAt);
-        if (orderDate == null) return false;
+      final start = selectedDateRange.value!.start;
+      final end = selectedDateRange.value!.end;
 
-        return orderDate.isAfter(
-              selectedDateRange.value!.start.subtract(Duration(seconds: 1)),
-            ) &&
-            orderDate.isBefore(
-              selectedDateRange.value!.end.add(Duration(seconds: 1)),
-            );
+      filtered = filtered.where((order) {
+        return isOrderCreatedAtInIstRange(
+          order.createdAt.toString(),
+          start,
+          end,
+        );
       }).toList();
     }
 
@@ -473,63 +510,153 @@ class ItemReportsController extends BaseController {
   /// Show date range dialog then export to Excel or PDF. [isExcel] true = Excel, false = PDF.
   Future<void> showExportDateRangeDialogAndExport(bool isExcel) async {
     final loc = AppLocalizations.of(Get.context!)!;
+    final isWindows =
+        Theme.of(Get.context!).platform == TargetPlatform.windows;
+    final actionLabel = isExcel ? 'Excel' : 'PDF';
 
     final useCurrent = await Get.dialog<bool>(
       AlertDialog(
-        title: Text(loc.item_reports),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+        contentPadding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+        actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        title: Row(
           children: [
-            Text(
-              '${loc.period}: ${formatExportDateRange(selectedDateRange.value, loc)}',
-              style: const TextStyle(fontSize: 14),
+            Icon(
+              isExcel ? Icons.table_view_rounded : Icons.picture_as_pdf_rounded,
+              color: AppColor.primary,
+              size: 22,
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Export with current date filter or choose a different date range.',
-              style: TextStyle(fontSize: 13, color: Colors.black54),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '${loc.item_reports} ($actionLabel)',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: Text(loc.cancel),
-          ),
-          TextButton(
-            onPressed: () => Get.back(result: true),
-            child: const Text('Use current filter'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Get.back(result: false);
-              final picked = await Get.dialog<DateTimeRange>(
-                DateRangePickerDialog(
-                  initialDateRange: selectedDateRange.value,
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime.now(),
+        content: SizedBox(
+          width: isWindows ? 460 : null,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade300),
                 ),
-              );
-              if (picked == null) return;
-              Get.dialog(
-                const Center(child: CircularProgressIndicator()),
-                barrierDismissible: false,
-              );
-              final items = await fetchItemsForExport(picked);
-              if (Get.isDialogOpen ?? false) Get.back();
-              if (items.isEmpty) {
-                showError(description: loc.no_items_to_export);
-                return;
-              }
-              if (isExcel) {
-                await _exportToExcelWithItems(items, picked);
-              } else {
-                await _exportToPdfWithItems(items, picked);
-              }
-            },
-            child: const Text('Choose date range'),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.date_range_rounded, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${loc.period}: ${formatExportDateRange(selectedDateRange.value, loc)}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Use current filter or choose a custom date range for export.',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+              ),
+            ],
           ),
+        ),
+        actions: [
+          if (isWindows)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                children: [
+                  TextButton(
+                    onPressed: () => Get.back(result: false),
+                    child: Text(loc.cancel),
+                  ),
+                  const Spacer(),
+                  OutlinedButton.icon(
+                    onPressed: () => Get.back(result: true),
+                    icon: const Icon(Icons.filter_alt_outlined, size: 18),
+                    label: const Text('Use current filter'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    onPressed: () async {
+                      Get.back(result: false);
+                      final picked = await _showAdaptiveDateRangePicker(
+                        initialDateRange: selectedDateRange.value,
+                      );
+                      if (picked == null) return;
+                      Get.dialog(
+                        const Center(child: CircularProgressIndicator()),
+                        barrierDismissible: false,
+                      );
+                      final items = await fetchItemsForExport(picked);
+                      if (Get.isDialogOpen ?? false) Get.back();
+                      if (items.isEmpty) {
+                        showError(description: loc.no_items_to_export);
+                        return;
+                      }
+                      if (isExcel) {
+                        await _exportToExcelWithItems(items, picked);
+                      } else {
+                        await _exportToPdfWithItems(items, picked);
+                      }
+                    },
+                    icon: const Icon(Icons.event_rounded, size: 18),
+                    label: const Text('Choose date range'),
+                  ),
+                ],
+              ),
+            )
+          else ...[
+            TextButton(
+              onPressed: () => Get.back(result: false),
+              child: Text(loc.cancel),
+            ),
+            TextButton(
+              onPressed: () => Get.back(result: true),
+              child: const Text('Use current filter'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                Get.back(result: false);
+                final picked = await _showAdaptiveDateRangePicker(
+                  initialDateRange: selectedDateRange.value,
+                );
+                if (picked == null) return;
+                Get.dialog(
+                  const Center(child: CircularProgressIndicator()),
+                  barrierDismissible: false,
+                );
+                final items = await fetchItemsForExport(picked);
+                if (Get.isDialogOpen ?? false) Get.back();
+                if (items.isEmpty) {
+                  showError(description: loc.no_items_to_export);
+                  return;
+                }
+                if (isExcel) {
+                  await _exportToExcelWithItems(items, picked);
+                } else {
+                  await _exportToPdfWithItems(items, picked);
+                }
+              },
+              child: const Text('Choose date range'),
+            ),
+          ],
         ],
       ),
     );
@@ -680,18 +807,24 @@ class ItemReportsController extends BaseController {
       final bytes = workbook.saveAsStream();
       workbook.dispose();
 
-      final saveDir = Directory('/storage/emulated/0/Download');
+      final saveDir = Directory(
+        await DownloadPathUtil.resolveSaveDirectory(
+          preferredPath: appPref.downloadPath,
+        ),
+      );
       if (!saveDir.existsSync()) saveDir.createSync(recursive: true);
       final fileName =
           'BillKaro_Item_Reports_${DateTime.now().millisecondsSinceEpoch}.xlsx';
       final fullPath = '${saveDir.path}/$fileName';
       await File(fullPath).writeAsBytes(bytes);
 
-      Get.back();
-      await Share.shareXFiles([
-        XFile(fullPath),
-      ], text: loc.item_reports_exported);
+      if (Get.isDialogOpen ?? false) Get.back();
       showSuccess(description: loc.excel_saved_to_downloads);
+
+      final openResult = await OpenFile.open(fullPath);
+      if (openResult.type != ResultType.done) {
+        debugPrint('⚠️ Excel saved but could not auto-open: ${openResult.message}');
+      }
     } catch (e) {
       if (Get.isDialogOpen ?? false) Get.back();
       final loc = AppLocalizations.of(Get.context!)!;
@@ -1059,23 +1192,9 @@ class ItemReportsController extends BaseController {
   /// Save PDF to Downloads folder
   Future<void> _savePdf(pw.Document pdf) async {
     try {
-      List<String> possiblePaths = [
-        '/storage/emulated/0/Download',
-        '/storage/emulated/0/Downloads',
-        '/sdcard/Download',
-        '/sdcard/Downloads',
-      ];
-
-      String? savePath;
-      for (String path in possiblePaths) {
-        final dir = Directory(path);
-        if (await dir.exists()) {
-          savePath = path;
-          break;
-        }
-      }
-
-      savePath ??= possiblePaths.first;
+      final savePath = await DownloadPathUtil.resolveSaveDirectory(
+        preferredPath: appPref.downloadPath,
+      );
       await Directory(savePath).create(recursive: true);
 
       final filePath =

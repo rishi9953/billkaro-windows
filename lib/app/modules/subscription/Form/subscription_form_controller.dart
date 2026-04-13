@@ -1,11 +1,24 @@
 import 'package:billkaro/app/routes/app_routes.dart';
+import 'package:billkaro/app/services/Modals/PrinterOrderRequest/printer_order_request.dart';
 import 'package:billkaro/app/services/Modals/Subscriptions/subscription_response.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:billkaro/app/services/razorpay/razorpay_service.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 class SubscriptionFormController extends BaseController {
   final formKey = GlobalKey<FormState>();
+  final RazorpayService razorpayService = RazorpayService();
+
+  String orderId = '';
+  String transactionId = '';
+  String signature = '';
+  String planId = '';
+  double expectedAmount = 0.0;
+  int expectedAmountInPaise = 0;
+  bool isProcessingPayment = false;
+  Map<String, String> _latestFormData = const {};
 
   // Passed from subscription screen when plan.withPrinter is true
   SubscriptionPlan? get subscriptionPlan {
@@ -28,6 +41,11 @@ class SubscriptionFormController extends BaseController {
   void onInit() {
     super.onInit();
     _fillFromSelectedOutlet();
+    razorpayService.initialize(
+      onSuccess: _handlePaymentSuccess,
+      onFailure: _handlePaymentFailure,
+      onExternalWallet: _handleExternalWallet,
+    );
   }
 
   /// Pre-fill form from selected outlet and user in appPref.
@@ -35,10 +53,12 @@ class SubscriptionFormController extends BaseController {
     final outlet = appPref.selectedOutlet;
     final user = appPref.user;
     if (outlet != null) {
-      if (outlet.businessName != null && outlet.businessName!.trim().isNotEmpty) {
+      if (outlet.businessName != null &&
+          outlet.businessName!.trim().isNotEmpty) {
         outletNameController.text = outlet.businessName!.trim();
       }
-      if (outlet.outletAddress != null && outlet.outletAddress!.trim().isNotEmpty) {
+      if (outlet.outletAddress != null &&
+          outlet.outletAddress!.trim().isNotEmpty) {
         outletAddressController.text = outlet.outletAddress!.trim();
         deliveryAddressController.text = outlet.outletAddress!.trim();
       }
@@ -50,12 +70,15 @@ class SubscriptionFormController extends BaseController {
       if (user.email != null && user.email!.trim().isNotEmpty) {
         emailController.text = user.email!.trim();
       }
-      if (phoneController.text.isEmpty && user.mobile != null && user.mobile!.trim().isNotEmpty) {
+      if (phoneController.text.isEmpty &&
+          user.mobile != null &&
+          user.mobile!.trim().isNotEmpty) {
         phoneController.text = _normalizePhoneForDisplay(user.mobile!);
       }
       final pincode = user.zipcode?.trim() ?? '';
       if (pincode.isNotEmpty && pincodeController.text.isEmpty) {
-        pincodeController.text = pincode.replaceAll(RegExp(r'\D'), '').length <= 6
+        pincodeController.text =
+            pincode.replaceAll(RegExp(r'\D'), '').length <= 6
             ? pincode.replaceAll(RegExp(r'\D'), '')
             : pincode.replaceAll(RegExp(r'\D'), '').substring(0, 6);
       }
@@ -82,6 +105,7 @@ class SubscriptionFormController extends BaseController {
 
   @override
   void onClose() {
+    razorpayService.dispose();
     outletNameController.dispose();
     outletAddressController.dispose();
     emailController.dispose();
@@ -192,7 +216,7 @@ class SubscriptionFormController extends BaseController {
   }
 
   /// Submit: validates form and returns collected data; caller can then API or navigate.
-  void submitSubscription() {
+  Future<void> submitSubscription() async {
     if (formKey.currentState == null) {
       showError(description: 'Form not initialized. Please try again.');
       return;
@@ -200,23 +224,220 @@ class SubscriptionFormController extends BaseController {
     if (!formKey.currentState!.validate()) return;
 
     final data = getFormData();
-    onSubmit(data);
+    await onSubmit(data);
   }
 
   /// Navigate to review with form data and plan (when opened with subscription plan).
-  void onSubmit(Map<String, String> data) {
+  Future<void> onSubmit(Map<String, String> data) async {
     final plan = subscriptionPlan;
     if (plan != null) {
-      Get.toNamed(
-        AppRoute.subscriptionReview,
-        arguments: {
-          'subscription': plan,
-          'formData': data,
-        },
-      );
+      await processPaymentFromDetails(data);
     } else {
       showSuccess(description: 'Details saved. You can proceed to payment.');
     }
+  }
+
+  int _toPaise(double rupees) => (rupees * 100).round();
+
+  double _calculateTaxAmount(SubscriptionPlan plan) {
+    final rate = plan.tax > 1 ? plan.tax / 100 : plan.tax;
+    return (plan.discountedPrice * rate).roundToDouble();
+  }
+
+  double _calculateTotalAmount(SubscriptionPlan plan) {
+    return (plan.discountedPrice + _calculateTaxAmount(plan)).roundToDouble();
+  }
+
+  Future<dynamic> createOrder(String planId, double amountInRupees) async {
+    try {
+      final request = {
+        'amount': amountInRupees,
+        'subscriptionId': planId,
+        'userId': appPref.user?.id,
+      };
+      final response = await callApi(
+        apiClient.createRazorPaymentOrder(request),
+        showLoader: true,
+      );
+      return response;
+    } catch (e) {
+      debugPrint('Error creating order from details screen: $e');
+      showError(
+        title: 'Payment Failed',
+        description: 'Failed to create payment order. Please try again.',
+      );
+      return null;
+    }
+  }
+
+  Future<dynamic> makePayment() async {
+    if (appPref.user?.id == null) {
+      throw Exception('User ID is required');
+    }
+    if (appPref.selectedOutlet?.id == null) {
+      throw Exception('Outlet ID is required');
+    }
+    if (orderId.isEmpty || transactionId.isEmpty || signature.isEmpty) {
+      throw Exception('Payment details are incomplete');
+    }
+
+    final request = {
+      'userId': appPref.user!.id!,
+      'expectedAmount': expectedAmount,
+      'subscriptionId': planId,
+      'outletId': appPref.selectedOutlet!.id!,
+      'transactionId': transactionId,
+      'orderId': orderId,
+      'signature': signature,
+    };
+
+    return callApi(apiClient.subscribeToPlan(request), showLoader: true);
+  }
+
+  Future<void> processPaymentFromDetails(Map<String, String> data) async {
+    final plan = subscriptionPlan;
+    if (plan == null) {
+      showError(title: 'Error', description: 'No subscription plan selected.');
+      return;
+    }
+    if (appPref.user == null) {
+      showError(
+        title: 'Payment Failed',
+        description: 'User not logged in. Please login and try again.',
+      );
+      return;
+    }
+    if (appPref.selectedOutlet == null) {
+      showError(
+        title: 'Payment Failed',
+        description:
+            'No outlet selected. Please select an outlet and try again.',
+      );
+      return;
+    }
+
+    _latestFormData = data;
+    planId = plan.id;
+    expectedAmount = _calculateTotalAmount(plan);
+    expectedAmountInPaise = _toPaise(expectedAmount);
+
+    final orderResponse = await createOrder(planId, expectedAmount);
+    if (orderResponse != null && orderResponse['status'] == 'success') {
+      orderId = orderResponse['data']?['id'] ?? '';
+      if (orderId.isEmpty) {
+        showError(
+          title: 'Payment Failed',
+          description: 'Invalid order response. Please try again.',
+        );
+        return;
+      }
+
+      razorpayService.openCheckout(
+        orderId: orderId,
+        amountInPaise: expectedAmountInPaise,
+        name: appPref.user!.brandName ?? appPref.user!.firstName ?? 'Customer',
+        email: data['email'] ?? appPref.user?.email ?? '',
+        contact: data['phone'] ?? appPref.user?.mobile ?? '',
+        description: 'Subscription Purchase - ${plan.title}',
+        notes: {'subscriptionId': planId},
+        prefill: {
+          'name': appPref.user!.firstName ?? 'Customer',
+          'email': data['email'] ?? appPref.user?.email ?? '',
+          'contact': data['phone'] ?? appPref.user?.mobile ?? '',
+        },
+      );
+      return;
+    }
+
+    showError(
+      title: 'Payment Failed',
+      description:
+          orderResponse?['message'] ??
+          'Failed to create payment order. Please try again.',
+    );
+  }
+
+  Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    if (isProcessingPayment) return;
+    isProcessingPayment = true;
+    try {
+      if (response.orderId != null && response.orderId!.isNotEmpty) {
+        orderId = response.orderId!;
+      }
+      if (response.paymentId != null && response.paymentId!.isNotEmpty) {
+        transactionId = response.paymentId!;
+      }
+      if (response.signature != null && response.signature!.isNotEmpty) {
+        signature = response.signature!;
+      }
+
+      final paymentResponse = await makePayment();
+      if (paymentResponse != null && paymentResponse['status'] == 'success') {
+        await _createPrinterOrderAfterSuccess();
+        showSuccess(description: 'Payment successful. Subscription activated.');
+        Get.offAllNamed(AppRoute.homeMain);
+      } else {
+        showError(
+          title: 'Payment Failed',
+          description:
+              paymentResponse?['message'] ??
+              'Payment successful but activation failed. Please contact support.',
+        );
+      }
+    } catch (e) {
+      showError(
+        title: 'Payment Failed',
+        description:
+            'Payment successful but activation failed. Please contact support.',
+      );
+    } finally {
+      isProcessingPayment = false;
+    }
+  }
+
+  Future<void> _createPrinterOrderAfterSuccess() async {
+    final plan = subscriptionPlan;
+    final user = appPref.user;
+    final outlet = appPref.selectedOutlet;
+    if (plan?.withPrinter != true || user == null || outlet == null) return;
+
+    final printerOrder = PrinterOrderRequest(
+      userId: user.id ?? '',
+      outletId: outlet.id ?? '',
+      subscriptionId: planId,
+      outletName: _latestFormData['outletName'] ?? outlet.businessName ?? '',
+      outletAddress:
+          _latestFormData['outletAddress'] ?? outlet.outletAddress ?? '',
+      email: _latestFormData['email'] ?? user.email ?? '',
+      phoneNumber:
+          _latestFormData['phone'] ?? outlet.phoneNumber ?? user.mobile ?? '',
+      deliveryAddress:
+          _latestFormData['deliveryAddress'] ??
+          _latestFormData['outletAddress'] ??
+          outlet.outletAddress ??
+          '',
+      pincode: _latestFormData['pincode'] ?? user.zipcode ?? '',
+      status: 'placed',
+    );
+
+    await callApi(
+      apiClient.printerOrderRequest(printerOrder),
+      showLoader: false,
+    );
+  }
+
+  void _handlePaymentFailure(PaymentFailureResponse response) {
+    final msg = response.message?.toString();
+    showError(
+      title: 'Payment Failed',
+      description: (msg != null && msg.isNotEmpty)
+          ? msg
+          : 'Payment could not be completed. Please try again.',
+    );
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    showSuccess(description: 'Wallet selected: ${response.walletName ?? ''}');
   }
 
   Map<String, String> getFormData() {
@@ -232,13 +453,13 @@ class SubscriptionFormController extends BaseController {
 
   /// Input formatter for Indian phone: digits only, max 10.
   List<TextInputFormatter> get phoneInputFormatters => [
-        FilteringTextInputFormatter.digitsOnly,
-        LengthLimitingTextInputFormatter(10),
-      ];
+    FilteringTextInputFormatter.digitsOnly,
+    LengthLimitingTextInputFormatter(10),
+  ];
 
   /// Input formatter for pincode: digits only, max 6.
   List<TextInputFormatter> get pincodeInputFormatters => [
-        FilteringTextInputFormatter.digitsOnly,
-        LengthLimitingTextInputFormatter(6),
-      ];
+    FilteringTextInputFormatter.digitsOnly,
+    LengthLimitingTextInputFormatter(6),
+  ];
 }

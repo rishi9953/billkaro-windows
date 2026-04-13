@@ -623,7 +623,7 @@ class SubscriptionController extends BaseController {
 
   Future<void> getSubscriptions() async {
     try {
-      final response = await callApi(apiClient.getSubscription());
+      final response = await callApi(apiClient.getSubscription('desktop'));
       if (response != null) {
         subscriptionPlans.clear();
         subscriptionPlans.addAll(response.data);

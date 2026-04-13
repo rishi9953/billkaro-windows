@@ -1,6 +1,8 @@
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Regular%20customer/CustomerDetails/customer_details_controller.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
 class CustomerDetailsScreen extends StatelessWidget {
   CustomerDetailsScreen({super.key});
@@ -22,13 +24,20 @@ class CustomerDetailsScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () {
-              Get.toNamed(
-                AppRoute.addRegularCustomer,
+              Modular.to.pushNamed(
+                HomeMainRoutes.addRegularCustomer,
                 arguments: {
                   'isEdit': true,
                   'customerData': controller.customer,
                 },
               );
+              // Get.toNamed(
+              //   AppRoute.addRegularCustomer,
+              //   arguments: {
+              //     'isEdit': true,
+              //     'customerData': controller.customer,
+              //   },
+              // );
             },
           ),
         ],

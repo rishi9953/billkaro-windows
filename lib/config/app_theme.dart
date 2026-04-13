@@ -480,4 +480,73 @@ abstract class AppTheme {
       space: 1,
     ),
   );
+
+  static ThemeData lightThemeWithPrimary(Color primary) {
+    final base = appTheme;
+    return base.copyWith(
+      primaryColor: primary,
+      colorScheme: base.colorScheme.copyWith(primary: primary, secondary: primary),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: base.elevatedButtonTheme.style?.copyWith(
+          backgroundColor: WidgetStateProperty.all(primary),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: base.outlinedButtonTheme.style?.copyWith(
+          foregroundColor: WidgetStateProperty.all(primary),
+          side: WidgetStateProperty.all(BorderSide(color: primary, width: 1.5)),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: base.textButtonTheme.style?.copyWith(
+          foregroundColor: WidgetStateProperty.all(primary),
+        ),
+      ),
+      appBarTheme: base.appBarTheme.copyWith(backgroundColor: primary),
+      inputDecorationTheme: base.inputDecorationTheme.copyWith(
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: primary, width: 2),
+        ),
+      ),
+      chipTheme: base.chipTheme.copyWith(
+        selectedColor: primary.withOpacity(0.1),
+      ),
+    );
+  }
+
+  static ThemeData darkThemeWithPrimary(Color primary) {
+    final base = darkTheme;
+    return base.copyWith(
+      primaryColor: primary,
+      colorScheme: base.colorScheme.copyWith(primary: primary, secondary: primary),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: base.elevatedButtonTheme.style?.copyWith(
+          backgroundColor: WidgetStateProperty.all(primary),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: base.outlinedButtonTheme.style?.copyWith(
+          foregroundColor: WidgetStateProperty.all(primary),
+          side: WidgetStateProperty.all(
+            BorderSide(color: primary.withOpacity(0.8), width: 1.5),
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: base.textButtonTheme.style?.copyWith(
+          foregroundColor: WidgetStateProperty.all(primary),
+        ),
+      ),
+      inputDecorationTheme: base.inputDecorationTheme.copyWith(
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: primary, width: 2),
+        ),
+      ),
+      chipTheme: base.chipTheme.copyWith(
+        selectedColor: primary.withOpacity(0.18),
+      ),
+    );
+  }
 }

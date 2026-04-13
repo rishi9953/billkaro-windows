@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io' show Platform;
+
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/helpers/storage_helper.dart';
 import 'package:billkaro/config/config.dart';
@@ -169,6 +171,10 @@ class PrinterController extends BaseController
 
   // ------------------ Bluetooth Permissions ------------------
   Future<void> checkBluetoothPermission() async {
+    if (Platform.isWindows) {
+      debugPrint('ℹ️ [Printer] Bluetooth tab inactive on Windows; use USB printers.');
+      return;
+    }
     try {
       // Check if Bluetooth is available
       if (await FlutterBluePlus.isSupported == false) {
@@ -186,6 +192,10 @@ class PrinterController extends BaseController
 
   // ------------------ Bluetooth Scan ------------------
   Future<void> scanForDevices() async {
+    if (Platform.isWindows) {
+      showError(description: 'On Windows, use the USB tab to find printers.');
+      return;
+    }
     try {
       await printerService.requestPermissions(); // <-- IMPORTANT FIX
       await ensureLocationService();
@@ -210,6 +220,10 @@ class PrinterController extends BaseController
 
   // ------------------ Connect to Device ------------------
   Future<void> connectToDevice(BluetoothDevice device) async {
+    if (Platform.isWindows) {
+      showError(description: 'Bluetooth printers are not supported on Windows; use USB.');
+      return;
+    }
     try {
       // Show loading
       Get.dialog(
@@ -285,7 +299,6 @@ class PrinterController extends BaseController
         final filtered = devices.toList();
 
         usbDevices.assignAll(filtered);
-        isUsbConnected.value = usbDevices.isNotEmpty;
 
         debugPrint('USB Printers found: ${usbDevices.length}');
         for (var printer in usbDevices) {
@@ -305,19 +318,68 @@ class PrinterController extends BaseController
 
   Future<void> connectUsbPrinter(Printer printer) async {
     try {
-      await _flutterThermalPrinter.connect(printer);
-      connectedUsbPrinter.value = printer;
-      showSuccess(description: 'Connected to ${printer.name ?? 'USB Printer'}');
+      final connected = await _flutterThermalPrinter.connect(printer);
+      if (connected && await _isUsbPrinterStillAvailable(printer)) {
+        connectedUsbPrinter.value = printer;
+        isUsbConnected.value = true;
+        showSuccess(
+          description: 'Connected to ${printer.name ?? 'USB Printer'}',
+        );
+      } else {
+        connectedUsbPrinter.value = null;
+        isUsbConnected.value = false;
+        showError(description: 'USB printer is not connected');
+      }
     } catch (e) {
+      connectedUsbPrinter.value = null;
+      isUsbConnected.value = false;
       showError(description: 'Failed to connect to USB printer: $e');
       debugPrint('USB connection error: $e');
     }
+  }
+
+  Future<bool> _isUsbPrinterStillAvailable(Printer targetPrinter) async {
+    try {
+      await _flutterThermalPrinter.getPrinters(
+        connectionTypes: [ConnectionType.USB],
+      );
+      final devices = await _flutterThermalPrinter.devicesStream.first.timeout(
+        const Duration(seconds: 2),
+      );
+      return devices.any((p) => _isSameUsbPrinter(p, targetPrinter));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  bool _isSameUsbPrinter(Printer a, Printer b) {
+    final aAddress = (a.address ?? '').trim();
+    final bAddress = (b.address ?? '').trim();
+    if (aAddress.isNotEmpty && bAddress.isNotEmpty) {
+      return aAddress == bAddress;
+    }
+
+    final aVendor = '${a.vendorId ?? ''}'.trim();
+    final bVendor = '${b.vendorId ?? ''}'.trim();
+    final aProduct = '${a.productId ?? ''}'.trim();
+    final bProduct = '${b.productId ?? ''}'.trim();
+    if (aVendor.isNotEmpty &&
+        bVendor.isNotEmpty &&
+        aProduct.isNotEmpty &&
+        bProduct.isNotEmpty) {
+      return aVendor == bVendor && aProduct == bProduct;
+    }
+
+    final aName = (a.name ?? '').trim();
+    final bName = (b.name ?? '').trim();
+    return aName.isNotEmpty && bName.isNotEmpty && aName == bName;
   }
 
   Future<void> disconnectUsbPrinter() async {
     try {
       await _flutterThermalPrinter.disconnect(Printer.fromJson({}));
       connectedUsbPrinter.value = null;
+      isUsbConnected.value = false;
       showSuccess(description: 'Disconnected from USB printer');
     } catch (e) {
       showError(description: 'Failed to disconnect: $e');

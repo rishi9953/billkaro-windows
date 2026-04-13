@@ -3,11 +3,15 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  bitsdojo_window_linux
   file_selector_linux
+  flutter_bluetooth_classic_serial
+  fullscreen_window
   open_file_linux
   printing
   sqlite3_flutter_libs
   url_launcher_linux
+  webview_win_floating
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

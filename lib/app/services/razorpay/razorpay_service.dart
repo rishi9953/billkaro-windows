@@ -1,15 +1,35 @@
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
+import 'package:get/get.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:billkaro/app/services/razorpay/razorpay_web_checkout.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 enum RazorpayEnvironment { test, production }
+
+/// `razorpay_flutter` only registers native code on Android and iOS.
+/// On Windows/macOS/Linux/web, constructing [Razorpay] throws [MissingPluginException].
+bool get isRazorpayNativeSdkSupported {
+  if (kIsWeb) return false;
+  return defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS;
+}
+
+/// Desktop apps use Razorpay Standard Checkout inside a WebView (see [RazorpayWebCheckout]).
+bool get isRazorpayWebCheckoutSupported {
+  if (kIsWeb) return false;
+  return defaultTargetPlatform == TargetPlatform.windows ||
+      defaultTargetPlatform == TargetPlatform.macOS ||
+      defaultTargetPlatform == TargetPlatform.linux;
+}
 
 class RazorpayService {
   static final RazorpayService _instance = RazorpayService._internal();
   factory RazorpayService() => _instance;
   RazorpayService._internal();
 
-  late Razorpay _razorpay;
+  Razorpay? _razorpay;
   Function(PaymentSuccessResponse)? onSuccess;
   Function(PaymentFailureResponse)? onFailure;
   Function(ExternalWalletResponse)? onExternalWallet;
@@ -32,14 +52,22 @@ class RazorpayService {
     Function(PaymentFailureResponse)? onFailure,
     Function(ExternalWalletResponse)? onExternalWallet,
   }) {
-    _razorpay = Razorpay();
     this.onSuccess = onSuccess;
     this.onFailure = onFailure;
     this.onExternalWallet = onExternalWallet;
 
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+    if (!isRazorpayNativeSdkSupported) {
+      debugPrint(
+        'Razorpay native SDK skipped on this platform; '
+        'desktop uses Standard Checkout (WebView / WebView2).',
+      );
+      return;
+    }
+
+    _razorpay = Razorpay();
+    _razorpay!.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay!.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay!.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
   }
 
   /// Handle payment success
@@ -89,9 +117,9 @@ class RazorpayService {
         throw Exception('Invalid amountInPaise: $amountInPaise');
       }
 
-      final options = {
-        'key': 'rzp_test_S6acVlkXQvGWT0',
-        'amount': amountInPaise.toString(), // Amount in paise (int)
+      final options = <String, dynamic>{
+        'key': keyId,
+        'amount': amountInPaise.toString(),
         'name': 'BillKaro ChillKaro',
         'currency': 'INR',
         'description': description,
@@ -102,16 +130,57 @@ class RazorpayService {
         },
         'notes': notes ?? {},
         'theme': {
-          'color': '#D4AF37', // Your app's primary color
+          'color': '#D4AF37',
         },
-        'order_id': orderId,
+        if (orderId != null && orderId.isNotEmpty) 'order_id': orderId,
       };
 
       debugPrint(
         'Opening Razorpay checkout: amountInPaise=$amountInPaise, '
         'orderId=${orderId ?? ''}, currency=INR',
       );
-      _razorpay.open(options);
+
+      if (isRazorpayNativeSdkSupported) {
+        if (_razorpay == null) {
+          showError(
+            title: 'Payment not available',
+            description:
+                'Payment could not be initialized. Please restart the app and try again.',
+          );
+          return;
+        }
+        _razorpay!.open(options);
+        return;
+      }
+
+      if (isRazorpayWebCheckoutSupported) {
+        if (onSuccess == null || onFailure == null) {
+          showError(
+            title: 'Payment Error',
+            description: 'Payment callbacks are not configured.',
+          );
+          return;
+        }
+        if (Get.context == null) {
+          showError(
+            title: 'Payment Error',
+            description: 'No valid screen context to open checkout.',
+          );
+          return;
+        }
+        RazorpayWebCheckout.open(
+          checkoutOptions: options,
+          onSuccess: onSuccess!,
+          onFailure: onFailure!,
+        );
+        return;
+      }
+
+      showError(
+        title: 'Payment not available',
+        description:
+            'In-app Razorpay checkout is not supported on this platform.',
+      );
     } catch (e) {
       debugPrint('Error opening Razorpay checkout: $e');
       showError(
@@ -123,6 +192,7 @@ class RazorpayService {
 
   /// Dispose Razorpay instance
   void dispose() {
-    _razorpay.clear();
+    _razorpay?.clear();
+    _razorpay = null;
   }
 }

@@ -1,23 +1,40 @@
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Tables/table_controller.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 import 'package:get/get.dart';
 
 class TableScreen extends StatelessWidget {
   TableScreen({super.key});
 
-  final TableController controller = Get.put(TableController());
-
   @override
   Widget build(BuildContext context) {
+    if (!HomeMainRoutes.outletShowsTables()) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Modular.to.navigate(HomeMainRoutes.home);
+      });
+      return const Scaffold(
+        backgroundColor: AppColor.backGroundColor,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (!Get.isRegistered<TableController>()) {
+      Get.put(TableController());
+    }
+    final controller = Get.find<TableController>();
+
+    final isWindows = Theme.of(context).platform == TargetPlatform.windows;
+    final scrollPhysics = isWindows
+        ? const ClampingScrollPhysics()
+        : const BouncingScrollPhysics();
+
     return Scaffold(
       backgroundColor: AppColor.backGroundColor,
       appBar: AppBar(
         elevation: 0,
-        title: const Text(
-          'Tables',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-        ),
+        title: const Text('Tables'),
         actions: [
           IconButton(
             icon: const Icon(Icons.restart_alt),
@@ -50,63 +67,88 @@ class TableScreen extends StatelessWidget {
 
         final filteredTables = controller.filteredTables;
 
-        return Column(
-          children: [
-            _TableHeader(controller: controller),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: controller.refresh,
-                child: filteredTables.isEmpty
-                    ? _EmptyState(
-                        query: controller.searchQuery.value,
-                        filter: controller.selectedFilter.value,
-                      )
-                    : LayoutBuilder(
-                        builder: (context, constraints) {
-                          final width = constraints.maxWidth;
-                          final maxExtent = width >= 1200
-                              ? 260.0
-                              : width >= 900
-                              ? 240.0
-                              : width >= 600
-                              ? 220.0
-                              : 180.0;
+        return SafeArea(
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 980),
+              child: Column(
+                children: [
+                  _TableHeader(controller: controller),
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: controller.refresh,
+                      child: filteredTables.isEmpty
+                          ? _EmptyState(
+                              query: controller.searchQuery.value,
+                              filter: controller.selectedFilter.value,
+                            )
+                          : LayoutBuilder(
+                              builder: (context, constraints) {
+                                final width = constraints.maxWidth;
+                                final maxExtent = width >= 900
+                                    ? 260.0
+                                    : width >= 760
+                                    ? 240.0
+                                    : width >= 600
+                                    ? 220.0
+                                    : 180.0;
 
-                          return GridView.builder(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                            itemCount: filteredTables.length,
-                            gridDelegate:
-                                SliverGridDelegateWithMaxCrossAxisExtent(
-                                  maxCrossAxisExtent: maxExtent,
-                                  crossAxisSpacing: 12,
-                                  mainAxisSpacing: 12,
-                                  childAspectRatio: width >= 900 ? 1.15 : 1.05,
-                                ),
-                            itemBuilder: (_, index) {
-                              final tws = filteredTables[index];
-                              return _TableCard(
-                                tableWithStatus: tws,
-                                onTap: () => controller.onTableTap(tws),
-                                onDelete: tws.isAvailable
-                                    ? () => _showDeleteTableDialog(context, tws)
-                                    : null,
-                              );
-                            },
-                          );
-                        },
-                      ),
+                                return Scrollbar(
+                                  thumbVisibility: isWindows,
+                                  child: GridView.builder(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      16,
+                                      8,
+                                      16,
+                                      16,
+                                    ),
+                                    physics: scrollPhysics,
+                                    itemCount: filteredTables.length,
+                                    gridDelegate:
+                                        SliverGridDelegateWithMaxCrossAxisExtent(
+                                          maxCrossAxisExtent: maxExtent,
+                                          crossAxisSpacing: 12,
+                                          mainAxisSpacing: 12,
+                                          childAspectRatio: width >= 900
+                                              ? 1.15
+                                              : 1.05,
+                                        ),
+                                    itemBuilder: (_, index) {
+                                      final tws = filteredTables[index];
+                                      return _TableCard(
+                                        enableHover: isWindows,
+                                        tableWithStatus: tws,
+                                        onTap: () => controller.onTableTap(tws),
+                                        onDelete: tws.isAvailable
+                                            ? () => _showDeleteTableDialog(
+                                                context,
+                                                tws,
+                                              )
+                                            : null,
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         );
       }),
     );
   }
 
   void _showAddTableDialog(BuildContext context) {
+    final controller = Get.find<TableController>();
     final tableController = TextEditingController();
     final limit = controller.seatingCapacityLimit;
     final currentCount = controller.tables.length;
+    final colorScheme = Theme.of(context).colorScheme;
 
     Get.dialog(
       AlertDialog(
@@ -119,7 +161,10 @@ class TableScreen extends StatelessWidget {
               limit > 0
                   ? 'Tables: $currentCount / $limit'
                   : 'Seating capacity is not set for this outlet.',
-              style: const TextStyle(fontSize: 13, color: Colors.black54),
+              style: TextStyle(
+                fontSize: 13,
+                color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -151,6 +196,8 @@ class TableScreen extends StatelessWidget {
   }
 
   void _showDeleteTableDialog(BuildContext context, TableWithStatus tws) {
+    final controller = Get.find<TableController>();
+    final colorScheme = Theme.of(context).colorScheme;
     Get.dialog(
       AlertDialog(
         title: const Text('Delete Table'),
@@ -167,7 +214,7 @@ class TableScreen extends StatelessWidget {
                 Get.back();
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: colorScheme.error),
             child: const Text('Delete'),
           ),
         ],
@@ -176,6 +223,8 @@ class TableScreen extends StatelessWidget {
   }
 
   void _showResetAllTablesDialog(BuildContext context) {
+    final controller = Get.find<TableController>();
+    final colorScheme = Theme.of(context).colorScheme;
     Get.dialog(
       Builder(
         builder: (dialogContext) => AlertDialog(
@@ -196,7 +245,9 @@ class TableScreen extends StatelessWidget {
                   Navigator.of(dialogContext).pop();
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colorScheme.error,
+              ),
               child: const Text('Reset All'),
             ),
           ],
@@ -213,61 +264,75 @@ class _TableHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      child: Column(
-        children: [
-          TextField(
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth >= 760;
+
+        final search = SizedBox(
+          width: wide ? 360 : null,
+          child: TextField(
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.search),
               hintText: 'Search table',
               filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 10,
-              ),
+              fillColor: colorScheme.surfaceVariant.withOpacity(0.22),
             ),
             onChanged: controller.setSearchQuery,
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 36,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                _FilterChip(
-                  label: 'All',
-                  selected: controller.selectedFilter.value == TableFilter.all,
-                  onTap: () => controller.setFilter(TableFilter.all),
-                ),
-                _FilterChip(
-                  label: 'Available',
-                  selected:
-                      controller.selectedFilter.value == TableFilter.available,
-                  onTap: () => controller.setFilter(TableFilter.available),
-                ),
-                _FilterChip(
-                  label: 'Occupied',
-                  selected:
-                      controller.selectedFilter.value == TableFilter.occupied,
-                  onTap: () => controller.setFilter(TableFilter.occupied),
-                ),
-                _FilterChip(
-                  label: 'Billing',
-                  selected:
-                      controller.selectedFilter.value == TableFilter.billing,
-                  onTap: () => controller.setFilter(TableFilter.billing),
-                ),
-              ],
-            ),
+        );
+
+        final filters = SizedBox(
+          height: 36,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              _FilterChip(
+                label: 'All',
+                selected: controller.selectedFilter.value == TableFilter.all,
+                onTap: () => controller.setFilter(TableFilter.all),
+              ),
+              _FilterChip(
+                label: 'Available',
+                selected:
+                    controller.selectedFilter.value == TableFilter.available,
+                onTap: () => controller.setFilter(TableFilter.available),
+              ),
+              _FilterChip(
+                label: 'Occupied',
+                selected:
+                    controller.selectedFilter.value == TableFilter.occupied,
+                onTap: () => controller.setFilter(TableFilter.occupied),
+              ),
+              _FilterChip(
+                label: 'Billing',
+                selected:
+                    controller.selectedFilter.value == TableFilter.billing,
+                onTap: () => controller.setFilter(TableFilter.billing),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+
+        return Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: wide
+              ? Row(
+                  children: [
+                    search,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: filters,
+                      ),
+                    ),
+                  ],
+                )
+              : Column(children: [search, const SizedBox(height: 10), filters]),
+        );
+      },
     );
   }
 }
@@ -285,6 +350,7 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
@@ -293,7 +359,7 @@ class _FilterChip extends StatelessWidget {
         onSelected: (_) => onTap(),
         selectedColor: AppColor.primary.withOpacity(0.18),
         labelStyle: TextStyle(
-          color: selected ? AppColor.primary : Colors.black87,
+          color: selected ? AppColor.primary : colorScheme.onSurfaceVariant,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -309,22 +375,32 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isWindows = Theme.of(context).platform == TargetPlatform.windows;
+    final scrollPhysics = isWindows
+        ? const ClampingScrollPhysics()
+        : const BouncingScrollPhysics();
+    final textColor = Theme.of(
+      context,
+    ).colorScheme.onSurfaceVariant.withOpacity(0.7);
     final hasFilter = query.trim().isNotEmpty || filter != TableFilter.all;
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      children: [
-        SizedBox(
-          height: MediaQuery.of(context).size.height * 0.5,
-          child: Center(
-            child: Text(
-              hasFilter
-                  ? 'No tables match your search/filter'
-                  : 'No tables available',
-              style: const TextStyle(fontSize: 15, color: Colors.black54),
+    return Scrollbar(
+      thumbVisibility: isWindows,
+      child: ListView(
+        physics: AlwaysScrollableScrollPhysics(parent: scrollPhysics),
+        children: [
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.5,
+            child: Center(
+              child: Text(
+                hasFilter
+                    ? 'No tables match your search/filter'
+                    : 'No tables available',
+                style: TextStyle(fontSize: 15, color: textColor),
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -337,18 +413,21 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = Theme.of(
+      context,
+    ).colorScheme.onSurfaceVariant.withOpacity(0.7);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.wifi_off, size: 44, color: Colors.black45),
+            Icon(Icons.wifi_off, size: 44, color: textColor),
             const SizedBox(height: 12),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, color: Colors.black54),
+              style: TextStyle(fontSize: 14, color: textColor),
             ),
             const SizedBox(height: 12),
             ElevatedButton(onPressed: onRetry, child: const Text('Retry')),
@@ -359,26 +438,36 @@ class _ErrorState extends StatelessWidget {
   }
 }
 
-class _TableCard extends StatelessWidget {
+class _TableCard extends StatefulWidget {
   final TableWithStatus tableWithStatus;
   final VoidCallback onTap;
   final VoidCallback? onDelete;
+  final bool enableHover;
 
   const _TableCard({
     required this.tableWithStatus,
     required this.onTap,
     this.onDelete,
+    required this.enableHover,
   });
 
   @override
+  State<_TableCard> createState() => _TableCardState();
+}
+
+class _TableCardState extends State<_TableCard> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    final table = tableWithStatus.table;
+    final table = widget.tableWithStatus.table;
+    final colorScheme = Theme.of(context).colorScheme;
 
     late Color statusColor;
     late IconData icon;
     late String statusText;
 
-    switch (tableWithStatus.status) {
+    switch (widget.tableWithStatus.status) {
       case TableStatus.available:
         statusColor = AppColor.lightgreen;
         icon = Icons.table_restaurant;
@@ -395,20 +484,47 @@ class _TableCard extends StatelessWidget {
         statusText = 'Occupied';
     }
 
-    return Material(
-      elevation: 2,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
+    final hovered = widget.enableHover && _hovered;
+    final borderOpacity = hovered ? 0.55 : 0.35;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) {
+        if (!widget.enableHover) return;
+        setState(() => _hovered = true);
+      },
+      onExit: (_) {
+        if (!widget.enableHover) return;
+        setState(() => _hovered = false);
+      },
+      child: Material(
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: statusColor, width: 1.6),
-            color: Colors.white,
-          ),
-          child: Padding(
+        child: InkWell(
+          onTap: widget.onTap,
+          borderRadius: BorderRadius.circular(16),
+          hoverColor: statusColor.withOpacity(0.10),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 140),
+            curve: Curves.easeOut,
             padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: statusColor.withOpacity(borderOpacity),
+                width: hovered ? 1.8 : 1.4,
+              ),
+              color: hovered
+                  ? statusColor.withOpacity(0.06)
+                  : colorScheme.surface,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(hovered ? 0.10 : 0.05),
+                  blurRadius: hovered ? 16 : 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -442,22 +558,25 @@ class _TableCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (onDelete != null) ...[
+                    if (widget.onDelete != null) ...[
                       const SizedBox(width: 6),
-                      InkWell(
-                        onTap: onDelete,
-                        borderRadius: BorderRadius.circular(18),
-                        child: Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.12),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.delete_outline,
-                            color: Colors.red,
-                            size: 16,
+                      Tooltip(
+                        message: 'Delete table',
+                        child: InkWell(
+                          onTap: widget.onDelete,
+                          borderRadius: BorderRadius.circular(18),
+                          child: Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: colorScheme.error.withOpacity(0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.delete_outline,
+                              color: colorScheme.error,
+                              size: 16,
+                            ),
                           ),
                         ),
                       ),
@@ -469,27 +588,33 @@ class _TableCard extends StatelessWidget {
                   table.displayName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  tableWithStatus.isAvailable
+                  widget.tableWithStatus.isAvailable
                       ? 'Tap to create new order'
                       : 'Tap to continue order',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                  ),
                 ),
-                if (tableWithStatus.currentOrder?.billNumber != null) ...[
+                if (widget.tableWithStatus.currentOrder?.billNumber !=
+                    null) ...[
                   const SizedBox(height: 8),
                   Text(
-                    'Bill #${tableWithStatus.currentOrder!.billNumber}',
-                    style: const TextStyle(
+                    'Bill #${widget.tableWithStatus.currentOrder!.billNumber}',
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
+                      color: colorScheme.onSurface,
                     ),
                   ),
                 ],

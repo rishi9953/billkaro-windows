@@ -1,5 +1,6 @@
 // Controller
 import 'dart:io';
+import 'package:billkaro/app/Widgets/desktop_camera_capture_dialog.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_item_controller.dart';
 import 'package:billkaro/app/services/Modals/addItem/addItem_modal.dart';
 import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
@@ -9,6 +10,7 @@ import 'package:billkaro/app/services/ai/menu_ai_scanner.dart';
 import 'package:billkaro/app/services/ai/ai_image_generator.dart';
 import 'package:billkaro/config/config.dart';
 import '../../services/Modals/Categories/categories_response.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
 class AddMenuItemController extends BaseController {
   final itemNameController = TextEditingController();
@@ -64,22 +66,41 @@ class AddMenuItemController extends BaseController {
     }
   }
 
-  // Upload image from camera
+  bool _usesDesktopCameraPlugin() {
+    if (kIsWeb) return false;
+    return Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+  }
+
+  /// On mobile uses [ImageSource.camera]. On desktop, opens a live preview (USB / built-in webcam).
   Future<void> uploadImageFromCamera() async {
     try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.camera,
-        maxWidth: 1800,
-        maxHeight: 1800,
-        imageQuality: 85,
-      );
-
-      if (image != null) {
-        selectedImage.value = File(image.path);
-        imagePath.value = image.path;
-        // Auto-scan with AI if image is captured
-        await scanMenuWithAI();
+      String? path;
+      if (_usesDesktopCameraPlugin()) {
+        path = await showDesktopCameraCaptureDialog();
+      } else {
+        final XFile? image = await _picker.pickImage(
+          source: ImageSource.camera,
+          maxWidth: 1800,
+          maxHeight: 1800,
+          imageQuality: 85,
+        );
+        path = image?.path;
       }
+
+      if (path == null || path.isEmpty) return;
+
+      selectedImage.value = File(path);
+      imagePath.value = path;
+
+      // ML Kit OCR (menu scan) is only supported on Android/iOS.
+      if (_usesDesktopCameraPlugin()) {
+        showSuccess(
+          description:
+              'Photo captured. Enter item name and price (desktop scan uses the image only).',
+        );
+        return;
+      }
+      await scanMenuWithAI();
     } catch (e) {
       showError(description: 'Failed to capture image: $e');
     }
@@ -143,7 +164,7 @@ class AddMenuItemController extends BaseController {
                             color: AppColor.primary.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.auto_awesome,
                             color: AppColor.primary,
                             size: 24,
@@ -188,7 +209,7 @@ class AddMenuItemController extends BaseController {
                             color: AppColor.primary.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.upload_outlined,
                             color: AppColor.primary,
                             size: 24,
@@ -285,7 +306,7 @@ class AddMenuItemController extends BaseController {
                     color: AppColor.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.photo_library_outlined,
                     color: AppColor.primary,
                     size: 24,
@@ -311,7 +332,7 @@ class AddMenuItemController extends BaseController {
                     color: AppColor.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.camera_alt_outlined,
                     color: AppColor.primary,
                     size: 24,
@@ -321,9 +342,11 @@ class AddMenuItemController extends BaseController {
                   'Camera',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                 ),
-                subtitle: const Text(
-                  'Take a new photo',
-                  style: TextStyle(fontSize: 13),
+                subtitle: Text(
+                  _usesDesktopCameraPlugin()
+                      ? 'Webcam or USB document camera'
+                      : 'Take a new photo',
+                  style: const TextStyle(fontSize: 13),
                 ),
                 onTap: () {
                   Get.back();
@@ -415,24 +438,29 @@ class AddMenuItemController extends BaseController {
   }
 
   void saveAndNew() {
-    saveItem();
-    // Reset fields
-    itemNameController.clear();
-    salePriceController.clear();
-    selectedCategory.value = 'none';
-    selectedTaxPercentage.value = 'None';
-    selectedImage.value = null;
-    imagePath.value = '';
-    makeDefaultTax.value = true;
-    markAsFavorite.value = false;
+    // Save and keep screen open; reset only after SUCCESS.
+    if (itemNameController.text.isEmpty) {
+      showError(description: 'Please enter item name');
+      return;
+    }
+    final appPref = Get.find<AppPref>();
+    if (!hasTrialOrSubscription(appPref)) {
+      checkSubscription();
+      return;
+    }
+    onAddItem(closeOnSuccess: false);
   }
 
   void onDeleteItem() async {
     final response = await callApi(apiClient.deleteItem(itemId.value.trim()));
     if (response['status'] == 'success') {
-      Get.back();
+      if (Get.isDialogOpen == true) {
+        Get.back();
+      }
       menuItemController.getItems(showLoader: false, forceApiRefresh: true);
-      Get.back();
+      if (Modular.to.canPop()) {
+        Modular.to.pop();
+      }
       showSuccess(description: response['message']);
     }
   }
@@ -447,7 +475,7 @@ class AddMenuItemController extends BaseController {
       checkSubscription();
       return;
     }
-    onAddItem();
+    onAddItem(closeOnSuccess: false);
   }
 
   void onUpdateItem() async {
@@ -506,35 +534,65 @@ class AddMenuItemController extends BaseController {
   }
 
   // Edit Mode Logic
-  void toggleEditMode() {
-    var args = Get.arguments as Map<String, dynamic>?;
+  void configureFromArgs(Map<String, dynamic>? args) {
+    // Always start from a clean state
+    isEdit.value = false;
+    itemNameController.clear();
+    salePriceController.clear();
+    selectedCategory.value = 'none';
+    selectedTaxPercentage.value = 'None';
+    isWithTax.value = false;
+    itemId.value = '';
+    imageUrl.value = '';
 
-    if (args != null && args.containsKey('isEdit')) {
-      isEdit.value = args['isEdit'] as bool;
-      var item = args['item'] as ItemData;
+    if (args == null) return;
 
-      itemNameController.text = item.itemName;
-      salePriceController.text = item.salePrice.toString();
+    final bool edit = args['isEdit'] == true;
+    isEdit.value = edit;
+    if (!edit || args['item'] == null) return;
 
-      selectedCategory.value = categories.contains(item.category)
-          ? item.category
-          : 'none';
+    final item = args['item'] as ItemData;
 
-      isWithTax.value = item.withTax;
-      itemId.value = item.id;
+    itemNameController.text = item.itemName;
+    salePriceController.text = item.salePrice.toString();
 
-      imageUrl.value = item.itemImage;
-      selectedTaxPercentage.value =
-          (double.parse(item.gst.toString()).round() == 0)
-          ? 'None'
-          : '${double.parse(item.gst.toString()).toInt()}';
-    }
+    selectedCategory.value = categories.contains(item.category)
+        ? item.category
+        : 'none';
+
+    isWithTax.value = item.withTax;
+    itemId.value = item.id;
+
+    imageUrl.value = item.itemImage;
+    selectedTaxPercentage.value = double.parse(item.gst.toString()).round() == 0
+        ? 'None'
+        : '${double.parse(item.gst.toString()).toInt()}';
   }
 
   // Save API Call
-  void onAddItem() async {
+  void resetForm() {
+    itemNameController.clear();
+    salePriceController.clear();
+    selectedCategory.value = 'none';
+    selectedTaxPercentage.value = 'None';
+    isWithTax.value = false;
+    isAvailable.value = true;
+    selectedImage.value = null;
+    imagePath.value = '';
+    imageUrl.value = '';
+    aiScanResult.value = null;
+    makeDefaultTax.value = true;
+    markAsFavorite.value = false;
+  }
+
+  // Save API Call
+  void onAddItem({required bool closeOnSuccess}) async {
     if (selectedImage.value != null) {
-      await uploadItemImage();
+      final ok = await uploadItemImage();
+      if (!ok) {
+        // uploadItemImage already shows an error
+        return;
+      }
     }
     final request = ItemRequest(
       showItem: isAvailable.value,
@@ -557,18 +615,21 @@ class AddMenuItemController extends BaseController {
 
     if (response['status'] == 'success') {
       menuItemController.getItems(showLoader: false, forceApiRefresh: true);
-      Get.back();
       showSuccess(
         description: response['message'] ?? 'Item added successfully',
       );
+      // Clear the form after a successful add (requested behavior).
+      resetForm();
+      if (closeOnSuccess) {
+        Get.back();
+      }
     } else {
       showError(description: response['message'] ?? 'Failed to add item');
     }
   }
 
-  Future<void> uploadItemImage() async {
-    showAppLoader();
-    final resposne = await callApi(
+  Future<bool> uploadItemImage() async {
+    final response = await callApi(
       MediaApi().uploadImage(
         file: File(selectedImage.value!.path),
         folderName: 'items',
@@ -576,10 +637,12 @@ class AddMenuItemController extends BaseController {
         userId: appPref.user!.id!,
       ),
     );
-    showAppLoader();
-    if (resposne != null) {
-      imageUrl.value = resposne.data['url'];
+    if (response?.data?['url'] != null) {
+      imageUrl.value = response!.data['url'];
+      return true;
     }
+    showError(description: 'Image upload failed. Please try again.');
+    return false;
   }
 
   void initializecontroller() {
@@ -598,7 +661,8 @@ class AddMenuItemController extends BaseController {
 
   @override
   void onReady() async {
-    toggleEditMode(); // now categories exist → no crash
+    // Categories are loaded here; screen will call configureFromArgs()
+    // with the latest arguments on each build.
     await getCategories();
     super.onReady();
   }

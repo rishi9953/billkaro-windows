@@ -17,9 +17,10 @@ class AppPref {
   static const String keyShowcaseCompleted = 'showcase_completed';
   static const String keyIsListView = 'is_list_view';
   static const String keyNotificationsEnabled = 'notifications_enabled';
-  static const String keySoundEnabled = 'sound_enabled';
-  static const String keyHapticEnabled = 'haptic_enabled';
   static const String keyShowQrOnBill = 'show_qr_on_bill';
+  static const String keyShowAddDetailsOnCreateOrder =
+      'show_add_details_on_create_order';
+  static const String keyDownloadPath = 'download_path';
 
   AppPref(this._preferences);
 
@@ -29,15 +30,27 @@ class AppPref {
   String get token => _preferences.getString('token') ?? '';
   set token(String value) => _preferences.setString('token', value);
 
-  User? get user => _preferences.containsKey('user') ? User.fromJson(jsonDecode(_preferences.getString('user') ?? '')) : null;
+  User? get user => _preferences.containsKey(keyUser)
+      ? User.fromJson(
+          jsonDecode(_preferences.getString(keyUser) ?? '') as Map<String, dynamic>,
+        )
+      : null;
 
-  set user(User? value) => _preferences.setString('user', jsonEncode(value));
+  set user(User? value) {
+    if (value == null) {
+      _preferences.remove(keyUser);
+    } else {
+      _preferences.setString(keyUser, jsonEncode(value.toJson()));
+    }
+  }
 
   /// 👉 Selected Outlet
   OutletData? get selectedOutlet {
     if (!_preferences.containsKey(keySelectedOutlet)) return null;
     try {
-      return OutletData.fromJson(jsonDecode(_preferences.getString(keySelectedOutlet) ?? ''));
+      return OutletData.fromJson(
+        jsonDecode(_preferences.getString(keySelectedOutlet) ?? ''),
+      );
     } catch (e) {
       return null;
     }
@@ -98,24 +111,31 @@ class AppPref {
   set isListView(bool value) => _preferences.setBool(keyIsListView, value);
 
   /// 👉 Showcase completion flag
-  bool get isShowcaseCompleted => _preferences.getBool(keyShowcaseCompleted) ?? false;
-  set isShowcaseCompleted(bool value) => _preferences.setBool(keyShowcaseCompleted, value);
+  bool get isShowcaseCompleted =>
+      _preferences.getBool(keyShowcaseCompleted) ?? false;
+  set isShowcaseCompleted(bool value) =>
+      _preferences.setBool(keyShowcaseCompleted, value);
 
   /// 👉 Notifications enabled
-  bool get notificationsEnabled => _preferences.getBool(keyNotificationsEnabled) ?? true;
-  set notificationsEnabled(bool value) => _preferences.setBool(keyNotificationsEnabled, value);
-
-  /// 👉 Sound enabled
-  bool get soundEnabled => _preferences.getBool(keySoundEnabled) ?? true;
-  set soundEnabled(bool value) => _preferences.setBool(keySoundEnabled, value);
-
-  /// 👉 Haptic feedback enabled
-  bool get hapticEnabled => _preferences.getBool(keyHapticEnabled) ?? true;
-  set hapticEnabled(bool value) => _preferences.setBool(keyHapticEnabled, value);
+  bool get notificationsEnabled =>
+      _preferences.getBool(keyNotificationsEnabled) ?? true;
+  set notificationsEnabled(bool value) =>
+      _preferences.setBool(keyNotificationsEnabled, value);
 
   /// 👉 Show QR code on bill/invoice (UPI scan to pay)
   bool get showQrOnBill => _preferences.getBool(keyShowQrOnBill) ?? true;
   set showQrOnBill(bool value) => _preferences.setBool(keyShowQrOnBill, value);
+
+  /// 👉 Show "Add Details" on create order (customer, table, discounts, etc.)
+  bool get showAddDetailsOnCreateOrder =>
+      _preferences.getBool(keyShowAddDetailsOnCreateOrder) ?? true;
+  set showAddDetailsOnCreateOrder(bool value) =>
+      _preferences.setBool(keyShowAddDetailsOnCreateOrder, value);
+
+  /// 👉 Preferred download directory for saved files
+  String get downloadPath => _preferences.getString(keyDownloadPath) ?? '';
+  set downloadPath(String value) =>
+      _preferences.setString(keyDownloadPath, value);
 
   /// Clear all
   Future<bool> clear() async => await _preferences.clear();

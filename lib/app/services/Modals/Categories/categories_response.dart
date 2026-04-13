@@ -23,6 +23,7 @@ class CategoryData {
   final String userId; // Added because API returns it
   final String outletId;
   final String categoryName;
+  final String imageURL; // Optional field for category image URL
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -31,6 +32,7 @@ class CategoryData {
     required this.userId,
     required this.outletId,
     required this.categoryName,
+    required this.imageURL,
     required this.createdAt,
     required this.updatedAt,
   });

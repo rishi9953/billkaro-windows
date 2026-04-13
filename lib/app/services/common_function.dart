@@ -4,16 +4,53 @@ import 'package:billkaro/config/config.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+/// Free trial length from account/outlet `createdAt`.
+const Duration kFreeTrialDuration = Duration(days: 7);
+
+/// Trial start: selected outlet `createdAt`, else any [user.outletData] outlet, else [user.createdAt].
+DateTime? trialCreatedAtStart(OutletData? outlet, User? user) {
+  if (outlet?.createdAt != null && outlet!.createdAt!.isNotEmpty) {
+    final d = tryParseDateTimeLoose(outlet.createdAt!);
+    if (d != null) return d;
+  }
+  final list = user?.outletData;
+  if (list != null) {
+    for (final o in list) {
+      if (o.createdAt != null && o.createdAt!.isNotEmpty) {
+        final d = tryParseDateTimeLoose(o.createdAt!);
+        if (d != null) return d;
+      }
+    }
+  }
+  if (user?.createdAt != null && user!.createdAt!.isNotEmpty) {
+    final d = tryParseDateTimeLoose(user.createdAt!);
+    if (d != null) return d;
+  }
+  return null;
+}
+
+/// End of free trial for [user] on [outlet], or null if not on trial or no start date.
+DateTime? trialEndDate(OutletData? outlet, User? user) {
+  if (user?.isTrial != true) return null;
+  final start = trialCreatedAtStart(outlet, user);
+  if (start == null) return null;
+  return start.add(kFreeTrialDuration);
+}
+
 /// Returns true if the user can access features that require trial or subscription.
-/// Allowed when: user is on trial (isTrial == true) OR selected outlet has subscription.
+/// Allowed when: user is on an active trial (isTrial and within [kFreeTrialDuration]
+/// from [trialCreatedAtStart]) OR selected outlet has subscription.
 /// Not allowed when: isTrial == false and selected outlet has no subscription.
 /// Use for voice add item, or any other feature gated by trial/subscription.
 bool hasTrialOrSubscription(AppPref appPref) {
   final user = appPref.user;
   if (user == null) return false;
 
-  // Trial users can always use voice add item
-  if (user.isTrial == true) return true;
+  if (user.isTrial == true) {
+    final end = trialEndDate(appPref.selectedOutlet, user);
+    if (end == null) return true;
+    return DateTime.now().isBefore(end);
+  }
 
   // Non-trial: allow only if selected outlet has subscription
   final subs = appPref.selectedOutlet?.subscriptions;

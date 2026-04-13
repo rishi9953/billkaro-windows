@@ -11,10 +11,30 @@ import 'package:billkaro/app/services/sync/sync_manager.dart';
 import 'package:billkaro/config/app_binding.dart';
 import 'package:billkaro/config/app_theme.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:billkaro/utils/app_info.dart';
+import 'package:billkaro/utils/exit_confirm_helper.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:workmanager/workmanager.dart';
+
+bool _isKeyboardStateAssertion(Object error) {
+  final message = error.toString();
+  return message.contains('hardware_keyboard.dart') &&
+      message.contains('_pressedKeys.containsKey(event.physicalKey)');
+}
+
+void _clearHardwareKeyboardStateSafely() {
+  try {
+    // `clearState` is testing-only in API docs, but works at runtime.
+    (HardwareKeyboard.instance as dynamic).clearState();
+  } catch (_) {
+    // Best-effort only; ignore if Flutter internals change.
+  }
+}
 
 void main() async {
   // Setup log filtering to reduce noise from harmless warnings
@@ -22,6 +42,11 @@ void main() async {
 
   // Wrap everything in error handling to prevent crashes (release + debug)
   FlutterError.onError = (FlutterErrorDetails details) {
+    if (_isKeyboardStateAssertion(details.exception)) {
+      _clearHardwareKeyboardStateSafely();
+      return;
+    }
+
     if (kDebugMode) {
       FlutterError.presentError(details);
     }
@@ -31,6 +56,11 @@ void main() async {
 
   // Handle async errors so app doesn't crash on unhandled async exceptions
   PlatformDispatcher.instance.onError = (error, stack) {
+    if (_isKeyboardStateAssertion(error)) {
+      _clearHardwareKeyboardStateSafely();
+      return true;
+    }
+
     debugPrint('❌ [PLATFORM ERROR] $error');
     debugPrint('❌ [STACK TRACE] $stack');
     return true; // mark as handled to prevent exit
@@ -73,7 +103,14 @@ void main() async {
       debugPrint('⚠️ [INIT] ThemeController failed: $e');
     }
 
-    // Initialize Thermal Printer Service
+    // Initialize Dependencies before services that read login state (e.g. printer auto-connect)
+    try {
+      await initDependencies();
+    } catch (e) {
+      debugPrint('⚠️ [INIT] initDependencies failed: $e');
+    }
+
+    // Initialize Thermal Printer Service (onInit may auto-connect only when logged in)
     try {
       Get.put(ThermalPrinterService(), permanent: true);
     } catch (e) {
@@ -89,21 +126,18 @@ void main() async {
       debugPrint('⚠️ [INIT] AppDatabase failed: $e');
     }
 
-    // Initialize WorkManager (use kDebugMode so release behaves correctly)
-    try {
-      await Workmanager().initialize(
-        callbackDispatcher,
-        isInDebugMode: kDebugMode,
-      );
-    } catch (e) {
-      debugPrint('⚠️ [INIT] Workmanager initialization failed: $e');
-    }
-
-    // Initialize Dependencies - must complete before runApp (avoids release crash)
-    try {
-      await initDependencies();
-    } catch (e) {
-      debugPrint('⚠️ [INIT] initDependencies failed: $e');
+    // Initialize WorkManager (Android/iOS only; not implemented on Windows)
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+      try {
+        await Workmanager().initialize(
+          callbackDispatcher,
+          isInDebugMode: kDebugMode,
+        );
+      } catch (e) {
+        debugPrint('⚠️ [INIT] Workmanager initialization failed: $e');
+      }
+    } else {
+      debugPrint('ℹ️ [INIT] Skipping Workmanager init (unsupported platform)');
     }
 
     // Register PrinterService2 WITHOUT initializing Bluetooth at app launch.
@@ -126,7 +160,17 @@ void main() async {
     }
 
     // Run the app
-    runApp(const MyApp());
+    runApp(const _MyAppRoot());
+    if (!kIsWeb && Platform.isWindows) {
+      doWhenWindowReady(() {
+        const initialSize = Size(1280, 720);
+        appWindow.minSize = const Size(1024, 640);
+        appWindow.size = initialSize;
+        appWindow.alignment = Alignment.center;
+        appWindow.title = 'Billkaro ChillKaro';
+        appWindow.show();
+      });
+    }
   } catch (e, stack) {
     debugPrint('❌ [MAIN] Critical error during initialization: $e');
     debugPrint('❌ [STACK] $stack');
@@ -167,6 +211,73 @@ void main() async {
   }
 }
 
+/// Workaround for a Flutter framework assertion on desktop:
+/// if a native file dialog steals focus, a key-up (often Alt) can be missed,
+/// leaving `HardwareKeyboard` thinking the key is still pressed.
+class _MyAppRoot extends StatefulWidget {
+  const _MyAppRoot();
+
+  @override
+  State<_MyAppRoot> createState() => _MyAppRootState();
+}
+
+class _MyAppRootState extends State<_MyAppRoot> with WidgetsBindingObserver {
+  bool _postFrameKeyboardClearScheduled = false;
+
+  void _clearHardwareKeyboardState() {
+    try {
+      // `clearState` is marked testing-only in Flutter; calling via `dynamic`
+      // avoids analyzer warnings while still working at runtime.
+      (HardwareKeyboard.instance as dynamic).clearState();
+    } catch (_) {
+      // If the API changes, just ignore; this is a best-effort workaround.
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _clearHardwareKeyboardState();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Never clear keyboard state from build() — that can trigger framework
+    // assertions. Schedule a one-time post-frame callback instead.
+    if (!_postFrameKeyboardClearScheduled) {
+      _postFrameKeyboardClearScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _clearHardwareKeyboardState();
+      });
+    }
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) {
+          return;
+        }
+        if (await ExitConfirmHelper.shouldExitAfterPrompt(context)) {
+          await SystemNavigator.pop();
+        }
+      },
+      child: const MyApp(),
+    );
+  }
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -185,13 +296,14 @@ class MyApp extends StatelessWidget {
           final themeController = Get.find<ThemeController>();
 
           return Obx(() {
+            final selectedPrimary = themeController.themeColor.value;
             return GetMaterialApp(
               debugShowCheckedModeBanner: false,
               title: 'BillKaro',
               initialRoute: AppRoute.initial,
               getPages: AppRoute.pages,
-              theme: AppTheme.appTheme,
-              darkTheme: AppTheme.darkTheme,
+              theme: AppTheme.lightThemeWithPrimary(selectedPrimary),
+              darkTheme: AppTheme.darkThemeWithPrimary(selectedPrimary),
               themeMode: themeController.themeMode.value,
               initialBinding: AppBinding(),
               locale: languageController.appLocale.value,

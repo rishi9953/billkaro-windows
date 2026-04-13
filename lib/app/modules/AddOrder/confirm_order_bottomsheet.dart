@@ -235,7 +235,7 @@ class _ConfirmOrderBottomSheetState extends State<ConfirmOrderBottomSheet> {
                             },
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColor.primary,
-                              side: const BorderSide(
+                              side: BorderSide(
                                 color: AppColor.primary,
                                 width: 1.5,
                               ),
@@ -261,7 +261,7 @@ class _ConfirmOrderBottomSheetState extends State<ConfirmOrderBottomSheet> {
                           child: ElevatedButton(
                             onPressed: () {
                               Get.back();
-                              controller.saveAndBill('billing');
+                              controller.saveAndBill('closed');
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColor.primary,
@@ -396,7 +396,7 @@ class _ConfirmOrderRow extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                   child: Container(
                     padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       color: AppColor.primary,
                       shape: BoxShape.circle,
                     ),
@@ -422,7 +422,7 @@ class _ConfirmOrderRow extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                   child: Container(
                     padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       color: AppColor.primary,
                       shape: BoxShape.circle,
                     ),

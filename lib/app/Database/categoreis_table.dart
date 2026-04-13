@@ -10,6 +10,8 @@ class CategoriesTable extends Table {
 
   /// 🔹 Category name
   TextColumn get categoryName => text()();
+  TextColumn get imageURL => text()();
+
 
   /// 🔹 Timestamps (stored as ISO string)
   DateTimeColumn get createdAt => dateTime()();

@@ -1,4 +1,5 @@
 import 'package:billkaro/app/Database/app_database.dart';
+import 'package:billkaro/app/modules/Theme/theme_controller.dart';
 import 'package:billkaro/config/config.dart';
 
 void showLogoutDialog(BuildContext context, AppLocalizations loc) {
@@ -59,6 +60,7 @@ void onLogOut() async {
 
   // Clear all SharedPreferences data
   await appPref.clearAllData();
+  await ThemeController.resetAfterLogout();
 
   // Navigate to main screen (or wherever you want after manual logout)
   Get.offAllNamed(AppRoute.main);

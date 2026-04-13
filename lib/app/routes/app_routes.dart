@@ -236,11 +236,7 @@ abstract class AppRoute {
       page: KotHistoryScreen.new,
       transition: transition,
     ),
-    GetPage(
-      name: tables,
-      page: TableScreen.new,
-      transition: transition,
-    ),
+    GetPage(name: tables, page: TableScreen.new, transition: transition),
     GetPage(
       name: createOutlet,
       page: CreateOutletScreen.new,

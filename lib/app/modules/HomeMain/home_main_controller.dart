@@ -1,9 +1,9 @@
 import 'package:billkaro/app/services/Modals/login_response.dart';
 import 'package:billkaro/app/services/notification/sync_notification_service.dart';
 import 'package:billkaro/app/services/permissionService.dart';
+import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/app/services/PrinterService2/printer_service2.dart';
 import 'package:billkaro/config/config.dart';
-import 'package:flutter/scheduler.dart';
 
 class HomeMainController extends BaseController {
   // Add your controller logic here
@@ -65,6 +65,13 @@ class HomeMainController extends BaseController {
         // Fallback: register then init
         Get.put(PrinterService2(), permanent: true);
         await PrinterService2.to.init();
+      }
+      // BLE/USB thermal printer: auto-connect was skipped at cold start when logged out
+      if (Get.isRegistered<ThermalPrinterService>()) {
+        final thermal = ThermalPrinterService.instance;
+        if (await thermal.isAutoConnectEnabled()) {
+          await thermal.tryAutoConnect();
+        }
       }
     } catch (e) {
       debugPrint('⚠️ [PRINTER] PrinterService2 init skipped/failed: $e');

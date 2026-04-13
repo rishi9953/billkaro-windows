@@ -1,9 +1,45 @@
 import 'dart:io';
 import 'package:billkaro/app/services/Network/urls.dart' as appconstants;
 import 'package:dio/dio.dart';
+import 'package:image/image.dart' as img;
+import 'package:path/path.dart' as p;
 
 class MediaApi {
   final Dio _dio = Dio();
+  static const int _maxUploadBytes = 4 * 1024 * 1024; // 4 MB
+
+  Future<File> _shrinkIfNeeded(File input) async {
+    final int len = await input.length();
+    if (len <= _maxUploadBytes) return input;
+
+    try {
+      final bytes = await input.readAsBytes();
+      final decoded = img.decodeImage(bytes);
+      if (decoded == null) return input;
+
+      const int maxDim = 1600;
+      final resized = img.copyResize(
+        decoded,
+        width: decoded.width >= decoded.height ? maxDim : null,
+        height: decoded.height > decoded.width ? maxDim : null,
+        interpolation: img.Interpolation.average,
+      );
+
+      final jpg = img.encodeJpg(resized, quality: 82);
+      final out = File(
+        p.join(
+          Directory.systemTemp.path,
+          'billkaro_upload_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        ),
+      );
+      await out.writeAsBytes(jpg, flush: true);
+
+      if (await out.length() > _maxUploadBytes) return input;
+      return out;
+    } catch (_) {
+      return input;
+    }
+  }
 
   /// Upload a file to the server.
   ///
@@ -27,10 +63,13 @@ class MediaApi {
 
       print(url);
 
-      String fileName = file.path.split('/').last;
+      final uploadFile = await _shrinkIfNeeded(file);
+
+      // Use a platform-safe basename (Windows uses backslashes).
+      final fileName = p.basename(uploadFile.path);
 
       FormData formData = FormData.fromMap({
-        "file": await MultipartFile.fromFile(file.path, filename: fileName),
+        "file": await MultipartFile.fromFile(uploadFile.path, filename: fileName),
       });
 
       Response response = await _dio.post(

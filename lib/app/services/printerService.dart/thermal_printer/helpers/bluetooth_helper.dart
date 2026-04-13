@@ -1,14 +1,27 @@
+import 'dart:io' show Platform;
+
+import 'package:billkaro/config/app_pref.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:get/get.dart';
 import 'package:get/get_utils/src/platform/platform.dart';
 import '../thermal_printer_service.dart';
 import 'storage_helper.dart';
 
 class BluetoothHelper {
+  /// Windows builds omit BLE plugin registration (native WinRT abort); never call FBP.
+  static bool get _skipBle => !kIsWeb && Platform.isWindows;
+
+  static bool _printerAutoConnectAllowed() {
+    if (!Get.isRegistered<AppPref>()) return false;
+    return Get.find<AppPref>().isLogin;
+  }
+
   // =========================
   // LISTEN CONNECTION STATE
   // =========================
   static void listenToConnectionState(ThermalPrinterService service) {
+    if (_skipBle) return;
     FlutterBluePlus.events.onConnectionStateChanged.listen((event) async {
       if (event.device == service.connectedDevice) {
         if (event.connectionState == BluetoothConnectionState.disconnected) {
@@ -35,6 +48,7 @@ class BluetoothHelper {
   // LISTEN ADAPTER STATE
   // =========================
   static void listenToAdapterState(ThermalPrinterService service) {
+    if (_skipBle) return;
     FlutterBluePlus.adapterState.listen((state) async {
       debugPrint('📡 Adapter state: $state');
 
@@ -54,6 +68,7 @@ class BluetoothHelper {
     final autoConnectEnabled = await StorageHelper.isAutoConnectEnabled();
 
     if (autoConnectEnabled &&
+        _printerAutoConnectAllowed() &&
         !service.isConnected.value &&
         !service.isAutoConnecting.value) {
       await tryAutoConnect(service);
@@ -68,6 +83,7 @@ class BluetoothHelper {
     ThermalPrinterService service, {
     int retryCount = 2,
   }) async {
+    if (_skipBle) return false;
     for (int attempt = 1; attempt <= retryCount; attempt++) {
       try {
         service.connectionStatus.value = 'Connecting... (Attempt $attempt)';
@@ -212,6 +228,7 @@ class BluetoothHelper {
   static Future<bool> tryRecoverFromExistingConnection(
     ThermalPrinterService service,
   ) async {
+    if (_skipBle) return false;
     try {
       // 1) Devices already connected to our app (e.g. state was cleared but BLE still connected)
       final connectedList = FlutterBluePlus.connectedDevices;
@@ -278,6 +295,13 @@ class BluetoothHelper {
   // DISCONNECT
   // =========================
   static Future<void> disconnect(ThermalPrinterService service) async {
+    if (_skipBle) {
+      service.connectedDevice = null;
+      service.writeCharacteristic = null;
+      service.isConnected.value = false;
+      service.connectionStatus.value = 'Disconnected';
+      return;
+    }
     if (service.connectedDevice != null) {
       try {
         debugPrint('🔌 Disconnecting from device...');
@@ -297,6 +321,11 @@ class BluetoothHelper {
   // AUTO CONNECT - ENHANCED FOR RUGTEK P2
   // =========================
   static Future<bool> tryAutoConnect(ThermalPrinterService service) async {
+    if (_skipBle) return false;
+    if (!_printerAutoConnectAllowed()) {
+      service.isAutoConnecting.value = false;
+      return false;
+    }
     try {
       service.isAutoConnecting.value = true;
       service.connectionStatus.value = 'Auto-connecting...';
@@ -355,9 +384,12 @@ class BluetoothHelper {
   static Future<void> _attemptAutoReconnect(
     ThermalPrinterService service,
   ) async {
+    if (_skipBle) return;
     final enabled = await StorageHelper.isAutoConnectEnabled();
 
-    if (enabled && !service.isAutoConnecting.value) {
+    if (enabled &&
+        _printerAutoConnectAllowed() &&
+        !service.isAutoConnecting.value) {
       debugPrint('🔄 Attempting auto-reconnect...');
       await Future.delayed(const Duration(seconds: 2));
       await tryAutoConnect(service);
@@ -368,6 +400,7 @@ class BluetoothHelper {
   // BLUETOOTH STATE HELPERS
   // =========================
   Future<bool> isBluetoothEnabled() async {
+    if (_skipBle) return false;
     final state = await FlutterBluePlus.adapterState.first;
     return state == BluetoothAdapterState.on;
   }
@@ -385,6 +418,7 @@ class BluetoothHelper {
   // 🔥 RUGTEK P2 DIAGNOSTIC HELPER
   // =========================
   static Future<void> printDiagnostics(BluetoothDevice device) async {
+    if (_skipBle) return;
     try {
       debugPrint('');
       debugPrint('═══════════════════════════════════════');

@@ -1,5 +1,9 @@
+import 'dart:io';
+
+import 'package:billkaro/app/Widgets/windows_desktop_title_bar.dart';
 import 'package:billkaro/app/modules/Login/login_controller.dart';
 import 'package:billkaro/config/app_colors.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
@@ -17,39 +21,62 @@ class LoginScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        centerTitle: true,
-        backgroundColor: AppColor.backGroundColor,
-        iconTheme: const IconThemeData(color: _textPrimary),
-        title: Text(
-          'Sign in',
-          style: TextStyle(
-            color: _textPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
+    final showWindowsTitleBar = !kIsWeb && Platform.isWindows;
+    final appBar = AppBar(
+      elevation: 0,
+      centerTitle: true,
+      backgroundColor: AppColor.backGroundColor,
+      iconTheme: const IconThemeData(color: _textPrimary),
+      title: Text(
+        'Sign in',
+        style: TextStyle(
+          color: _textPrimary,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
         ),
       ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Obx(
-                () => AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  child: controller.toggle.value
-                      ? _buildLoginCard()
-                      : _buildRequestKeyCard(),
-                ),
-              ),
+    );
+
+    final scrollContent = Center(
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Obx(
+            () => AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              child: controller.toggle.value
+                  ? _buildLoginCard()
+                  : _buildRequestKeyCard(),
             ),
           ),
         ),
+      ),
+    );
+
+    if (!showWindowsTitleBar) {
+      return Scaffold(
+        backgroundColor: AppColor.backGroundColor,
+        appBar: appBar,
+        body: SafeArea(child: scrollContent),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppColor.backGroundColor,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const WindowsDesktopTitleBar(actions: []),
+          appBar,
+          Expanded(
+            child: SafeArea(
+              top: false,
+              child: scrollContent,
+            ),
+          ),
+        ],
       ),
     );
   }

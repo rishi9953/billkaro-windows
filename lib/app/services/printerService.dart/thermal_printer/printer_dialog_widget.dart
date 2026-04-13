@@ -1,5 +1,6 @@
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/app_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -188,18 +189,18 @@ class PrinterConnectionDialog extends StatelessWidget {
                           );
                           if (success) {
                             Get.back();
-                            Get.snackbar(
-                              'Success',
-                              'Connected to $deviceName',
+                            AppSnackbar.show(
+                              title: 'Success',
+                              message: 'Connected to $deviceName',
                               snackPosition: SnackPosition.BOTTOM,
                               backgroundColor: Colors.green,
                               colorText: Colors.white,
                               duration: const Duration(seconds: 2),
                             );
                           } else {
-                            Get.snackbar(
-                              'Error',
-                              'Failed to connect to $deviceName',
+                            AppSnackbar.show(
+                              title: 'Error',
+                              message: 'Failed to connect to $deviceName',
                               snackPosition: SnackPosition.BOTTOM,
                               backgroundColor: Colors.red,
                               colorText: Colors.white,

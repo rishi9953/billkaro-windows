@@ -1,10 +1,11 @@
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Menu/menu_controller.dart';
-import 'package:billkaro/app/services/PrinterService2/printer_screen2.dart';
 import 'package:billkaro/app/Widgets/logout_dialog.dart';
 import 'package:billkaro/app/services/Modals/login_response.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/app/services/common_function.dart';
-import 'package:intl/intl.dart';
+import 'package:billkaro/utils/date_util.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
 class MenuScreen extends StatelessWidget {
   MenuScreen({super.key});
@@ -210,7 +211,8 @@ class MenuScreen extends StatelessWidget {
                             title: loc.regular_customers,
                             subtitle: loc.manage_your_loyal_customers,
                             iconColor: const Color(0xff083c6b),
-                            onTap: () => Get.toNamed(AppRoute.regularCustomer),
+                            onTap: () =>
+                                Modular.to.pushNamed(HomeMainRoutes.customers),
                           ),
                           _buildDivider(),
                           _buildMenuItem(
@@ -218,8 +220,9 @@ class MenuScreen extends StatelessWidget {
                             title: loc.whatsapp_marketing,
                             subtitle: loc.send_bulk_messages,
                             iconColor: const Color(0xff25D366),
-                            onTap: () =>
-                                Get.toNamed(AppRoute.bulkWhatssMessage),
+                            onTap: () => Modular.to.pushNamed(
+                              HomeMainRoutes.whatsaapMarketing,
+                            ),
                           ),
                           // _buildDivider(),
                           // _buildSwitchMenuItem(
@@ -236,7 +239,7 @@ class MenuScreen extends StatelessWidget {
                             iconColor: const Color(0xffFF6B6B),
                             onTap: () {
                               // Navigate to manage staff
-                              Get.toNamed(AppRoute.staffDetailsScreen);
+                              Modular.to.pushNamed(HomeMainRoutes.staff);
                             },
                           ),
                           _buildDivider(),
@@ -247,7 +250,7 @@ class MenuScreen extends StatelessWidget {
                             iconColor: const Color(0xff4ECDC4),
 
                             onTap: () {
-                              Get.to(() => PrinterScreen2());
+                              Modular.to.pushNamed(HomeMainRoutes.printer);
                             },
                             // onTap: () => Get.to(() => PrinterPage()),
                             // onTap: () => Get.toNamed(AppRoute.printerScreen),
@@ -266,7 +269,8 @@ class MenuScreen extends StatelessWidget {
                             title: loc.settings,
                             subtitle: 'Change App Settings',
                             iconColor: const Color(0xff9B59B6),
-                            onTap: () => Get.toNamed(AppRoute.appSettings),
+                            onTap: () =>
+                                Modular.to.pushNamed(HomeMainRoutes.settings),
                           ),
                           _buildDivider(),
                         ],
@@ -353,7 +357,7 @@ class MenuScreen extends StatelessWidget {
                 child: InkWell(
                   onTap: () {
                     // Navigate to buy table gold
-                    Get.toNamed(AppRoute.subscriptions);
+                    Modular.to.pushNamed(HomeMainRoutes.subscriptions);
                   },
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
@@ -449,7 +453,8 @@ class MenuScreen extends StatelessWidget {
     final SubscriptionPlan? plan = activeSubscription.subscription;
     final duration = plan?.duration ?? 0;
     final planName = _planNameFromDuration(duration);
-    final validUntilStr = DateFormat('d MMMM, yyyy').format(expiryDate);
+    final validUntilStr =
+        formatDateTimeForDisplay(expiryDate, 'd MMMM, yyyy');
 
     const primaryBlue = Color(0xff083c6b);
     final lighterBlue = primaryBlue.withOpacity(0.85);
@@ -457,7 +462,7 @@ class MenuScreen extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: InkWell(
-        onTap: () => Get.toNamed(AppRoute.subscriptions),
+        onTap: () => Modular.to.pushNamed(HomeMainRoutes.subscriptions),
         borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.all(16),
