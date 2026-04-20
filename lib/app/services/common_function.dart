@@ -39,8 +39,8 @@ DateTime? trialEndDate(OutletData? outlet, User? user) {
 
 /// Returns true if the user can access features that require trial or subscription.
 /// Allowed when: user is on an active trial (isTrial and within [kFreeTrialDuration]
-/// from [trialCreatedAtStart]) OR selected outlet has subscription.
-/// Not allowed when: isTrial == false and selected outlet has no subscription.
+/// from [trialCreatedAtStart]) OR has an active outlet subscription.
+/// Not allowed when: isTrial == false and no active outlet subscription exists.
 /// Use for voice add item, or any other feature gated by trial/subscription.
 bool hasTrialOrSubscription(AppPref appPref) {
   final user = appPref.user;
@@ -52,10 +52,27 @@ bool hasTrialOrSubscription(AppPref appPref) {
     return DateTime.now().isBefore(end);
   }
 
-  // Non-trial: allow only if selected outlet has subscription
-  final subs = appPref.selectedOutlet?.subscriptions;
-  final outletHasSubscription = subs != null && subs.isNotEmpty;
-  return outletHasSubscription;
+  // Non-trial: allow if selected outlet (or matched user outlet) has active subscription.
+  final selectedOutlet = appPref.selectedOutlet;
+  if (outletHasAnyActiveSubscription(selectedOutlet)) return true;
+
+  final outlets = user.outletData;
+  if (outlets == null || outlets.isEmpty) return false;
+
+  if (selectedOutlet?.id != null && selectedOutlet!.id!.trim().isNotEmpty) {
+    final selectedId = selectedOutlet.id!.trim();
+    for (final outlet in outlets) {
+      if (outlet.id == selectedId) {
+        return outletHasAnyActiveSubscription(outlet);
+      }
+    }
+  }
+
+  // Fallback for cases where no outlet is selected yet in preferences.
+  for (final outlet in outlets) {
+    if (outletHasAnyActiveSubscription(outlet)) return true;
+  }
+  return false;
 }
 
 DateTime? tryParseDateTimeLoose(String value) {
@@ -104,15 +121,19 @@ DateTime? tryParseDateTimeLoose(String value) {
 
   // Heuristic: 10-digit => seconds, 13-digit => millis.
   if (v.length <= 10) {
-    return DateTime.fromMillisecondsSinceEpoch(asInt * 1000, isUtc: true)
-        .toLocal();
+    return DateTime.fromMillisecondsSinceEpoch(
+      asInt * 1000,
+      isUtc: true,
+    ).toLocal();
   }
   return DateTime.fromMillisecondsSinceEpoch(asInt, isUtc: true).toLocal();
 }
 
 /// Returns plan IDs for subscriptions that are still active (endDate in future).
-Set<String> activeSubscriptionPlanIdsFromOutlet(OutletData? outlet,
-    {DateTime? now}) {
+Set<String> activeSubscriptionPlanIdsFromOutlet(
+  OutletData? outlet, {
+  DateTime? now,
+}) {
   final subs = outlet?.subscriptions;
   if (subs == null || subs.isEmpty) return <String>{};
   final current = now ?? DateTime.now();
@@ -148,8 +169,11 @@ bool outletHasAnyActiveSubscription(OutletData? outlet, {DateTime? now}) {
   return false;
 }
 
-bool outletHasActiveSubscriptionForPlan(OutletData? outlet, String? planId,
-    {DateTime? now}) {
+bool outletHasActiveSubscriptionForPlan(
+  OutletData? outlet,
+  String? planId, {
+  DateTime? now,
+}) {
   if (planId == null || planId.trim().isEmpty) return false;
   final ids = activeSubscriptionPlanIdsFromOutlet(outlet, now: now);
   return ids.contains(planId.trim());
@@ -171,8 +195,8 @@ Future<void> openWhatsApp(String phoneNumber) async {
 
 Future<void> checkSubscription() async {
   final appPref = Get.find<AppPref>();
-  // Check if user is on trial
-  if (appPref.user != null && appPref.user?.isTrial == false) {
+  // Show membership sheet when user has neither active trial nor subscription.
+  if (!hasTrialOrSubscription(appPref)) {
     showModalBottomSheet(
       context: Get.context!,
       isScrollControlled: true,

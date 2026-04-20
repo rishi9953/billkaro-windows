@@ -98,7 +98,10 @@ class AddCategoryController extends BaseController {
               ),
               const SizedBox(height: 16),
               ListTile(
-                leading: Icon(Icons.photo_library_outlined, color: AppColor.primary),
+                leading: Icon(
+                  Icons.photo_library_outlined,
+                  color: AppColor.primary,
+                ),
                 title: const Text('Gallery'),
                 onTap: () {
                   Get.back();
@@ -106,7 +109,10 @@ class AddCategoryController extends BaseController {
                 },
               ),
               ListTile(
-                leading: Icon(Icons.camera_alt_outlined, color: AppColor.primary),
+                leading: Icon(
+                  Icons.camera_alt_outlined,
+                  color: AppColor.primary,
+                ),
                 title: const Text('Camera'),
                 onTap: () {
                   Get.back();
@@ -141,10 +147,25 @@ class AddCategoryController extends BaseController {
     return false;
   }
 
+  void removeCategoryImage() {
+    selectedImage.value = null;
+    imageUrl.value = '';
+  }
+
   void resetForm() {
     categoryNameController.clear();
     selectedImage.value = null;
     imageUrl.value = '';
+    categoryId.value = '';
+  }
+
+  void startEditCategory(CategoryData category) {
+    isEdit.value = true;
+    categoryId.value = category.id;
+    categoryNameController.text = category.categoryName;
+    imageUrl.value = category.imageURL;
+    // Reset newly picked image when switching between categories.
+    selectedImage.value = null;
   }
 
   Future<void> addCategory() async {
@@ -164,7 +185,7 @@ class AddCategoryController extends BaseController {
           'userId': appPref.user!.id,
           'outletId': appPref.selectedOutlet!.id,
           'categoryName': categoryNameController.text.trim().toLowerCase(),
-          'categoryImage': imageUrl.value,
+          'imageURL': imageUrl.value,
         }),
         showLoader: false,
       );
@@ -214,8 +235,6 @@ class AddCategoryController extends BaseController {
       dismissAllAppLoader();
       debugPrint('Error in getCategories: $e');
     }
-
-    toggleEdit();
   }
 
   void deleteCategory(int index) async {
@@ -235,6 +254,10 @@ class AddCategoryController extends BaseController {
       debugPrint('Delete response: $response');
 
       if (response != null && response['status'] == 'success') {
+        if (categoryId.value == id) {
+          isEdit.value = false;
+          resetForm();
+        }
         // Refresh categories in both controllers
         await getCategories(showloader: false);
         await addOrderController?.getCategories();
@@ -269,7 +292,7 @@ class AddCategoryController extends BaseController {
           'userId': appPref.user!.id,
           "categoryName": name,
           'outletId': appPref.selectedOutlet!.id,
-          'categoryImage': imageUrl.value,
+          'imageURL': imageUrl.value,
         }),
       );
       debugPrint('Update response: $response');
@@ -302,9 +325,10 @@ class AddCategoryController extends BaseController {
       final dynamic rawCategory = args['category'];
 
       if (rawCategory is CategoryData) {
-        categoryNameController.text = rawCategory.categoryName;
-        categoryId.value = rawCategory.id;
-        imageUrl.value = '';
+        debugPrint(
+          'Editing category: ${rawCategory.categoryName} (ID: ${rawCategory.id})',
+        );
+        startEditCategory(rawCategory);
         return;
       }
 
@@ -312,12 +336,17 @@ class AddCategoryController extends BaseController {
       if (rawCategory is Map) {
         final name = rawCategory['categoryName']?.toString() ?? '';
         final id = rawCategory['id']?.toString() ?? '';
-        final image = rawCategory['categoryImage']?.toString() ?? '';
+        final image =
+            rawCategory['categoryImage']?.toString() ??
+            rawCategory['imageURL']?.toString() ??
+            '';
         categoryNameController.text = name;
         categoryId.value = id;
         imageUrl.value = image;
+        selectedImage.value = null;
         return;
       }
+      return;
     } else {
       isEdit.value = false;
       resetForm();

@@ -4,10 +4,66 @@ import 'package:billkaro/app/modules/AddOrder/AddCategory/add_category_controlle
 import 'package:billkaro/config/config.dart';
 import 'package:flutter/widgets.dart' show Image;
 
-class AddCategoryScreen extends StatelessWidget {
-  AddCategoryScreen({super.key});
+class AddCategoryScreen extends StatefulWidget {
+  const AddCategoryScreen({super.key});
 
-  final controller = Get.put(AddCategoryController());
+  @override
+  State<AddCategoryScreen> createState() => _AddCategoryScreenState();
+}
+
+class _AddCategoryScreenState extends State<AddCategoryScreen> {
+  late final AddCategoryController controller;
+  final ScrollController _categoriesScrollController = ScrollController();
+
+  Future<void> _confirmDeleteCategory(int index, String categoryName) async {
+    final loc = AppLocalizations.of(context)!;
+    final safeName = categoryName.trim();
+    final shouldDelete =
+        await Get.dialog<bool>(
+          AlertDialog(
+            title: Text(loc.delete),
+            content: Text(
+              safeName.isEmpty
+                  ? 'Are you sure you want to delete this category?'
+                  : 'Are you sure you want to delete "$safeName"?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(result: false),
+                child: Text(loc.cancel),
+              ),
+              ElevatedButton(
+                onPressed: () => Get.back(result: true),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child: Text(loc.delete),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (!shouldDelete) return;
+    controller.deleteCategory(index);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Recreate controller on each open so route arguments are always fresh.
+    if (Get.isRegistered<AddCategoryController>()) {
+      Get.delete<AddCategoryController>(force: true);
+    }
+    controller = Get.put(AddCategoryController());
+  }
+
+  @override
+  void dispose() {
+    _categoriesScrollController.dispose();
+    if (Get.isRegistered<AddCategoryController>()) {
+      Get.delete<AddCategoryController>(force: true);
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -73,8 +129,10 @@ class AddCategoryScreen extends StatelessWidget {
                           );
                         }
                         return Scrollbar(
+                          controller: _categoriesScrollController,
                           thumbVisibility: isDesktop,
                           child: ListView.separated(
+                            controller: _categoriesScrollController,
                             physics: const ClampingScrollPhysics(),
                             itemCount: controller.categories.length,
                             separatorBuilder: (_, __) =>
@@ -83,6 +141,8 @@ class AddCategoryScreen extends StatelessWidget {
                               final cat = controller.categories[index];
                               return ListTile(
                                 dense: true,
+                                selected: controller.categoryId.value == cat.id,
+                                onTap: () => controller.startEditCategory(cat),
                                 leading: cat.imageURL.isNotEmpty
                                     ? ClipRRect(
                                         borderRadius: BorderRadius.circular(6),
@@ -108,7 +168,7 @@ class AddCategoryScreen extends StatelessWidget {
                                         radius: 18,
                                         backgroundColor: Colors.grey.shade300,
                                         child: const Icon(
-                                          Icons.category,
+                                          Icons.image_not_supported_outlined,
                                           color: Colors.white,
                                         ),
                                       ),
@@ -127,8 +187,10 @@ class AddCategoryScreen extends StatelessWidget {
                                     width: 20,
                                     height: 20,
                                   ),
-                                  onPressed: () =>
-                                      controller.deleteCategory(index),
+                                  onPressed: () => _confirmDeleteCategory(
+                                    index,
+                                    cat.categoryName,
+                                  ),
                                 ),
                               );
                             },
@@ -144,6 +206,24 @@ class AddCategoryScreen extends StatelessWidget {
 
           Widget rightEditor() {
             Widget buildCategoryImagePicker() {
+              Widget buildImageActionButton({
+                required IconData icon,
+                required String tooltip,
+                required VoidCallback onPressed,
+              }) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.55),
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    tooltip: tooltip,
+                    onPressed: onPressed,
+                    icon: Icon(icon, color: Colors.white, size: 18),
+                  ),
+                );
+              }
+
               return Obx(
                 () => InkWell(
                   onTap: controller.uploadImage,
@@ -171,20 +251,21 @@ class AddCategoryScreen extends StatelessWidget {
                               Positioned(
                                 top: 8,
                                 right: 8,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.55),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: IconButton(
-                                    tooltip: 'Change image',
-                                    onPressed: controller.uploadImage,
-                                    icon: const Icon(
-                                      Icons.edit,
-                                      color: Colors.white,
-                                      size: 18,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    buildImageActionButton(
+                                      icon: Icons.delete_outline,
+                                      tooltip: 'Remove image',
+                                      onPressed: controller.removeCategoryImage,
                                     ),
-                                  ),
+                                    const SizedBox(width: 8),
+                                    buildImageActionButton(
+                                      icon: Icons.edit,
+                                      tooltip: 'Change image',
+                                      onPressed: controller.uploadImage,
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -207,20 +288,21 @@ class AddCategoryScreen extends StatelessWidget {
                               Positioned(
                                 top: 8,
                                 right: 8,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.55),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: IconButton(
-                                    tooltip: 'Change image',
-                                    onPressed: controller.uploadImage,
-                                    icon: const Icon(
-                                      Icons.edit,
-                                      color: Colors.white,
-                                      size: 18,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    buildImageActionButton(
+                                      icon: Icons.delete_outline,
+                                      tooltip: 'Remove image',
+                                      onPressed: controller.removeCategoryImage,
                                     ),
-                                  ),
+                                    const SizedBox(width: 8),
+                                    buildImageActionButton(
+                                      icon: Icons.edit,
+                                      tooltip: 'Change image',
+                                      onPressed: controller.uploadImage,
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],

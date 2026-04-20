@@ -902,17 +902,25 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
             : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
         child: InkWell(
-          onTap: () {
+          onTap: () async {
             if (isLogout) {
               showLogoutDialog(context, AppLocalizations.of(context)!);
               return;
+            }
+
+            final targetRoute = HomeMainRoutes.routeForIndex(index);
+            final isLeavingCreateOrder =
+                Modular.to.path.startsWith(HomeMainRoutes.createOrder) &&
+                targetRoute != HomeMainRoutes.createOrder;
+            if (isLeavingCreateOrder) {
+              final shouldLeave = await _confirmLeaveCreateOrder(context);
+              if (!shouldLeave) return;
             }
 
             if (index == 1 && Get.isRegistered<AddOrderController>()) {
               Get.delete<AddOrderController>();
             }
 
-            final targetRoute = HomeMainRoutes.routeForIndex(index);
             if (targetRoute == HomeMainRoutes.staff) {
               Modular.to.navigate('${HomeMainRoutes.staff}?fromSidebar=true');
             } else {
@@ -1204,6 +1212,38 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
     final m = diff.inMinutes % 60;
     final s = diff.inSeconds % 60;
     return '${d}d ${h}h ${m}m ${s}s';
+  }
+
+  Future<bool> _confirmLeaveCreateOrder(BuildContext context) async {
+    if (!Get.isRegistered<AddOrderController>()) return true;
+
+    final shouldLeave = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          constraints: const BoxConstraints(maxWidth: 360),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+          title: const Text('Discard order?'),
+          content: const Text(
+            'You have unsaved order changes. Are you sure you want to leave this screen?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Stay'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Leave'),
+            ),
+          ],
+        );
+      },
+    );
+    return shouldLeave ?? false;
   }
 }
 

@@ -29,6 +29,7 @@ class SubscriptionPlan {
   final int duration;
   final int tax;
   final bool withPrinter;
+  final String platform;
 
   SubscriptionPlan({
     required this.id,
@@ -43,6 +44,7 @@ class SubscriptionPlan {
     required this.duration,
     required this.tax,
     required this.withPrinter,
+    required this.platform,
   });
 
   factory SubscriptionPlan.fromJson(Map<String, dynamic> json) =>

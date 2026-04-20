@@ -13,7 +13,6 @@
 #include <flutter_blue_plus_winrt/flutter_blue_plus_plugin.h>
 #include <flutter_bluetooth_classic_serial/flutter_bluetooth_classic_plugin.h>
 #include <flutter_thermal_printer/flutter_thermal_printer_plugin_c_api.h>
-#include <fullscreen_window/fullscreen_window_plugin_c_api.h>
 #include <geolocator_windows/geolocator_windows.h>
 #include <permission_handler_windows/permission_handler_windows_plugin.h>
 #include <printing/printing_plugin.h>
@@ -22,7 +21,7 @@
 #include <sqlite3_flutter_libs/sqlite3_flutter_libs_plugin.h>
 #include <universal_ble/universal_ble_plugin_c_api.h>
 #include <url_launcher_windows/url_launcher_windows.h>
-#include <webview_win_floating/webview_win_floating_plugin_c_api.h>
+#include <webview_windows/webview_windows_plugin.h>
 
 void RegisterPlugins(flutter::PluginRegistry* registry) {
   BitsdojoWindowPluginRegisterWithRegistrar(
@@ -39,8 +38,6 @@ void RegisterPlugins(flutter::PluginRegistry* registry) {
       registry->GetRegistrarForPlugin("FlutterBluetoothClassicPlugin"));
   FlutterThermalPrinterPluginCApiRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("FlutterThermalPrinterPluginCApi"));
-  FullscreenWindowPluginCApiRegisterWithRegistrar(
-      registry->GetRegistrarForPlugin("FullscreenWindowPluginCApi"));
   GeolocatorWindowsRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("GeolocatorWindows"));
   PermissionHandlerWindowsPluginRegisterWithRegistrar(
@@ -57,6 +54,6 @@ void RegisterPlugins(flutter::PluginRegistry* registry) {
       registry->GetRegistrarForPlugin("UniversalBlePluginCApi"));
   UrlLauncherWindowsRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("UrlLauncherWindows"));
-  WebviewWinFloatingPluginCApiRegisterWithRegistrar(
-      registry->GetRegistrarForPlugin("WebviewWinFloatingPluginCApi"));
+  WebviewWindowsPluginRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("WebviewWindowsPlugin"));
 }

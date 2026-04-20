@@ -23,7 +23,9 @@ String? _resolveItemImageUrl(String raw) {
   // Build an absolute URL from the API base origin.
   // baseURL example: https://65.2.81.212/api/
   final origin = Uri.parse(baseURL).replace(path: '').toString();
-  final joined = trimmed.startsWith('/') ? '$origin$trimmed' : '$origin/$trimmed';
+  final joined = trimmed.startsWith('/')
+      ? '$origin$trimmed'
+      : '$origin/$trimmed';
   try {
     return Uri.encodeFull(joined);
   } catch (_) {
@@ -215,10 +217,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: AppColor.primary,
-                        width: 2,
-                      ),
+                      borderSide: BorderSide(color: AppColor.primary, width: 2),
                     ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 14),
                   ),
@@ -337,10 +336,10 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
               child: OutlinedButton.icon(
                 onPressed: () {
                   final appPref = Get.find<AppPref>();
-                  if (!hasTrialOrSubscription(appPref)) {
-                    checkSubscription();
-                    return;
-                  }
+                  // if (!hasTrialOrSubscription(appPref)) {
+                  //   checkSubscription();
+                  //   return;
+                  // }
                   Modular.to.pushNamed(
                     HomeMainRoutes.category,
                     arguments: {'screen': 'item', 'isEdit': false},
@@ -367,6 +366,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                       title: loc.all,
                       selected: selectedId == 'none',
                       onTap: () => controller.selectCategory('none'),
+                      image: '',
                     ),
                     const SizedBox(height: 6),
                     ...categoriesList.map((category) {
@@ -380,6 +380,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                               category.categoryName,
                           selected: isSelected,
                           onTap: () => controller.selectCategory(id),
+                          image: category.imageURL,
                           onLongPress: () {
                             final appPref = Get.find<AppPref>();
                             if (!hasTrialOrSubscription(appPref)) {
@@ -827,6 +828,7 @@ class _DesktopCategoryTile extends StatelessWidget {
     required this.title,
     required this.selected,
     required this.onTap,
+    required this.image,
     this.onLongPress,
   });
 
@@ -834,6 +836,7 @@ class _DesktopCategoryTile extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
+  final String image;
 
   @override
   Widget build(BuildContext context) {
@@ -860,11 +863,7 @@ class _DesktopCategoryTile extends StatelessWidget {
           child: Row(
             children: [
               if (selected)
-                Icon(
-                  Icons.check_circle,
-                  size: 16,
-                  color: AppColor.primary,
-                )
+                Icon(Icons.check_circle, size: 16, color: AppColor.primary)
               else
                 Icon(
                   Icons.circle_outlined,
@@ -873,15 +872,45 @@ class _DesktopCategoryTile extends StatelessWidget {
                 ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                    color: selected ? AppColor.primary : Colors.grey.shade800,
-                  ),
+                child: Row(
+                  children: [
+                    if (title != 'ALL')
+                      CachedNetworkImage(
+                        imageUrl: image,
+
+                        width: 32,
+                        height: 32,
+                        errorWidget: (context, url, error) => Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Icon(
+                            Icons.image_not_supported,
+                            size: 16,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                    const SizedBox(width: 10),
+
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                        color: selected
+                            ? AppColor.primary
+                            : Colors.grey.shade800,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -1173,7 +1202,9 @@ class _ItemCard extends StatelessWidget {
                       FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Obx(() {
-                          final isAvailable = controller.isItemAvailable(item.id);
+                          final isAvailable = controller.isItemAvailable(
+                            item.id,
+                          );
                           return Switch(
                             materialTapTargetSize:
                                 MaterialTapTargetSize.shrinkWrap,

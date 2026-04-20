@@ -10,7 +10,6 @@ list(APPEND FLUTTER_PLUGIN_LIST
   flutter_blue_plus_winrt
   flutter_bluetooth_classic_serial
   flutter_thermal_printer
-  fullscreen_window
   geolocator_windows
   permission_handler_windows
   printing
@@ -19,7 +18,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   sqlite3_flutter_libs
   universal_ble
   url_launcher_windows
-  webview_win_floating
+  webview_windows
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

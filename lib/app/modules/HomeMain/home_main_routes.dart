@@ -34,6 +34,7 @@ abstract class HomeMainRoutes {
   static const changeLanguage = '/change-language';
   static const subscriptions = '/subscriptions';
   static const subscriptionForm = '/subscription-form';
+  static const subscriptionReview = '/subscriptionReview';
 
   /// Cafe / restaurant outlets (matches business type from outlet profile).
   static bool outletIsCafeOrRestaurant() {

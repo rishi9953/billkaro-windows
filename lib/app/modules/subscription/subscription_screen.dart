@@ -2,6 +2,7 @@
 import 'dart:math' as math;
 import 'dart:ui' show PaintingStyle;
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
+import 'package:billkaro/app/modules/subscription/review/subscription_review_screen.dart';
 import 'package:billkaro/app/modules/subscription/subscription_controller.dart';
 import 'package:billkaro/app/services/Modals/Subscriptions/subscription_response.dart';
 import 'package:billkaro/app/services/Modals/login_response.dart'
@@ -750,19 +751,6 @@ class SubscriptionScreen extends StatelessWidget {
                             )
                           : ElevatedButton(
                               onPressed: () {
-                                final ctrl = Get.find<SubscriptionController>();
-                                final outlet = ctrl.appPref.selectedOutlet;
-                                final activeIds = _activeSubscriptionPlanIds(
-                                  outlet,
-                                );
-                                // if (activeIds.isNotEmpty) {
-                                //   showError(
-                                //     title: 'Already Subscribed',
-                                //     description:
-                                //         'This outlet already has an active subscription.',
-                                //   );
-                                //   return;
-                                // }
                                 if (plan.withPrinter) {
                                   Modular.to.pushNamed(
                                     HomeMainRoutes.subscriptionForm,
@@ -773,10 +761,39 @@ class SubscriptionScreen extends StatelessWidget {
                                   //   arguments: {'subscription': plan},
                                   // );
                                 } else {
-                                  Get.toNamed(
-                                    AppRoute.subscriptionReview,
-                                    arguments: {'subscription': plan},
-                                  );
+                                  if (isWindowsStyle) {
+                                    Get.dialog(
+                                      Dialog(
+                                        insetPadding: const EdgeInsets.symmetric(
+                                          horizontal: 64,
+                                          vertical: 36,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        clipBehavior: Clip.antiAlias,
+                                        child: ConstrainedBox(
+                                          constraints: const BoxConstraints(
+                                            maxWidth: 980,
+                                            maxHeight: 760,
+                                          ),
+                                          child: SubscriptionReviewScreen(
+                                            subscription: plan,
+                                          ),
+                                        ),
+                                      ),
+                                      barrierDismissible: false,
+                                    );
+                                  } else {
+                                    Modular.to.pushNamed(
+                                      HomeMainRoutes.subscriptionReview,
+                                      arguments: {'subscription': plan},
+                                    );
+                                  }
+                                  // Get.toNamed(
+                                  //   AppRoute.subscriptionReview,
+                                  //   arguments: {'subscription': plan},
+                                  // );
                                 }
                               },
                               style: ElevatedButton.styleFrom(

@@ -129,9 +129,7 @@ class RazorpayService {
           ...?prefill,
         },
         'notes': notes ?? {},
-        'theme': {
-          'color': '#D4AF37',
-        },
+        'theme': {'color': '#D4AF37'},
         if (orderId != null && orderId.isNotEmpty) 'order_id': orderId,
       };
 

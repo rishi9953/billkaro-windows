@@ -28,6 +28,7 @@ import 'package:billkaro/app/modules/Staff/staff_details_screen.dart';
 import 'package:billkaro/app/modules/Tables/table_screen.dart';
 import 'package:billkaro/app/modules/Whatsapp%20Marketing/whatsapp_marketing_screen.dart';
 import 'package:billkaro/app/modules/subscription/Form/subscription_form.dart';
+import 'package:billkaro/app/modules/subscription/review/subscription_review_screen.dart';
 import 'package:billkaro/app/modules/subscription/subscription_screen.dart';
 import 'package:billkaro/app/services/PrinterService2/printer_screen2.dart';
 import 'package:flutter_modular/flutter_modular.dart';
@@ -123,6 +124,10 @@ class HomeMainModule extends Module {
         ChildRoute(
           HomeMainRoutes.subscriptionForm,
           child: (_) => SubscriptionFormScreen(),
+        ),
+        ChildRoute(
+          HomeMainRoutes.subscriptionReview,
+          child: (_) => SubscriptionReviewScreen(),
         ),
       ],
     );

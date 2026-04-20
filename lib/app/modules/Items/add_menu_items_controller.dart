@@ -466,6 +466,7 @@ class AddMenuItemController extends BaseController {
   }
 
   void saveItem() {
+    debugPrint('Save item called. isEdit: ${isEdit.value}');
     if (itemNameController.text.isEmpty) {
       showError(description: 'Please enter item name');
       return;

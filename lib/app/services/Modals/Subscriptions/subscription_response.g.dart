@@ -35,6 +35,7 @@ SubscriptionPlan _$SubscriptionPlanFromJson(Map<String, dynamic> json) =>
       duration: (json['duration'] as num).toInt(),
       tax: (json['tax'] as num).toInt(),
       withPrinter: json['withPrinter'] as bool,
+      platform: json['platform'] as String,
     );
 
 Map<String, dynamic> _$SubscriptionPlanToJson(SubscriptionPlan instance) =>
@@ -51,4 +52,5 @@ Map<String, dynamic> _$SubscriptionPlanToJson(SubscriptionPlan instance) =>
       'duration': instance.duration,
       'tax': instance.tax,
       'withPrinter': instance.withPrinter,
+      'platform': instance.platform,
     };

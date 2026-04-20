@@ -1,11 +1,14 @@
 import 'package:billkaro/app/modules/subscription/review/subscription_review_controller.dart';
+import 'package:billkaro/app/services/Modals/Subscriptions/subscription_response.dart';
 import 'package:billkaro/config/config.dart';
 
 class SubscriptionReviewScreen extends StatelessWidget {
-  const SubscriptionReviewScreen({super.key});
+  const SubscriptionReviewScreen({super.key, this.subscription});
+
+  final SubscriptionPlan? subscription;
 
   SubscriptionReviewController get controller =>
-      Get.put(SubscriptionReviewController());
+      Get.put(SubscriptionReviewController(initialPlan: subscription));
 
   @override
   Widget build(BuildContext context) {
@@ -149,6 +152,7 @@ class SubscriptionReviewScreen extends StatelessWidget {
     );
   }
 
+  // ignore: unused_element
   Widget _buildCouponSection() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -342,6 +346,7 @@ class _SlideToPayButton extends StatefulWidget {
   const _SlideToPayButton({required this.amount, required this.onPay});
 
   final double amount;
+
   /// Called when user slides past threshold. Should create order and open Razorpay.
   final Future<void> Function() onPay;
 
@@ -360,91 +365,107 @@ class _SlideToPayButtonState extends State<_SlideToPayButton> {
   Future<void> _triggerPayment() async {
     if (!mounted || _completed) return;
     setState(() => _completed = true);
-    await widget.onPay();
+    try {
+      await widget.onPay();
+    } finally {
+      // Reset the slider so cancel/failure does not leave it in "Processing...".
+      if (mounted) {
+        setState(() {
+          _completed = false;
+          _dragPosition = 0;
+        });
+      }
+    }
+  }
+
+  Future<void> _onDragEnd(double maxDrag) async {
+    if (maxDrag <= 0 || _completed) return;
+    final progress = _dragPosition / maxDrag;
+    if (progress >= _threshold) {
+      setState(() => _dragPosition = maxDrag);
+      await _triggerPayment();
+      return;
+    }
+    setState(() => _dragPosition = 0);
   }
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width - 40;
-    final maxDrag = width - _thumbSize - 8;
-    final isTriggered = _completed || (_dragPosition / maxDrag >= _threshold);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxDrag = (constraints.maxWidth - _thumbSize).clamp(0.0, double.infinity);
+        final thumbLeft = _completed ? maxDrag : _dragPosition.clamp(0.0, maxDrag);
 
-    if (isTriggered && !_completed) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _triggerPayment();
-      });
-    }
-
-    return SizedBox(
-      height: _height,
-      width: double.infinity,
-      child: Stack(
-        alignment: Alignment.centerLeft,
-        children: [
-          // Track
-          Container(
-            width: double.infinity,
-            height: _height,
-            decoration: BoxDecoration(
-              color: AppColor.white.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(_height / 2),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              _completed
-                  ? 'Processing...'
-                  : 'Slide to Pay ₹${widget.amount.toStringAsFixed(2)}/-',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppColor.white,
-              ),
-            ),
-          ),
-          // Thumb
-          Positioned(
-            left: _completed ? maxDrag : _dragPosition.clamp(0.0, maxDrag),
-            child: GestureDetector(
-              onHorizontalDragUpdate: _completed
-                  ? null
-                  : (details) {
-                      setState(() {
-                        _dragPosition += details.delta.dx;
-                        _dragPosition = _dragPosition.clamp(0.0, maxDrag);
-                      });
-                    },
-              onHorizontalDragEnd: _completed
-                  ? null
-                  : (details) {
-                      if (_dragPosition / maxDrag < _threshold) {
-                        setState(() => _dragPosition = 0);
-                      }
-                    },
-              child: Container(
-                width: _thumbSize,
-                height: _thumbSize,
-                decoration: BoxDecoration(
-                  color: AppColor.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
+        return SizedBox(
+          height: _height,
+          width: double.infinity,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onHorizontalDragUpdate: _completed
+                ? null
+                : (details) {
+                    if (maxDrag <= 0) return;
+                    setState(() {
+                      _dragPosition = (_dragPosition + details.delta.dx).clamp(
+                        0.0,
+                        maxDrag,
+                      );
+                    });
+                  },
+            onHorizontalDragEnd: _completed ? null : (_) => _onDragEnd(maxDrag),
+            child: Stack(
+              alignment: Alignment.centerLeft,
+              children: [
+                // Track
+                Container(
+                  width: double.infinity,
+                  height: _height,
+                  decoration: BoxDecoration(
+                    color: AppColor.white.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(_height / 2),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    _completed
+                        ? 'Processing...'
+                        : 'Slide to Pay ₹${widget.amount.toStringAsFixed(2)}/-',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColor.white,
                     ),
-                  ],
+                  ),
                 ),
-                alignment: Alignment.center,
-                child: Icon(
-                  _completed ? Icons.check : Icons.arrow_forward_ios,
-                  size: 22,
-                  color: AppColor.primary,
+                // Thumb
+                Positioned(
+                  left: thumbLeft,
+                  child: Container(
+                    width: _thumbSize,
+                    height: _thumbSize,
+                    decoration: BoxDecoration(
+                      color: AppColor.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      _completed ? Icons.check : Icons.arrow_forward_ios,
+                      size: 22,
+                      color: AppColor.primary,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

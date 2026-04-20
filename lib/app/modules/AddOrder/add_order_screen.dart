@@ -636,8 +636,18 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
       );
     }
 
-    return Scaffold(
+    return WillPopScope(
+      onWillPop: () => _showLeaveConfirmationDialog(context),
+      child: Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () async {
+            final shouldLeave = await _showLeaveConfirmationDialog(context);
+            if (!shouldLeave || !context.mounted) return;
+            Navigator.of(context).maybePop();
+          },
+        ),
         elevation: 0,
         centerTitle: false,
         toolbarHeight: _isDesktopPlatform ? 64 : kToolbarHeight,
@@ -1052,7 +1062,35 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
           ),
         );
       }),
+      ),
     );
+  }
+
+  Future<bool> _showLeaveConfirmationDialog(BuildContext context) async {
+    final shouldLeave = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          constraints: const BoxConstraints(maxWidth: 360),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+          title: const Text('Discard order?'),
+          content: const Text(
+            'You have unsaved order changes. Are you sure you want to leave this screen?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Stay'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Leave'),
+            ),
+          ],
+        );
+      },
+    );
+    return shouldLeave ?? false;
   }
 }
 

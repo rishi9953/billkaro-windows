@@ -12,7 +12,7 @@ part of 'api_client.dart';
 
 class _ApiClient implements ApiClient {
   _ApiClient(this._dio, {this.baseUrl, this.errorLogger}) {
-    baseUrl ??= 'https://nmsmfkdd-3000.inc1.devtunnels.ms/api/';
+    baseUrl ??= 'https://api.billkrochillkro.com/api/';
   }
 
   final Dio _dio;

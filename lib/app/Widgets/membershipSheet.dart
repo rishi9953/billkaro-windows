@@ -1,5 +1,7 @@
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/app/modules/subscription/subscription_controller.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
 class GoldMembershipSheet extends StatefulWidget {
   const GoldMembershipSheet({super.key});
@@ -11,6 +13,9 @@ class GoldMembershipSheet extends StatefulWidget {
 class _GoldMembershipSheetState extends State<GoldMembershipSheet> {
   SubscriptionController? _subscriptionController;
   bool _isInitialized = false;
+
+  bool get _isWindows =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
 
   @override
   void initState() {
@@ -76,43 +81,46 @@ class _GoldMembershipSheetState extends State<GoldMembershipSheet> {
     return 'Only ₹${pricePerDay.toStringAsFixed(0)} per day';
   }
 
+  Widget _buildStateShell({
+    required BuildContext context,
+    required Widget child,
+  }) {
+    final borderRadius = BorderRadius.circular(_isWindows ? 14 : 24);
+    final horizontalPadding = _isWindows ? 24.0 : 16.0;
+    final verticalPadding = _isWindows ? 22.0 : 16.0;
+
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.9,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: _isWindows
+            ? borderRadius
+            : const BorderRadius.vertical(top: Radius.circular(24)),
+        border: _isWindows ? Border.all(color: Colors.grey.shade300) : null,
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPadding,
+            vertical: verticalPadding,
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized || _subscriptionController == null) {
-      return Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.9,
-        ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: SafeArea(
+      return _buildStateShell(
+        context: context,
+        child: const Center(
           child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Drag handle
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(24.0),
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
-              ],
-            ),
+            padding: EdgeInsets.all(24),
+            child: CircularProgressIndicator(),
           ),
         ),
       );
@@ -121,96 +129,27 @@ class _GoldMembershipSheetState extends State<GoldMembershipSheet> {
     return Obx(() {
       final subscriptionController = _subscriptionController!;
 
-      // Check if subscriptions are loaded
-      if (subscriptionController.subscriptionPlans.isEmpty) {
-        return Container(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.9,
-          ),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Drag handle
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(24.0),
-                      child: CircularProgressIndicator(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Loading subscription plans...',
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      }
-
       // Check if we have at least 1 subscription (need index 0)
       if (subscriptionController.subscriptionPlans.isEmpty) {
-        return Container(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.9,
-          ),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Drag handle
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const Icon(Icons.error_outline, size: 48, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'No subscription plans available',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Please check back later.',
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+        return _buildStateShell(
+          context: context,
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline, size: 48, color: Colors.grey),
+              SizedBox(height: 16),
+              Text(
+                'No subscription plans available',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
               ),
-            ),
+              SizedBox(height: 8),
+              Text(
+                'Please check back later.',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         );
       }
@@ -224,61 +163,63 @@ class _GoldMembershipSheetState extends State<GoldMembershipSheet> {
         plan.duration,
       );
 
-      return Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.9,
-        ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+      final content = SingleChildScrollView(
+        physics: _isWindows
+            ? const ClampingScrollPhysics()
+            : const BouncingScrollPhysics(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_isWindows) ...[
+              Row(
                 children: [
-                  // Drag handle
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
+                  const Expanded(
+                    child: Text(
+                      'Upgrade your plan',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
-                  // Header
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColor.primary,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          "Trial over!\nKeep billing running!",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
+                  IconButton(
+                    onPressed: Get.back,
+                    tooltip: 'Close',
+                    icon: const Icon(Icons.close),
                   ),
-
-                  const SizedBox(height: 20),
-
-                  // Title
+                ],
+              ),
+              const SizedBox(height: 12),
+            ],
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(_isWindows ? 18 : 16),
+              decoration: BoxDecoration(
+                color: AppColor.primary,
+                borderRadius: BorderRadius.circular(_isWindows ? 12 : 16),
+              ),
+              child: const Text(
+                "Trial over!\nKeep billing running!",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(_isWindows ? 18 : 14),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Row(
                     children: [
                       const Icon(Icons.workspace_premium, color: Colors.amber),
@@ -294,11 +235,11 @@ class _GoldMembershipSheetState extends State<GoldMembershipSheet> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 12),
-
-                  // Price
-                  Row(
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       Text(
                         "₹${plan.price.toStringAsFixed(0)}",
@@ -308,16 +249,14 @@ class _GoldMembershipSheetState extends State<GoldMembershipSheet> {
                           fontSize: 16,
                         ),
                       ),
-                      const SizedBox(width: 8),
                       Text(
                         "₹${plan.discountedPrice.toStringAsFixed(0)}",
                         style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      if (discount > 0) ...[
-                        const SizedBox(width: 8),
+                      if (discount > 0)
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
@@ -326,6 +265,7 @@ class _GoldMembershipSheetState extends State<GoldMembershipSheet> {
                           decoration: BoxDecoration(
                             color: Colors.green.shade50,
                             borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: Colors.green.shade200),
                           ),
                           child: Text(
                             '$discount% OFF',
@@ -336,44 +276,39 @@ class _GoldMembershipSheetState extends State<GoldMembershipSheet> {
                             ),
                           ),
                         ),
-                      ],
                     ],
                   ),
-
-                  const SizedBox(height: 8),
-
-                  // Subtitle
                   if (plan.subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 8),
                     Text(
                       plan.subtitle,
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey.shade600,
+                        color: Colors.grey.shade700,
                       ),
                     ),
-                    const SizedBox(height: 8),
                   ],
-
-                  // Tag
+                  const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
-                      vertical: 6,
+                      vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade300),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                    child: Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 4,
                       children: [
-                        if (pricePerDay.isNotEmpty) ...[
+                        if (pricePerDay.isNotEmpty)
                           Text(
                             pricePerDay,
                             style: const TextStyle(fontSize: 12),
                           ),
-                          const Text(' • ', style: TextStyle(fontSize: 12)),
-                        ],
                         Text(
                           _formatDuration(plan.duration),
                           style: const TextStyle(fontSize: 12),
@@ -381,59 +316,80 @@ class _GoldMembershipSheetState extends State<GoldMembershipSheet> {
                       ],
                     ),
                   ),
-
-                  const SizedBox(height: 16),
-
-                  // Features from bulletPoints
-                  if (plan.bulletPoints.isNotEmpty) ...[
-                    ...plan.bulletPoints
-                        .take(3)
-                        .map(
-                          (feature) => _feature(Icons.check_circle, feature),
-                        ),
-                  ],
-
-                  const SizedBox(height: 20),
-
-                  // Buy Gold Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFF7D88C), Color(0xFFB89B5E)],
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (plan.bulletPoints.isNotEmpty) ...[
+              ...plan.bulletPoints
+                  .take(4)
+                  .map((feature) => _feature(Icons.check_circle, feature)),
+            ],
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                if (_isWindows) ...[
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: Get.back,
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(44),
+                      ),
+                      child: const Text('Maybe later'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  flex: _isWindows ? 2 : 1,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFF7D88C), Color(0xFFB89B5E)],
+                      ),
+                    ),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(46),
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(),
-                        onPressed: () {
-                          Get.back(); // Close the bottom sheet
-                          // subscriptionController.buyNow(
-                          //   plan.id,
-                          //   plan.discountedPrice,
-                          // );
-                          Get.toNamed(AppRoute.subscriptions);
-                        },
-                        child: Text(
-                          "Buy ${plan.title}",
-                          style: const TextStyle(
-                            color: AppColor.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      onPressed: () {
+                        Get.back();
+                        // Get.toNamed(AppRoute.subscriptions);
+                        Modular.to.pushNamed(HomeMainRoutes.subscriptions);
+                      },
+                      child: Text(
+                        "Buy ${plan.title}",
+                        style: const TextStyle(
+                          color: AppColor.white,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                   ),
-
-                  const SizedBox(height: 16),
-                ],
-              ),
+                ),
+              ],
             ),
-          ),
+            const SizedBox(height: 8),
+          ],
         ),
       );
+
+      if (_isWindows) {
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: _buildStateShell(context: context, child: content),
+          ),
+        );
+      }
+
+      return _buildStateShell(context: context, child: content);
     });
   }
 

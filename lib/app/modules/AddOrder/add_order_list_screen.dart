@@ -92,7 +92,7 @@ class _AddOrderListScreenState extends State<AddOrderListScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                flex: 3,
+                flex: 2,
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.grey[50],
@@ -179,19 +179,44 @@ class _AddOrderListScreenState extends State<AddOrderListScreen> {
                                             0.5,
                                           )
                                         : Colors.transparent,
-                                    child: Text(
-                                      category.categoryName.capitalize ?? '',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: isSelected
-                                            ? FontWeight.w600
-                                            : FontWeight.normal,
-                                        color: isSelected
-                                            ? AppColor.primary
-                                            : Colors.black87,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        CachedNetworkImage(
+                                          imageUrl: category.imageURL,
+                                          width: 40,
+                                          height: 40,
+                                          fit: BoxFit.cover,
+                                          errorWidget: (context, url, error) =>
+                                              Container(
+                                                width: 30,
+                                                height: 30,
+                                                color: Colors.grey[200],
+                                                child: Icon(
+                                                  Icons
+                                                      .image_not_supported_outlined,
+                                                  color: Colors.grey[400],
+                                                  size: 16,
+                                                ),
+                                              ),
+                                        ),
+                                        Text(
+                                          category.categoryName.capitalize ??
+                                              '',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: isSelected
+                                                ? FontWeight.w600
+                                                : FontWeight.normal,
+                                            color: isSelected
+                                                ? AppColor.primary
+                                                : Colors.black87,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 );

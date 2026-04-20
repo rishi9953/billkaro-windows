@@ -7,6 +7,11 @@ import 'package:billkaro/utils/app_snackbar.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 class SubscriptionReviewController extends BaseController {
+  SubscriptionReviewController({SubscriptionPlan? initialPlan})
+    : _initialPlan = initialPlan;
+
+  final SubscriptionPlan? _initialPlan;
+
   /// -------------------------------
   /// Razorpay
   /// -------------------------------
@@ -113,6 +118,11 @@ class SubscriptionReviewController extends BaseController {
   void onInit() {
     super.onInit();
     _initializeRazorpay();
+
+    if (_initialPlan != null) {
+      _plan.value = _initialPlan;
+      return;
+    }
 
     final args = Get.arguments;
     if (args is Map && args['subscription'] is SubscriptionPlan) {
@@ -426,8 +436,7 @@ class SubscriptionReviewController extends BaseController {
     if (outletHasAnyActiveSubscription(appPref.selectedOutlet)) {
       showError(
         title: 'Already Subscribed',
-        description:
-            'This outlet already has an active subscription.',
+        description: 'This outlet already has an active subscription.',
       );
       return;
     }
@@ -489,58 +498,166 @@ class SubscriptionReviewController extends BaseController {
   }) async {
     final context = Get.context;
     if (context == null) return;
+    final isWindowsDesktop =
+        Theme.of(context).platform == TargetPlatform.windows;
 
     await Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                height: 140,
-                child: Lottie.asset(
-                  'assets/lottie/Success.json',
-                  repeat: false,
-                ),
+      isWindowsDesktop
+          ? Dialog(
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 56,
+                vertical: 40,
               ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
               ),
-              const SizedBox(height: 8),
-              Text(
-                description,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Get.back();
-                    Get.offAllNamed(AppRoute.homeMain);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            alignment: Alignment.center,
+                            child: const Icon(
+                              Icons.check_circle_outline,
+                              color: Colors.green,
+                              size: 18,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Divider(color: Colors.black.withOpacity(0.1), height: 1),
+                      const SizedBox(height: 14),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 110,
+                            height: 110,
+                            child: Lottie.asset(
+                              'assets/lottie/Success.json',
+                              repeat: false,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              description,
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.35,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: SizedBox(
+                          width: 120,
+                          child: FilledButton(
+                            onPressed: () {
+                              Get.back();
+                              Get.offAllNamed(AppRoute.homeMain);
+                            },
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 11),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: Text(AppLocalizations.of(context)!.submit),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  child: Text(AppLocalizations.of(context)!.submit),
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
+            )
+          : Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      height: 140,
+                      child: Lottie.asset(
+                        'assets/lottie/Success.json',
+                        repeat: false,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      description,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Get.back();
+                          Get.offAllNamed(AppRoute.homeMain);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(AppLocalizations.of(context)!.submit),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
       barrierDismissible: false,
     );
   }
@@ -551,53 +668,163 @@ class SubscriptionReviewController extends BaseController {
   }) async {
     final context = Get.context;
     if (context == null) return;
+    final isWindowsDesktop =
+        Theme.of(context).platform == TargetPlatform.windows;
 
     await Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                height: 140,
-                child: Lottie.asset('assets/lottie/Fail.json', repeat: false),
+      isWindowsDesktop
+          ? Dialog(
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 56,
+                vertical: 40,
               ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
               ),
-              const SizedBox(height: 8),
-              Text(
-                description,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Get.back(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: Colors.redAccent.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            alignment: Alignment.center,
+                            child: const Icon(
+                              Icons.error_outline,
+                              color: Colors.redAccent,
+                              size: 18,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Divider(color: Colors.black.withOpacity(0.1), height: 1),
+                      const SizedBox(height: 14),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 110,
+                            height: 110,
+                            child: Lottie.asset(
+                              'assets/lottie/Fail.json',
+                              repeat: false,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              description,
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.35,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: SizedBox(
+                          width: 110,
+                          child: FilledButton(
+                            onPressed: () => Get.back(),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.redAccent,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 11),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text('Close'),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  child: const Text('OK'),
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
+            )
+          : Dialog(
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 40,
+                vertical: 24,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      height: 140,
+                      child: Lottie.asset(
+                        'assets/lottie/Fail.json',
+                        repeat: false,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      description,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => Get.back(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('OK'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
       barrierDismissible: false,
     );
   }
