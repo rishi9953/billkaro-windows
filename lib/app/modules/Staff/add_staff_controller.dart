@@ -1,7 +1,12 @@
 // Controller
+import 'package:billkaro/app/modules/Staff/staff_details_controller.dart';
+import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
 class AddStaffController extends BaseController {
+  StaffMember? editingStaff;
+
   final userNameController = TextEditingController();
   final emailController = TextEditingController();
   final phoneNumberController = TextEditingController();
@@ -11,12 +16,35 @@ class AddStaffController extends BaseController {
 
   static const List<String> roleOptions = ['Secondary Admin', 'Biller'];
 
+  bool get isEditMode => editingStaff != null;
+
+  @override
+  void onInit() {
+    _hydrateFromArgs();
+    super.onInit();
+  }
+
   @override
   void onClose() {
     userNameController.dispose();
     emailController.dispose();
     phoneNumberController.dispose();
     super.onClose();
+  }
+
+  void _hydrateFromArgs() {
+    final dynamic rawArgs = Get.arguments ?? Modular.args.data;
+    if (rawArgs is StaffMember) {
+      editingStaff = rawArgs;
+      userNameController.text = rawArgs.name;
+      emailController.text = rawArgs.email;
+      phoneNumberController.text = _normalizePhone(rawArgs.phone);
+      selectedRole.value = _normalizeRole(rawArgs.role);
+      final permissions =
+          rawArgs.permissions.map((item) => item.trim()).toSet();
+      canManageBills.value = permissions.contains('create_bill');
+      canEditMenuItems.value = permissions.contains('view_reports');
+    }
   }
 
   void selectRole(String role) {
@@ -48,6 +76,11 @@ class AddStaffController extends BaseController {
   }
 
   Future<void> sendInvite() async {
+    if (!hasTrialOrSubscription(appPref)) {
+      checkSubscription();
+      return;
+    }
+
     final name = userNameController.text.trim();
     final email = emailController.text.trim();
     final phone = phoneNumberController.text.trim();
@@ -87,6 +120,7 @@ class AddStaffController extends BaseController {
     final role = selectedRole.value == 'Secondary Admin'
         ? 'secondary_admin'
         : 'biller';
+    final permissions = _buildPermissions(role);
 
     final response = await callApi(
       apiClient.addStaff(outletId, {
@@ -94,12 +128,119 @@ class AddStaffController extends BaseController {
         'email': email,
         'userPhoneNumber': '+91$phone',
         'userRole': role,
+        'permissions': permissions,
       }),
     );
 
     if (response == null) return;
-    showSuccess(description: 'Invite sent successfully');
-    Get.back();
+    _popWithResult({'created': true, 'message': 'Invite sent successfully'});
+  }
+
+  Future<void> onUpdateStaff() async {
+    if (!hasTrialOrSubscription(appPref)) {
+      checkSubscription();
+      return;
+    }
+
+    final name = userNameController.text.trim();
+    final email = emailController.text.trim();
+    final phone = phoneNumberController.text.trim();
+    final staffId = editingStaff?.id.trim() ?? '';
+
+    if (name.isEmpty) {
+      showError(description: 'Please enter user name');
+      return;
+    }
+
+    if (email.isEmpty) {
+      showError(description: 'Please enter email');
+      return;
+    }
+
+    final emailRegex = RegExp(r'^[\w\-\.]+@([\w-]+\.)+[\w-]{2,}$');
+    if (!emailRegex.hasMatch(email)) {
+      showError(description: 'Please enter a valid email address');
+      return;
+    }
+
+    if (phone.isEmpty) {
+      showError(description: 'Please enter phone number');
+      return;
+    }
+
+    if (phone.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(phone)) {
+      showError(description: 'Please enter a valid 10-digit phone number');
+      return;
+    }
+
+    if (staffId.isEmpty) {
+      showError(description: 'Unable to update staff member');
+      return;
+    }
+
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null || outletId.isEmpty) {
+      showError(description: 'No outlet selected');
+      return;
+    }
+
+    final role = selectedRole.value == 'Secondary Admin'
+        ? 'secondary_admin'
+        : 'biller';
+    final permissions = _buildPermissions(role);
+
+    final response = await callApi(
+      apiClient.updateStaff(outletId, staffId, {
+        'userName': name,
+        'email': email,
+        'userPhoneNumber': '+91$phone',
+        'userRole': role,
+        'permissions': permissions,
+      }),
+    );
+    if (response == null) return;
+    _popWithResult({
+      'updated': true,
+      'message': 'Staff member updated successfully',
+    });
+  }
+
+  void _popWithResult(Map<String, dynamic> result) {
+    if (Modular.to.canPop()) {
+      Modular.to.pop(result);
+    } else {
+      Get.back(result: result);
+    }
+  }
+
+  String _normalizeRole(String role) {
+    final normalized = role.trim().toLowerCase().replaceAll('_', ' ');
+    if (normalized == 'secondary admin') return 'Secondary Admin';
+    if (normalized == 'biller') return 'Biller';
+    return role.isEmpty ? 'Secondary Admin' : role;
+  }
+
+  String _normalizePhone(String phone) {
+    final digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length >= 10) {
+      return digits.substring(digits.length - 10);
+    }
+    return digits;
+  }
+
+  List<String> _buildPermissions(String role) {
+    if (role == 'secondary_admin') {
+      return <String>['create_bill', 'view_reports'];
+    }
+
+    final permissions = <String>[];
+    if (canManageBills.value) {
+      permissions.add('create_bill');
+    }
+    if (canEditMenuItems.value) {
+      permissions.add('view_reports');
+    }
+    return permissions;
   }
 }
 

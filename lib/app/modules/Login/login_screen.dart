@@ -44,11 +44,20 @@ class LoginScreen extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
           child: Obx(
-            () => AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              child: controller.toggle.value
-                  ? _buildLoginCard()
-                  : _buildRequestKeyCard(),
+            () => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (controller.toggle.value) ...[
+                  _buildSignInTabs(),
+                  const SizedBox(height: 16),
+                ],
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  child: controller.toggle.value
+                      ? _buildLoginCard()
+                      : _buildRequestKeyCard(),
+                ),
+              ],
             ),
           ),
         ),
@@ -108,21 +117,29 @@ class LoginScreen extends StatelessWidget {
               fit: BoxFit.contain,
             ),
             const SizedBox(height: 16),
-            Text(
-              'Sign in to your account',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: _textPrimary,
+            Obx(
+              () => Text(
+                controller.signInTabIndex.value == 1
+                    ? 'Staff sign in'
+                    : 'Sign in to your account',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: _textPrimary,
+                ),
               ),
             ),
             const SizedBox(height: 6),
-            Text(
-              'Enter your email and password to continue.',
-              style: TextStyle(
-                fontSize: 14,
-                color: _textSecondary,
-                height: 1.4,
+            Obx(
+              () => Text(
+                controller.signInTabIndex.value == 1
+                    ? 'Use the email and password provided by your outlet.'
+                    : 'Enter your email and password to continue.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: _textSecondary,
+                  height: 1.4,
+                ),
               ),
             ),
             const SizedBox(height: 28),
@@ -151,25 +168,78 @@ class LoginScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            Center(
-              child: TextButton(
-                onPressed: controller.isLoading.value
-                    ? null
-                    : controller.onToggle,
-                style: TextButton.styleFrom(
-                  foregroundColor: _primary,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
+            Obx(() {
+              if (controller.signInTabIndex.value == 1) {
+                return const SizedBox.shrink();
+              }
+              return Center(
+                child: TextButton(
+                  onPressed: controller.isLoading.value
+                      ? null
+                      : controller.onToggle,
+                  style: TextButton.styleFrom(
+                    foregroundColor: _primary,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                  ),
+                  child: const Text(
+                    'Request registration key',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                   ),
                 ),
-                child: const Text(
-                  'Request registration key',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                ),
-              ),
-            ),
+              );
+            }),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSignInTabs() {
+    return Obx(
+      () => SegmentedButton<int>(
+        segments: const [
+          ButtonSegment<int>(
+            value: 0,
+            label: Text(
+              'Sign in as\nuser',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, height: 1.15),
+            ),
+            icon: Icon(Icons.person_outline_rounded, size: 18),
+          ),
+          ButtonSegment<int>(
+            value: 1,
+            label: Text(
+              'Sign in as\nstaff',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, height: 1.15),
+            ),
+            icon: Icon(Icons.badge_outlined, size: 18),
+          ),
+        ],
+        selected: {controller.signInTabIndex.value},
+        onSelectionChanged: controller.isLoading.value
+            ? null
+            : (Set<int> next) {
+                if (next.isEmpty) return;
+                controller.signInTabIndex.value = next.first;
+              },
+        style: ButtonStyle(
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return Colors.white;
+            }
+            return _textPrimary;
+          }),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return _primary;
+            }
+            return const Color(0xfff9fafb);
+          }),
         ),
       ),
     );

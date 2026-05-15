@@ -6,6 +6,7 @@ import 'package:billkaro/app/modules/Home/Widgets/payment_summary_widget.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Items/voice_add_menu_items_bottomsheet.dart';
 import 'package:billkaro/app/services/common_function.dart';
+import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart' as m;
@@ -480,13 +481,35 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _printerStatusBanner() {
+    final thermalPrinter = ThermalPrinterService.instance;
     return Obx(() {
-      if (!controller.printerservice2.isConnected.value) {
+      final usbConnected = thermalPrinter.isUsbConnected.value;
+      final bleConnected =
+          thermalPrinter.connectedBleDeviceId.value != null && !usbConnected;
+      final classicConnected = controller.printerservice2.isConnected.value;
+      final connected = usbConnected || bleConnected || classicConnected;
+
+      if (!connected) {
         return const SizedBox.shrink();
       }
-      final name =
-          controller.printerservice2.selectedPrinter.value?.name ??
-          'Printer Connected';
+
+      final String name;
+      final IconData statusIcon;
+      if (usbConnected) {
+        name = thermalPrinter.connectedUsbPrinter?.name ?? 'USB Printer';
+        statusIcon = Icons.usb;
+      } else if (bleConnected) {
+        final platformName =
+            thermalPrinter.connectedDevice?.platformName ?? '';
+        name = platformName.trim().isNotEmpty ? platformName : 'Printer';
+        statusIcon = Icons.bluetooth_connected;
+      } else {
+        name =
+            controller.printerservice2.selectedPrinter.value?.name ??
+            'Printer Connected';
+        statusIcon = Icons.bluetooth_connected;
+      }
+
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: _pageHMargin),
         child: Showcase(
@@ -516,7 +539,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    Icons.bluetooth_connected,
+                    statusIcon,
                     color: AppColor.primary,
                     size: 18,
                   ),

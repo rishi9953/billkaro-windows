@@ -48,3 +48,6 @@ const String businessTypes = 'services';
 const String forgotPass = 'auth/forgot-password';
 const String printerOrder = 'printer-orders';
 const String staff = 'staff';
+const String staffLogin = 'auth/staff/login';
+const String activities = 'activities';
+

@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
+
+import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
 import 'package:billkaro/app/services/PrinterService2/printer_service2.dart';
@@ -35,6 +38,10 @@ class ThermalPrinterService extends GetxController {
   BluetoothDevice? connectedDevice;
   BluetoothCharacteristic? writeCharacteristic;
 
+  /// Reactive ids so list rows / banners rebuild without manual refresh.
+  final connectedBleDeviceId = Rxn<String>();
+  final connectedUsbPrinterKey = Rxn<String>();
+
   // Observable states
   final isScanning = false.obs;
   final isConnected = false.obs;
@@ -48,21 +55,81 @@ class ThermalPrinterService extends GetxController {
   final usbPrinters = <Printer>[].obs;
   final isUsbScanning = false.obs;
 
+  /// True while a user-initiated BLE connect is in progress (suppresses reconnect).
+  final isBleConnecting = false.obs;
+  final connectingBleDeviceId = Rxn<String>();
+
+  StreamSubscription<List<ScanResult>>? _scanResultsSubscription;
+
+  static String usbPrinterKey(Printer printer) {
+    final addr = (printer.address ?? '').trim();
+    if (addr.isNotEmpty) return 'usb:$addr';
+    return '${printer.vendorId ?? ''}|${printer.productId ?? ''}|'
+        '${(printer.name ?? '').trim()}';
+  }
+
+  bool _sameUsbPrinter(Printer? a, Printer? b) {
+    if (a == null || b == null) return false;
+    return usbPrinterKey(a) == usbPrinterKey(b);
+  }
+
+  Future<void> _disconnectActiveConnections() async {
+    try {
+      if (isUsbConnected.value) {
+        await disconnectUsbPrinter();
+      }
+    } catch (e) {
+      debugPrint('USB disconnect before role switch: $e');
+    }
+    try {
+      if (connectedDevice != null || connectedBleDeviceId.value != null) {
+        await BluetoothHelper.disconnect(this);
+      }
+    } catch (e) {
+      debugPrint('BLE disconnect before role switch: $e');
+    }
+    try {
+      if (Get.isRegistered<PrinterService2>() &&
+          PrinterService2.to.isConnected.value) {
+        await PrinterService2.to.disconnect();
+      }
+    } catch (e) {
+      debugPrint('Classic BT disconnect before role switch: $e');
+    }
+  }
+
+  void syncBleConnected(
+    BluetoothDevice device,
+    BluetoothCharacteristic characteristic,
+  ) {
+    connectedDevice = device;
+    writeCharacteristic = characteristic;
+    connectedBleDeviceId.value = device.remoteId.toString();
+    isConnected.value = true;
+    final name = device.platformName.trim();
+    connectionStatus.value =
+        'Connected to ${name.isNotEmpty ? name : 'Printer'}';
+  }
+
+  void syncBleDisconnected({String? statusMessage}) {
+    connectedDevice = null;
+    writeCharacteristic = null;
+    connectedBleDeviceId.value = null;
+    if (!isUsbConnected.value) {
+      isConnected.value = false;
+      connectionStatus.value = statusMessage ?? 'Disconnected';
+    }
+  }
+
   @override
   void onInit() {
     super.onInit();
-    // FlutterBluePlus on Windows uses WinRT; startup listeners / auto-scan have
-    // triggered native `abort()` in debug builds on some setups. USB thermal
-    // printing does not need BLE here.
-    if (kIsWeb || Platform.isWindows) {
-      debugPrint(
-        'ℹ️ [ThermalPrinter] Skipping BLE listener/auto-connect on '
-        '${kIsWeb ? "web" : "Windows"}',
-      );
-      return;
-    }
+    if (kIsWeb) return;
     BluetoothHelper.listenToConnectionState(this);
-    _initAutoConnect();
+    // Windows: manual connect from Printer Settings only (no background auto-connect).
+    if (!Platform.isWindows) {
+      _initAutoConnect();
+    }
   }
 
   bool _shouldAutoConnectPrinter() {
@@ -72,6 +139,7 @@ class ThermalPrinterService extends GetxController {
 
   @override
   void onClose() {
+    _scanResultsSubscription?.cancel();
     disconnect();
     super.onClose();
   }
@@ -97,33 +165,38 @@ class ThermalPrinterService extends GetxController {
 
   // Public API - Bluetooth Scanning
   Future<void> startScan() async {
-    if (kIsWeb || Platform.isWindows) {
-      debugPrint('ℹ️ [ThermalPrinter] BLE scan not available on this platform');
-      isScanning.value = false;
-      return;
-    }
+    if (kIsWeb) return;
     try {
+      if (await FlutterBluePlus.isSupported == false) {
+        connectionStatus.value = 'Bluetooth not supported on this device';
+        isScanning.value = false;
+        return;
+      }
+      await stopScan();
       isScanning.value = true;
       scanResults.clear();
-      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 10));
-      FlutterBluePlus.scanResults.listen(
+      await _scanResultsSubscription?.cancel();
+      _scanResultsSubscription = FlutterBluePlus.scanResults.listen(
         (results) => scanResults.value = results,
       );
+      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 10));
       await Future.delayed(const Duration(seconds: 10));
       await stopScan();
     } catch (e) {
       debugPrint('Scan error: $e');
+      connectionStatus.value = 'Scan failed: $e';
       isScanning.value = false;
     }
   }
 
   Future<void> stopScan() async {
-    if (kIsWeb || Platform.isWindows) {
-      isScanning.value = false;
-      return;
-    }
-    await FlutterBluePlus.stopScan();
+    if (kIsWeb) return;
+    try {
+      await FlutterBluePlus.stopScan();
+    } catch (_) {}
     isScanning.value = false;
+    await _scanResultsSubscription?.cancel();
+    _scanResultsSubscription = null;
   }
 
   // Public API - USB Scanning and Connection
@@ -199,6 +272,7 @@ class ThermalPrinterService extends GetxController {
 
       if (connected) {
         connectedUsbPrinter = printer;
+        connectedUsbPrinterKey.value = usbPrinterKey(printer);
         isUsbConnected.value = true;
         isConnected.value = true;
         connectionStatus.value =
@@ -229,9 +303,12 @@ class ThermalPrinterService extends GetxController {
       if (connectedUsbPrinter != null) {
         await FlutterThermalPrinter.instance.disconnect(connectedUsbPrinter!);
         connectedUsbPrinter = null;
+        connectedUsbPrinterKey.value = null;
         isUsbConnected.value = false;
-        isConnected.value = false;
-        connectionStatus.value = 'USB printer disconnected';
+        isConnected.value = connectedBleDeviceId.value != null;
+        if (connectedBleDeviceId.value == null) {
+          connectionStatus.value = 'USB printer disconnected';
+        }
 
         AppSnackbar.show(
           title: 'Disconnected',
@@ -246,31 +323,22 @@ class ThermalPrinterService extends GetxController {
 
   // Public API - Bluetooth Connection
   Future<bool> connectToDevice(BluetoothDevice device) async {
-    if (kIsWeb || Platform.isWindows) return false;
-    return await BluetoothHelper.connectToDevice(device, this);
+    if (kIsWeb) return false;
+    isBleConnecting.value = true;
+    connectingBleDeviceId.value = device.remoteId.toString();
+    try {
+      await stopScan();
+      return await BluetoothHelper.connectToDevice(device, this);
+    } finally {
+      isBleConnecting.value = false;
+      connectingBleDeviceId.value = null;
+    }
   }
 
   Future<bool> ensureConnected() async {
     // Check if already connected (Bluetooth or USB)
     if (isConnected.value) {
       return true;
-    }
-
-    // Windows: BLE stack is not registered; use USB only.
-    if (!kIsWeb && Platform.isWindows) {
-      await scanUsbPrinters();
-      if (usbPrinters.isNotEmpty) {
-        await Get.dialog(
-          PrinterConnectionDialog(printerService: this),
-          barrierDismissible: true,
-        );
-      } else {
-        showError(
-          title: 'No USB printer',
-          description: 'Connect a USB thermal printer and use the USB tab.',
-        );
-      }
-      return isConnected.value;
     }
 
     // 1️⃣ Check Bluetooth status
@@ -326,6 +394,7 @@ class ThermalPrinterService extends GetxController {
   Future<void> clearSavedDevice() => StorageHelper.clearAll();
 
   Future<bool> tryAutoConnect() async {
+    if (Platform.isWindows) return false;
     if (!_shouldAutoConnectPrinter()) return false;
     if (isConnected.value) return true;
     // Try Bluetooth auto-connect first
@@ -348,6 +417,144 @@ class ThermalPrinterService extends GetxController {
   }
 
   String _roleKey(PrintRole role) => role == PrintRole.bill ? 'bill' : 'kot';
+
+  /// Whether raw ESC/POS can be sent (USB or BLE with write characteristic).
+  bool get hasActiveThermalPath {
+    if (isUsbConnected.value && connectedUsbPrinter != null) return true;
+    if (isConnected.value &&
+        connectedDevice != null &&
+        writeCharacteristic != null) {
+      return true;
+    }
+    if (Get.isRegistered<PrinterService2>() &&
+        PrinterService2.to.isConnected.value) {
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> hasRolePrinter(PrintRole role) async {
+    final type = await StorageHelper.getRoleLastPrinterType(_roleKey(role));
+    if (type == null || type.isEmpty) return false;
+    if (type == 'bluetooth') {
+      final id = await StorageHelper.getRoleSavedDeviceId(_roleKey(role));
+      return id != null && id.isNotEmpty;
+    }
+    if (type == 'usb') {
+      final name = await StorageHelper.getRoleSavedUsbPrinter(_roleKey(role));
+      return name != null && name.isNotEmpty;
+    }
+    return false;
+  }
+
+  Future<void> assignBluetoothToRole(
+    PrintRole role,
+    BluetoothDevice device,
+  ) async {
+    await StorageHelper.saveRoleBluetoothDevice(_roleKey(role), device);
+    connectionStatus.value =
+        '${role == PrintRole.bill ? 'Bill' : 'KOT'} printer set: ${device.platformName}';
+  }
+
+  Future<void> assignUsbToRole(PrintRole role, Printer printer) async {
+    await StorageHelper.saveRoleUsbPrinter(
+      _roleKey(role),
+      printer.name ?? '',
+      vendorId: int.tryParse('${printer.vendorId ?? ''}'),
+      productId: int.tryParse('${printer.productId ?? ''}'),
+      address: printer.address,
+    );
+    connectionStatus.value =
+        '${role == PrintRole.bill ? 'Bill' : 'KOT'} printer set: ${printer.name ?? 'USB Printer'}';
+  }
+
+  Future<void> clearRolePrinter(PrintRole role) async {
+    await StorageHelper.clearRolePrinter(_roleKey(role));
+  }
+
+  bool _usbPrinterMatchesSaved(
+    Printer printer, {
+    String? name,
+    int? vendorId,
+    int? productId,
+    String? address,
+  }) {
+    final savedAddr = (address ?? '').trim();
+    final printerAddr = (printer.address ?? '').trim();
+    if (savedAddr.isNotEmpty && printerAddr.isNotEmpty) {
+      return savedAddr == printerAddr;
+    }
+
+    final savedVendor = vendorId;
+    final savedProduct = productId;
+    final pVendor = int.tryParse('${printer.vendorId ?? ''}');
+    final pProduct = int.tryParse('${printer.productId ?? ''}');
+    if (savedVendor != null &&
+        savedProduct != null &&
+        pVendor != null &&
+        pProduct != null &&
+        savedVendor == pVendor &&
+        savedProduct == pProduct) {
+      return true;
+    }
+
+    final savedName = (name ?? '').trim();
+    final printerName = (printer.name ?? '').trim();
+    if (savedName.isNotEmpty && printerName.isNotEmpty) {
+      return savedName == printerName;
+    }
+    return false;
+  }
+
+  Future<Printer?> _findUsbPrinterForRole(String roleKey) async {
+    final name = await StorageHelper.getRoleSavedUsbPrinter(roleKey);
+    final vendorId = await StorageHelper.getRoleSavedUsbVendorId(roleKey);
+    final productId = await StorageHelper.getRoleSavedUsbProductId(roleKey);
+    final address = await StorageHelper.getRoleSavedUsbAddress(roleKey);
+
+    for (final p in usbPrinters) {
+      if (_usbPrinterMatchesSaved(
+        p,
+        name: name,
+        vendorId: vendorId,
+        productId: productId,
+        address: address,
+      )) {
+        return p;
+      }
+    }
+    return null;
+  }
+
+  Future<bool> _isConnectedForRole(PrintRole role) async {
+    final roleKey = _roleKey(role);
+    final type = await StorageHelper.getRoleLastPrinterType(roleKey);
+    if (type == 'usb') {
+      if (!isUsbConnected.value || connectedUsbPrinter == null) return false;
+      final name = await StorageHelper.getRoleSavedUsbPrinter(roleKey);
+      final vendorId = await StorageHelper.getRoleSavedUsbVendorId(roleKey);
+      final productId = await StorageHelper.getRoleSavedUsbProductId(roleKey);
+      final address = await StorageHelper.getRoleSavedUsbAddress(roleKey);
+      return _usbPrinterMatchesSaved(
+        connectedUsbPrinter!,
+        name: name,
+        vendorId: vendorId,
+        productId: productId,
+        address: address,
+      );
+    }
+    if (type == 'bluetooth') {
+      final savedId = await StorageHelper.getRoleSavedDeviceId(roleKey);
+      if (savedId == null || savedId.isEmpty) return false;
+      return isConnected.value &&
+          connectedDevice != null &&
+          connectedDevice!.remoteId.toString() == savedId &&
+          (writeCharacteristic != null ||
+              (Get.isRegistered<PrinterService2>() &&
+                  PrinterService2.to.isConnected.value));
+    }
+    return false;
+  }
 
   int _detectReceiptWidth() {
     // Prefer best-effort inference from connected device/printer name.
@@ -386,42 +593,40 @@ class ThermalPrinterService extends GetxController {
   }
 
   Future<bool> ensureConnectedForRole(PrintRole role) async {
-    // 1) If role printer saved, connect/switch to it.
+    if (kIsWeb) return false;
+
     final roleKey = _roleKey(role);
+
+    if (await _isConnectedForRole(role)) {
+      return true;
+    }
+
     final type = await StorageHelper.getRoleLastPrinterType(roleKey);
 
     if (type == 'usb') {
-      final savedName = await StorageHelper.getRoleSavedUsbPrinter(roleKey);
-      if (savedName != null && savedName.isNotEmpty) {
+      await scanUsbPrinters();
+      if (usbPrinters.isEmpty) {
+        await Future.delayed(const Duration(milliseconds: 500));
         await scanUsbPrinters();
-        final match = usbPrinters.firstWhereOrNull(
-          (p) => (p.name ?? '') == savedName,
-        );
-        if (match != null) {
-          if (isUsbConnected.value && connectedUsbPrinter == match) {
-            return true;
-          }
-          await disconnect();
-          return await connectUsbPrinter(match);
-        }
       }
-      // Fall through to interactive connect
+      final match = await _findUsbPrinterForRole(roleKey);
+      if (match != null) {
+        final alreadyUsb =
+            isUsbConnected.value &&
+            connectedUsbPrinter != null &&
+            _sameUsbPrinter(connectedUsbPrinter, match);
+        if (!alreadyUsb) {
+          await _disconnectActiveConnections();
+          final ok = await connectUsbPrinter(match);
+          if (!ok) return false;
+        }
+        return isUsbConnected.value && connectedUsbPrinter != null;
+      }
     }
 
     if (type == 'bluetooth') {
-      if (!kIsWeb && Platform.isWindows) {
-        // BLE not available on Windows desktop build; fall through to dialog.
-      } else {
       final savedId = await StorageHelper.getRoleSavedDeviceId(roleKey);
       if (savedId != null && savedId.isNotEmpty) {
-        // Already connected to the right device
-        if (isConnected.value &&
-            connectedDevice != null &&
-            connectedDevice!.remoteId.toString() == savedId) {
-          return true;
-        }
-
-        // Switch to the saved device by scanning briefly for it
         try {
           await disconnect();
         } catch (_) {}
@@ -445,31 +650,108 @@ class ThermalPrinterService extends GetxController {
           return await connectToDevice(targetDevice!);
         }
       }
-      // Fall through to interactive connect
-      }
     }
 
-    // 2) No role printer saved (or not found): use existing connection UI
     final ok = await ensureConnected();
 
-    // If user connected something, and role isn't configured yet, save it as role.
     if (ok) {
       if (isUsbConnected.value && connectedUsbPrinter != null) {
-        final name = connectedUsbPrinter!.name ?? '';
-        if (name.isNotEmpty) {
-          await StorageHelper.saveRoleUsbPrinter(
-            roleKey,
-            name,
-            vendorId: int.tryParse('${connectedUsbPrinter!.vendorId ?? ''}'),
-            productId: int.tryParse('${connectedUsbPrinter!.productId ?? ''}'),
-          );
-        }
+        await assignUsbToRole(role, connectedUsbPrinter!);
       } else if (connectedDevice != null) {
-        await StorageHelper.saveRoleBluetoothDevice(roleKey, connectedDevice!);
+        await assignBluetoothToRole(role, connectedDevice!);
       }
     }
 
     return ok;
+  }
+
+  Future<List<int>> _buildUsbTestEscPosBytes(PrintRole role) async {
+    final profile = await CapabilityProfile.load();
+    final generator = Generator(PaperSize.mm80, profile);
+    final roleLabel = role == PrintRole.bill ? 'Bill' : 'KOT';
+    var bytes = <int>[];
+    bytes += generator.text(
+      'BillKaro',
+      styles: const PosStyles(
+        align: PosAlign.center,
+        height: PosTextSize.size2,
+        width: PosTextSize.size2,
+        bold: true,
+      ),
+    );
+    bytes += generator.emptyLines(1);
+    bytes += generator.text(
+      '$roleLabel printer test',
+      styles: const PosStyles(align: PosAlign.center, bold: true),
+    );
+    bytes += generator.text(
+      DateTime.now().toString(),
+      styles: const PosStyles(align: PosAlign.center),
+    );
+    bytes += generator.emptyLines(2);
+    bytes += generator.text(
+      'USB test OK',
+      styles: const PosStyles(align: PosAlign.center),
+    );
+    bytes += generator.emptyLines(2);
+    bytes += generator.cut();
+    return bytes;
+  }
+
+  Future<void> _printUsbEscPos(Printer printer, List<int> bytes) async {
+    await FlutterThermalPrinter.instance.printData(
+      printer,
+      Uint8List.fromList(bytes),
+      longData: true,
+    );
+  }
+
+  Future<void> testPrintForRole(PrintRole role) async {
+    if (!await hasRolePrinter(role)) {
+      throw Exception(
+        'No ${role == PrintRole.bill ? 'bill' : 'KOT'} printer assigned. '
+        'Tap Bill or KOT on a device in the list.',
+      );
+    }
+
+    final ok = await ensureConnectedForRole(role);
+    if (!ok) {
+      throw Exception(
+        'Could not connect to ${role == PrintRole.bill ? 'bill' : 'KOT'} printer. '
+        'Check USB cable, then scan for USB printers.',
+      );
+    }
+
+    if (isUsbConnected.value && connectedUsbPrinter != null) {
+      final printer = connectedUsbPrinter!;
+      try {
+        final bytes = await _buildUsbTestEscPosBytes(role);
+        await _printUsbEscPos(printer, bytes);
+        return;
+      } catch (e) {
+        debugPrint('USB printData failed, trying printInfo: $e');
+        try {
+          FlutterThermalPrinter.instance.printInfo(
+            info:
+                'BillKaro\n${role == PrintRole.bill ? 'Bill' : 'KOT'} test\n'
+                '${DateTime.now()}\n',
+          );
+          return;
+        } catch (e2) {
+          throw Exception('USB print failed: $e2');
+        }
+      }
+    }
+
+    final builder = PrintBuilder(receiptWidth: _detectReceiptWidth())
+      ..center()
+      ..boldDoubleHeight('BillKaro\n')
+      ..text('${role == PrintRole.bill ? 'Bill' : 'KOT'} printer test\n')
+      ..text('${DateTime.now()}\n')
+      ..feed(3)
+      ..cut();
+
+    await _printBytes(builder.bytes);
   }
 
   // Public API - Printing
@@ -491,13 +773,11 @@ class ThermalPrinterService extends GetxController {
     required String specialInstructions,
     required int totalQuantity,
   }) async {
-    // Windows default: use OS print dialog (PDF).
-    // BUT if a BLE printer is connected (writeCharacteristic available), send raw ESC/POS bytes.
-    final hasBlePrinter =
-        isConnected.value &&
-        connectedDevice != null &&
-        writeCharacteristic != null;
-    if (!kIsWeb && Platform.isWindows && !hasBlePrinter) {
+    final ok = await ensureConnectedForRole(PrintRole.kot);
+    if (!ok) throw Exception('No KOT printer connected');
+
+    // Windows: PDF dialog only when no thermal path after role connect.
+    if (!kIsWeb && Platform.isWindows && !hasActiveThermalPath) {
       await _printKotWindowsPdf(
         kotNumber: kotNumber,
         businessName: businessName,
@@ -513,9 +793,6 @@ class ThermalPrinterService extends GetxController {
       );
       return;
     }
-
-    final ok = await ensureConnectedForRole(PrintRole.kot);
-    if (!ok) throw Exception('No KOT printer connected');
 
     final receiptW = _detectReceiptWidth();
     final builder = PrintBuilder(receiptWidth: receiptW);
@@ -658,13 +935,10 @@ class ThermalPrinterService extends GetxController {
     bool isBluetooth = false,
     String? upiId,
   }) async {
-    // Windows default: use OS print dialog (PDF).
-    // BUT if a BLE printer is connected (writeCharacteristic available), send raw ESC/POS bytes.
-    final hasBlePrinter =
-        isConnected.value &&
-        connectedDevice != null &&
-        writeCharacteristic != null;
-    if (!kIsWeb && Platform.isWindows && !hasBlePrinter) {
+    final ok = await ensureConnectedForRole(PrintRole.bill);
+    if (!ok) throw Exception('No bill printer connected');
+
+    if (!kIsWeb && Platform.isWindows && !hasActiveThermalPath) {
       await _printInvoiceWindowsPdf(
         brandName: brandName,
         businessName: businessName,
@@ -693,9 +967,6 @@ class ThermalPrinterService extends GetxController {
     }
 
     debugPrint('Printer is ${PrinterService2.to.isConnected.value}');
-
-    // final ok = await ensureConnectedForRole(PrintRole.bill);
-    // if (!ok) throw Exception('No bill printer connected');
 
     final receiptW = _detectReceiptWidth();
     final cols = _invoiceColumns(receiptW);
@@ -806,31 +1077,22 @@ class ThermalPrinterService extends GetxController {
         ..text('\n');
 
       String transactionNote = 'Invoice: $invoiceNo';
-      List<int> qrCode = await QRGenerator.generate(
+      // Use bitmap QR for broad printer compatibility.
+      // Native ESC/POS QR commands can print stray characters (e.g. "2") on some printers.
+      List<int> qrCode = await QRGenerator.generateBitmap(
         upiId!.trim(),
         totalAmount,
         businessName,
         transactionNote,
       );
 
-      if (qrCode.isEmpty) {
-        qrCode = await QRGenerator.generateBitmap(
-          upiId.trim(),
-          totalAmount,
-          businessName,
-          transactionNote,
-        );
-      }
-
       if (qrCode.isNotEmpty) {
         builder.bytes.addAll(qrCode);
         builder.text('\n');
       }
-      builder.feed(3).cut();
-
       builder
         ..text('UPI ID: $upiId\n')
-        ..text('Amount: ₹${totalAmount.toStringAsFixed(2)}\n');
+        ..text('Amount: Rs${totalAmount.toStringAsFixed(2)}\n');
     }
 
     builder.feed(3).cut();
@@ -1345,11 +1607,7 @@ class ThermalPrinterService extends GetxController {
   Future<void> _printBytes(List<int> bytes) async {
     try {
       if (isUsbConnected.value && connectedUsbPrinter != null) {
-        await FlutterThermalPrinter.instance.printData(
-          connectedUsbPrinter!,
-          Uint8List.fromList(bytes),
-          longData: true,
-        );
+        await _printUsbEscPos(connectedUsbPrinter!, bytes);
         return;
       }
 

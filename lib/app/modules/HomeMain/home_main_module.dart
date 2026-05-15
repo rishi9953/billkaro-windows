@@ -23,6 +23,7 @@ import 'package:billkaro/app/modules/Regular%20customer/CustomerList/customer_li
 import 'package:billkaro/app/modules/Reports/ItemReports/item_reports_screen.dart';
 import 'package:billkaro/app/modules/Reports/OrderReports/order_reports_screen.dart';
 import 'package:billkaro/app/modules/Reports/reports_screen.dart';
+import 'package:billkaro/app/modules/Staff/Staff%20Activity/staff_activity_screen.dart';
 import 'package:billkaro/app/modules/Staff/add_staff_screen.dart';
 import 'package:billkaro/app/modules/Staff/staff_details_screen.dart';
 import 'package:billkaro/app/modules/Tables/table_screen.dart';
@@ -106,6 +107,10 @@ class HomeMainModule extends Module {
         ChildRoute(
           HomeMainRoutes.addStaffScreen,
           child: (_) => const AddStaffScreen(),
+        ),
+        ChildRoute(
+          HomeMainRoutes.staffActivityScreen,
+          child: (_) => const StaffActivityScreen(),
         ),
         ChildRoute(
           HomeMainRoutes.whatsaapMarketing,

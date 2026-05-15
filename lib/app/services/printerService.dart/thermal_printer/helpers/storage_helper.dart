@@ -30,6 +30,8 @@ class StorageHelper {
       '${role}_usb_printer_vendor_id';
   static String _roleUsbPrinterProductIdKey(String role) =>
       '${role}_usb_printer_product_id';
+  static String _roleUsbPrinterAddressKey(String role) =>
+      '${role}_usb_printer_address';
 
   // Bluetooth Device Methods
   static Future<void> saveDevice(BluetoothDevice device) async {
@@ -44,9 +46,22 @@ class StorageHelper {
     String role,
     BluetoothDevice device,
   ) async {
+    await saveRoleBluetoothByAddress(
+      role,
+      device.remoteId.toString(),
+      device.platformName,
+    );
+  }
+
+  /// Classic BT (address as id) or BLE — same storage keys.
+  static Future<void> saveRoleBluetoothByAddress(
+    String role,
+    String deviceId,
+    String deviceName,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_roleBtDeviceIdKey(role), device.remoteId.toString());
-    await prefs.setString(_roleBtDeviceNameKey(role), device.platformName);
+    await prefs.setString(_roleBtDeviceIdKey(role), deviceId);
+    await prefs.setString(_roleBtDeviceNameKey(role), deviceName);
     await prefs.setString(_rolePrinterTypeKey(role), 'bluetooth');
   }
 
@@ -93,6 +108,7 @@ class StorageHelper {
     String printerName, {
     int? vendorId,
     int? productId,
+    String? address,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_roleUsbPrinterNameKey(role), printerName);
@@ -103,6 +119,12 @@ class StorageHelper {
     }
     if (productId != null) {
       await prefs.setInt(_roleUsbPrinterProductIdKey(role), productId);
+    }
+    final addr = (address ?? '').trim();
+    if (addr.isNotEmpty) {
+      await prefs.setString(_roleUsbPrinterAddressKey(role), addr);
+    } else {
+      await prefs.remove(_roleUsbPrinterAddressKey(role));
     }
   }
 
@@ -124,6 +146,11 @@ class StorageHelper {
   static Future<int?> getRoleSavedUsbProductId(String role) async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt(_roleUsbPrinterProductIdKey(role));
+  }
+
+  static Future<String?> getRoleSavedUsbAddress(String role) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_roleUsbPrinterAddressKey(role));
   }
 
   static Future<int?> getSavedUsbVendorId() async {
@@ -193,6 +220,7 @@ class StorageHelper {
       await prefs.remove(_roleUsbPrinterNameKey(role));
       await prefs.remove(_roleUsbPrinterVendorIdKey(role));
       await prefs.remove(_roleUsbPrinterProductIdKey(role));
+      await prefs.remove(_roleUsbPrinterAddressKey(role));
     }
   }
 
@@ -204,6 +232,7 @@ class StorageHelper {
     await prefs.remove(_roleUsbPrinterNameKey(role));
     await prefs.remove(_roleUsbPrinterVendorIdKey(role));
     await prefs.remove(_roleUsbPrinterProductIdKey(role));
+    await prefs.remove(_roleUsbPrinterAddressKey(role));
   }
 
   // Check if any printer is saved
@@ -255,6 +284,7 @@ class StorageHelper {
         'name': prefs.getString(_roleUsbPrinterNameKey(role)),
         'vendorId': prefs.getInt(_roleUsbPrinterVendorIdKey(role)),
         'productId': prefs.getInt(_roleUsbPrinterProductIdKey(role)),
+        'address': prefs.getString(_roleUsbPrinterAddressKey(role)),
       };
     }
 

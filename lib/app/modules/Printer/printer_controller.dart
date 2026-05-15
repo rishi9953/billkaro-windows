@@ -27,6 +27,8 @@ class PrinterController extends BaseController
   final savedDeviceName = Rxn<String>();
   final savedBillPrinterName = Rxn<String>();
   final savedKotPrinterName = Rxn<String>();
+  final savedBillPrinterType = Rxn<String>();
+  final savedKotPrinterType = Rxn<String>();
 
   // ------------------ USB Printers ------------------
   var usbDevices = <Printer>[].obs;
@@ -89,61 +91,148 @@ class PrinterController extends BaseController
     final kotInfo = await StorageHelper.getRoleSavedPrinterInfo('kot');
     savedBillPrinterName.value = (billInfo['name'] as String?)?.trim();
     savedKotPrinterName.value = (kotInfo['name'] as String?)?.trim();
+    savedBillPrinterType.value = _typeLabel(billInfo['type'] as String?);
+    savedKotPrinterType.value = _typeLabel(kotInfo['type'] as String?);
+  }
+
+  String? _typeLabel(String? type) {
+    if (type == 'usb') return 'USB';
+    if (type == 'bluetooth') return 'Bluetooth';
+    return null;
+  }
+
+  Future<void> assignBluetoothToRole(
+    PrintRole role,
+    BluetoothDevice device,
+  ) async {
+    try {
+      await printerService.assignBluetoothToRole(role, device);
+      await _loadAutoConnectSettings();
+      showSuccess(
+        description:
+            '${role == PrintRole.bill ? 'Bill' : 'KOT'} printer assigned to ${device.platformName}',
+      );
+    } catch (e) {
+      showError(description: 'Failed to assign printer: $e');
+    }
+  }
+
+  Future<void> assignUsbToRole(PrintRole role, Printer printer) async {
+    try {
+      await printerService.assignUsbToRole(role, printer);
+      await _loadAutoConnectSettings();
+      showSuccess(
+        description:
+            '${role == PrintRole.bill ? 'Bill' : 'KOT'} printer assigned to ${printer.name ?? 'USB Printer'}',
+      );
+    } catch (e) {
+      showError(description: 'Failed to assign printer: $e');
+    }
+  }
+
+  Future<void> clearRolePrinter(PrintRole role) async {
+    await printerService.clearRolePrinter(role);
+    await _loadAutoConnectSettings();
+    showSuccess(
+      description:
+          '${role == PrintRole.bill ? 'Bill' : 'KOT'} printer removed',
+    );
+  }
+
+  Future<void> testPrintForRole(PrintRole role) async {
+    try {
+      showAppLoader();
+      await printerService.testPrintForRole(role);
+      showSuccess(
+        description:
+            '${role == PrintRole.bill ? 'Bill' : 'KOT'} test print sent',
+      );
+    } catch (e) {
+      showError(description: e.toString());
+    } finally {
+      dismissAppLoader();
+    }
   }
 
   Future<void> setCurrentAsBillPrinter() async {
-    try {
-      if (printerService.isUsbConnected.value &&
-          printerService.connectedUsbPrinter != null) {
-        final p = printerService.connectedUsbPrinter!;
-        await StorageHelper.saveRoleUsbPrinter(
-          'bill',
-          p.name ?? '',
-          vendorId: int.tryParse('${p.vendorId ?? ''}'),
-          productId: int.tryParse('${p.productId ?? ''}'),
-        );
-      } else if (printerService.connectedDevice != null) {
-        await StorageHelper.saveRoleBluetoothDevice(
-          'bill',
-          printerService.connectedDevice!,
-        );
-      } else {
-        showError(description: 'No printer connected');
-        return;
-      }
-
-      await _loadAutoConnectSettings();
-      showSuccess(description: 'Bill printer set successfully');
-    } catch (e) {
-      showError(description: 'Failed to set bill printer: $e');
+    if (printerService.isUsbConnected.value &&
+        printerService.connectedUsbPrinter != null) {
+      await assignUsbToRole(
+        PrintRole.bill,
+        printerService.connectedUsbPrinter!,
+      );
+    } else if (printerService.connectedDevice != null) {
+      await assignBluetoothToRole(
+        PrintRole.bill,
+        printerService.connectedDevice!,
+      );
+    } else {
+      showError(description: 'No printer connected');
     }
   }
 
   Future<void> setCurrentAsKotPrinter() async {
-    try {
-      if (printerService.isUsbConnected.value &&
-          printerService.connectedUsbPrinter != null) {
-        final p = printerService.connectedUsbPrinter!;
-        await StorageHelper.saveRoleUsbPrinter(
-          'kot',
-          p.name ?? '',
-          vendorId: int.tryParse('${p.vendorId ?? ''}'),
-          productId: int.tryParse('${p.productId ?? ''}'),
-        );
-      } else if (printerService.connectedDevice != null) {
-        await StorageHelper.saveRoleBluetoothDevice(
-          'kot',
-          printerService.connectedDevice!,
-        );
-      } else {
-        showError(description: 'No printer connected');
+    if (printerService.isUsbConnected.value &&
+        printerService.connectedUsbPrinter != null) {
+      await assignUsbToRole(
+        PrintRole.kot,
+        printerService.connectedUsbPrinter!,
+      );
+    } else if (printerService.connectedDevice != null) {
+      await assignBluetoothToRole(
+        PrintRole.kot,
+        printerService.connectedDevice!,
+      );
+    } else {
+      showError(description: 'No printer connected');
+    }
+  }
+
+  Future<void> useSamePrinterForKot() async {
+    final billInfo = await StorageHelper.getRoleSavedPrinterInfo('bill');
+    final type = billInfo['type'] as String?;
+    if (type == null) {
+      showError(description: 'Set a bill printer first');
+      return;
+    }
+    if (type == 'bluetooth') {
+      final id = billInfo['id'] as String?;
+      if (id == null || id.isEmpty) {
+        showError(description: 'Bill printer not configured');
         return;
       }
-
+      try {
+        await FlutterBluePlus.stopScan();
+        BluetoothDevice? device;
+        final sub = FlutterBluePlus.scanResults.listen((results) {
+          for (final r in results) {
+            if (r.device.remoteId.toString() == id) {
+              device = r.device;
+            }
+          }
+        });
+        await FlutterBluePlus.startScan(timeout: const Duration(seconds: 6));
+        await Future.delayed(const Duration(seconds: 6));
+        await FlutterBluePlus.stopScan();
+        await sub.cancel();
+        if (device != null) {
+          await assignBluetoothToRole(PrintRole.kot, device!);
+        } else {
+          showError(description: 'Bill printer not found. Turn it on and retry.');
+        }
+      } catch (e) {
+        showError(description: 'Failed: $e');
+      }
+    } else if (type == 'usb') {
+      await StorageHelper.saveRoleUsbPrinter(
+        'kot',
+        (billInfo['name'] as String?) ?? '',
+        vendorId: billInfo['vendorId'] as int?,
+        productId: billInfo['productId'] as int?,
+        address: billInfo['address'] as String?,
+      );
       await _loadAutoConnectSettings();
-      showSuccess(description: 'KOT printer set successfully');
-    } catch (e) {
-      showError(description: 'Failed to set KOT printer: $e');
+      showSuccess(description: 'KOT printer set same as bill printer');
     }
   }
 
@@ -171,34 +260,32 @@ class PrinterController extends BaseController
 
   // ------------------ Bluetooth Permissions ------------------
   Future<void> checkBluetoothPermission() async {
-    if (Platform.isWindows) {
-      debugPrint('ℹ️ [Printer] Bluetooth tab inactive on Windows; use USB printers.');
-      return;
-    }
     try {
-      // Check if Bluetooth is available
       if (await FlutterBluePlus.isSupported == false) {
         showError(description: 'Bluetooth not supported on this device');
         return;
       }
-
-      // Request to turn on Bluetooth if off
-      await FlutterBluePlus.turnOn();
+      // turnOn() is Android-only; desktop uses the OS Bluetooth toggle.
+      if (Platform.isAndroid) {
+        await FlutterBluePlus.turnOn();
+      }
     } catch (e) {
       debugPrint('Bluetooth permission error: $e');
-      showError(description: 'Please enable Bluetooth permissions in settings');
+      if (Platform.isAndroid) {
+        showError(
+          description: 'Please enable Bluetooth permissions in settings',
+        );
+      }
     }
   }
 
   // ------------------ Bluetooth Scan ------------------
   Future<void> scanForDevices() async {
-    if (Platform.isWindows) {
-      showError(description: 'On Windows, use the USB tab to find printers.');
-      return;
-    }
     try {
-      await printerService.requestPermissions(); // <-- IMPORTANT FIX
-      await ensureLocationService();
+      if (Platform.isAndroid) {
+        await printerService.requestPermissions();
+        await ensureLocationService();
+      }
       await printerService.startScan();
     } catch (e) {
       showError(description: 'Failed to scan Bluetooth: $e');
@@ -220,10 +307,6 @@ class PrinterController extends BaseController
 
   // ------------------ Connect to Device ------------------
   Future<void> connectToDevice(BluetoothDevice device) async {
-    if (Platform.isWindows) {
-      showError(description: 'Bluetooth printers are not supported on Windows; use USB.');
-      return;
-    }
     try {
       // Show loading
       Get.dialog(

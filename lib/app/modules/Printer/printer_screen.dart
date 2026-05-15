@@ -3,6 +3,7 @@
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Printer/printer_controller.dart';
+import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:get/get.dart';
 
@@ -48,11 +49,183 @@ class PrinterScreen extends GetView<PrinterController> {
           ],
         ),
       ),
-      body: TabBarView(
-        controller: controller.tabController,
-        children: [_buildBluetoothTab(), _buildUSBTab()],
+      body: Column(
+        children: [
+          _buildMultiplePrinterSettingsCard(),
+          Expanded(
+            child: TabBarView(
+              controller: controller.tabController,
+              children: [_buildBluetoothTab(), _buildUSBTab()],
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  Widget _buildMultiplePrinterSettingsCard() {
+    return Obx(() {
+      if (Get.isRegistered<HomeScreenController>()) {
+        Get.find<HomeScreenController>().selectedOutlet.value;
+      }
+      final showKot = HomeMainRoutes.outletIsCafeOrRestaurant();
+      return Card(
+        margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        elevation: 2,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Multiple Printer Settings',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[850],
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Assign bill and kitchen printers like Petpooja. '
+                'Pick a device below — no need to stay connected.',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 12),
+              _buildRolePrinterTile(
+                icon: Icons.receipt_long,
+                title: 'Bill Printer',
+                name: controller.savedBillPrinterName.value,
+                connectionType: controller.savedBillPrinterType.value,
+                onTest: () => controller.testPrintForRole(PrintRole.bill),
+                onClear: () => controller.clearRolePrinter(PrintRole.bill),
+              ),
+              if (showKot) ...[
+                const SizedBox(height: 10),
+                _buildRolePrinterTile(
+                  icon: Icons.restaurant,
+                  title: 'KOT Printer',
+                  name: controller.savedKotPrinterName.value,
+                  connectionType: controller.savedKotPrinterType.value,
+                  onTest: () => controller.testPrintForRole(PrintRole.kot),
+                  onClear: () => controller.clearRolePrinter(PrintRole.kot),
+                ),
+                if (controller.savedBillPrinterName.value != null &&
+                    controller.savedBillPrinterName.value!.isNotEmpty)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: controller.useSamePrinterForKot,
+                      child: const Text('Use same as Bill printer'),
+                    ),
+                  ),
+              ],
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildRolePrinterTile({
+    required IconData icon,
+    required String title,
+    required String? name,
+    required String? connectionType,
+    required VoidCallback onTest,
+    required VoidCallback onClear,
+  }) {
+    final configured = name != null && name.isNotEmpty;
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: configured
+            ? Colors.green.withOpacity(0.06)
+            : Colors.grey.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: configured ? Colors.green.withOpacity(0.35) : Colors.grey[300]!,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColor.primary, size: 28),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  configured
+                      ? '$name${connectionType != null ? ' · $connectionType' : ''}'
+                      : 'Not assigned — tap Bill or KOT on a device',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                ),
+              ],
+            ),
+          ),
+          if (configured) ...[
+            IconButton(
+              icon: const Icon(Icons.print_outlined, size: 22),
+              tooltip: 'Test print',
+              onPressed: onTest,
+            ),
+            IconButton(
+              icon: const Icon(Icons.clear, size: 22, color: Colors.red),
+              tooltip: 'Remove',
+              onPressed: onClear,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAssignRoleButtons({
+    required VoidCallback onBill,
+    required VoidCallback onKot,
+    bool compact = false,
+  }) {
+    if (Get.isRegistered<HomeScreenController>()) {
+      Get.find<HomeScreenController>().selectedOutlet.value;
+    }
+    final showKot = HomeMainRoutes.outletIsCafeOrRestaurant();
+    final children = <Widget>[
+      TextButton(
+        onPressed: onBill,
+        style: TextButton.styleFrom(
+          padding: compact
+              ? const EdgeInsets.symmetric(horizontal: 8)
+              : null,
+          minimumSize: compact ? const Size(0, 32) : null,
+        ),
+        child: Text(compact ? 'Bill' : 'Set Bill'),
+      ),
+    ];
+    if (showKot) {
+      children.addAll([
+        const SizedBox(width: 4),
+        TextButton(
+          onPressed: onKot,
+          style: TextButton.styleFrom(
+            padding: compact
+                ? const EdgeInsets.symmetric(horizontal: 8)
+                : null,
+            minimumSize: compact ? const Size(0, 32) : null,
+          ),
+          child: Text(compact ? 'KOT' : 'Set KOT'),
+        ),
+      ]);
+    }
+    return Row(mainAxisSize: MainAxisSize.min, children: children);
   }
 
   Widget _buildBluetoothTab() {
@@ -110,16 +283,16 @@ class PrinterScreen extends GetView<PrinterController> {
               );
             }
 
+            final filtered = controller.devices
+                .where((d) => d.platformName.isNotEmpty)
+                .toList();
+
             return ListView.builder(
               physics: BouncingScrollPhysics(),
               padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: controller.devices
-                  .where((d) => d.platformName.isNotEmpty)
-                  .length,
+              itemCount: filtered.length,
               itemBuilder: (context, index) {
-                final devices = controller.devices;
-
-                final device = devices[index];
+                final device = filtered[index];
 
                 final isConnected =
                     controller.connectedDevice.value?.remoteId ==
@@ -150,38 +323,36 @@ class PrinterScreen extends GetView<PrinterController> {
                         fontSize: 12,
                       ),
                     ),
-                    trailing: isConnected
-                        ? Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: Icon(
-                                  Icons.print,
-                                  color: AppColor.primary,
-                                ),
-                                onPressed: controller.printTestReceipt,
-                                tooltip: 'Test Print',
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.close,
-                                  color: Colors.red,
-                                ),
-                                onPressed: () =>
-                                    controller.disconnectDevice(device),
-                                tooltip: 'Disconnect',
-                              ),
-                            ],
-                          )
-                        : ElevatedButton(
-                            onPressed: () => controller.connectToDevice(device),
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                            ),
-                            child: const Text('Connect'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildAssignRoleButtons(
+                          compact: true,
+                          onBill: () => controller.assignBluetoothToRole(
+                            PrintRole.bill,
+                            device,
                           ),
+                          onKot: () => controller.assignBluetoothToRole(
+                            PrintRole.kot,
+                            device,
+                          ),
+                        ),
+                        if (isConnected)
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.red),
+                            onPressed: () =>
+                                controller.disconnectDevice(device),
+                            tooltip: 'Disconnect',
+                          )
+                        else
+                          IconButton(
+                            icon: Icon(Icons.link, color: AppColor.primary),
+                            onPressed: () =>
+                                controller.connectToDevice(device),
+                            tooltip: 'Connect',
+                          ),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -308,65 +479,6 @@ class PrinterScreen extends GetView<PrinterController> {
               ],
             ),
             SizedBox(height: 12),
-            Obx(() {
-              if (Get.isRegistered<HomeScreenController>()) {
-                Get.find<HomeScreenController>().selectedOutlet.value;
-              }
-              final bill = controller.savedBillPrinterName.value;
-              final kot = controller.savedKotPrinterName.value;
-              final showKot = HomeMainRoutes.outletIsCafeOrRestaurant();
-              if ((bill == null || bill.isEmpty) &&
-                  (!showKot || kot == null || kot.isEmpty)) {
-                return const SizedBox.shrink();
-              }
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (bill != null && bill.isNotEmpty)
-                      Text(
-                        'Bill Printer: $bill',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-                      ),
-                    if (showKot && kot != null && kot.isNotEmpty)
-                      Text(
-                        'KOT Printer: $kot',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-                      ),
-                  ],
-                ),
-              );
-            }),
-            Obx(() {
-              if (Get.isRegistered<HomeScreenController>()) {
-                Get.find<HomeScreenController>().selectedOutlet.value;
-              }
-              final showKot = HomeMainRoutes.outletIsCafeOrRestaurant();
-              final connected =
-                  controller.printerService.isConnected.value ||
-                  controller.printerService.isUsbConnected.value;
-              if (!connected) return const SizedBox.shrink();
-              return Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: controller.setCurrentAsBillPrinter,
-                      child: const Text('Set as Bill Printer'),
-                    ),
-                  ),
-                  if (showKot) ...[
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: controller.setCurrentAsKotPrinter,
-                        child: const Text('Set as KOT Printer'),
-                      ),
-                    ),
-                  ],
-                ],
-              );
-            }),
             Obx(
               () => controller.printerService.isAutoConnecting.value
                   ? Column(
@@ -529,30 +641,35 @@ class PrinterScreen extends GetView<PrinterController> {
                           fontSize: 12,
                         ),
                       ),
-                      trailing: isConnected
-                          ? Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: Icon(
-                                    Icons.print,
-                                    color: AppColor.primary,
-                                  ),
-                                  onPressed: controller.printTestReceipt,
-                                  tooltip: 'Test Print',
-                                ),
-                                IconButton(
-                                  icon: Icon(Icons.close, color: Colors.red),
-                                  onPressed: controller.disconnectUsbPrinter,
-                                  tooltip: 'Disconnect',
-                                ),
-                              ],
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildAssignRoleButtons(
+                            compact: true,
+                            onBill: () => controller.assignUsbToRole(
+                              PrintRole.bill,
+                              printer,
+                            ),
+                            onKot: () => controller.assignUsbToRole(
+                              PrintRole.kot,
+                              printer,
+                            ),
+                          ),
+                          if (isConnected)
+                            IconButton(
+                              icon: const Icon(Icons.close, color: Colors.red),
+                              onPressed: controller.disconnectUsbPrinter,
+                              tooltip: 'Disconnect',
                             )
-                          : ElevatedButton(
+                          else
+                            IconButton(
+                              icon: Icon(Icons.link, color: AppColor.primary),
                               onPressed: () =>
                                   controller.connectUsbPrinter(printer),
-                              child: Text('Connect'),
+                              tooltip: 'Connect',
                             ),
+                        ],
+                      ),
                     ),
                   );
                 },

@@ -202,10 +202,10 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
     final iReports = 5 + seatOffset;
     final iKot = 6 + seatOffset;
     final iCust = (kotEnabled ? 7 : 6) + seatOffset;
-    final iPrinter = (kotEnabled ? 8 : 7) + seatOffset;
-    final iStaff = (kotEnabled ? 9 : 8) + seatOffset;
-    final iSubs = (kotEnabled ? 11 : 10) + seatOffset;
-    final iWa = (kotEnabled ? 12 : 11) + seatOffset;
+    final iStaff = (kotEnabled ? 8 : 7) + seatOffset;
+    final iSubs = (kotEnabled ? 10 : 9) + seatOffset;
+    final iWa = (kotEnabled ? 11 : 10) + seatOffset;
+    final iPrinter = (kotEnabled ? 12 : 11) + seatOffset;
     final iSettings = (kotEnabled ? 13 : 12) + seatOffset;
     final iProfile = (kotEnabled ? 14 : 13) + seatOffset;
     final iLogout = (kotEnabled ? 15 : 14) + seatOffset;
@@ -645,18 +645,6 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
                   ),
                   _navItem(
                     context: context,
-                    index: iPrinter,
-                    label: loc.printer,
-                    svgIcon: Icon(
-                      Icons.print_rounded,
-                      size: AppShellSidebar.navIconSize,
-                      color: widget.selectedIndex == iPrinter
-                          ? _SidebarColors.textActive
-                          : _SidebarColors.iconInactive,
-                    ),
-                  ),
-                  _navItem(
-                    context: context,
                     index: iStaff,
                     label: loc.manage_staff,
                     svgIcon: Icon(
@@ -697,6 +685,18 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
                       Icons.campaign_outlined,
                       size: AppShellSidebar.navIconSize,
                       color: widget.selectedIndex == iWa
+                          ? _SidebarColors.textActive
+                          : _SidebarColors.iconInactive,
+                    ),
+                  ),
+                  _navItem(
+                    context: context,
+                    index: iPrinter,
+                    label: loc.printer,
+                    svgIcon: Icon(
+                      Icons.print_rounded,
+                      size: AppShellSidebar.navIconSize,
+                      color: widget.selectedIndex == iPrinter
                           ? _SidebarColors.textActive
                           : _SidebarColors.iconInactive,
                     ),

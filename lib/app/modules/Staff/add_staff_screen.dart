@@ -240,6 +240,8 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
     final loc = AppLocalizations.of(context)!;
     final isWin = _isWindows(context);
 
+    final isEditMode = controller.isEditMode;
+
     return Scaffold(
       backgroundColor: isWin ? AppColor.backGroundColor : null,
       appBar: AppBar(
@@ -248,7 +250,7 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
         surfaceTintColor: isWin ? Colors.transparent : null,
         toolbarHeight: isWin ? 48 : kToolbarHeight,
         title: Text(
-          loc.add_staff,
+          isEditMode ? 'Edit Staff' : loc.add_staff,
           style: TextStyle(
             color: AppColor.white,
             fontSize: 20,
@@ -332,7 +334,9 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        loc.add_staff,
+                                        isEditMode
+                                            ? 'Edit Staff'
+                                            : loc.add_staff,
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleLarge
@@ -342,7 +346,9 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        'Invite a team member and assign a role.',
+                                        isEditMode
+                                            ? 'Update team member details and role.'
+                                            : 'Invite a team member and assign a role.',
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodyMedium
@@ -421,7 +427,9 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                   child: SizedBox(
                     width: isWin ? 220 : double.infinity,
                     child: ElevatedButton(
-                      onPressed: controller.sendInvite,
+                      onPressed: isEditMode
+                          ? controller.onUpdateStaff
+                          : controller.sendInvite,
                       style: ElevatedButton.styleFrom(
                         elevation: 0,
                         padding: EdgeInsets.symmetric(
@@ -432,7 +440,7 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                         ),
                       ),
                       child: Text(
-                        loc.send_invite,
+                        isEditMode ? 'Update Staff' : loc.send_invite,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,

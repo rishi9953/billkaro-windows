@@ -1,9 +1,12 @@
+import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
+import 'package:billkaro/app/services/PrinterService2/printer_screen2_controller.dart';
 import 'package:billkaro/app/services/PrinterService2/printer_service2.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
+import 'package:billkaro/config/config.dart';
 import 'dart:io' show Platform;
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:flutter_thermal_printer/utils/printer.dart';
 
 class PrinterScreen2 extends StatefulWidget {
   const PrinterScreen2({super.key});
@@ -15,6 +18,7 @@ class PrinterScreen2 extends StatefulWidget {
 class _PrinterScreen2State extends State<PrinterScreen2>
     with SingleTickerProviderStateMixin {
   late final PrinterService2 printerService;
+  late final PrinterScreen2Controller roleController;
   ThermalPrinterService get thermalPrinter => ThermalPrinterService.instance;
   late TabController _tabController;
   final TextEditingController _bleSearchController = TextEditingController();
@@ -23,36 +27,226 @@ class _PrinterScreen2State extends State<PrinterScreen2>
   String _usbSearchQuery = '';
   bool get _isWindowsDesktop => Platform.isWindows;
 
+  static const double _winMaxContentWidth = 1180;
+  static const double _winCardRadius = 16;
+  static const double _winTwoColumnBreakpoint = 920;
+  static const Color _winTileHover = Color(0x0A0F172A);
+
+  final ScrollController _bleListScrollController = ScrollController();
+  final ScrollController _usbListScrollController = ScrollController();
+  final ScrollController _classicBtScrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
 
-    /// ✅ SAFE GetX resolution
     printerService = Get.put(PrinterService2());
+    if (Get.isRegistered<PrinterScreen2Controller>()) {
+      roleController = Get.find<PrinterScreen2Controller>();
+      roleController.loadRolePrinters();
+    } else {
+      roleController = Get.put(PrinterScreen2Controller());
+    }
 
-    /// optional auto-init
     if (Platform.isWindows) {
-      // On Windows we use BLE via `ThermalPrinterService` (flutter_blue_plus).
-      thermalPrinter.startScan();
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scanBleOnceOnOpen());
     } else {
       printerService.init();
       printerService.scanForDevices();
     }
 
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  /// One BLE scan when the screen opens (manual reconnect stays disabled).
+  void _scanBleOnceOnOpen() {
+    if (!mounted) return;
+    if (thermalPrinter.isScanning.value ||
+        thermalPrinter.isBleConnecting.value ||
+        thermalPrinter.isConnected.value) {
+      return;
+    }
+    thermalPrinter.startScan();
   }
 
   @override
   void dispose() {
     _bleSearchController.dispose();
     _usbSearchController.dispose();
+    _bleListScrollController.dispose();
+    _usbListScrollController.dispose();
+    _classicBtScrollController.dispose();
     _tabController.dispose();
+    if (Platform.isWindows) {
+      thermalPrinter.stopScan();
+    }
     super.dispose();
+  }
+
+  Widget _connectDisconnectButton({
+    required BuildContext context,
+    required bool isConnected,
+    required VoidCallback? onPressed,
+    bool isLoading = false,
+  }) {
+    final height = _isWindowsDesktop ? 36.0 : 40.0;
+    final textStyle = TextStyle(
+      fontSize: _isWindowsDesktop ? 12 : 14,
+      fontWeight: FontWeight.w600,
+    );
+    if (isLoading) {
+      return FilledButton.tonal(
+        style: FilledButton.styleFrom(minimumSize: Size.fromHeight(height)),
+        onPressed: null,
+        child: SizedBox(
+          height: 20,
+          width: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+      );
+    }
+    if (isConnected) {
+      final error = Theme.of(context).colorScheme.error;
+      return OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: error,
+          side: BorderSide(color: error.withOpacity(0.85)),
+          minimumSize: Size.fromHeight(height),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+        ),
+        onPressed: onPressed,
+        child: Text('Disconnect', style: textStyle),
+      );
+    }
+    return FilledButton.tonal(
+      style: FilledButton.styleFrom(
+        minimumSize: Size.fromHeight(height),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        backgroundColor: AppColor.primary.withOpacity(0.08),
+        foregroundColor: AppColor.primary,
+      ),
+      onPressed: onPressed,
+      child: Text('Connect', style: textStyle),
+    );
+  }
+
+  Future<void> _onRefreshPressed() async {
+    if (Platform.isWindows) {
+      if (_tabController.index == 0) {
+        await thermalPrinter.startScan();
+      } else {
+        await thermalPrinter.scanUsbPrinters();
+      }
+    } else {
+      await printerService.init();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+    if (_isWindowsDesktop) {
+      return _buildWindowsScaffold(context);
+    }
+    return _buildMobileScaffold(context);
+  }
+
+  PreferredSizeWidget _buildAppBarBottom(BuildContext context) {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(1),
+      child: Divider(height: 1, thickness: 1, color: Colors.grey.shade200),
+    );
+  }
+
+  Widget _buildWindowsScaffold(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColor.backGroundColor,
+      appBar: AppBar(
+        elevation: 0,
+        foregroundColor: AppColor.white,
+        title: Text(
+          'Printer Settings',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: AppColor.white,
+          ),
+        ),
+        bottom: _buildAppBarBottom(context),
+        actions: [
+          TextButton.icon(
+            onPressed: _onRefreshPressed,
+            icon: const Icon(Icons.refresh_rounded, size: 20),
+            label: const Text('Refresh'),
+            style: TextButton.styleFrom(foregroundColor: AppColor.white),
+          ),
+          const Gap(8),
+        ],
+      ),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: _winMaxContentWidth),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final useTwoColumns =
+                      constraints.maxWidth >= _winTwoColumnBreakpoint;
+                  Widget sidebarContent() {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildMultiplePrinterSettingsCard(context),
+                        const Gap(14),
+                        _buildConnectionStatusCard(context),
+                        const Gap(12),
+                        _buildWindowsHelpCard(context),
+                      ],
+                    );
+                  }
+
+                  final devices = _buildWindowsDevicePanel(context);
+
+                  if (useTwoColumns) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SizedBox(
+                          width: 400,
+                          child: SingleChildScrollView(child: sidebarContent()),
+                        ),
+                        const Gap(20),
+                        Expanded(child: devices),
+                      ],
+                    );
+                  }
+                  return Column(
+                    children: [
+                      Flexible(
+                        flex: 0,
+                        child: SingleChildScrollView(child: sidebarContent()),
+                      ),
+                      const Gap(14),
+                      Expanded(child: devices),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileScaffold(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Printer Settings'),
@@ -72,158 +266,28 @@ class _PrinterScreen2State extends State<PrinterScreen2>
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () async {
-              if (Platform.isWindows) {
-                await thermalPrinter.startScan();
-              } else {
-                await printerService.init();
-              }
-            },
+            onPressed: _onRefreshPressed,
           ),
         ],
       ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: _isWindowsDesktop ? 1080 : double.infinity,
-            ),
+            constraints: const BoxConstraints(maxWidth: 1080),
             child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: _isWindowsDesktop ? 24 : 16,
-                vertical: _isWindowsDesktop ? 20 : 16,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: Column(
                 children: [
-                  /// STATUS CARD (Bluetooth or USB)
-                  Obx(() {
-                    final bleConnected = thermalPrinter.isConnected.value;
-                    final btConnected = printerService.isConnected.value;
-                    final usbConnected = thermalPrinter.isUsbConnected.value;
-                    final connected =
-                        usbConnected || bleConnected || btConnected;
-
-                    final isUsb = usbConnected;
-                    final isBle = !usbConnected && bleConnected;
-                    final isDark =
-                        Theme.of(context).brightness == Brightness.dark;
-
-                    final statusBg = connected
-                        ? (isDark
-                              ? Colors.green.withOpacity(0.18)
-                              : Colors.green.shade100)
-                        : (isDark
-                              ? Colors.red.withOpacity(0.18)
-                              : Colors.red.shade100);
-                    final statusIcon = connected ? Colors.green : Colors.red;
-
-                    final String connectionType;
-                    final String connectionName;
-
-                    if (!connected) {
-                      connectionType = 'Not connected';
-                      connectionName = 'Printer not connected';
-                    } else if (isUsb) {
-                      connectionType = 'USB';
-                      connectionName =
-                          thermalPrinter.connectedUsbPrinter?.name ?? 'Printer';
-                    } else if (isBle) {
-                      connectionType = 'Bluetooth';
-                      final platformName =
-                          thermalPrinter.connectedDevice?.platformName;
-                      connectionName =
-                          (platformName != null &&
-                              platformName.trim().isNotEmpty)
-                          ? platformName
-                          : 'Printer';
-                    } else {
-                      connectionType = 'Bluetooth';
-                      connectionName =
-                          printerService.selectedPrinter.value?.name ??
-                          'Printer';
-                    }
-
-                    return Card(
-                      elevation: 0,
-                      color: statusBg,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                          _isWindowsDesktop ? 12 : 14,
-                        ),
-                        side: BorderSide(
-                          color: connected
-                              ? Colors.green.withOpacity(0.35)
-                              : Colors.red.withOpacity(0.35),
-                          width: 1,
-                        ),
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.all(_isWindowsDesktop ? 18 : 16),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Icon(
-                              connected ? Icons.print : Icons.print_disabled,
-                              color: statusIcon,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    connectionType,
-                                    style: textTheme.labelLarge?.copyWith(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurface,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    connectionName,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (connected)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 8),
-                                child: IconButton(
-                                  tooltip: 'Disconnect printer',
-                                  icon: const Icon(Icons.close),
-                                  onPressed: isUsb
-                                      ? () => thermalPrinter
-                                            .disconnectUsbPrinter()
-                                      : isBle
-                                      ? () => thermalPrinter.disconnect()
-                                      : printerService.disconnect,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }),
-
+                  _buildMultiplePrinterSettingsCard(context),
+                  const SizedBox(height: 12),
+                  _buildConnectionStatusCard(context),
                   const SizedBox(height: 16),
-
-                  /// TABS CONTENT
                   Expanded(
                     child: Card(
                       margin: EdgeInsets.zero,
-                      elevation: _isWindowsDesktop ? 0 : 1,
+                      elevation: 1,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                          _isWindowsDesktop ? 12 : 10,
-                        ),
+                        borderRadius: BorderRadius.circular(10),
                         side: BorderSide(
                           color: Theme.of(
                             context,
@@ -231,7 +295,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                         ),
                       ),
                       child: Padding(
-                        padding: EdgeInsets.all(_isWindowsDesktop ? 16 : 8),
+                        padding: const EdgeInsets.all(8),
                         child: TabBarView(
                           controller: _tabController,
                           children: [_buildBluetoothTab(), _buildUsbTab()],
@@ -248,63 +312,1044 @@ class _PrinterScreen2State extends State<PrinterScreen2>
     );
   }
 
-  Widget _buildBluetoothTab() {
-    if (Platform.isWindows) {
-      final textTheme = Theme.of(context).textTheme;
-      return Column(
+  Widget _buildWindowsDevicePanel(BuildContext context) {
+    return _winSectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: 4),
-          Row(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+            child: Row(
+              children: [
+                Text(
+                  'Available printers',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColor.primary,
+                  ),
+                ),
+                const Spacer(),
+                SizedBox(
+                  width: 280,
+                  child: SegmentedButton<int>(
+                    segments: const [
+                      ButtonSegment(
+                        value: 0,
+                        icon: Icon(Icons.bluetooth_rounded, size: 18),
+                        label: Text('Bluetooth'),
+                      ),
+                      ButtonSegment(
+                        value: 1,
+                        icon: Icon(Icons.usb_rounded, size: 18),
+                        label: Text('USB'),
+                      ),
+                    ],
+                    selected: {_tabController.index},
+                    onSelectionChanged: (set) {
+                      final index = set.first;
+                      _tabController.animateTo(index);
+                      setState(() {});
+                      if (index == 1) {
+                        thermalPrinter.scanUsbPrinters();
+                      } else {
+                        thermalPrinter.startScan();
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: TabBarView(
+                controller: _tabController,
+                children: [_buildBluetoothTab(), _buildUsbTab()],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWindowsHelpCard(BuildContext context) {
+    return _winSectionCard(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline_rounded, color: AppColor.primary, size: 22),
+          const Gap(12),
+          Expanded(
+            child: Text(
+              'Assign Bill for counter receipts and KOT for kitchen tickets. '
+              'You can use USB at the desk and Bluetooth in the kitchen.',
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.45,
+                color: AppColor.primary.withOpacity(0.75),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _winSectionCard({required Widget child, EdgeInsetsGeometry? padding}) {
+    return Card(
+      color: Colors.white,
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(_winCardRadius),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: padding != null ? Padding(padding: padding, child: child) : child,
+    );
+  }
+
+  Widget _sectionHeader(String title, {String? subtitle}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: AppColor.primary,
+          ),
+        ),
+        if (subtitle != null) ...[
+          const Gap(4),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.4,
+              color: AppColor.primary.withOpacity(0.6),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _iconBadge(IconData icon, {Color? color}) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: (color ?? AppColor.primary).withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(icon, color: color ?? AppColor.primary, size: 22),
+    );
+  }
+
+  Widget _buildConnectionStatusCard(BuildContext context) {
+    return Obx(() {
+      final bleConnected = thermalPrinter.connectedBleDeviceId.value != null;
+      final btConnected = printerService.isConnected.value;
+      final usbConnected = thermalPrinter.isUsbConnected.value;
+      final connected = usbConnected || bleConnected || btConnected;
+      final isUsb = usbConnected;
+      final isBle = !usbConnected && bleConnected;
+
+      final String connectionType;
+      final String connectionName;
+      IconData statusIcon;
+
+      if (!connected) {
+        connectionType = 'Live session';
+        connectionName = 'No printer connected';
+        statusIcon = Icons.link_off_rounded;
+      } else if (isUsb) {
+        connectionType = 'USB connected';
+        connectionName =
+            thermalPrinter.connectedUsbPrinter?.name ?? 'USB Printer';
+        statusIcon = Icons.usb_rounded;
+      } else if (isBle) {
+        connectionType = 'Bluetooth connected';
+        final platformName = thermalPrinter.connectedDevice?.platformName;
+        connectionName =
+            (platformName != null && platformName.trim().isNotEmpty)
+            ? platformName
+            : 'BLE Printer';
+        statusIcon = Icons.bluetooth_connected_rounded;
+      } else {
+        connectionType = 'Bluetooth connected';
+        connectionName =
+            printerService.selectedPrinter.value?.name ?? 'Printer';
+        statusIcon = Icons.bluetooth_connected_rounded;
+      }
+
+      final accent = connected ? AppColor.lightgreen : Colors.red.shade400;
+
+      if (_isWindowsDesktop) {
+        return _winSectionCard(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.bluetooth),
-              const SizedBox(width: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _iconBadge(statusIcon, color: accent),
+                  const Gap(12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: accent.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                connected ? 'ONLINE' : 'OFFLINE',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.6,
+                                  color: accent,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              connectionType,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColor.primary.withOpacity(0.55),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Gap(8),
+                        Text(
+                          connectionName,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            height: 1.3,
+                            color: AppColor.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (connected) ...[
+                const Gap(12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: isUsb
+                        ? thermalPrinter.disconnectUsbPrinter
+                        : isBle
+                        ? thermalPrinter.disconnect
+                        : printerService.disconnect,
+                    icon: const Icon(Icons.link_off_rounded, size: 18),
+                    label: const Text('Disconnect'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red.shade700,
+                      side: BorderSide(color: Colors.red.shade200),
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      }
+
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final statusBg = connected
+          ? (isDark ? Colors.green.withOpacity(0.18) : Colors.green.shade100)
+          : (isDark ? Colors.red.withOpacity(0.18) : Colors.red.shade100);
+
+      return Card(
+        elevation: 0,
+        color: statusBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(
+            color: connected
+                ? Colors.green.withOpacity(0.35)
+                : Colors.red.withOpacity(0.35),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    connected ? Icons.print : Icons.print_disabled,
+                    color: accent,
+                    size: 28,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          connectionType,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          connectionName,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (connected) ...[
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: isUsb
+                        ? thermalPrinter.disconnectUsbPrinter
+                        : isBle
+                        ? thermalPrinter.disconnect
+                        : printerService.disconnect,
+                    icon: const Icon(Icons.link_off, size: 18),
+                    label: const Text('Disconnect'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.red.shade700,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildMultiplePrinterSettingsCard(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Obx(() {
+      if (Get.isRegistered<HomeScreenController>()) {
+        Get.find<HomeScreenController>().selectedOutlet.value;
+      }
+      final showKot = HomeMainRoutes.outletIsCafeOrRestaurant();
+      final loading = roleController.isRoleActionLoading.value;
+
+      final billTile = _buildRolePrinterTile(
+        context,
+        icon: Icons.receipt_long_outlined,
+        title: 'Bill Printer',
+        name: roleController.savedBillPrinterName.value,
+        connectionType: roleController.savedBillPrinterType.value,
+        onTest: () => roleController.testPrintForRole(PrintRole.bill),
+        onClear: () => roleController.clearRolePrinter(PrintRole.bill),
+      );
+      final kotTile = showKot
+          ? _buildRolePrinterTile(
+              context,
+              icon: Icons.restaurant_menu_outlined,
+              title: 'KOT Printer',
+              name: roleController.savedKotPrinterName.value,
+              connectionType: roleController.savedKotPrinterType.value,
+              onTest: () => roleController.testPrintForRole(PrintRole.kot),
+              onClear: () => roleController.clearRolePrinter(PrintRole.kot),
+            )
+          : null;
+
+      if (_isWindowsDesktop) {
+        return _winSectionCard(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _sectionHeader(
+                      'Print routing',
+                      subtitle: 'Assign bill and KOT printers separately.',
+                    ),
+                  ),
+                  if (loading)
+                    const Padding(
+                      padding: EdgeInsets.only(left: 8, top: 2),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                ],
+              ),
+              const Gap(14),
+              billTile,
+              if (showKot && kotTile != null) ...[const Gap(10), kotTile],
+              if (showKot &&
+                  roleController.savedBillPrinterName.value != null &&
+                  roleController.savedBillPrinterName.value!.isNotEmpty) ...[
+                const Gap(10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: loading
+                        ? null
+                        : roleController.useSamePrinterForKot,
+                    icon: const Icon(Icons.copy_all_rounded, size: 18),
+                    label: const Text('Use bill printer for KOT'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColor.primary,
+                      side: BorderSide(color: Colors.grey.shade300),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      }
+
+      return Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.4)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Multiple Printer Settings',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  if (loading)
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 4),
               Text(
-                'Nearby BLE devices',
-                style: textTheme.titleMedium?.copyWith(
+                'Tap Bill or KOT on a device below.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: colorScheme.onSurface.withOpacity(0.65),
+                ),
+              ),
+              const SizedBox(height: 12),
+              billTile,
+              if (kotTile != null) ...[
+                const SizedBox(height: 10),
+                kotTile,
+                if (roleController.savedBillPrinterName.value != null &&
+                    roleController.savedBillPrinterName.value!.isNotEmpty)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: loading
+                          ? null
+                          : roleController.useSamePrinterForKot,
+                      child: const Text('Use same as Bill printer'),
+                    ),
+                  ),
+              ],
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildRolePrinterTile(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String? name,
+    required String? connectionType,
+    required VoidCallback onTest,
+    required VoidCallback onClear,
+  }) {
+    final configured = name != null && name.isNotEmpty;
+    final colorScheme = Theme.of(context).colorScheme;
+    final isKot = title.contains('KOT');
+    final accent = isKot ? AppColor.secondaryPrimary : AppColor.primary;
+
+    if (_isWindowsDesktop) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: configured
+              ? accent.withOpacity(0.06)
+              : AppColor.backGroundColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: configured ? accent.withOpacity(0.28) : Colors.grey.shade200,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _iconBadge(icon, color: accent),
+                const Gap(10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColor.primary,
+                        ),
+                      ),
+                      if (configured &&
+                          connectionType != null &&
+                          connectionType.isNotEmpty) ...[
+                        const Gap(6),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: accent.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              connectionType,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: accent,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                      const Gap(6),
+                      Text(
+                        configured
+                            ? name
+                            : 'Not assigned — pick Bill or KOT below',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.35,
+                          color: configured
+                              ? AppColor.primary.withOpacity(0.85)
+                              : AppColor.primary.withOpacity(0.45),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (configured) ...[
+              const Gap(10),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: onTest,
+                      icon: const Icon(Icons.print_outlined, size: 17),
+                      label: const Text('Test print'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColor.primary,
+                        side: BorderSide(color: Colors.grey.shade300),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
+                  ),
+                  const Gap(8),
+                  Tooltip(
+                    message: 'Remove assignment',
+                    child: IconButton(
+                      visualDensity: VisualDensity.compact,
+                      onPressed: onClear,
+                      icon: Icon(
+                        Icons.delete_outline,
+                        color: Colors.red.shade400,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: configured
+            ? colorScheme.primaryContainer.withOpacity(0.35)
+            : colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: configured
+              ? colorScheme.primary.withOpacity(0.35)
+              : colorScheme.outlineVariant,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: colorScheme.primary, size: 26),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  configured
+                      ? '$name${connectionType != null ? ' · $connectionType' : ''}'
+                      : 'Not assigned',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (configured) ...[
+            IconButton(
+              icon: const Icon(Icons.print_outlined, size: 22),
+              onPressed: onTest,
+            ),
+            IconButton(
+              icon: Icon(Icons.clear, size: 22, color: colorScheme.error),
+              onPressed: onClear,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _roleActionChip({
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+    bool selected = false,
+  }) {
+    return Material(
+      color: selected ? color : color.withOpacity(0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(
+          color: selected ? color : color.withOpacity(0.25),
+          width: selected ? 1.5 : 1,
+        ),
+      ),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(8),
+        hoverColor: _winTileHover,
+        mouseCursor: SystemMouseCursors.click,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (selected) ...[
+                Icon(Icons.check_rounded, size: 14, color: AppColor.white),
+                const Gap(4),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
+                  color: selected ? AppColor.white : color,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+        ),
+      ),
+    );
+  }
 
+  Widget _mobileRoleButton({
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+    bool selected = false,
+  }) {
+    return TextButton(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        backgroundColor: selected ? color : color.withOpacity(0.1),
+        foregroundColor: selected ? AppColor.white : color,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        minimumSize: const Size(0, 32),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(
+            color: selected ? color : color.withOpacity(0.35),
+          ),
+        ),
+      ),
+      child: Text(
+        selected ? '$label ✓' : label,
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+
+  Widget _buildAssignRoleButtons({
+    required VoidCallback onBill,
+    required VoidCallback onKot,
+    bool billSelected = false,
+    bool kotSelected = false,
+  }) {
+    if (Get.isRegistered<HomeScreenController>()) {
+      Get.find<HomeScreenController>().selectedOutlet.value;
+    }
+    final showKot = HomeMainRoutes.outletIsCafeOrRestaurant();
+
+    if (_isWindowsDesktop) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _roleActionChip(
+            label: 'Bill',
+            color: AppColor.primary,
+            onPressed: onBill,
+            selected: billSelected,
+          ),
+          if (showKot) ...[
+            const Gap(6),
+            _roleActionChip(
+              label: 'KOT',
+              color: AppColor.secondaryPrimary,
+              onPressed: onKot,
+              selected: kotSelected,
+            ),
+          ],
+        ],
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _mobileRoleButton(
+          label: 'Bill',
+          color: AppColor.primary,
+          onPressed: onBill,
+          selected: billSelected,
+        ),
+        if (showKot) ...[
+          const Gap(4),
+          _mobileRoleButton(
+            label: 'KOT',
+            color: AppColor.secondaryPrimary,
+            onPressed: onKot,
+            selected: kotSelected,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildAssignRoleButtonsForBle(BluetoothDevice device) {
+    return Obx(() {
+      roleController.billRoleInfo.value;
+      roleController.kotRoleInfo.value;
+      return _buildAssignRoleButtons(
+        onBill: () => roleController.assignBluetoothToRole(
+          PrintRole.bill,
+          device,
+        ),
+        onKot: () => roleController.assignBluetoothToRole(
+          PrintRole.kot,
+          device,
+        ),
+        billSelected: roleController.isBillBleDevice(device),
+        kotSelected: roleController.isKotBleDevice(device),
+      );
+    });
+  }
+
+  Widget _buildAssignRoleButtonsForUsb(Printer printer) {
+    return Obx(() {
+      roleController.billRoleInfo.value;
+      roleController.kotRoleInfo.value;
+      return _buildAssignRoleButtons(
+        onBill: () => roleController.assignUsbToRole(PrintRole.bill, printer),
+        onKot: () => roleController.assignUsbToRole(PrintRole.kot, printer),
+        billSelected: roleController.isBillUsbPrinter(printer),
+        kotSelected: roleController.isKotUsbPrinter(printer),
+      );
+    });
+  }
+
+  Widget _buildAssignRoleButtonsForClassicBt({
+    required String address,
+    required String name,
+  }) {
+    return Obx(() {
+      roleController.billRoleInfo.value;
+      roleController.kotRoleInfo.value;
+      return _buildAssignRoleButtons(
+        onBill: () => roleController.assignClassicBluetoothToRole(
+          PrintRole.bill,
+          address: address,
+          name: name,
+        ),
+        onKot: () => roleController.assignClassicBluetoothToRole(
+          PrintRole.kot,
+          address: address,
+          name: name,
+        ),
+        billSelected: roleController.isBillClassicBt(address),
+        kotSelected: roleController.isKotClassicBt(address),
+      );
+    });
+  }
+
+  Widget _buildWindowsDeviceRow({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required Widget actions,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          hoverColor: _winTileHover,
+          mouseCursor: SystemMouseCursors.basic,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Row(
+              children: [
+                _iconBadge(icon, color: iconColor),
+                const Gap(14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: AppColor.primary,
+                        ),
+                      ),
+                      const Gap(2),
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColor.primary.withOpacity(0.5),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Gap(12),
+                actions,
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState({required IconData icon, required String message}) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 56, color: Colors.grey.shade400),
+            const Gap(16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: AppColor.primary.withOpacity(0.55),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWinSearchField({
+    required TextEditingController controller,
+    required String hint,
+    required VoidCallback onClear,
+    required bool showClear,
+    required ValueChanged<String> onChanged,
+  }) {
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(
+        hintText: hint,
+        filled: true,
+        fillColor: AppColor.backGroundColor,
+        prefixIcon: const Icon(Icons.search_rounded, size: 22),
+        suffixIcon: showClear
+            ? IconButton(
+                onPressed: onClear,
+                icon: const Icon(Icons.clear_rounded),
+              )
+            : null,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: AppColor.primary, width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 14,
+        ),
+      ),
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _buildBluetoothTab() {
+    if (Platform.isWindows) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
           Row(
             children: [
               Expanded(
-                child: TextField(
+                child: _buildWinSearchField(
                   controller: _bleSearchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search by device name or id...',
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(
-                        _isWindowsDesktop ? 10 : 8,
-                      ),
-                    ),
-                    isDense: _isWindowsDesktop,
-                  ),
+                  hint: 'Search Bluetooth devices…',
+                  showClear: _bleSearchQuery.isNotEmpty,
+                  onClear: () {
+                    _bleSearchController.clear();
+                    setState(() => _bleSearchQuery = '');
+                  },
                   onChanged: (v) => setState(() => _bleSearchQuery = v),
                 ),
               ),
-              const SizedBox(width: 10),
-              IconButton(
-                tooltip: 'Clear search',
-                onPressed: _bleSearchQuery.isEmpty
-                    ? null
-                    : () {
-                        _bleSearchController.clear();
-                        setState(() => _bleSearchQuery = '');
-                      },
-                icon: const Icon(Icons.clear),
+              const Gap(12),
+              FilledButton.icon(
+                onPressed: () => thermalPrinter.startScan(),
+                icon: const Icon(Icons.radar_rounded, size: 20),
+                label: const Text('Scan'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColor.primary,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(120, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
               ),
             ],
           ),
-
-          const SizedBox(height: 12),
+          const Gap(14),
           Expanded(
             child: Obx(() {
               if (thermalPrinter.isScanning.value) {
-                return const Center(child: CircularProgressIndicator());
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const CircularProgressIndicator(),
+                      const Gap(16),
+                      Text(
+                        'Scanning for nearby printers…',
+                        style: TextStyle(
+                          color: AppColor.primary.withOpacity(0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
               }
               final results = thermalPrinter.scanResults;
               final query = _bleSearchQuery.trim().toLowerCase();
@@ -319,76 +1364,68 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                     }).toList();
 
               if (filtered.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.bluetooth_disabled,
-                        size: 48,
-                        color: Colors.grey.shade400,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        query.isEmpty
-                            ? 'No devices found'
-                            : 'No devices match "$_bleSearchQuery"',
-                        textAlign: TextAlign.center,
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
+                return _buildEmptyState(
+                  icon: Icons.bluetooth_disabled_rounded,
+                  message: query.isEmpty
+                      ? 'No Bluetooth printers found.\nTurn on the printer and tap Scan.'
+                      : 'No devices match your search.',
                 );
               }
 
               return Scrollbar(
+                controller: _bleListScrollController,
                 thumbVisibility: true,
-                child: ListView.separated(
+                child: ListView.builder(
+                  controller: _bleListScrollController,
+                  primary: false,
+                  padding: const EdgeInsets.only(bottom: 8),
                   itemCount: filtered.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (context, index) {
-                    final r = filtered[index];
-                    final BluetoothDevice device = r.device;
+                    final device = filtered[index].device;
                     final name = device.platformName.isNotEmpty
                         ? device.platformName
-                        : '(unknown)';
-                    final isThisConnected =
-                        thermalPrinter.isConnected.value &&
-                        thermalPrinter.connectedDevice?.remoteId ==
-                            device.remoteId;
-
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      leading: const Icon(Icons.bluetooth),
-                      title: Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Text(
-                        device.remoteId.toString(),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: SizedBox(
-                        width: 130,
-                        child: FilledButton.tonal(
-                          onPressed: () async {
-                            if (isThisConnected) {
-                              await thermalPrinter.disconnect();
-                            } else {
-                              await thermalPrinter.connectToDevice(device);
-                            }
-                          },
-                          child: Text(
-                            isThisConnected ? 'Disconnect' : 'Connect',
-                          ),
-                        ),
+                        : 'Unknown device';
+                    return _buildWindowsDeviceRow(
+                      icon: Icons.bluetooth_rounded,
+                      iconColor: AppColor.primary,
+                      title: name,
+                      subtitle: device.remoteId.toString(),
+                      actions: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildAssignRoleButtonsForBle(device),
+                          const Gap(8),
+                          Obx(() {
+                            final deviceId = device.remoteId.toString();
+                            final isThisConnected =
+                                !thermalPrinter.isUsbConnected.value &&
+                                thermalPrinter.connectedBleDeviceId.value ==
+                                    deviceId;
+                            final isConnectingThis =
+                                thermalPrinter.isBleConnecting.value &&
+                                thermalPrinter.connectingBleDeviceId.value ==
+                                    deviceId;
+                            return SizedBox(
+                              width: 108,
+                              child: _connectDisconnectButton(
+                                context: context,
+                                isConnected: isThisConnected,
+                                isLoading: isConnectingThis,
+                                onPressed: isConnectingThis
+                                    ? null
+                                    : () async {
+                                        if (isThisConnected) {
+                                          await thermalPrinter.disconnect();
+                                        } else {
+                                          await thermalPrinter.connectToDevice(
+                                            device,
+                                          );
+                                        }
+                                      },
+                              ),
+                            );
+                          }),
+                        ],
                       ),
                     );
                   },
@@ -396,25 +1433,6 @@ class _PrinterScreen2State extends State<PrinterScreen2>
               );
             }),
           ),
-
-          Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: SizedBox(
-                width: 220,
-                child: FilledButton.icon(
-                  icon: const Icon(Icons.search),
-                  label: const Text('Scan devices'),
-                  onPressed: () => thermalPrinter.startScan(),
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(46),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
         ],
       );
     }
@@ -447,8 +1465,11 @@ class _PrinterScreen2State extends State<PrinterScreen2>
             }
 
             return Scrollbar(
+              controller: _classicBtScrollController,
               thumbVisibility: true,
               child: ListView.separated(
+                controller: _classicBtScrollController,
+                primary: false,
                 itemCount: devices.length,
                 separatorBuilder: (_, __) => const Divider(height: 1),
                 itemBuilder: (context, index) {
@@ -473,18 +1494,29 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                               device.address;
 
                       return SizedBox(
-                        width: 130,
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            if (isThisDeviceConnected) {
-                              await printerService.disconnect();
-                            } else {
-                              await printerService.connect(device);
-                            }
-                          },
-                          child: Text(
-                            isThisDeviceConnected ? 'Disconnect' : 'Connect',
-                          ),
+                        width: 240,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            _buildAssignRoleButtonsForClassicBt(
+                              address: device.address,
+                              name: device.name,
+                            ),
+                            SizedBox(
+                              width: 100,
+                              child: _connectDisconnectButton(
+                                context: context,
+                                isConnected: isThisDeviceConnected,
+                                onPressed: () async {
+                                  if (isThisDeviceConnected) {
+                                    await printerService.disconnect();
+                                  } else {
+                                    await printerService.connect(device);
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
                         ),
                       );
                     }),
@@ -515,6 +1547,159 @@ class _PrinterScreen2State extends State<PrinterScreen2>
   }
 
   Widget _buildUsbTab() {
+    if (_isWindowsDesktop) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _buildWinSearchField(
+                  controller: _usbSearchController,
+                  hint: 'Search USB printers…',
+                  showClear: _usbSearchQuery.isNotEmpty,
+                  onClear: () {
+                    _usbSearchController.clear();
+                    setState(() => _usbSearchQuery = '');
+                  },
+                  onChanged: (v) => setState(() => _usbSearchQuery = v),
+                ),
+              ),
+              const Gap(12),
+              Obx(() {
+                final isScanning = thermalPrinter.isUsbScanning.value;
+                return FilledButton.icon(
+                  onPressed: isScanning
+                      ? null
+                      : () => thermalPrinter.scanUsbPrinters(),
+                  icon: isScanning
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.usb_rounded, size: 20),
+                  label: Text(isScanning ? 'Scanning' : 'Scan'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColor.primary,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(120, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+          const Gap(14),
+          Expanded(
+            child: Obx(() {
+              final list = thermalPrinter.usbPrinters;
+              final query = _usbSearchQuery.trim().toLowerCase();
+              final filtered = query.isEmpty
+                  ? list
+                  : list.where((p) {
+                      final name = (p.name ?? '').toLowerCase();
+                      final vendor = p.vendorId?.toString().toLowerCase() ?? '';
+                      final product =
+                          p.productId?.toString().toLowerCase() ?? '';
+                      return name.contains(query) ||
+                          vendor.contains(query) ||
+                          product.contains(query);
+                    }).toList();
+
+              if (thermalPrinter.isUsbScanning.value && filtered.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const CircularProgressIndicator(),
+                      const Gap(16),
+                      Text(
+                        'Looking for USB printers…',
+                        style: TextStyle(
+                          color: AppColor.primary.withOpacity(0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              if (filtered.isEmpty) {
+                return _buildEmptyState(
+                  icon: Icons.usb_off_rounded,
+                  message: query.isEmpty
+                      ? 'No USB printers found.\nConnect the cable and tap Scan.'
+                      : 'No USB printers match your search.',
+                );
+              }
+
+              return Scrollbar(
+                controller: _usbListScrollController,
+                thumbVisibility: true,
+                child: ListView.builder(
+                  controller: _usbListScrollController,
+                  primary: false,
+                  padding: const EdgeInsets.only(bottom: 8),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    final printer = filtered[index];
+                    final printerKey = ThermalPrinterService.usbPrinterKey(
+                      printer,
+                    );
+                    final ids = [
+                      if (printer.vendorId != null) 'V:${printer.vendorId}',
+                      if (printer.productId != null) 'P:${printer.productId}',
+                    ].join(' · ');
+
+                    return _buildWindowsDeviceRow(
+                      icon: Icons.usb_rounded,
+                      iconColor: AppColor.secondaryPrimary,
+                      title: printer.name ?? 'USB Printer',
+                      subtitle: ids.isNotEmpty ? ids : (printer.address ?? ''),
+                      actions: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildAssignRoleButtonsForUsb(printer),
+                          const Gap(8),
+                          Obx(() {
+                            final isConnected =
+                                thermalPrinter.connectedUsbPrinterKey.value ==
+                                printerKey;
+                            return SizedBox(
+                              width: 108,
+                              child: _connectDisconnectButton(
+                                context: context,
+                                isConnected: isConnected,
+                                onPressed: () async {
+                                  if (isConnected) {
+                                    await thermalPrinter.disconnectUsbPrinter();
+                                  } else {
+                                    await thermalPrinter.connectUsbPrinter(
+                                      printer,
+                                    );
+                                  }
+                                },
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              );
+            }),
+          ),
+        ],
+      );
+    }
+
     final textTheme = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -522,90 +1707,38 @@ class _PrinterScreen2State extends State<PrinterScreen2>
         const SizedBox(height: 8),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              const Icon(Icons.usb),
-              const SizedBox(width: 8),
-              Text(
-                'USB printers (plug in cable first)',
-                style: textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+          child: Text(
+            'USB printers',
+            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
         ),
         const SizedBox(height: 10),
-
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _usbSearchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search by printer name or ids...',
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(
-                        _isWindowsDesktop ? 10 : 8,
-                      ),
-                    ),
-                    isDense: _isWindowsDesktop,
-                  ),
-                  onChanged: (v) => setState(() => _usbSearchQuery = v),
-                ),
-              ),
-              const SizedBox(width: 10),
-              IconButton(
-                tooltip: 'Clear search',
-                onPressed: _usbSearchQuery.isEmpty
-                    ? null
-                    : () {
-                        _usbSearchController.clear();
-                        setState(() => _usbSearchQuery = '');
-                      },
-                icon: const Icon(Icons.clear),
-              ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: Text(
-            'Connect the printer with a USB cable to this device, then tap "Scan for USB printers".',
-            style: textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+          child: TextField(
+            controller: _usbSearchController,
+            decoration: const InputDecoration(
+              hintText: 'Search printers…',
+              prefixIcon: Icon(Icons.search),
+            ),
+            onChanged: (v) => setState(() => _usbSearchQuery = v),
           ),
         ),
         const SizedBox(height: 12),
         Obx(() {
           final isScanning = thermalPrinter.isUsbScanning.value;
           return Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: SizedBox(
-                width: 220,
-                child: FilledButton.icon(
-                  icon: isScanning
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.usb),
-                  label: Text(
-                    isScanning ? 'Scanning...' : 'Scan for USB printers',
-                  ),
-                  onPressed: isScanning
-                      ? null
-                      : () => thermalPrinter.scanUsbPrinters(),
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(46),
-                  ),
-                ),
-              ),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: FilledButton.icon(
+              icon: isScanning
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.usb),
+              label: Text(isScanning ? 'Scanning…' : 'Scan USB'),
+              onPressed: isScanning ? null : thermalPrinter.scanUsbPrinters,
             ),
           );
         }),
@@ -618,83 +1751,52 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                 ? list
                 : list.where((p) {
                     final name = (p.name ?? '').toLowerCase();
-                    final vendor = p.vendorId?.toString().toLowerCase() ?? '';
-                    final product = p.productId?.toString().toLowerCase() ?? '';
-                    return name.contains(query) ||
-                        vendor.contains(query) ||
-                        product.contains(query);
+                    return name.contains(query);
                   }).toList();
-            final _ = thermalPrinter
-                .isUsbConnected
-                .value; // rebuild when connection changes
             if (filtered.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.usb_off, size: 48, color: Colors.grey.shade400),
-                    const SizedBox(height: 12),
-                    Text(
-                      thermalPrinter.isUsbScanning.value
-                          ? 'Looking for USB printers...'
-                          : query.isEmpty
-                          ? 'No USB printers found.\nPlug in the printer and tap Scan.'
-                          : 'No USB printers match "$_usbSearchQuery".',
-                      textAlign: TextAlign.center,
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              );
+              return const Center(child: Text('No USB printers found'));
             }
-            return Scrollbar(
-              thumbVisibility: true,
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: filtered.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  final printer = filtered[index];
-                  final isConnected =
-                      thermalPrinter.isUsbConnected.value &&
-                      thermalPrinter.connectedUsbPrinter == printer;
-                  return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
+            return ListView.separated(
+              itemCount: filtered.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final printer = filtered[index];
+                final printerKey = ThermalPrinterService.usbPrinterKey(printer);
+                return ListTile(
+                  leading: const Icon(Icons.usb),
+                  title: Text(printer.name ?? 'USB Printer'),
+                  trailing: SizedBox(
+                    width: 220,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        _buildAssignRoleButtonsForUsb(printer),
+                        Obx(() {
+                          final isConnected =
+                              thermalPrinter.connectedUsbPrinterKey.value ==
+                              printerKey;
+                          return SizedBox(
+                            width: 100,
+                            child: _connectDisconnectButton(
+                              context: context,
+                              isConnected: isConnected,
+                              onPressed: () async {
+                                if (isConnected) {
+                                  await thermalPrinter.disconnectUsbPrinter();
+                                } else {
+                                  await thermalPrinter.connectUsbPrinter(
+                                    printer,
+                                  );
+                                }
+                              },
+                            ),
+                          );
+                        }),
+                      ],
                     ),
-                    leading: const Icon(Icons.usb),
-                    title: Text(
-                      printer.name ?? 'USB Printer',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: Text(
-                      [
-                        if (printer.vendorId != null) '${printer.vendorId}',
-                        if (printer.productId != null) '${printer.productId}',
-                      ].join(' / '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: SizedBox(
-                      width: 130,
-                      child: FilledButton.tonal(
-                        onPressed: () async {
-                          if (isConnected) {
-                            await thermalPrinter.disconnectUsbPrinter();
-                          } else {
-                            await thermalPrinter.connectUsbPrinter(printer);
-                          }
-                        },
-                        child: Text(isConnected ? 'Disconnect' : 'Connect'),
-                      ),
-                    ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             );
           }),
         ),

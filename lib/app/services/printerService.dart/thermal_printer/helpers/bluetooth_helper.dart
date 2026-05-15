@@ -9,8 +9,7 @@ import '../thermal_printer_service.dart';
 import 'storage_helper.dart';
 
 class BluetoothHelper {
-  /// Windows builds omit BLE plugin registration (native WinRT abort); never call FBP.
-  static bool get _skipBle => !kIsWeb && Platform.isWindows;
+  static bool get _skipBle => kIsWeb;
 
   static bool _printerAutoConnectAllowed() {
     if (!Get.isRegistered<AppPref>()) return false;
@@ -25,20 +24,23 @@ class BluetoothHelper {
     FlutterBluePlus.events.onConnectionStateChanged.listen((event) async {
       if (event.device == service.connectedDevice) {
         if (event.connectionState == BluetoothConnectionState.disconnected) {
+          if (service.isBleConnecting.value) return;
+
           debugPrint('🔌 Device disconnected');
 
-          service.isConnected.value = false;
-          service.connectionStatus.value = 'Disconnected';
-          service.connectedDevice = null;
-          service.writeCharacteristic = null;
+          service.syncBleDisconnected();
 
-          await _attemptAutoReconnect(service);
+          if (!Platform.isWindows) {
+            await _attemptAutoReconnect(service);
+          }
         } else if (event.connectionState ==
             BluetoothConnectionState.connected) {
           debugPrint('🔗 Device connected');
 
-          service.isConnected.value = true;
-          service.connectionStatus.value = 'Connected';
+          if (service.connectedBleDeviceId.value == null) {
+            service.isConnected.value = true;
+            service.connectionStatus.value = 'Connected';
+          }
         }
       }
     });
@@ -56,10 +58,7 @@ class BluetoothHelper {
         await Future.delayed(const Duration(seconds: 3)); // 🔥 TABLET FIX
         await _onBluetoothEnabled(service);
       } else if (state == BluetoothAdapterState.off) {
-        service.isConnected.value = false;
-        service.connectionStatus.value = 'Bluetooth Off';
-        service.connectedDevice = null;
-        service.writeCharacteristic = null;
+        service.syncBleDisconnected(statusMessage: 'Bluetooth Off');
       }
     });
   }
@@ -107,12 +106,13 @@ class BluetoothHelper {
           await FlutterBluePlus.stopScan();
         } catch (_) {}
 
-        // 3️⃣ Disconnect if already connected
-        try {
-          await device.disconnect();
-        } catch (_) {}
-
-        await Future.delayed(const Duration(milliseconds: 500));
+        // 3️⃣ Disconnect if already connected (skip on Windows — spurious events)
+        if (!Platform.isWindows) {
+          try {
+            await device.disconnect();
+          } catch (_) {}
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
 
         // 4️⃣ Android-specific: check bond state
         if (GetPlatform.isAndroid) {
@@ -192,11 +192,7 @@ class BluetoothHelper {
         }
 
         // 9️⃣ Save connection info
-        service.connectedDevice = device;
-        service.writeCharacteristic = writableChar;
-        service.isConnected.value = true;
-        service.connectionStatus.value =
-            'Connected to ${device.name.isNotEmpty ? device.name : 'Rugtek P2'}';
+        service.syncBleConnected(device, writableChar);
 
         await StorageHelper.saveDevice(device);
 
@@ -245,11 +241,7 @@ class BluetoothHelper {
 
         final writableChar = await _discoverWritableCharacteristic(device);
         if (writableChar != null) {
-          service.connectedDevice = device;
-          service.writeCharacteristic = writableChar;
-          service.isConnected.value = true;
-          service.connectionStatus.value =
-              'Reconnected to ${device.platformName.isNotEmpty ? device.platformName : "printer"}';
+          service.syncBleConnected(device, writableChar);
           debugPrint('✅ Recovered Bluetooth state from existing connection');
           return true;
         }
@@ -296,10 +288,7 @@ class BluetoothHelper {
   // =========================
   static Future<void> disconnect(ThermalPrinterService service) async {
     if (_skipBle) {
-      service.connectedDevice = null;
-      service.writeCharacteristic = null;
-      service.isConnected.value = false;
-      service.connectionStatus.value = 'Disconnected';
+      service.syncBleDisconnected();
       return;
     }
     if (service.connectedDevice != null) {
@@ -309,11 +298,7 @@ class BluetoothHelper {
       } catch (e) {
         debugPrint('⚠️ Disconnect error: $e');
       }
-
-      service.connectedDevice = null;
-      service.writeCharacteristic = null;
-      service.isConnected.value = false;
-      service.connectionStatus.value = 'Disconnected';
+      service.syncBleDisconnected();
     }
   }
 
@@ -321,7 +306,7 @@ class BluetoothHelper {
   // AUTO CONNECT - ENHANCED FOR RUGTEK P2
   // =========================
   static Future<bool> tryAutoConnect(ThermalPrinterService service) async {
-    if (_skipBle) return false;
+    if (_skipBle || Platform.isWindows) return false;
     if (!_printerAutoConnectAllowed()) {
       service.isAutoConnecting.value = false;
       return false;

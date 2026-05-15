@@ -22,6 +22,9 @@ class AppPref {
       'show_add_details_on_create_order';
   static const String keyDownloadPath = 'download_path';
 
+  /// True when the user signed in via the staff tab (`auth/staff/login`).
+  static const String keyStaffSession = 'staff_session';
+
   AppPref(this._preferences);
 
   /// Login
@@ -32,7 +35,8 @@ class AppPref {
 
   User? get user => _preferences.containsKey(keyUser)
       ? User.fromJson(
-          jsonDecode(_preferences.getString(keyUser) ?? '') as Map<String, dynamic>,
+          jsonDecode(_preferences.getString(keyUser) ?? '')
+              as Map<String, dynamic>,
         )
       : null;
 
@@ -137,6 +141,11 @@ class AppPref {
   set downloadPath(String value) =>
       _preferences.setString(keyDownloadPath, value);
 
+  /// 👉 Staff sign-in path (role from API may be missing or inconsistent).
+  bool get isStaffSession => _preferences.getBool(keyStaffSession) ?? false;
+  set isStaffSession(bool value) =>
+      _preferences.setBool(keyStaffSession, value);
+
   /// Clear all
   Future<bool> clear() async => await _preferences.clear();
 
@@ -147,6 +156,7 @@ class AppPref {
     await _preferences.remove(keyCurrentUser);
     await _preferences.remove(keySelectedOutlet);
     await _preferences.remove(keyIsKOT);
+    await _preferences.remove(keyStaffSession);
     await _preferences.remove(keyShowcaseCompleted); // Reset showcase on logout
     // Keeping saved users & recent users
     return true;

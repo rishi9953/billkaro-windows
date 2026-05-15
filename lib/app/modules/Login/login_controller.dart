@@ -3,6 +3,9 @@ import 'package:billkaro/app/services/Modals/login_modal.dart';
 import 'package:billkaro/config/config.dart';
 
 class LoginController extends BaseController {
+  /// 0 = business user (auth/login), 1 = staff (auth/staff/login).
+  var signInTabIndex = 0.obs;
+
   // Observable variables
   var toggle = true.obs;
   var isLoading = false.obs;
@@ -170,25 +173,39 @@ class LoginController extends BaseController {
   }
 
   void onLogin() async {
+    if (!addDeviceFormKey.currentState!.validate()) {
+      return;
+    }
+
     // Set up SSL bypass (call once, preferably in main())
     HttpOverrides.global = MyHttpOverrides();
 
     try {
+      isLoading.value = true;
+      final isStaff = signInTabIndex.value == 1;
       var request = LoginModel(
-        email: registrationKeyController.text,
+        email: registrationKeyController.text.trim(),
         password: deviceLabelController.text,
       );
 
-      final response = await callApi(apiClient.onLogin(request));
+      final response = await callApi(
+        isStaff ? apiClient.onStaffLogin(request) : apiClient.onLogin(request),
+      );
       debugPrint('Login Response: $response');
       if (response != null) {
         appPref.token = response.accessToken;
+        appPref.isStaffSession = isStaff;
         appPref.user = response.user;
-        appPref.selectedOutlet = response.user.outletData![0];
+        final outlets = response.user.outletData;
+        if (outlets != null && outlets.isNotEmpty) {
+          appPref.selectedOutlet = outlets.first;
+        }
         Get.offAllNamed(AppRoute.homeMain);
       }
     } catch (e) {
-      print('Error during login: $e');
+      debugPrint('Error during login: $e');
+    } finally {
+      isLoading.value = false;
     }
   }
 

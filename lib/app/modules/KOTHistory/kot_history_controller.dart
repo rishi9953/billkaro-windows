@@ -111,7 +111,9 @@ class KotHistoryController extends BaseController {
   Future<void> reprintThermal(OrderModel o) async {
     try {
       final printerService = ThermalPrinterService.instance;
-      final connected = await printerService.ensureConnected();
+      final connected = await printerService.ensureConnectedForRole(
+        PrintRole.kot,
+      );
       if (!connected) return;
 
       final now = DateTime.now().toString();

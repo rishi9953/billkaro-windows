@@ -29,6 +29,7 @@ abstract class HomeMainRoutes {
   static const customersDetails = '/customer-details';
   static const addRegularCustomer = '/add-regular-customer';
   static const addStaffScreen = '/add-staff';
+  static const staffActivityScreen = '/staff-activity';
   static const whatsaapMarketing = '/whatsaap-marketing';
   static const settings = '/app-settings';
   static const changeLanguage = '/change-language';
@@ -121,15 +122,15 @@ abstract class HomeMainRoutes {
           case 6:
             return customers;
           case 7:
-            return printer;
-          case 8:
             return staff;
-          case 9:
+          case 8:
             return menu;
-          case 10:
+          case 9:
             return subscriptions;
-          case 11:
+          case 10:
             return whatsaapMarketing;
+          case 11:
+            return printer;
           case 12:
             return settings;
           case 13:
@@ -152,15 +153,15 @@ abstract class HomeMainRoutes {
         case 5:
           return customers;
         case 6:
-          return printer;
-        case 7:
           return staff;
-        case 8:
+        case 7:
           return menu;
-        case 9:
+        case 8:
           return subscriptions;
-        case 10:
+        case 9:
           return whatsaapMarketing;
+        case 10:
+          return printer;
         case 11:
           return settings;
         case 12:
@@ -189,15 +190,15 @@ abstract class HomeMainRoutes {
         case 7:
           return customers;
         case 8:
-          return printer;
-        case 9:
           return staff;
-        case 10:
+        case 9:
           return menu;
-        case 11:
+        case 10:
           return subscriptions;
-        case 12:
+        case 11:
           return whatsaapMarketing;
+        case 12:
+          return printer;
         case 13:
           return settings;
         case 14:
@@ -222,15 +223,15 @@ abstract class HomeMainRoutes {
       case 6:
         return customers;
       case 7:
-        return printer;
-      case 8:
         return staff;
-      case 9:
+      case 8:
         return menu;
-      case 10:
+      case 9:
         return subscriptions;
-      case 11:
+      case 10:
         return whatsaapMarketing;
+      case 11:
+        return printer;
       case 12:
         return settings;
       case 13:
@@ -277,23 +278,23 @@ abstract class HomeMainRoutes {
         return k ? 6 : 5;
       }
       if (path.startsWith(printer)) {
-        return k ? 7 : 6;
-      }
-      if (path.startsWith(staff)) {
-        return k ? 8 : 7;
-      }
-      if (path.startsWith(whatsaapMarketing)) {
         return k ? 11 : 10;
       }
+      if (path.startsWith(staff)) {
+        return k ? 7 : 6;
+      }
+      if (path.startsWith(whatsaapMarketing)) {
+        return k ? 10 : 9;
+      }
       if (path.startsWith(menu)) {
-        return k ? 9 : 8;
+        return k ? 8 : 7;
       }
       if (path.startsWith(profile)) {
         return k ? 13 : 12;
       }
 
       if (path.startsWith(subscriptions)) {
-        return k ? 10 : 9;
+        return k ? 9 : 8;
       }
 
       if (path.startsWith(settings)) {
@@ -301,7 +302,7 @@ abstract class HomeMainRoutes {
       }
 
       if (path.startsWith(changeLanguage)) {
-        return k ? 9 : 8;
+        return k ? 8 : 7;
       }
 
       return 0;
@@ -336,23 +337,23 @@ abstract class HomeMainRoutes {
       return k ? 7 : 6;
     }
     if (path.startsWith(printer)) {
-      return k ? 8 : 7;
-    }
-    if (path.startsWith(staff)) {
-      return k ? 9 : 8;
-    }
-    if (path.startsWith(whatsaapMarketing)) {
       return k ? 12 : 11;
     }
+    if (path.startsWith(staff)) {
+      return k ? 8 : 7;
+    }
+    if (path.startsWith(whatsaapMarketing)) {
+      return k ? 11 : 10;
+    }
     if (path.startsWith(menu)) {
-      return k ? 10 : 9;
+      return k ? 9 : 8;
     }
     if (path.startsWith(profile)) {
       return k ? 14 : 13;
     }
 
     if (path.startsWith(subscriptions)) {
-      return k ? 11 : 10;
+      return k ? 10 : 9;
     }
 
     if (path.startsWith(settings)) {
@@ -362,7 +363,7 @@ abstract class HomeMainRoutes {
     // Keep Change Language under the "Menu" section in the sidebar.
     // (Language screen is not a dedicated sidebar item.)
     if (path.startsWith(changeLanguage)) {
-      return k ? 10 : 9;
+      return k ? 9 : 8;
     }
 
     return 0;

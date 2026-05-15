@@ -84,38 +84,6 @@ class KOTPreviewController extends BaseController {
     try {
       showAppLoader();
 
-      // Check if printer is connected
-      if (!printerService.isConnected.value) {
-        dismissAppLoader();
-
-        // Show connection dialog
-        final shouldConnect = await Get.dialog<bool>(
-          AlertDialog(
-            title: const Text('Printer Not Connected'),
-            content: const Text(
-              'Would you like to connect to a thermal printer?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Get.back(result: false),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () => Get.back(result: true),
-                child: const Text('Connect'),
-              ),
-            ],
-          ),
-        );
-
-        if (shouldConnect == true) {
-          // Navigate to printer settings or show connection UI
-          await _showPrinterConnection();
-        }
-        return;
-      }
-
-      // Print KOT
       await printerService.printKOT(
         kotNumber: kotNumber.value,
         brandName: appPref.user!.brandName ?? '',

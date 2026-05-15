@@ -1,6 +1,7 @@
 import 'package:billkaro/app/services/Modals/Categories/categories_response.dart';
 import 'package:billkaro/app/services/Modals/PrinterOrderRequest/printer_order_request.dart';
 import 'package:billkaro/app/services/Modals/Subscriptions/subscription_response.dart';
+import 'package:billkaro/app/services/Modals/activites/activities_response.dart';
 import 'package:billkaro/app/services/Modals/addItem/addItem_modal.dart';
 import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
 import 'package:billkaro/app/services/Modals/businessType/businesst_type_response.dart';
@@ -30,6 +31,9 @@ abstract class ApiClient {
 
   @POST(login)
   Future<LoginResponse> onLogin(@Body() LoginModel loginRequest);
+
+  @POST(staffLogin)
+  Future<LoginResponse> onStaffLogin(@Body() LoginModel loginRequest);
 
   @POST(forgotPass)
   Future<dynamic> forgotPassword(@Body() Map<String, dynamic> body);
@@ -222,9 +226,27 @@ abstract class ApiClient {
   @GET('outlets/{outletId}/$staff')
   Future<dynamic> getStaffList(@Path('outletId') String outletId);
 
+  @PATCH('outlets/{outletId}/$staff/{staffId}')
+  Future<dynamic> updateStaff(
+    @Path('outletId') String outletId,
+    @Path('staffId') String staffId,
+    @Body() Map<String, dynamic> body,
+  );
+
   @DELETE('outlets/{outletId}/$staff/{staffId}')
   Future<dynamic> deleteStaff(
     @Path('outletId') String outletId,
     @Path('staffId') String staffId,
   );
+
+  @GET(activities)
+  Future<ActivityResponseModel> getActivities(
+    @Query('outletId') String outletId, {
+    @Query('userId') String? staffId,
+    @Query('type') String? type,
+    @Query('startDate') String? startDate,
+    @Query('endDate') String? endDate,
+    @Query('page') int? page,
+    @Query('limit') int? limit,
+  });
 }
