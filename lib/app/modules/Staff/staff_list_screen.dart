@@ -19,18 +19,11 @@ class StaffListScreen extends StatelessWidget {
       backgroundColor: const Color(0xFFE8EEF7),
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: const Color(0xFFE8EEF7),
         elevation: 0,
-        title: isWindows
-            ? null
-            : Text(
-                loc.manage_staff,
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+        title: Text(
+          loc.manage_staff,
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+        ),
       ),
       body: isWindows
           ? _buildWindowsLayout(context, controller, loc)
@@ -50,8 +43,7 @@ class StaffListScreen extends StatelessWidget {
     return Column(
       children: [
         _StaffActivityEntry(
-          onTap: () =>
-              Modular.to.pushNamed(HomeMainRoutes.staffActivityScreen),
+          onTap: () => Modular.to.pushNamed(HomeMainRoutes.staffActivityScreen),
         ),
         _SearchField(controller: controller, isWindows: false),
         Expanded(
@@ -62,8 +54,9 @@ class StaffListScreen extends StatelessWidget {
                 return const Center(child: CircularProgressIndicator());
               }
               final list = controller.filteredStaff;
-              final isSearching =
-                  controller.searchQuery.value.trim().isNotEmpty;
+              final isSearching = controller.searchQuery.value
+                  .trim()
+                  .isNotEmpty;
               if (list.isEmpty) {
                 return _EmptyStaffState(
                   isSearching: isSearching,
@@ -167,9 +160,7 @@ class StaffListScreen extends StatelessWidget {
                                 if (controller.isLoading.value &&
                                     controller.staffList.isEmpty) {
                                   return const Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      vertical: 50,
-                                    ),
+                                    padding: EdgeInsets.symmetric(vertical: 50),
                                     child: Center(
                                       child: CircularProgressIndicator(),
                                     ),
@@ -395,10 +386,7 @@ class _StaffActivityEntry extends StatelessWidget {
           padding: const EdgeInsets.all(10),
           child: Row(
             children: [
-              Icon(
-                Icons.people_alt_outlined,
-                color: Colors.blueGrey.shade700,
-              ),
+              Icon(Icons.people_alt_outlined, color: Colors.blueGrey.shade700),
               const SizedBox(width: 10),
               const Text(
                 'Check Staff Activity',
@@ -441,10 +429,7 @@ class _WindowsHeaderCard extends StatelessWidget {
                   color: AppColor.primary.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  Icons.people_alt_outlined,
-                  color: AppColor.primary,
-                ),
+                child: Icon(Icons.people_alt_outlined, color: AppColor.primary),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -584,9 +569,7 @@ class _WindowsStaffRow extends StatelessWidget {
                   radius: 16,
                   backgroundColor: AppColor.primary.withValues(alpha: 0.12),
                   child: Text(
-                    member.name.isNotEmpty
-                        ? member.name[0].toUpperCase()
-                        : '?',
+                    member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 12,
@@ -822,11 +805,7 @@ class _StatusChip extends StatelessWidget {
       ),
       child: Text(
         isActive ? 'Active' : 'Pending',
-        style: TextStyle(
-          fontSize: 11,
-          color: fg,
-          fontWeight: FontWeight.w600,
-        ),
+        style: TextStyle(fontSize: 11, color: fg, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -855,10 +834,7 @@ class _EmptyStaffState extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               isSearching ? 'No matching staff found' : 'No staff found',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(

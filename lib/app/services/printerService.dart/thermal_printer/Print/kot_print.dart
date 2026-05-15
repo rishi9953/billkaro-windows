@@ -109,7 +109,14 @@ class KotPrintJob extends PrintJob {
 
     builder
       ..line()
-      ..bold(TextHelper.formatRow('Total Items', '$totalQuantity', 48) + '\n');
+      ..bold(
+        TextHelper.formatRow(
+              'Total Items',
+              '$totalQuantity',
+              builder.receiptWidth,
+            ) +
+            '\n',
+      );
 
     if (specialInstructions.isNotEmpty) {
       builder

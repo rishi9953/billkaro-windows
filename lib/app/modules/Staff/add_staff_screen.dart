@@ -243,11 +243,9 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
     final isEditMode = controller.isEditMode;
 
     return Scaffold(
-      backgroundColor: isWin ? AppColor.backGroundColor : null,
       appBar: AppBar(
         elevation: isWin ? 0 : 0,
         scrolledUnderElevation: isWin ? 0 : null,
-        surfaceTintColor: isWin ? Colors.transparent : null,
         toolbarHeight: isWin ? 48 : kToolbarHeight,
         title: Text(
           isEditMode ? 'Edit Staff' : loc.add_staff,

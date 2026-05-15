@@ -20,6 +20,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:billkaro/utils/app_snackbar.dart';
 import 'helpers/storage_helper.dart';
 import 'helpers/bluetooth_helper.dart';
+import 'helpers/windows_usb_printer_probe.dart';
 import 'builders/print_builder.dart';
 import 'generators/qr_generator.dart';
 import 'helpers/text_helper.dart';
@@ -60,6 +61,13 @@ class ThermalPrinterService extends GetxController {
   final connectingBleDeviceId = Rxn<String>();
 
   StreamSubscription<List<ScanResult>>? _scanResultsSubscription;
+  StreamSubscription<BluetoothConnectionState>? _bleDeviceStateSubscription;
+  StreamSubscription<List<Printer>>? _usbPresenceMonitorSub;
+  Timer? _printerHealthTimer;
+  DateTime? _lastOfflineNoticeAt;
+  bool _handlingPrinterOffline = false;
+  int _usbPresenceMissStreak = 0;
+  int _blePresenceMissStreak = 0;
 
   static String usbPrinterKey(Printer printer) {
     final addr = (printer.address ?? '').trim();
@@ -76,7 +84,7 @@ class ThermalPrinterService extends GetxController {
   Future<void> _disconnectActiveConnections() async {
     try {
       if (isUsbConnected.value) {
-        await disconnectUsbPrinter();
+        await disconnectUsbPrinter(notifyUser: false);
       }
     } catch (e) {
       debugPrint('USB disconnect before role switch: $e');
@@ -109,9 +117,12 @@ class ThermalPrinterService extends GetxController {
     final name = device.platformName.trim();
     connectionStatus.value =
         'Connected to ${name.isNotEmpty ? name : 'Printer'}';
+    _startWatchingBleDevice(device);
   }
 
   void syncBleDisconnected({String? statusMessage}) {
+    _stopWatchingBleDevice();
+    _blePresenceMissStreak = 0;
     connectedDevice = null;
     writeCharacteristic = null;
     connectedBleDeviceId.value = null;
@@ -126,6 +137,8 @@ class ThermalPrinterService extends GetxController {
     super.onInit();
     if (kIsWeb) return;
     BluetoothHelper.listenToConnectionState(this);
+    BluetoothHelper.listenToAdapterState(this);
+    _startPrinterHealthMonitor();
     // Windows: manual connect from Printer Settings only (no background auto-connect).
     if (!Platform.isWindows) {
       _initAutoConnect();
@@ -140,8 +153,285 @@ class ThermalPrinterService extends GetxController {
   @override
   void onClose() {
     _scanResultsSubscription?.cancel();
+    _bleDeviceStateSubscription?.cancel();
+    _usbPresenceMonitorSub?.cancel();
+    _printerHealthTimer?.cancel();
     disconnect();
     super.onClose();
+  }
+
+  void _startPrinterHealthMonitor() {
+    if (kIsWeb) return;
+    _printerHealthTimer?.cancel();
+    _printerHealthTimer = Timer.periodic(
+      const Duration(seconds: 2),
+      (_) => unawaited(_verifyActivePrinterConnections()),
+    );
+    _ensureUsbPresenceMonitor();
+  }
+
+  void _ensureUsbPresenceMonitor() {
+    if (kIsWeb || _usbPresenceMonitorSub != null) return;
+    unawaited(
+      FlutterThermalPrinter.instance
+          .getPrinters(connectionTypes: [ConnectionType.USB])
+          .catchError((_) {}),
+    );
+    _usbPresenceMonitorSub = FlutterThermalPrinter.instance.devicesStream
+        .listen(
+          _handleUsbDevicesListUpdate,
+          onError: (e) => debugPrint('USB presence monitor error: $e'),
+        );
+  }
+
+  void _handleUsbDevicesListUpdate(List<Printer> event) {
+    final list = event.toList()
+      ..removeWhere((p) => (p.name ?? '').trim().isEmpty);
+    usbPrinters.assignAll(list);
+
+    if (!isUsbConnected.value || connectedUsbPrinter == null) {
+      _usbPresenceMissStreak = 0;
+      return;
+    }
+
+    // Windows keeps installed queue names even when hardware is off — use spooler status.
+    if (Platform.isWindows) {
+      unawaited(_verifyUsbConnectionIfNeeded());
+      return;
+    }
+
+    final stillPresent = list.any(
+      (p) => _sameUsbPrinter(p, connectedUsbPrinter!),
+    );
+    if (stillPresent) {
+      _usbPresenceMissStreak = 0;
+      return;
+    }
+
+    debugPrint('🔌 USB device list: connected printer no longer present');
+    unawaited(
+      handleUsbPrinterWentOffline(
+        notifyUser: true,
+        statusMessage: 'USB printer disconnected',
+      ),
+    );
+  }
+
+  void _notifyPrinterWentOffline(String message) {
+    final now = DateTime.now();
+    if (_lastOfflineNoticeAt != null &&
+        now.difference(_lastOfflineNoticeAt!) < const Duration(seconds: 10)) {
+      return;
+    }
+    _lastOfflineNoticeAt = now;
+    AppSnackbar.show(
+      title: 'Printer offline',
+      message: message,
+      duration: Duration(seconds: 2),
+      snackPosition: SnackPosition.BOTTOM,
+    );
+  }
+
+  /// Clears BLE state when the device drops off (power off, out of range, etc.).
+  void handleBlePrinterWentOffline({
+    bool notifyUser = false,
+    String? statusMessage,
+  }) {
+    if (_handlingPrinterOffline) return;
+    _handlingPrinterOffline = true;
+    try {
+      final wasBle =
+          connectedBleDeviceId.value != null || connectedDevice != null;
+      syncBleDisconnected(statusMessage: statusMessage);
+      if (notifyUser && wasBle) {
+        _notifyPrinterWentOffline(
+          statusMessage ?? 'Bluetooth printer is no longer available',
+        );
+      }
+    } finally {
+      _handlingPrinterOffline = false;
+    }
+  }
+
+  void syncUsbDisconnected({String? statusMessage}) {
+    connectedUsbPrinter = null;
+    connectedUsbPrinterKey.value = null;
+    isUsbConnected.value = false;
+    _usbPresenceMissStreak = 0;
+    if (connectedBleDeviceId.value == null) {
+      isConnected.value = false;
+      connectionStatus.value = statusMessage ?? 'USB printer disconnected';
+    }
+  }
+
+  /// Clears USB state when the printer is unplugged, powered off, or unreachable.
+  Future<void> handleUsbPrinterWentOffline({
+    bool notifyUser = false,
+    String? statusMessage,
+  }) async {
+    if (_handlingPrinterOffline || !isUsbConnected.value) return;
+    _handlingPrinterOffline = true;
+    try {
+      final wasUsb = connectedUsbPrinter != null;
+      debugPrint('🔌 USB printer offline — disconnecting');
+      try {
+        if (connectedUsbPrinter != null) {
+          await FlutterThermalPrinter.instance.disconnect(
+            connectedUsbPrinter!,
+          );
+        }
+      } catch (e) {
+        debugPrint('USB plugin disconnect on offline: $e');
+      }
+      syncUsbDisconnected(statusMessage: statusMessage);
+      if (notifyUser && wasUsb) {
+        _notifyPrinterWentOffline(
+          statusMessage ?? 'USB printer was unplugged or turned off',
+        );
+      }
+    } finally {
+      _handlingPrinterOffline = false;
+    }
+  }
+
+  Future<bool> _isUsbPrinterReachable() async {
+    if (connectedUsbPrinter == null) return false;
+    final printer = connectedUsbPrinter!;
+
+    if (Platform.isWindows) {
+      final name = (printer.name ?? printer.address ?? '').trim();
+      return isWindowsUsbPrinterReachable(name);
+    }
+
+    if (usbPrinters.any((p) => _sameUsbPrinter(p, connectedUsbPrinter!))) {
+      return true;
+    }
+
+    await _refreshUsbDeviceListQuiet();
+    return usbPrinters.any((p) => _sameUsbPrinter(p, connectedUsbPrinter!));
+  }
+
+  int get _offlineMissThreshold => Platform.isWindows ? 1 : 2;
+
+  Future<void> _verifyUsbConnectionIfNeeded() async {
+    if (!isUsbConnected.value || connectedUsbPrinter == null) {
+      _usbPresenceMissStreak = 0;
+      return;
+    }
+
+    final reachable = await _isUsbPrinterReachable();
+    if (reachable) {
+      _usbPresenceMissStreak = 0;
+      return;
+    }
+
+    _usbPresenceMissStreak++;
+    debugPrint('USB health check miss ($_usbPresenceMissStreak)');
+    if (_usbPresenceMissStreak >= _offlineMissThreshold) {
+      await handleUsbPrinterWentOffline(
+        notifyUser: true,
+        statusMessage: 'USB printer disconnected',
+      );
+    }
+  }
+
+  Future<bool> _isBlePrinterReachable() async {
+    final device = connectedDevice;
+    if (device == null) return false;
+
+    try {
+      if (!await device.isConnected) return false;
+
+      final state = await device.connectionState
+          .where(
+            (s) =>
+                s == BluetoothConnectionState.connected ||
+                s == BluetoothConnectionState.disconnected,
+          )
+          .first
+          .timeout(const Duration(seconds: 2));
+      if (state != BluetoothConnectionState.connected) return false;
+
+      await device.discoverServices().timeout(const Duration(seconds: 2));
+      return true;
+    } catch (e) {
+      debugPrint('BLE reachability probe failed: $e');
+      return false;
+    }
+  }
+
+  Future<void> _verifyBleConnectionIfNeeded() async {
+    if (connectedDevice == null || connectedBleDeviceId.value == null) {
+      _blePresenceMissStreak = 0;
+      return;
+    }
+
+    final reachable = await _isBlePrinterReachable();
+    if (reachable) {
+      _blePresenceMissStreak = 0;
+      return;
+    }
+
+    _blePresenceMissStreak++;
+    debugPrint('BLE health check miss ($_blePresenceMissStreak)');
+    if (_blePresenceMissStreak >= _offlineMissThreshold) {
+      handleBlePrinterWentOffline(
+        notifyUser: true,
+        statusMessage: 'Bluetooth printer disconnected',
+      );
+    }
+  }
+
+  Future<void> _verifyActivePrinterConnections() async {
+    if (kIsWeb || _handlingPrinterOffline) return;
+
+    if (isUsbConnected.value && connectedUsbPrinter != null) {
+      await _verifyUsbConnectionIfNeeded();
+      if (!isUsbConnected.value) return;
+    }
+
+    if (connectedDevice != null && connectedBleDeviceId.value != null) {
+      await _verifyBleConnectionIfNeeded();
+    }
+  }
+
+  Future<void> _refreshUsbDeviceListQuiet() async {
+    if (kIsWeb) return;
+    try {
+      await FlutterThermalPrinter.instance.getPrinters(
+        connectionTypes: [ConnectionType.USB],
+      );
+      final discovered = await FlutterThermalPrinter
+          .instance
+          .devicesStream
+          .first
+          .timeout(const Duration(seconds: 2), onTimeout: () => <Printer>[]);
+      usbPrinters.assignAll(
+        discovered.where((p) => (p.name ?? '').trim().isNotEmpty),
+      );
+    } catch (e) {
+      debugPrint('Quiet USB refresh failed: $e');
+    }
+  }
+
+  void _startWatchingBleDevice(BluetoothDevice device) {
+    if (kIsWeb) return;
+    _bleDeviceStateSubscription?.cancel();
+    _bleDeviceStateSubscription = device.connectionState.listen((state) {
+      if (state != BluetoothConnectionState.disconnected) return;
+      if (connectedBleDeviceId.value != device.remoteId.toString()) return;
+      if (isBleConnecting.value) return;
+      debugPrint('🔌 BLE device stream: disconnected');
+      handleBlePrinterWentOffline(
+        notifyUser: true,
+        statusMessage: 'Bluetooth printer disconnected',
+      );
+    });
+  }
+
+  void _stopWatchingBleDevice() {
+    _bleDeviceStateSubscription?.cancel();
+    _bleDeviceStateSubscription = null;
   }
 
   // Public API - Permissions
@@ -201,7 +491,6 @@ class ThermalPrinterService extends GetxController {
 
   // Public API - USB Scanning and Connection
   List<Printer> printers = [];
-  StreamSubscription<List<Printer>>? _devicesStreamSubscription;
 
   Future<void> checkForUsbPermission() async {
     // USB printer discovery does not require storage permission on desktop.
@@ -217,7 +506,6 @@ class ThermalPrinterService extends GetxController {
   Future<void> scanUsbPrinters() async {
     try {
       await checkForUsbPermission();
-      _devicesStreamSubscription?.cancel();
       isUsbScanning.value = true;
       usbPrinters.clear();
 
@@ -244,14 +532,7 @@ class ThermalPrinterService extends GetxController {
       // Some Windows USB printers report generic names; don't aggressively filter.
       usbPrinters.assignAll(printers);
       debugPrint('Found ${usbPrinters.length} USB printer(s)');
-
-      // Keep subscription to reflect late-arriving devices (optional but useful)
-      _devicesStreamSubscription = FlutterThermalPrinter.instance.devicesStream
-          .listen((List<Printer> event) {
-            final list = event.toList()
-              ..removeWhere((p) => (p.name ?? '').trim().isEmpty);
-            usbPrinters.assignAll(list);
-          });
+      _ensureUsbPresenceMonitor();
     } catch (e) {
       debugPrint('USB Scan Error: $e');
       AppSnackbar.show(
@@ -280,6 +561,9 @@ class ThermalPrinterService extends GetxController {
 
         // Save USB printer info for auto-connect
         await StorageHelper.saveUsbPrinter(printer.name ?? '');
+        _usbPresenceMissStreak = 0;
+        _ensureUsbPresenceMonitor();
+        unawaited(_refreshUsbDeviceListQuiet());
 
         return true;
       } else {
@@ -298,18 +582,18 @@ class ThermalPrinterService extends GetxController {
     }
   }
 
-  Future<void> disconnectUsbPrinter() async {
+  Future<void> disconnectUsbPrinter({bool notifyUser = true}) async {
     try {
       if (connectedUsbPrinter != null) {
-        await FlutterThermalPrinter.instance.disconnect(connectedUsbPrinter!);
-        connectedUsbPrinter = null;
-        connectedUsbPrinterKey.value = null;
-        isUsbConnected.value = false;
-        isConnected.value = connectedBleDeviceId.value != null;
-        if (connectedBleDeviceId.value == null) {
-          connectionStatus.value = 'USB printer disconnected';
+        try {
+          await FlutterThermalPrinter.instance.disconnect(connectedUsbPrinter!);
+        } catch (e) {
+          debugPrint('USB Disconnect Error: $e');
         }
+      }
+      syncUsbDisconnected(statusMessage: 'USB printer disconnected');
 
+      if (notifyUser) {
         AppSnackbar.show(
           title: 'Disconnected',
           message: 'USB printer disconnected',
@@ -318,6 +602,7 @@ class ThermalPrinterService extends GetxController {
       }
     } catch (e) {
       debugPrint('USB Disconnect Error: $e');
+      syncUsbDisconnected();
     }
   }
 
@@ -375,7 +660,7 @@ class ThermalPrinterService extends GetxController {
 
   Future<void> disconnect() async {
     if (isUsbConnected.value) {
-      await disconnectUsbPrinter();
+      await disconnectUsbPrinter(notifyUser: false);
     } else {
       await BluetoothHelper.disconnect(this);
     }
@@ -699,11 +984,24 @@ class ThermalPrinterService extends GetxController {
   }
 
   Future<void> _printUsbEscPos(Printer printer, List<int> bytes) async {
-    await FlutterThermalPrinter.instance.printData(
-      printer,
-      Uint8List.fromList(bytes),
-      longData: true,
-    );
+    try {
+      await FlutterThermalPrinter.instance.printData(
+        printer,
+        Uint8List.fromList(bytes),
+        longData: true,
+      );
+    } catch (e) {
+      debugPrint('USB printData error: $e');
+      if (isUsbConnected.value) {
+        unawaited(
+          handleUsbPrinterWentOffline(
+            notifyUser: true,
+            statusMessage: 'USB printer connection lost',
+          ),
+        );
+      }
+      rethrow;
+    }
   }
 
   Future<void> testPrintForRole(PrintRole role) async {
@@ -870,7 +1168,10 @@ class ThermalPrinterService extends GetxController {
 
     builder
       ..line()
-      ..bold(TextHelper.formatRow('Total Items', '$totalQuantity', 48) + '\n');
+      ..bold(
+        TextHelper.formatRow('Total Items', '$totalQuantity', receiptW) +
+            '\n',
+      );
 
     if (specialInstructions.isNotEmpty) {
       builder

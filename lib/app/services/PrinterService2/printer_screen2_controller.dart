@@ -128,6 +128,7 @@ class PrinterScreen2Controller extends GetxController {
         title: 'Success',
         message:
             '${role == PrintRole.bill ? 'Bill' : 'KOT'} printer: ${printer.name ?? 'USB'}',
+        duration: const Duration(seconds: 2),
       );
     } catch (e) {
       AppSnackbar.show(title: 'Error', message: '$e');
@@ -149,9 +150,14 @@ class PrinterScreen2Controller extends GetxController {
       AppSnackbar.show(
         title: 'Success',
         message: '${role == PrintRole.bill ? 'Bill' : 'KOT'} printer: $name',
+        duration: const Duration(seconds: 2),
       );
     } catch (e) {
-      AppSnackbar.show(title: 'Error', message: '$e');
+      AppSnackbar.show(
+        title: 'Error',
+        message: '$e',
+        duration: const Duration(seconds: 2),
+      );
     } finally {
       isRoleActionLoading.value = false;
     }
@@ -163,6 +169,7 @@ class PrinterScreen2Controller extends GetxController {
     AppSnackbar.show(
       title: 'Removed',
       message: '${role == PrintRole.bill ? 'Bill' : 'KOT'} printer cleared',
+      duration: const Duration(seconds: 2),
     );
   }
 
@@ -176,7 +183,11 @@ class PrinterScreen2Controller extends GetxController {
         duration: const Duration(seconds: 2),
       );
     } catch (e) {
-      AppSnackbar.show(title: 'Print failed', message: '$e');
+      AppSnackbar.show(
+        title: 'Print failed',
+        message: '$e',
+        duration: const Duration(seconds: 2),
+      );
     } finally {
       isRoleActionLoading.value = false;
     }
@@ -224,15 +235,21 @@ class PrinterScreen2Controller extends GetxController {
           AppSnackbar.show(
             title: 'Success',
             message: 'KOT printer set same as bill printer',
+            duration: const Duration(seconds: 2),
           );
         } else {
           AppSnackbar.show(
             title: 'Error',
             message: 'Bill printer not found. Turn it on and retry.',
+            duration: const Duration(seconds: 2),
           );
         }
       } catch (e) {
-        AppSnackbar.show(title: 'Error', message: '$e');
+        AppSnackbar.show(
+          title: 'Error',
+          message: '$e',
+          duration: const Duration(seconds: 2),
+        );
       } finally {
         isRoleActionLoading.value = false;
       }
@@ -248,6 +265,7 @@ class PrinterScreen2Controller extends GetxController {
       AppSnackbar.show(
         title: 'Success',
         message: 'KOT printer set same as bill printer',
+        duration: const Duration(seconds: 2),
       );
     }
   }

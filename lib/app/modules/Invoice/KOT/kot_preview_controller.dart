@@ -412,21 +412,11 @@ class KOTPreviewController extends BaseController {
                           fontWeight: pw.FontWeight.bold,
                         ),
                       ),
-                      pw.Container(
-                        padding: const pw.EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(width: 2),
-                          borderRadius: pw.BorderRadius.circular(8),
-                        ),
-                        child: pw.Text(
-                          '$totalQuantity',
-                          style: pw.TextStyle(
-                            fontSize: 16,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
+                      pw.Text(
+                        '$totalQuantity',
+                        style: pw.TextStyle(
+                          fontSize: 15,
+                          fontWeight: pw.FontWeight.bold,
                         ),
                       ),
                     ],

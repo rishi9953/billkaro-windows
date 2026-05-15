@@ -22,25 +22,31 @@ class BluetoothHelper {
   static void listenToConnectionState(ThermalPrinterService service) {
     if (_skipBle) return;
     FlutterBluePlus.events.onConnectionStateChanged.listen((event) async {
-      if (event.device == service.connectedDevice) {
-        if (event.connectionState == BluetoothConnectionState.disconnected) {
-          if (service.isBleConnecting.value) return;
+      final activeId = service.connectedBleDeviceId.value;
+      final eventId = event.device.remoteId.toString();
+      final isOurDevice = activeId != null && activeId == eventId;
 
-          debugPrint('🔌 Device disconnected');
+      if (!isOurDevice) return;
 
-          service.syncBleDisconnected();
+      if (event.connectionState == BluetoothConnectionState.disconnected) {
+        if (service.isBleConnecting.value) return;
 
-          if (!Platform.isWindows) {
-            await _attemptAutoReconnect(service);
-          }
-        } else if (event.connectionState ==
-            BluetoothConnectionState.connected) {
-          debugPrint('🔗 Device connected');
+        debugPrint('🔌 Device disconnected (system event)');
 
-          if (service.connectedBleDeviceId.value == null) {
-            service.isConnected.value = true;
-            service.connectionStatus.value = 'Connected';
-          }
+        service.handleBlePrinterWentOffline(
+          notifyUser: true,
+          statusMessage: 'Bluetooth printer disconnected',
+        );
+
+        if (!Platform.isWindows) {
+          await _attemptAutoReconnect(service);
+        }
+      } else if (event.connectionState == BluetoothConnectionState.connected) {
+        debugPrint('🔗 Device connected');
+
+        if (service.connectedBleDeviceId.value == null) {
+          service.isConnected.value = true;
+          service.connectionStatus.value = 'Connected';
         }
       }
     });
@@ -58,7 +64,10 @@ class BluetoothHelper {
         await Future.delayed(const Duration(seconds: 3)); // 🔥 TABLET FIX
         await _onBluetoothEnabled(service);
       } else if (state == BluetoothAdapterState.off) {
-        service.syncBleDisconnected(statusMessage: 'Bluetooth Off');
+        service.handleBlePrinterWentOffline(
+          notifyUser: true,
+          statusMessage: 'Bluetooth turned off',
+        );
       }
     });
   }
