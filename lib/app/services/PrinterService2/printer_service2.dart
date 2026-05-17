@@ -165,7 +165,12 @@ class PrinterService2 extends GetxService {
     isScanning.value = true;
     try {
       final devices = await _bluetooth.getPairedDevices();
-      availableDevices.assignAll(devices);
+      availableDevices.assignAll(
+        devices.where((d) {
+          final name = d.name.trim();
+          return name.isNotEmpty && name.toLowerCase() != 'unknown';
+        }),
+      );
     } catch (e) {
       if (e is MissingPluginException) {
         _pluginAvailable = false;

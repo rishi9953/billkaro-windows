@@ -1,8 +1,14 @@
 import 'dart:async';
+import 'package:billkaro/app/services/itemfileservice.dart';
 import 'package:billkaro/app/services/Modals/Categories/categories_response.dart';
 import 'package:billkaro/app/services/Modals/addItem/addItem_modal.dart';
+import 'package:billkaro/app/services/Modals/addItem/bulk_delete_request.dart';
+import 'package:billkaro/app/services/Modals/addItem/bulk_item_request.dart';
 import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
+import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/app/modules/Items/menuItem/menu_import_preview_dialog.dart';
+import 'package:file_selector/file_selector.dart';
 
 class MenuItemController extends BaseController {
   final RxList<ItemData> items = <ItemData>[].obs;
@@ -25,6 +31,11 @@ class MenuItemController extends BaseController {
 
   // Initial load done (so UI can show loader until first fetch completes)
   final RxBool initialLoadDone = false.obs;
+
+  // Multi-select delete
+  final RxBool isSelectionMode = false.obs;
+  final RxList<String> selectedItemIds = <String>[].obs;
+  final RxBool isDeletingItems = false.obs;
 
   // Connectivity listener
   StreamSubscription<bool>? _connectivitySubscription;
@@ -399,6 +410,258 @@ class MenuItemController extends BaseController {
     }
     final item = allItems.where((e) => e.id == itemId).firstOrNull;
     return item?.showItem ?? true;
+  }
+
+  /// ===============================
+  /// MULTI-SELECT DELETE
+  /// ===============================
+  void toggleSelectionMode() {
+    if (isSelectionMode.value) {
+      exitSelectionMode();
+    } else {
+      isSelectionMode.value = true;
+    }
+  }
+
+  void exitSelectionMode() {
+    isSelectionMode.value = false;
+    selectedItemIds.clear();
+  }
+
+  void toggleItemSelection(String itemId) {
+    if (selectedItemIds.contains(itemId)) {
+      selectedItemIds.remove(itemId);
+    } else {
+      selectedItemIds.add(itemId);
+    }
+  }
+
+  bool isItemSelected(String itemId) => selectedItemIds.contains(itemId);
+
+  void selectAllVisibleItems() {
+    selectedItemIds.assignAll(items.map((e) => e.id));
+  }
+
+  void clearItemSelection() => selectedItemIds.clear();
+
+  Future<void> deleteItem(ItemData item) async {
+    final name = item.itemName.trim();
+    final displayName = name.isEmpty ? 'this item' : name;
+    final shouldDelete =
+        await Get.dialog<bool>(
+          AlertDialog(
+            title: const Text('Delete item'),
+            content: Text('Delete "$displayName"? This cannot be undone.'),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(result: false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Get.back(result: true),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!shouldDelete) return;
+
+    await _deleteItemsByIds([item.id.trim()], clearSelection: false);
+  }
+
+  Future<void> deleteSelectedItems() async {
+    if (selectedItemIds.isEmpty) {
+      showError(description: 'Select at least one item to delete');
+      return;
+    }
+
+    final count = selectedItemIds.length;
+    final shouldDelete =
+        await Get.dialog<bool>(
+          AlertDialog(
+            title: const Text('Delete items'),
+            content: Text(
+              'Delete $count selected item${count == 1 ? '' : 's'}? This cannot be undone.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(result: false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Get.back(result: true),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!shouldDelete) return;
+
+    final ids = selectedItemIds.map((id) => id.trim()).toList();
+    await _deleteItemsByIds(ids, clearSelection: true);
+  }
+
+  Future<void> _deleteItemsByIds(
+    List<String> ids, {
+    required bool clearSelection,
+  }) async {
+    if (ids.isEmpty) return;
+
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null) {
+      showError(description: 'Please select an outlet first');
+      return;
+    }
+
+    isDeletingItems.value = true;
+    showAppLoader();
+    try {
+      final request = BulkDeleteRequest(outletId: outletId, itemIds: ids);
+      final res = await callApi(
+        apiClient.deleteBulkItems(request),
+        showLoader: false,
+      );
+
+      if (res != null && res is Map && res['status'] == 'success') {
+        for (final id in ids) {
+          allItems.removeWhere((e) => e.id == id);
+          items.removeWhere((e) => e.id == id);
+          itemAvailability.remove(id);
+        }
+        if (clearSelection) {
+          exitSelectionMode();
+        }
+        _applyFilters();
+        await getItems(showLoader: false, forceApiRefresh: true);
+        showSuccess(
+          description:
+              '${ids.length} item${ids.length == 1 ? '' : 's'} deleted successfully',
+        );
+      } else {
+        final message = res is Map ? res['message']?.toString() : null;
+        showError(
+          description: message?.isNotEmpty == true
+              ? message!
+              : 'Failed to delete selected items',
+        );
+      }
+    } catch (e) {
+      showError(description: 'Failed to delete items: $e');
+    } finally {
+      isDeletingItems.value = false;
+      dismissAllAppLoader();
+    }
+  }
+
+  /// ===============================
+  /// IMPORT FROM FILE (CSV / Excel)
+  /// ===============================
+  Future<void> importFromFile() async {
+    if (!hasTrialOrSubscription(appPref)) {
+      checkSubscription();
+      return;
+    }
+
+    final outletId = appPref.selectedOutlet?.id;
+    final userId = appPref.user?.id;
+    if (outletId == null || userId == null) {
+      showError(description: 'Please select an outlet first');
+      return;
+    }
+
+    const typeGroup = XTypeGroup(
+      label: 'Spreadsheet',
+      extensions: ['csv', 'xlsx'],
+    );
+    final file = await openFile(acceptedTypeGroups: [typeGroup]);
+    if (file == null) return;
+
+    List<ItemImportRow> rows;
+    try {
+      showAppLoader();
+      rows = ItemFileService.parseSpreadsheet(file.path);
+    } catch (e) {
+      showError(description: 'Failed to read file: $e');
+      return;
+    } finally {
+      dismissAllAppLoader();
+    }
+
+    if (rows.isEmpty) {
+      showError(
+        description:
+            'No valid rows found. Use headers like: Item Name, Price / Price (₹), Category, Tax % or GST. '
+            'Avoid Item Code / Description / Unit only as names. '
+            'Prices must be numbers greater than 0.',
+      );
+      return;
+    }
+
+    final fileName = file.name;
+    final previewRows = await showMenuImportPreviewDialog(
+      fileName: fileName.isNotEmpty ? fileName : 'Import file',
+      items: rows.map((row) {
+        debugPrint(
+          'Preview Row - Name: ${row.name}, Price: ${row.price}, Category: ${row.category}, GST: ${row.gst}, WithTax: ${row.withTax}',
+        );
+        return MenuImportPreviewRow(
+          name: row.name,
+          price: row.price,
+          category: row.category,
+          gst: row.gst,
+          withTax: row.withTax,
+        );
+      }).toList(),
+    );
+    if (previewRows == null) return;
+
+    showAppLoader();
+    try {
+      final request = BulkItemRequest(
+        userId: userId,
+        outletId: outletId,
+        items: previewRows
+            .map(
+              (row) => BulkItemEntry(
+                itemName: row.name,
+                salePrice: row.price,
+                withTax: row.withTax,
+                gst: row.gst,
+                orderFrom: 'None',
+                category: row.category,
+                showItem: row.isAvailable,
+              ),
+            )
+            .toList(),
+      );
+      final res = await callApi(
+        apiClient.addBulkItem(request),
+        showLoader: false,
+      );
+
+      await getCategories();
+      await getItems(showLoader: false, forceApiRefresh: true);
+
+      if (res != null && res is Map && res['status'] == 'success') {
+        final count = previewRows.length;
+        showSuccess(description: '$count item(s) imported successfully');
+      } else {
+        final message = res is Map ? res['message']?.toString() : null;
+        showError(
+          description: message?.isNotEmpty == true
+              ? message!
+              : 'Failed to import items',
+        );
+      }
+    } catch (e) {
+      showError(description: 'Failed to import file: $e');
+    } finally {
+      dismissAllAppLoader();
+    }
   }
 
   /// ===============================

@@ -467,7 +467,9 @@ class ThermalPrinterService extends GetxController {
       scanResults.clear();
       await _scanResultsSubscription?.cancel();
       _scanResultsSubscription = FlutterBluePlus.scanResults.listen(
-        (results) => scanResults.value = results,
+        (results) => scanResults.value = results
+            .where((r) => r.device.platformName.trim().isNotEmpty)
+            .toList(),
       );
       await FlutterBluePlus.startScan(timeout: const Duration(seconds: 10));
       await Future.delayed(const Duration(seconds: 10));

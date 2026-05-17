@@ -1045,9 +1045,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
-          side: BorderSide(
-            color: selected ? color : color.withOpacity(0.35),
-          ),
+          side: BorderSide(color: selected ? color : color.withOpacity(0.35)),
         ),
       ),
       child: Text(
@@ -1118,14 +1116,10 @@ class _PrinterScreen2State extends State<PrinterScreen2>
       roleController.billRoleInfo.value;
       roleController.kotRoleInfo.value;
       return _buildAssignRoleButtons(
-        onBill: () => roleController.assignBluetoothToRole(
-          PrintRole.bill,
-          device,
-        ),
-        onKot: () => roleController.assignBluetoothToRole(
-          PrintRole.kot,
-          device,
-        ),
+        onBill: () =>
+            roleController.assignBluetoothToRole(PrintRole.bill, device),
+        onKot: () =>
+            roleController.assignBluetoothToRole(PrintRole.kot, device),
         billSelected: roleController.isBillBleDevice(device),
         kotSelected: roleController.isKotBleDevice(device),
       );
@@ -1351,7 +1345,9 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                   ),
                 );
               }
-              final results = thermalPrinter.scanResults;
+              final results = thermalPrinter.scanResults
+                  .where((r) => r.device.platformName.trim().isNotEmpty)
+                  .toList();
               final query = _bleSearchQuery.trim().toLowerCase();
               final filtered = query.isEmpty
                   ? results
@@ -1382,9 +1378,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                   itemCount: filtered.length,
                   itemBuilder: (context, index) {
                     final device = filtered[index].device;
-                    final name = device.platformName.isNotEmpty
-                        ? device.platformName
-                        : 'Unknown device';
+                    final name = device.platformName;
                     return _buildWindowsDeviceRow(
                       icon: Icons.bluetooth_rounded,
                       iconColor: AppColor.primary,

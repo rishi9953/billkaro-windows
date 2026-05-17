@@ -34,6 +34,7 @@ const String register = 'auth/register';
 const String login = 'auth/login';
 const String profile = 'auth/profile';
 const String items = 'items';
+const String bulkItems = 'items/bulk';
 const String categories = 'categories';
 const String outlets = 'outlets';
 const String mediaUrl = 'media/upload';
@@ -50,4 +51,3 @@ const String printerOrder = 'printer-orders';
 const String staff = 'staff';
 const String staffLogin = 'auth/staff/login';
 const String activities = 'activities';
-

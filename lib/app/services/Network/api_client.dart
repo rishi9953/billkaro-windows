@@ -3,6 +3,8 @@ import 'package:billkaro/app/services/Modals/PrinterOrderRequest/printer_order_r
 import 'package:billkaro/app/services/Modals/Subscriptions/subscription_response.dart';
 import 'package:billkaro/app/services/Modals/activites/activities_response.dart';
 import 'package:billkaro/app/services/Modals/addItem/addItem_modal.dart';
+import 'package:billkaro/app/services/Modals/addItem/bulk_delete_request.dart';
+import 'package:billkaro/app/services/Modals/addItem/bulk_item_request.dart';
 import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
 import 'package:billkaro/app/services/Modals/businessType/businesst_type_response.dart';
 import 'package:billkaro/app/services/Modals/customer/customerRequest.dart';
@@ -53,6 +55,9 @@ abstract class ApiClient {
 
   @POST(items)
   Future<dynamic> addItem(@Body() ItemRequest itemRequest);
+  
+  @POST(bulkItems)
+  Future<dynamic> addBulkItem(@Body() BulkItemRequest bulkItemRequest);
 
   @GET('$items/outlet/{outletId}')
   Future<ItemResponse> getItems(
@@ -69,6 +74,9 @@ abstract class ApiClient {
 
   @DELETE('$items/{id}')
   Future<dynamic> deleteItem(@Path('id') String id);
+
+  @DELETE(bulkItems)
+  Future<dynamic> deleteBulkItems(@Body() BulkDeleteRequest bulkDeleteRequest);
 
   // -------------------- CATEGORIES --------------------
 
