@@ -7,6 +7,7 @@ import 'package:billkaro/app/services/Modals/addItem/bulk_item_request.dart';
 import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/app/modules/Items/menuItem/menu_import_file_dialog.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_import_preview_dialog.dart';
 import 'package:file_selector/file_selector.dart';
 
@@ -572,6 +573,9 @@ class MenuItemController extends BaseController {
       showError(description: 'Please select an outlet first');
       return;
     }
+
+    final shouldPickFile = await showMenuImportFileDialog();
+    if (shouldPickFile != true) return;
 
     const typeGroup = XTypeGroup(
       label: 'Spreadsheet',

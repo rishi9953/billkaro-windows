@@ -26,6 +26,43 @@ The project includes Windows desktop support. To run on Windows:
 
 **Note:** Some features (e.g. WorkManager background sync, Bluetooth thermal printer) may be unavailable or limited on Windows; the app will still run and other features will work.
 
+## Screenshots
+
+### Dashboard and Sales Overview
+Main dashboard showing quick actions and a snapshot of business performance.
+
+![Dashboard and Sales Overview](assets/screenshots/1.png)
+
+### Product and Inventory Management
+Screen used to add, edit, and monitor product inventory details.
+
+![Product and Inventory Management](assets/screenshots/2.png)
+
+### Billing and Checkout Workflow
+Billing interface for creating invoices and completing customer checkout.
+
+![Billing and Checkout Workflow](assets/screenshots/3.png)
+
+### Customer and Order Tracking
+View customer records and track order history from a single screen.
+
+![Customer and Order Tracking](assets/screenshots/4.png)
+
+### Reports and Analytics
+Detailed reports section for sales, profit, and trend analysis.
+
+![Reports and Analytics](assets/screenshots/5.png)
+
+### Printing and Receipt Preview
+Receipt preview and printer integration flow for final bill printing.
+
+![Printing and Receipt Preview](assets/screenshots/6.png)
+
+### Settings and Configuration
+Application settings for shop profile, preferences, and system options.
+
+![Settings and Configuration](assets/screenshots/7.png)
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.

@@ -8,6 +8,9 @@ import 'dart:io' show Platform;
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_thermal_printer/utils/printer.dart';
 
+/// USB and BLE thermal can both be connected; each gets its own status card.
+enum PrinterScreen2ConnLink { bleThermal, usbThermal, classicBluetooth }
+
 class PrinterScreen2 extends StatefulWidget {
   const PrinterScreen2({super.key});
 
@@ -66,7 +69,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
     if (!mounted) return;
     if (thermalPrinter.isScanning.value ||
         thermalPrinter.isBleConnecting.value ||
-        thermalPrinter.isConnected.value) {
+        thermalPrinter.connectedBleDeviceId.value != null) {
       return;
     }
     thermalPrinter.startScan();
@@ -205,7 +208,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                       children: [
                         _buildMultiplePrinterSettingsCard(context),
                         const Gap(14),
-                        _buildConnectionStatusCard(context),
+                        _buildConnectionStatusCards(context),
                         const Gap(12),
                         _buildWindowsHelpCard(context),
                       ],
@@ -280,7 +283,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                 children: [
                   _buildMultiplePrinterSettingsCard(context),
                   const SizedBox(height: 12),
-                  _buildConnectionStatusCard(context),
+                  _buildConnectionStatusCards(context),
                   const SizedBox(height: 16),
                   Expanded(
                     child: Card(
@@ -451,41 +454,108 @@ class _PrinterScreen2State extends State<PrinterScreen2>
     );
   }
 
-  Widget _buildConnectionStatusCard(BuildContext context) {
-    return Obx(() {
-      final bleConnected = thermalPrinter.connectedBleDeviceId.value != null;
-      final btConnected = printerService.isConnected.value;
-      final usbConnected = thermalPrinter.isUsbConnected.value;
-      final connected = usbConnected || bleConnected || btConnected;
-      final isUsb = usbConnected;
-      final isBle = !usbConnected && bleConnected;
+  Widget _buildConnectionStatusCards(BuildContext context) {
+    final gap = _isWindowsDesktop ? const Gap(12) : const SizedBox(height: 12);
+    if (_isWindowsDesktop) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildConnectionStatusCard(
+            context,
+            link: PrinterScreen2ConnLink.bleThermal,
+          ),
+          gap,
+          _buildConnectionStatusCard(
+            context,
+            link: PrinterScreen2ConnLink.usbThermal,
+          ),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildConnectionStatusCard(
+          context,
+          link: PrinterScreen2ConnLink.classicBluetooth,
+        ),
+        gap,
+        _buildConnectionStatusCard(
+          context,
+          link: PrinterScreen2ConnLink.usbThermal,
+        ),
+      ],
+    );
+  }
 
+  Widget _buildConnectionStatusCard(
+    BuildContext context, {
+    required PrinterScreen2ConnLink link,
+  }) {
+    return Obx(() {
+      final bool connected;
       final String connectionType;
       final String connectionName;
-      IconData statusIcon;
+      final IconData statusIcon;
+      final VoidCallback? onDisconnect;
 
-      if (!connected) {
-        connectionType = 'Live session';
-        connectionName = 'No printer connected';
-        statusIcon = Icons.link_off_rounded;
-      } else if (isUsb) {
-        connectionType = 'USB connected';
-        connectionName =
-            thermalPrinter.connectedUsbPrinter?.name ?? 'USB Printer';
-        statusIcon = Icons.usb_rounded;
-      } else if (isBle) {
-        connectionType = 'Bluetooth connected';
-        final platformName = thermalPrinter.connectedDevice?.platformName;
-        connectionName =
-            (platformName != null && platformName.trim().isNotEmpty)
-            ? platformName
-            : 'BLE Printer';
-        statusIcon = Icons.bluetooth_connected_rounded;
-      } else {
-        connectionType = 'Bluetooth connected';
-        connectionName =
-            printerService.selectedPrinter.value?.name ?? 'Printer';
-        statusIcon = Icons.bluetooth_connected_rounded;
+      switch (link) {
+        case PrinterScreen2ConnLink.bleThermal:
+          connected = thermalPrinter.connectedBleDeviceId.value != null;
+          connectionType = 'Bluetooth (BLE)';
+          if (!connected) {
+            connectionName = 'No Bluetooth printer connected';
+            statusIcon = Icons.bluetooth_disabled_rounded;
+          } else {
+            final platformName = thermalPrinter.connectedDevice?.platformName;
+            connectionName =
+                (platformName != null && platformName.trim().isNotEmpty)
+                ? platformName
+                : 'BLE Printer';
+            statusIcon = Icons.bluetooth_connected_rounded;
+          }
+          onDisconnect = connected
+              ? () {
+                  thermalPrinter.disconnect();
+                }
+              : null;
+          break;
+        case PrinterScreen2ConnLink.usbThermal:
+          connected = thermalPrinter.isUsbConnected.value;
+          connectionType = 'USB';
+          if (!connected) {
+            connectionName = 'No USB printer connected';
+            statusIcon = Icons.usb_off_rounded;
+          } else {
+            connectionName =
+                thermalPrinter.connectedUsbPrinter?.name ?? 'USB Printer';
+            statusIcon = Icons.usb_rounded;
+          }
+          onDisconnect = connected
+              ? () {
+                  thermalPrinter.disconnectUsbPrinter();
+                }
+              : null;
+          break;
+        case PrinterScreen2ConnLink.classicBluetooth:
+          connected = printerService.isConnected.value;
+          connectionType = 'Bluetooth (paired)';
+          if (!connected) {
+            connectionName = 'No paired printer connected';
+            statusIcon = Icons.bluetooth_disabled_rounded;
+          } else {
+            connectionName =
+                printerService.selectedPrinter.value?.name ?? 'Printer';
+            statusIcon = Icons.bluetooth_connected_rounded;
+          }
+          onDisconnect = connected
+              ? () {
+                  printerService.disconnect();
+                }
+              : null;
+          break;
       }
 
       final accent = connected ? AppColor.lightgreen : Colors.red.shade400;
@@ -556,16 +626,12 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                   ),
                 ],
               ),
-              if (connected) ...[
+              if (connected && onDisconnect != null) ...[
                 const Gap(12),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: isUsb
-                        ? thermalPrinter.disconnectUsbPrinter
-                        : isBle
-                        ? thermalPrinter.disconnect
-                        : printerService.disconnect,
+                    onPressed: onDisconnect,
                     icon: const Icon(Icons.link_off_rounded, size: 18),
                     label: const Text('Disconnect'),
                     style: OutlinedButton.styleFrom(
@@ -632,16 +698,12 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                   ),
                 ],
               ),
-              if (connected) ...[
+              if (connected && onDisconnect != null) ...[
                 const SizedBox(height: 10),
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton.icon(
-                    onPressed: isUsb
-                        ? thermalPrinter.disconnectUsbPrinter
-                        : isBle
-                        ? thermalPrinter.disconnect
-                        : printerService.disconnect,
+                    onPressed: onDisconnect,
                     icon: const Icon(Icons.link_off, size: 18),
                     label: const Text('Disconnect'),
                     style: TextButton.styleFrom(
@@ -1392,9 +1454,8 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                           Obx(() {
                             final deviceId = device.remoteId.toString();
                             final isThisConnected =
-                                !thermalPrinter.isUsbConnected.value &&
                                 thermalPrinter.connectedBleDeviceId.value ==
-                                    deviceId;
+                                deviceId;
                             final isConnectingThis =
                                 thermalPrinter.isBleConnecting.value &&
                                 thermalPrinter.connectingBleDeviceId.value ==

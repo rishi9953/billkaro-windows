@@ -81,31 +81,6 @@ class ThermalPrinterService extends GetxController {
     return usbPrinterKey(a) == usbPrinterKey(b);
   }
 
-  Future<void> _disconnectActiveConnections() async {
-    try {
-      if (isUsbConnected.value) {
-        await disconnectUsbPrinter(notifyUser: false);
-      }
-    } catch (e) {
-      debugPrint('USB disconnect before role switch: $e');
-    }
-    try {
-      if (connectedDevice != null || connectedBleDeviceId.value != null) {
-        await BluetoothHelper.disconnect(this);
-      }
-    } catch (e) {
-      debugPrint('BLE disconnect before role switch: $e');
-    }
-    try {
-      if (Get.isRegistered<PrinterService2>() &&
-          PrinterService2.to.isConnected.value) {
-        await PrinterService2.to.disconnect();
-      }
-    } catch (e) {
-      debugPrint('Classic BT disconnect before role switch: $e');
-    }
-  }
-
   void syncBleConnected(
     BluetoothDevice device,
     BluetoothCharacteristic characteristic,
@@ -156,7 +131,10 @@ class ThermalPrinterService extends GetxController {
     _bleDeviceStateSubscription?.cancel();
     _usbPresenceMonitorSub?.cancel();
     _printerHealthTimer?.cancel();
-    disconnect();
+    if (isUsbConnected.value) {
+      unawaited(disconnectUsbPrinter(notifyUser: false));
+    }
+    unawaited(disconnect());
     super.onClose();
   }
 
@@ -660,12 +638,10 @@ class ThermalPrinterService extends GetxController {
     return isConnected.value;
   }
 
+  /// Disconnects the BLE thermal path only. USB stays connected so bill (USB)
+  /// and KOT (BLE) can be live at the same time.
   Future<void> disconnect() async {
-    if (isUsbConnected.value) {
-      await disconnectUsbPrinter(notifyUser: false);
-    } else {
-      await BluetoothHelper.disconnect(this);
-    }
+    await BluetoothHelper.disconnect(this);
   }
 
   // Public API - Auto-Connect
@@ -903,7 +879,9 @@ class ThermalPrinterService extends GetxController {
             connectedUsbPrinter != null &&
             _sameUsbPrinter(connectedUsbPrinter, match);
         if (!alreadyUsb) {
-          await _disconnectActiveConnections();
+          if (isUsbConnected.value && connectedUsbPrinter != null) {
+            await disconnectUsbPrinter(notifyUser: false);
+          }
           final ok = await connectUsbPrinter(match);
           if (!ok) return false;
         }
@@ -1022,7 +1000,11 @@ class ThermalPrinterService extends GetxController {
       );
     }
 
-    if (isUsbConnected.value && connectedUsbPrinter != null) {
+    final roleKey = _roleKey(role);
+    final assignedType = await StorageHelper.getRoleLastPrinterType(roleKey);
+    if (assignedType == 'usb' &&
+        isUsbConnected.value &&
+        connectedUsbPrinter != null) {
       final printer = connectedUsbPrinter!;
       try {
         final bytes = await _buildUsbTestEscPosBytes(role);
@@ -1051,7 +1033,7 @@ class ThermalPrinterService extends GetxController {
       ..feed(3)
       ..cut();
 
-    await _printBytes(builder.bytes);
+    await _printBytes(builder.bytes, forRole: role);
   }
 
   // Public API - Printing
@@ -1190,7 +1172,7 @@ class ThermalPrinterService extends GetxController {
       ..feed(3)
       ..cut();
 
-    await _printBytes(builder.bytes);
+    await _printBytes(builder.bytes, forRole: PrintRole.kot);
   }
 
   Future<Uint8List> generateUpiQrImage({
@@ -1399,7 +1381,7 @@ class ThermalPrinterService extends GetxController {
     }
 
     builder.feed(3).cut();
-    await _printBytes(builder.bytes);
+    await _printBytes(builder.bytes, forRole: PrintRole.bill);
   }
 
   Future<void> _printInvoiceWindowsPdf({
@@ -1906,11 +1888,37 @@ class ThermalPrinterService extends GetxController {
     await Printing.layoutPdf(onLayout: (_) async => doc.save());
   }
 
-  // Private helper - Universal print method for both Bluetooth and USB
-  Future<void> _printBytes(List<int> bytes) async {
+  /// Sends ESC/POS to the transport saved for [forRole] (USB vs Bluetooth),
+  /// so bill and KOT can use different printers when both are connected.
+  Future<void> _printBytes(List<int> bytes, {required PrintRole forRole}) async {
     try {
-      if (isUsbConnected.value && connectedUsbPrinter != null) {
-        await _printUsbEscPos(connectedUsbPrinter!, bytes);
+      final roleKey = _roleKey(forRole);
+      final type = await StorageHelper.getRoleLastPrinterType(roleKey);
+
+      if (type == 'usb') {
+        final printer = connectedUsbPrinter;
+        if (!isUsbConnected.value || printer == null) {
+          throw Exception(
+            '${forRole == PrintRole.bill ? 'Bill' : 'KOT'}: USB printer not connected',
+          );
+        }
+        final name = await StorageHelper.getRoleSavedUsbPrinter(roleKey);
+        final vendorId = await StorageHelper.getRoleSavedUsbVendorId(roleKey);
+        final productId = await StorageHelper.getRoleSavedUsbProductId(roleKey);
+        final address = await StorageHelper.getRoleSavedUsbAddress(roleKey);
+        if (!_usbPrinterMatchesSaved(
+          printer,
+          name: name,
+          vendorId: vendorId,
+          productId: productId,
+          address: address,
+        )) {
+          throw Exception(
+            '${forRole == PrintRole.bill ? 'Bill' : 'KOT'}: '
+            'connected USB printer does not match this assignment',
+          );
+        }
+        await _printUsbEscPos(printer, bytes);
         return;
       }
 
