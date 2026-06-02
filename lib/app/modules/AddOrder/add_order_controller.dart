@@ -17,6 +17,7 @@ import 'package:billkaro/app/Widgets/desktop_camera_capture_dialog.dart';
 import 'package:billkaro/app/services/ai/menu_ai_scanner.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/utils/date_util.dart';
+import 'package:billkaro/utils/kot_print_tracker.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:billkaro/config/config.dart';
@@ -60,6 +61,9 @@ class AddOrderController extends BaseController {
   // Map to store all items for lookup (persists across category changes)
   final RxMap<String, ItemData> allItemsMap = <String, ItemData>{}.obs;
 
+  /// Quantities already sent to kitchen (for incremental KOT like Petpooja).
+  final Map<String, int> kotPrintedQuantities = <String, int>{};
+
   final RxBool showSearchBar = false.obs;
   final RxDouble subtotal = 0.0.obs;
   final RxDouble totalTax = 0.0.obs;
@@ -100,6 +104,7 @@ class AddOrderController extends BaseController {
 
   void clearOrderDraft() {
     itemQuantities.clear();
+    kotPrintedQuantities.clear();
     orderDetails.clear();
     orders = null;
     isEdit.value = false;
@@ -173,6 +178,7 @@ class AddOrderController extends BaseController {
 
     if (isEdit.value && orders != null) {
       _loadOrderForEdit();
+      await _syncKotPrintedFromStorage();
     } else {
       // Only show dialog if order source is not already set (e.g., from table screen).
       // Cafe / restaurant: user picks channel; other outlets: default without blocking.
@@ -194,6 +200,91 @@ class AddOrderController extends BaseController {
     }
 
     calculateTotals();
+  }
+
+  Future<void> _syncKotPrintedFromStorage() async {
+    final outletId = appPref.selectedOutlet?.id;
+    final orderId = orders?.id ?? orderDetails['id']?.toString();
+    if (outletId == null || orderId == null || orderId.isEmpty) {
+      if (isEdit.value && orders != null) {
+        for (final item in orders!.items) {
+          kotPrintedQuantities[item.itemId] = item.quantity;
+        }
+      }
+      return;
+    }
+
+    final saved = await KotPrintTracker.loadPrintedQuantities(outletId, orderId);
+    if (saved.isNotEmpty) {
+      kotPrintedQuantities
+        ..clear()
+        ..addAll(saved);
+      return;
+    }
+
+    if (isEdit.value && orders != null) {
+      for (final item in orders!.items) {
+        kotPrintedQuantities[item.itemId] = item.quantity;
+      }
+    }
+  }
+
+  /// Items with quantity not yet sent to kitchen on this order.
+  List<OrderItem> buildKotDeltaItems() {
+    final delta = <OrderItem>[];
+    for (final entry in itemQuantities.entries) {
+      final qty = entry.value;
+      if (qty < 1) continue;
+
+      final sent = kotPrintedQuantities[entry.key] ?? 0;
+      final diff = qty - sent;
+      if (diff <= 0) continue;
+
+      final item = allItemsMap[entry.key];
+      if (item == null) continue;
+
+      delta.add(
+        OrderItem(
+          itemId: item.id,
+          itemName: item.itemName,
+          category: item.category,
+          quantity: diff,
+          salePrice: item.salePrice,
+          gst: item.gst?.toDouble() ?? 0.0,
+        ),
+      );
+    }
+    return delta;
+  }
+
+  Future<String> _nextKotNumber(String billNumber) async {
+    final outletId = appPref.selectedOutlet?.id ?? '';
+    return KotPrintTracker.nextKotLabel(outletId, billNumber);
+  }
+
+  /// Call after a successful manual KOT print so the same items are not re-sent.
+  Future<void> commitKitchenSentQuantities({String? orderId}) =>
+      _commitKotPrintedBaseline(orderId: orderId);
+
+  Future<void> _commitKotPrintedBaseline({String? orderId}) async {
+    for (final entry in itemQuantities.entries) {
+      if (entry.value >= 1) {
+        kotPrintedQuantities[entry.key] = entry.value;
+      }
+    }
+
+    final outletId = appPref.selectedOutlet?.id;
+    final resolvedOrderId =
+        orderId ?? orders?.id ?? orderDetails['id']?.toString();
+    if (outletId != null &&
+        resolvedOrderId != null &&
+        resolvedOrderId.isNotEmpty) {
+      await KotPrintTracker.savePrintedQuantities(
+        outletId,
+        resolvedOrderId,
+        kotPrintedQuantities,
+      );
+    }
   }
 
   // Load order data when editing
@@ -1088,27 +1179,13 @@ class AddOrderController extends BaseController {
       return;
     }
 
-    final List<OrderItem> kotItems = [];
+    final kotItems = isKotFeatureActive
+        ? buildKotDeltaItems()
+        : _allCartItemsForKot();
 
-    for (final entry in itemQuantities.entries) {
-      final itemId = entry.key;
-      final qty = entry.value;
-
-      if (qty < 1) continue;
-
-      final item = allItemsMap[itemId];
-      if (item == null) continue;
-
-      kotItems.add(
-        OrderItem(
-          itemId: item.id,
-          itemName: item.itemName,
-          category: item.category,
-          quantity: qty,
-          salePrice: item.salePrice,
-          gst: item.gst?.toDouble() ?? 0.0,
-        ),
-      );
+    if (kotItems.isEmpty) {
+      showError(description: 'No new items to send to kitchen');
+      return;
     }
 
     String kotBillNumber = orderDetails['billNumber']?.toString() ?? '';
@@ -1116,8 +1193,12 @@ class AddOrderController extends BaseController {
       kotBillNumber = await _generateNextIntegerBillNumber();
     }
 
+    final kotNumber = isKotFeatureActive
+        ? await _nextKotNumber(kotBillNumber)
+        : kotBillNumber;
+
     final kotRequest = CreateorderRequest(
-      billNumber: kotBillNumber,
+      billNumber: kotNumber,
       tableNumber: orderDetails['tableNumber'] ?? '',
       customerName: orderDetails['customerName'] ?? '',
       phoneNumber: orderDetails['phoneNumber'] ?? '',
@@ -1147,12 +1228,39 @@ class AddOrderController extends BaseController {
         'orderStatus': orderDetails['status'] ?? 'pending',
         'isEdit': isEdit.value,
         'specialInstructions': remarkController.text.trim(),
+        'billNumber': kotBillNumber,
       },
     );
   }
 
-  Future<void> _maybeAutoPrintKOT(CreateorderRequest request) async {
+  List<OrderItem> _allCartItemsForKot() {
+    final kotItems = <OrderItem>[];
+    for (final entry in itemQuantities.entries) {
+      if (entry.value < 1) continue;
+      final item = allItemsMap[entry.key];
+      if (item == null) continue;
+      kotItems.add(
+        OrderItem(
+          itemId: item.id,
+          itemName: item.itemName,
+          category: item.category,
+          quantity: entry.value,
+          salePrice: item.salePrice,
+          gst: item.gst?.toDouble() ?? 0.0,
+        ),
+      );
+    }
+    return kotItems;
+  }
+
+  Future<void> _maybeAutoPrintKOT(
+    CreateorderRequest request, {
+    String? orderId,
+  }) async {
     if (!isKotFeatureActive) return;
+
+    final kotItems = buildKotDeltaItems();
+    if (kotItems.isEmpty) return;
 
     try {
       final printerService = ThermalPrinterService.instance;
@@ -1163,18 +1271,19 @@ class AddOrderController extends BaseController {
       );
       if (!connected) return;
 
+      final billNo = orderDetails['billNumber']?.toString() ??
+          request.billNumber ??
+          '';
+      final kotNumber = await _nextKotNumber(billNo);
+
       final now = DateTime.now().toString();
       final dateStr = formatDate(now);
       final timeStr = formatTime(now);
 
-      final kotItems = (request.items ?? const <OrderItem>[])
-          .where((i) => i.quantity > 0)
-          .toList(growable: false);
-
       final totalQty = kotItems.fold<int>(0, (sum, i) => sum + i.quantity);
 
       await printerService.printKOT(
-        kotNumber: request.billNumber ?? '',
+        kotNumber: kotNumber,
         brandName: appPref.user?.brandName ?? '',
         businessName: appPref.user?.outletData?.first.businessName ?? '',
         address: appPref.user?.address ?? '',
@@ -1191,6 +1300,8 @@ class AddOrderController extends BaseController {
         specialInstructions: remarkController.text.trim(),
         totalQuantity: totalQty,
       );
+
+      await _commitKotPrintedBaseline(orderId: orderId);
     } catch (e) {
       debugPrint('⚠️ Auto KOT print failed: $e');
     }
@@ -1315,6 +1426,14 @@ class AddOrderController extends BaseController {
     final orderStatusForApi = normalizedStatus == 'billing'
         ? 'pending'
         : normalizedStatus;
+    final isBilling =
+        normalizedStatus == 'closed' || normalizedStatus == 'billing';
+    final isKotHold = isKotFeatureActive && !isBilling;
+
+    if (isKotFeatureActive && buildKotDeltaItems().isNotEmpty) {
+      await showRemarkDialog();
+    }
+
     if (itemQuantities.isEmpty) {
       showError(description: loc.add_items);
       return;
@@ -1433,6 +1552,7 @@ class AddOrderController extends BaseController {
         await _syncTableStatusForDineInOrder(
           orderStatus: normalizedStatus,
           tableNumber: request.tableNumber,
+          currentBillNumber: response['data']?['billNumber']?.toString(),
         );
 
         await homeController.getOrderList(forceApiRefresh: true);
@@ -1443,12 +1563,30 @@ class AddOrderController extends BaseController {
         }
 
         final loc = AppLocalizations.of(Get.context!)!;
-        showSuccess(description: loc.order_saved);
+        final savedOrderId =
+            response['data']?['id']?.toString() ?? orderDetails['id']?.toString();
+        if (savedOrderId != null && savedOrderId.isNotEmpty) {
+          orderDetails['id'] = savedOrderId;
+        }
 
-        await _maybeAutoPrintKOT(request);
+        final hadKotDelta = buildKotDeltaItems().isNotEmpty;
+        await _maybeAutoPrintKOT(request, orderId: savedOrderId);
 
-        // Clear local draft state before showing invoice preview.
         clearOrderDraft();
+
+        if (isKotHold) {
+          showSuccess(
+            description: hadKotDelta
+                ? loc.order_saved
+                : '${loc.order_saved} (no new kitchen items)',
+          );
+          if (Modular.to.canPop()) {
+            Modular.to.pop();
+          }
+          return;
+        }
+
+        showSuccess(description: loc.order_saved);
 
         await Modular.to.pushNamed(
           HomeMainRoutes.invoiceScreen,
@@ -1459,15 +1597,6 @@ class AddOrderController extends BaseController {
             'isOffline': false,
           },
         );
-        // await Get.toNamed(
-        //   AppRoute.pdfPreview,
-        //   arguments: {
-        //     'invoice': request,
-        //     'orderFrom': selectedOrderSource.value,
-        //     'isEdit': isEdit.value,
-        //     'isOffline': false,
-        //   },
-        // );
       } else {
         showError(description: loc.order_failed);
       }
@@ -1495,12 +1624,24 @@ class AddOrderController extends BaseController {
         }
 
         final loc = AppLocalizations.of(Get.context!)!;
-        showSuccess(description: loc.order_saved_offline);
+        final hadKotDelta = buildKotDeltaItems().isNotEmpty;
+        await _maybeAutoPrintKOT(request, orderId: tempOrderId);
 
-        await _maybeAutoPrintKOT(request);
-
-        // Clear local draft state before showing invoice preview.
         clearOrderDraft();
+
+        if (isKotHold) {
+          showSuccess(
+            description: hadKotDelta
+                ? loc.order_saved_offline
+                : '${loc.order_saved_offline} (no new kitchen items)',
+          );
+          if (Modular.to.canPop()) {
+            Modular.to.pop();
+          }
+          return;
+        }
+
+        showSuccess(description: loc.order_saved_offline);
 
         await Modular.to.pushNamed(
           HomeMainRoutes.invoiceScreen,
@@ -1796,6 +1937,7 @@ class AddOrderController extends BaseController {
   Future<void> _syncTableStatusForDineInOrder({
     required String orderStatus,
     required String? tableNumber,
+    String? currentBillNumber,
   }) async {
     if (!_isDineInOrder()) return;
     final rawTable = (tableNumber ?? '').trim();
@@ -1827,7 +1969,12 @@ class AddOrderController extends BaseController {
       };
 
       await callApi(
-        apiClient.updateTableStatus(table.id, {'status': nextStatus}),
+        apiClient.updateTableStatus(table.id, {
+          'status': nextStatus,
+          'currentBillNumber': nextStatus == 'available'
+              ? null
+              : currentBillNumber,
+        }),
         showLoader: false,
       );
     } catch (e) {

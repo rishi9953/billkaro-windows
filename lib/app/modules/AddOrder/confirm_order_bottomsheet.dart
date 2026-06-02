@@ -248,7 +248,9 @@ class _ConfirmOrderBottomSheetState extends State<ConfirmOrderBottomSheet> {
                               ),
                             ),
                             child: Text(
-                              loc.save_and_hold,
+                              controller.isKotFeatureActive
+                                  ? loc.kot_and_hold
+                                  : loc.save_and_hold,
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -276,7 +278,9 @@ class _ConfirmOrderBottomSheetState extends State<ConfirmOrderBottomSheet> {
                               ),
                             ),
                             child: Text(
-                              loc.save_and_bill,
+                              controller.isKotFeatureActive
+                                  ? loc.kot_and_bill
+                                  : loc.save_and_bill,
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,

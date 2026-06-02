@@ -4,11 +4,11 @@ class ApiConstants {
   static const String prod = 'https://api.billkrochillkro.com/api/';
 }
 
-const String baseURL = ApiConstants.prod;
+const String baseURL = ApiConstants.local;
 
 /// Stored logo/media paths from the API may be full URLs or relative paths.
 /// Returns a URL suitable for [Image.network].
-String resolvedMediaUrl(String? stored) {
+String resolvedMediaUrl(String? stored) { 
   if (stored == null) return '';
   final s = stored.trim();
   if (s.isEmpty) return '';

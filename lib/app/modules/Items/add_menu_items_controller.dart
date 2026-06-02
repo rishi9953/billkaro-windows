@@ -38,6 +38,7 @@ class AddMenuItemController extends BaseController {
   // AI Image Generator
   final AIImageGenerator _aiImageGenerator = AIImageGenerator();
   var isGeneratingImage = false.obs;
+  var aiImageStatus = ''.obs;
 
   final taxOptions = ['None', '5', '12', '18', '28'];
   var isEdit = false.obs;
@@ -363,71 +364,48 @@ class AddMenuItemController extends BaseController {
     );
   }
 
-  // Generate image using AI based on item name
+  // Generate image using Billkaro AI (free cloud + offline fallback)
   Future<void> generateImageWithAI() async {
-    // Check if item name is provided
-    if (itemNameController.text.trim().isEmpty) {
+    final itemName = itemNameController.text.trim();
+    if (itemName.isEmpty) {
       showError(description: 'Please enter item name first to generate image');
       return;
     }
 
+    isGeneratingImage.value = true;
+    aiImageStatus.value = 'Starting Billkaro AI…';
+
     try {
-      isGeneratingImage.value = true;
-      showAppLoader();
-
-      debugPrint('🎨 [AI] Generating image for: ${itemNameController.text}');
-
-      // Generate image URL using AI
-      final imageUrlFromAI = await _aiImageGenerator.generateImageFromItemName(
-        itemNameController.text.trim(),
+      final result = await _aiImageGenerator.generateMenuItemImage(
+        itemName: itemName,
+        onStatus: (message) => aiImageStatus.value = message,
       );
 
-      if (imageUrlFromAI != null && imageUrlFromAI.isNotEmpty) {
-        // Download the image and save it locally
-        final downloadedFile = await _aiImageGenerator.downloadImageToFile(
-          imageUrlFromAI,
-        );
-
-        if (downloadedFile != null && await downloadedFile.exists()) {
-          selectedImage.value = downloadedFile;
-          imagePath.value = downloadedFile.path;
-
-          dismissAppLoader();
-          isGeneratingImage.value = false;
-
-          showSuccess(description: 'AI image generated successfully!');
-        } else {
-          // If download fails, try to use the URL directly
-          // This will require uploading it to your server
-          dismissAppLoader();
-          isGeneratingImage.value = false;
-          showError(
-            description:
-                'Failed to download generated image. Please try again.',
-          );
-        }
-      } else {
-        dismissAppLoader();
-        isGeneratingImage.value = false;
+      final file = await _aiImageGenerator.fileFromResult(result.filePath);
+      if (file == null) {
         showError(
-          description:
-              'Failed to generate image. Please try uploading manually.',
+          description: 'Generated image could not be saved. Please try again.',
         );
+        return;
       }
-    } on Exception catch (e) {
-      dismissAppLoader();
-      isGeneratingImage.value = false;
-      debugPrint('❌ [AI] Image generation error: $e');
-      // Show the user-friendly error message from the AI generator
-      final errorMessage = e.toString().replaceFirst('Exception: ', '');
-      showError(description: errorMessage);
+
+      selectedImage.value = file;
+      imagePath.value = file.path;
+      imageUrl.value = '';
+      aiScanResult.value = null;
+
+      showSuccess(description: 'AI image ready');
     } catch (e) {
-      dismissAppLoader();
-      isGeneratingImage.value = false;
       debugPrint('❌ [AI] Image generation error: $e');
+      final msg = e.toString().replaceFirst('Exception: ', '');
       showError(
-        description: 'Failed to generate image. Please try uploading manually.',
+        description: msg.isEmpty
+            ? 'Failed to generate image. Please try uploading manually.'
+            : msg,
       );
+    } finally {
+      isGeneratingImage.value = false;
+      aiImageStatus.value = '';
     }
   }
 

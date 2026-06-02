@@ -32,6 +32,13 @@ class StorageHelper {
       '${role}_usb_printer_product_id';
   static String _roleUsbPrinterAddressKey(String role) =>
       '${role}_usb_printer_address';
+  static String _roleNetworkIpKey(String role) => '${role}_network_ip';
+  static String _roleNetworkPortKey(String role) => '${role}_network_port';
+  static String _roleNetworkNameKey(String role) => '${role}_network_name';
+
+  // Last Ethernet connection (for reconnect on settings screen)
+  static const String _lastNetworkIpKey = 'last_network_ip';
+  static const String _lastNetworkPortKey = 'last_network_port';
 
   // Bluetooth Device Methods
   static Future<void> saveDevice(BluetoothDevice device) async {
@@ -153,6 +160,53 @@ class StorageHelper {
     return prefs.getString(_roleUsbPrinterAddressKey(role));
   }
 
+  static Future<void> saveRoleNetworkPrinter(
+    String role,
+    String ip,
+    int port, {
+    String? name,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_roleNetworkIpKey(role), ip.trim());
+    await prefs.setInt(_roleNetworkPortKey(role), port);
+    await prefs.setString(
+      _roleNetworkNameKey(role),
+      (name?.trim().isNotEmpty ?? false) ? name!.trim() : ip.trim(),
+    );
+    await prefs.setString(_rolePrinterTypeKey(role), 'network');
+  }
+
+  static Future<void> saveLastNetworkConnection(String ip, int port) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastNetworkIpKey, ip.trim());
+    await prefs.setInt(_lastNetworkPortKey, port);
+  }
+
+  static Future<String?> getLastNetworkIp() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_lastNetworkIpKey);
+  }
+
+  static Future<int> getLastNetworkPort() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_lastNetworkPortKey) ?? 9100;
+  }
+
+  static Future<String?> getRoleSavedNetworkIp(String role) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_roleNetworkIpKey(role));
+  }
+
+  static Future<int?> getRoleSavedNetworkPort(String role) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_roleNetworkPortKey(role));
+  }
+
+  static Future<String?> getRoleSavedNetworkName(String role) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_roleNetworkNameKey(role));
+  }
+
   static Future<int?> getSavedUsbVendorId() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt(_usbPrinterVendorIdKey);
@@ -221,6 +275,9 @@ class StorageHelper {
       await prefs.remove(_roleUsbPrinterVendorIdKey(role));
       await prefs.remove(_roleUsbPrinterProductIdKey(role));
       await prefs.remove(_roleUsbPrinterAddressKey(role));
+      await prefs.remove(_roleNetworkIpKey(role));
+      await prefs.remove(_roleNetworkPortKey(role));
+      await prefs.remove(_roleNetworkNameKey(role));
     }
   }
 
@@ -233,6 +290,9 @@ class StorageHelper {
     await prefs.remove(_roleUsbPrinterVendorIdKey(role));
     await prefs.remove(_roleUsbPrinterProductIdKey(role));
     await prefs.remove(_roleUsbPrinterAddressKey(role));
+    await prefs.remove(_roleNetworkIpKey(role));
+    await prefs.remove(_roleNetworkPortKey(role));
+    await prefs.remove(_roleNetworkNameKey(role));
   }
 
   // Check if any printer is saved
@@ -285,6 +345,13 @@ class StorageHelper {
         'vendorId': prefs.getInt(_roleUsbPrinterVendorIdKey(role)),
         'productId': prefs.getInt(_roleUsbPrinterProductIdKey(role)),
         'address': prefs.getString(_roleUsbPrinterAddressKey(role)),
+      };
+    } else if (printerType == 'network') {
+      return {
+        'type': 'network',
+        'name': prefs.getString(_roleNetworkNameKey(role)),
+        'ip': prefs.getString(_roleNetworkIpKey(role)),
+        'port': prefs.getInt(_roleNetworkPortKey(role)),
       };
     }
 

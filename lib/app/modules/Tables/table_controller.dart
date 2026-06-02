@@ -153,15 +153,18 @@ class TableController extends BaseController {
       return TableStatus.occupied;
     }
 
+    // Prefer local history when there is no active local order for this table.
+    // This avoids stale "occupied" UI right after an order is closed.
+    if (hasLocalHistory) {
+      return TableStatus.available;
+    }
+
     final apiStatus = table.status.trim().toLowerCase();
     if (apiStatus == 'billing') return TableStatus.billing;
     if (apiStatus == 'occupied' ||
         apiStatus == 'busy' ||
         apiStatus == 'reserved') {
       return TableStatus.occupied;
-    }
-    if (hasLocalHistory) {
-      return TableStatus.available;
     }
     if ((table.currentBillNumber ?? '').trim().isNotEmpty) {
       return TableStatus.billing;

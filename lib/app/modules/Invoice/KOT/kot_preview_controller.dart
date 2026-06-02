@@ -103,6 +103,10 @@ class KOTPreviewController extends BaseController {
         totalQuantity: totalQuantity,
       );
 
+      await addOrderController?.commitKitchenSentQuantities(
+        orderId: (Get.arguments ?? Modular.args.data)?['orderId']?.toString(),
+      );
+
       dismissAppLoader();
       showSuccess(description: 'KOT printed successfully');
     } catch (e) {

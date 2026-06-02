@@ -20,6 +20,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:billkaro/utils/app_snackbar.dart';
 import 'helpers/storage_helper.dart';
 import 'helpers/bluetooth_helper.dart';
+import 'helpers/network_printer_helper.dart';
 import 'helpers/windows_usb_printer_probe.dart';
 import 'builders/print_builder.dart';
 import 'generators/qr_generator.dart';
@@ -55,6 +56,12 @@ class ThermalPrinterService extends GetxController {
   final isUsbConnected = false.obs;
   final usbPrinters = <Printer>[].obs;
   final isUsbScanning = false.obs;
+  final _network = NetworkPrinterHelper();
+
+  // Ethernet / network (TCP port 9100)
+  final isNetworkConnected = false.obs;
+  final connectedNetworkLabel = Rxn<String>();
+  final isNetworkConnecting = false.obs;
 
   /// True while a user-initiated BLE connect is in progress (suppresses reconnect).
   final isBleConnecting = false.obs;
@@ -135,7 +142,88 @@ class ThermalPrinterService extends GetxController {
       unawaited(disconnectUsbPrinter(notifyUser: false));
     }
     unawaited(disconnect());
+    unawaited(disconnectNetworkPrinter());
     super.onClose();
+  }
+
+  Future<bool> connectNetworkPrinter(String host, {int port = 9100}) async {
+    if (isNetworkConnecting.value) return false;
+    isNetworkConnecting.value = true;
+    try {
+      final ok = await _network.connect(host, port: port);
+      _syncNetworkConnectionObservables(connected: ok);
+      if (ok) {
+        await StorageHelper.saveLastNetworkConnection(host, port);
+        connectionStatus.value = 'Ethernet: ${_network.connectionLabel}';
+      } else {
+        connectionStatus.value = 'Ethernet connection failed';
+      }
+      return ok;
+    } finally {
+      isNetworkConnecting.value = false;
+    }
+  }
+
+  void _syncNetworkConnectionObservables({bool? connected}) {
+    final ready = connected ?? _network.hasActiveEndpoint;
+    isNetworkConnected.value = ready;
+    connectedNetworkLabel.value =
+        ready ? _network.connectionLabel : null;
+  }
+
+  /// Restores Ethernet status from live socket or saved IP (after print disconnects).
+  Future<void> restoreNetworkConnectionStatus() async {
+    if (_network.hasActiveEndpoint) {
+      _syncNetworkConnectionObservables(connected: true);
+      return;
+    }
+    final ip = await StorageHelper.getLastNetworkIp();
+    final port = await StorageHelper.getLastNetworkPort();
+    if (ip != null && ip.trim().isNotEmpty) {
+      isNetworkConnected.value = true;
+      connectedNetworkLabel.value = '$ip:$port';
+      return;
+    }
+    for (final role in ['bill', 'kot']) {
+      final info = await StorageHelper.getRoleSavedPrinterInfo(role);
+      if (info['type'] == 'network') {
+        final roleIp = info['ip'] as String?;
+        final rolePort = info['port'] as int? ?? 9100;
+        if (roleIp != null && roleIp.trim().isNotEmpty) {
+          isNetworkConnected.value = true;
+          connectedNetworkLabel.value = '$roleIp:$rolePort';
+          return;
+        }
+      }
+    }
+    _syncNetworkConnectionObservables(connected: false);
+  }
+
+  Future<void> disconnectNetworkPrinter() async {
+    await _network.disconnect();
+    _syncNetworkConnectionObservables(connected: false);
+  }
+
+  Future<void> assignNetworkToRole(
+    PrintRole role,
+    String host,
+    int port, {
+    String? name,
+  }) async {
+    await StorageHelper.saveRoleNetworkPrinter(
+      _roleKey(role),
+      host,
+      port,
+      name: name,
+    );
+    connectionStatus.value =
+        '${role == PrintRole.bill ? 'Bill' : 'KOT'} printer set: ${name ?? host}';
+  }
+
+  Future<Map<String, String?>> getLastNetworkSettings() async {
+    final ip = await StorageHelper.getLastNetworkIp();
+    final port = await StorageHelper.getLastNetworkPort();
+    return {'ip': ip, 'port': port.toString()};
   }
 
   void _startPrinterHealthMonitor() {
@@ -707,6 +795,10 @@ class ThermalPrinterService extends GetxController {
       final name = await StorageHelper.getRoleSavedUsbPrinter(_roleKey(role));
       return name != null && name.isNotEmpty;
     }
+    if (type == 'network') {
+      final ip = await StorageHelper.getRoleSavedNetworkIp(_roleKey(role));
+      return ip != null && ip.isNotEmpty;
+    }
     return false;
   }
 
@@ -816,6 +908,19 @@ class ThermalPrinterService extends GetxController {
               (Get.isRegistered<PrinterService2>() &&
                   PrinterService2.to.isConnected.value));
     }
+    if (type == 'network') {
+      final savedIp = await StorageHelper.getRoleSavedNetworkIp(roleKey);
+      final savedPort = await StorageHelper.getRoleSavedNetworkPort(roleKey) ?? 9100;
+      if (savedIp == null || savedIp.isEmpty) return false;
+      if (_network.isConnected &&
+          _network.host == savedIp &&
+          _network.port == savedPort) {
+        return true;
+      }
+      // Socket may be closed between prints; role + saved endpoint still counts.
+      return isNetworkConnected.value &&
+          connectedNetworkLabel.value == '$savedIp:$savedPort';
+    }
     return false;
   }
 
@@ -886,6 +991,19 @@ class ThermalPrinterService extends GetxController {
           if (!ok) return false;
         }
         return isUsbConnected.value && connectedUsbPrinter != null;
+      }
+    }
+
+    if (type == 'network') {
+      final ip = await StorageHelper.getRoleSavedNetworkIp(roleKey);
+      final port = await StorageHelper.getRoleSavedNetworkPort(roleKey) ?? 9100;
+      if (ip != null && ip.isNotEmpty) {
+        if (isNetworkConnected.value &&
+            _network.host == ip &&
+            _network.port == port) {
+          return true;
+        }
+        return await connectNetworkPrinter(ip, port: port);
       }
     }
 
@@ -1023,6 +1141,18 @@ class ThermalPrinterService extends GetxController {
           throw Exception('USB print failed: $e2');
         }
       }
+    }
+
+    if (assignedType == 'network') {
+      final builder = PrintBuilder(receiptWidth: _detectReceiptWidth())
+        ..center()
+        ..boldDoubleHeight('BillKaro\n')
+        ..text('${role == PrintRole.bill ? 'Bill' : 'KOT'} printer test\n')
+        ..text('${DateTime.now()}\n')
+        ..feed(3)
+        ..cut();
+      await _printBytes(builder.bytes, forRole: role);
+      return;
     }
 
     final builder = PrintBuilder(receiptWidth: _detectReceiptWidth())
@@ -1922,11 +2052,32 @@ class ThermalPrinterService extends GetxController {
         return;
       }
 
+      if (type == 'network') {
+        await _printBytesOverNetwork(bytes, role: forRole);
+        return;
+      }
+
       await _writeBluetoothBytes(bytes);
     } catch (e) {
       debugPrint('Print error: $e');
       rethrow;
     }
+  }
+
+  Future<void> _printBytesOverNetwork(
+    List<int> bytes, {
+    required PrintRole role,
+  }) async {
+    if (!await ensureConnectedForRole(role)) {
+      throw Exception('Ethernet printer not connected');
+    }
+    final ok = await _network.printBytes(bytes);
+    if (!ok) {
+      _syncNetworkConnectionObservables(connected: false);
+      throw Exception('Ethernet print failed. Check IP, port, and network.');
+    }
+    // printBytes closes the socket after each job; endpoint stays configured.
+    _syncNetworkConnectionObservables(connected: true);
   }
 
   // Private helper - Bluetooth specific write

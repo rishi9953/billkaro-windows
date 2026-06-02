@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/PrinterService2/printer_screen2_controller.dart';
@@ -8,8 +10,13 @@ import 'dart:io' show Platform;
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_thermal_printer/utils/printer.dart';
 
-/// USB and BLE thermal can both be connected; each gets its own status card.
-enum PrinterScreen2ConnLink { bleThermal, usbThermal, classicBluetooth }
+/// USB, BLE, and Ethernet can each be connected; each gets its own status card.
+enum PrinterScreen2ConnLink {
+  bleThermal,
+  usbThermal,
+  ethernet,
+  classicBluetooth,
+}
 
 class PrinterScreen2 extends StatefulWidget {
   const PrinterScreen2({super.key});
@@ -47,6 +54,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
     if (Get.isRegistered<PrinterScreen2Controller>()) {
       roleController = Get.find<PrinterScreen2Controller>();
       roleController.loadRolePrinters();
+      unawaited(thermalPrinter.restoreNetworkConnectionStatus());
     } else {
       roleController = Get.put(PrinterScreen2Controller());
     }
@@ -58,7 +66,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
       printerService.scanForDevices();
     }
 
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       if (mounted) setState(() {});
     });
@@ -143,8 +151,10 @@ class _PrinterScreen2State extends State<PrinterScreen2>
     if (Platform.isWindows) {
       if (_tabController.index == 0) {
         await thermalPrinter.startScan();
-      } else {
+      } else if (_tabController.index == 1) {
         await thermalPrinter.scanUsbPrinters();
+      } else {
+        await roleController.loadRolePrinters();
       }
     } else {
       await printerService.init();
@@ -264,6 +274,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
           tabs: const [
             Tab(icon: Icon(Icons.bluetooth), text: 'Bluetooth'),
             Tab(icon: Icon(Icons.usb), text: 'USB'),
+            Tab(icon: Icon(Icons.settings_ethernet), text: 'Ethernet'),
           ],
         ),
         actions: [
@@ -301,7 +312,11 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                         padding: const EdgeInsets.all(8),
                         child: TabBarView(
                           controller: _tabController,
-                          children: [_buildBluetoothTab(), _buildUsbTab()],
+                          children: [
+                            _buildBluetoothTab(),
+                            _buildUsbTab(),
+                            _buildEthernetTab(context),
+                          ],
                         ),
                       ),
                     ),
@@ -334,7 +349,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                 ),
                 const Spacer(),
                 SizedBox(
-                  width: 280,
+                  width: 380,
                   child: SegmentedButton<int>(
                     segments: const [
                       ButtonSegment(
@@ -347,6 +362,11 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                         icon: Icon(Icons.usb_rounded, size: 18),
                         label: Text('USB'),
                       ),
+                      ButtonSegment(
+                        value: 2,
+                        icon: Icon(Icons.settings_ethernet_rounded, size: 18),
+                        label: Text('Ethernet'),
+                      ),
                     ],
                     selected: {_tabController.index},
                     onSelectionChanged: (set) {
@@ -355,7 +375,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                       setState(() {});
                       if (index == 1) {
                         thermalPrinter.scanUsbPrinters();
-                      } else {
+                      } else if (index == 0) {
                         thermalPrinter.startScan();
                       }
                     },
@@ -370,7 +390,11 @@ class _PrinterScreen2State extends State<PrinterScreen2>
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               child: TabBarView(
                 controller: _tabController,
-                children: [_buildBluetoothTab(), _buildUsbTab()],
+                children: [
+                  _buildBluetoothTab(),
+                  _buildUsbTab(),
+                  _buildEthernetTab(context),
+                ],
               ),
             ),
           ),
@@ -390,7 +414,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
           Expanded(
             child: Text(
               'Assign Bill for counter receipts and KOT for kitchen tickets. '
-              'You can use USB at the desk and Bluetooth in the kitchen.',
+              'Use USB, Bluetooth, or Ethernet (LAN) depending on your setup.',
               style: TextStyle(
                 fontSize: 13,
                 height: 1.45,
@@ -470,6 +494,11 @@ class _PrinterScreen2State extends State<PrinterScreen2>
             context,
             link: PrinterScreen2ConnLink.usbThermal,
           ),
+          gap,
+          _buildConnectionStatusCard(
+            context,
+            link: PrinterScreen2ConnLink.ethernet,
+          ),
         ],
       );
     }
@@ -536,6 +565,23 @@ class _PrinterScreen2State extends State<PrinterScreen2>
           onDisconnect = connected
               ? () {
                   thermalPrinter.disconnectUsbPrinter();
+                }
+              : null;
+          break;
+        case PrinterScreen2ConnLink.ethernet:
+          connected = thermalPrinter.isNetworkConnected.value;
+          connectionType = 'Ethernet / LAN';
+          if (!connected) {
+            connectionName = 'No Ethernet printer connected';
+            statusIcon = Icons.portable_wifi_off_rounded;
+          } else {
+            connectionName =
+                thermalPrinter.connectedNetworkLabel.value ?? 'Connected';
+            statusIcon = Icons.settings_ethernet_rounded;
+          }
+          onDisconnect = connected
+              ? () {
+                  thermalPrinter.disconnectNetworkPrinter();
                 }
               : null;
           break;
@@ -1855,6 +1901,151 @@ class _PrinterScreen2State extends State<PrinterScreen2>
             );
           }),
         ),
+      ],
+    );
+  }
+
+  Widget _buildEthernetTab(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final padding = _isWindowsDesktop ? 20.0 : 16.0;
+
+    return ListView(
+      padding: EdgeInsets.all(padding),
+      children: [
+        Text(
+          'Printer IP on your network (port 9100).',
+          style: TextStyle(
+            fontSize: _isWindowsDesktop ? 13 : 12,
+            color: AppColor.primary.withOpacity(0.65),
+            height: 1.4,
+          ),
+        ),
+        const Gap(14),
+        TextField(
+          controller: roleController.ipController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'IP address',
+            hintText: '192.168.1.100',
+            filled: true,
+            fillColor: Colors.white,
+            isDense: true,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            prefixIcon: const Icon(Icons.router_outlined, size: 20),
+          ),
+        ),
+        const Gap(10),
+        TextField(
+          controller: roleController.portController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Port',
+            hintText: '9100',
+            filled: true,
+            fillColor: Colors.white,
+            isDense: true,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            prefixIcon: const Icon(Icons.numbers, size: 20),
+          ),
+        ),
+        const Gap(14),
+        Obx(() {
+          final connecting = thermalPrinter.isNetworkConnecting.value;
+          final connected = thermalPrinter.isNetworkConnected.value;
+          final btnWidth = _isWindowsDesktop ? 132.0 : 120.0;
+          final btnHeight = _isWindowsDesktop ? 40.0 : 38.0;
+          return Align(
+            alignment: Alignment.centerLeft,
+            child: SizedBox(
+              width: btnWidth,
+              height: btnHeight,
+              child: FilledButton(
+                onPressed: connecting || roleController.isRoleActionLoading.value
+                    ? null
+                    : roleController.connectEthernet,
+                style: FilledButton.styleFrom(
+                  backgroundColor:
+                      connected ? Colors.red.shade400 : AppColor.primary,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  minimumSize: Size(btnWidth, btnHeight),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: connecting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        connected ? 'Disconnect' : 'Connect',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+              ),
+            ),
+          );
+        }),
+        const Gap(18),
+        Obx(() {
+          roleController.networkFormTick.value;
+          roleController.billRoleInfo.value;
+          roleController.kotRoleInfo.value;
+          final ip = roleController.ipController.text.trim();
+          final port =
+              int.tryParse(roleController.portController.text.trim()) ?? 9100;
+          return _winSectionCard(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  ip.isEmpty ? 'Enter IP above' : '$ip:$port',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: _isWindowsDesktop ? 15 : 14,
+                    color: AppColor.primary,
+                  ),
+                ),
+                const Gap(10),
+                _buildAssignRoleButtons(
+                  onBill: () =>
+                      roleController.assignNetworkToRole(PrintRole.bill),
+                  onKot: () =>
+                      roleController.assignNetworkToRole(PrintRole.kot),
+                  billSelected: roleController.isBillNetworkPrinter(ip, port),
+                  kotSelected: roleController.isKotNetworkPrinter(ip, port),
+                ),
+              ],
+            ),
+          );
+        }),
+        if (!_isWindowsDesktop) ...[
+          const Gap(12),
+          Obx(() {
+            final connected = thermalPrinter.isNetworkConnected.value;
+            return Text(
+              connected
+                  ? 'Connected: ${thermalPrinter.connectedNetworkLabel.value ?? ''}'
+                  : 'Not connected',
+              style: TextStyle(
+                fontSize: 12,
+                color: connected ? AppColor.lightgreen : scheme.error,
+              ),
+            );
+          }),
+        ],
       ],
     );
   }

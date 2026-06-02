@@ -1,6 +1,9 @@
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/helpers/storage_helper.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/utils/app_snackbar.dart';
+import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_thermal_printer/utils/printer.dart';
 import 'package:get/get.dart';
@@ -16,16 +19,45 @@ class PrinterScreen2Controller extends GetxController {
   final billRoleInfo = Rx<Map<String, dynamic>>({});
   final kotRoleInfo = Rx<Map<String, dynamic>>({});
   final isRoleActionLoading = false.obs;
+  final networkFormTick = 0.obs;
+
+  final ipController = TextEditingController();
+  final portController = TextEditingController(text: '9100');
 
   @override
   void onInit() {
     super.onInit();
     loadRolePrinters();
+    _loadLastNetworkSettings();
+    unawaited(thermalPrinter.restoreNetworkConnectionStatus());
+    void bumpNetworkForm() => networkFormTick.value++;
+    ipController.addListener(bumpNetworkForm);
+    portController.addListener(bumpNetworkForm);
+  }
+
+  @override
+  void onClose() {
+    ipController.dispose();
+    portController.dispose();
+    super.onClose();
+  }
+
+  Future<void> _loadLastNetworkSettings() async {
+    final settings = await thermalPrinter.getLastNetworkSettings();
+    final ip = settings['ip'];
+    if (ip != null && ip.isNotEmpty) {
+      ipController.text = ip;
+    }
+    final port = settings['port'];
+    if (port != null && port.isNotEmpty) {
+      portController.text = port;
+    }
   }
 
   String? _typeLabel(String? type) {
     if (type == 'usb') return 'USB';
     if (type == 'bluetooth') return 'Bluetooth';
+    if (type == 'network') return 'Ethernet';
     return null;
   }
 
@@ -97,6 +129,125 @@ class PrinterScreen2Controller extends GetxController {
 
   bool isKotClassicBt(String address) =>
       _matchesClassicBtRole(kotRoleInfo.value, address);
+
+  bool _matchesNetworkRole(Map<String, dynamic> info, String ip, int port) {
+    if (info['type'] != 'network') return false;
+    final savedIp = (info['ip'] as String?)?.trim() ?? '';
+    if (savedIp.isEmpty || savedIp != ip.trim()) return false;
+    final savedPort = info['port'] as int? ?? 9100;
+    return savedPort == port;
+  }
+
+  bool isBillNetworkPrinter(String ip, int port) =>
+      _matchesNetworkRole(billRoleInfo.value, ip, port);
+
+  bool isKotNetworkPrinter(String ip, int port) =>
+      _matchesNetworkRole(kotRoleInfo.value, ip, port);
+
+  int? _parsePort() {
+    final p = int.tryParse(portController.text.trim());
+    if (p == null || p < 1 || p > 65535) return null;
+    return p;
+  }
+
+  bool _isValidIp(String ip) {
+    final parts = ip.trim().split('.');
+    if (parts.length != 4) return false;
+    for (final part in parts) {
+      final n = int.tryParse(part);
+      if (n == null || n < 0 || n > 255) return false;
+    }
+    return true;
+  }
+
+  Future<void> connectEthernet() async {
+    final ip = ipController.text.trim();
+    final port = _parsePort();
+    if (!_isValidIp(ip)) {
+      AppSnackbar.show(
+        title: 'Error',
+        message: 'Enter a valid IP address (e.g. 192.168.1.100)',
+      );
+      return;
+    }
+    if (port == null) {
+      AppSnackbar.show(
+        title: 'Error',
+        message: 'Enter a valid port (default 9100)',
+      );
+      return;
+    }
+
+    if (thermalPrinter.isNetworkConnected.value &&
+        thermalPrinter.connectedNetworkLabel.value == '$ip:$port') {
+      await thermalPrinter.disconnectNetworkPrinter();
+      AppSnackbar.show(
+        title: 'Success',
+        message: 'Ethernet printer disconnected',
+        duration: const Duration(seconds: 2),
+      );
+      return;
+    }
+
+    try {
+      isRoleActionLoading.value = true;
+      final ok = await thermalPrinter.connectNetworkPrinter(ip, port: port);
+      AppSnackbar.show(
+        title: ok ? 'Success' : 'Error',
+        message: ok
+            ? 'Connected to $ip:$port'
+            : 'Could not connect. Check IP, port, and that the printer is on the same network.',
+        duration: const Duration(seconds: 2),
+      );
+    } finally {
+      isRoleActionLoading.value = false;
+    }
+  }
+
+  Future<void> assignNetworkToRole(PrintRole role) async {
+    final ip = ipController.text.trim();
+    final port = _parsePort();
+    if (!_isValidIp(ip)) {
+      AppSnackbar.show(title: 'Error', message: 'Enter a valid IP address first');
+      return;
+    }
+    if (port == null) {
+      AppSnackbar.show(title: 'Error', message: 'Enter a valid port');
+      return;
+    }
+
+    try {
+      isRoleActionLoading.value = true;
+      if (!thermalPrinter.isNetworkConnected.value) {
+        final connected =
+            await thermalPrinter.connectNetworkPrinter(ip, port: port);
+        if (!connected) {
+          AppSnackbar.show(
+            title: 'Error',
+            message: 'Connect to the printer first',
+          );
+          return;
+        }
+      }
+      await thermalPrinter.assignNetworkToRole(
+        role,
+        ip,
+        port,
+        name: 'Ethernet $ip',
+      );
+      await loadRolePrinters();
+      await thermalPrinter.restoreNetworkConnectionStatus();
+      AppSnackbar.show(
+        title: 'Success',
+        message: '${role == PrintRole.bill ? 'Bill' : 'KOT'} printer: $ip:$port',
+        duration: const Duration(seconds: 2),
+      );
+    } catch (e) {
+      AppSnackbar.show(title: 'Error', message: 'Failed: $e');
+    } finally {
+      isRoleActionLoading.value = false;
+    }
+  }
 
   Future<void> assignBluetoothToRole(
     PrintRole role,
@@ -260,6 +411,29 @@ class PrinterScreen2Controller extends GetxController {
         vendorId: billInfo['vendorId'] as int?,
         productId: billInfo['productId'] as int?,
         address: billInfo['address'] as String?,
+      );
+      await loadRolePrinters();
+      AppSnackbar.show(
+        title: 'Success',
+        message: 'KOT printer set same as bill printer',
+        duration: const Duration(seconds: 2),
+      );
+    } else if (type == 'network') {
+      final ip = billInfo['ip'] as String?;
+      final port = billInfo['port'] as int? ?? 9100;
+      if (ip == null || ip.isEmpty) {
+        AppSnackbar.show(
+          title: 'Error',
+          message: 'Bill printer not configured',
+          duration: const Duration(seconds: 2),
+        );
+        return;
+      }
+      await StorageHelper.saveRoleNetworkPrinter(
+        'kot',
+        ip,
+        port,
+        name: billInfo['name'] as String?,
       );
       await loadRolePrinters();
       AppSnackbar.show(

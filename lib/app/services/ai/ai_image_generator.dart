@@ -1,117 +1,50 @@
 import 'dart:io';
-import 'package:dio/dio.dart';
+
+import 'package:billkaro/app/services/ai/billkaro_ai_image_engine.dart';
 import 'package:billkaro/config/config.dart';
 
-/// AI Image Generator Service
-/// Generates images based on item names using AI
+/// Menu-item images via [BillkaroAiImageEngine] (free cloud, offline fallback).
 class AIImageGenerator {
   static final AIImageGenerator _instance = AIImageGenerator._internal();
   factory AIImageGenerator() => _instance;
   AIImageGenerator._internal();
 
-  final Dio _dio = Dio();
+  final BillkaroAiImageEngine _engine = BillkaroAiImageEngine();
 
-  /// Generate an image based on item name
-  ///
-  /// This method can be connected to various AI image generation APIs:
-  /// - OpenAI DALL-E
-  /// - Stable Diffusion
-  /// - Custom backend API
-  ///
-  /// For now, it uses a placeholder approach that can be easily connected
-  /// to your preferred AI image generation service.
-  Future<String?> generateImageFromItemName(String itemName) async {
-    try {
-      debugPrint('🎨 [AI Image Generator] Generating image for: $itemName');
-      final prompt = _createImagePrompt(itemName);
-      return await _generateWithCustomAPI(prompt, itemName);
-    } catch (e) {
-      debugPrint('❌ [AI Image Generator] Error: $e');
-      return null;
+  /// Builds a food-photo prompt from the menu item name and generates a PNG.
+  Future<GeneratedImageResult> generateMenuItemImage({
+    required String itemName,
+    void Function(String message)? onStatus,
+  }) async {
+    final name = BillkaroAiImageEngine.sanitizePrompt(itemName);
+    if (!BillkaroAiImageEngine.isValidPrompt(name)) {
+      throw ArgumentError('Item name must be at least 3 characters');
     }
+
+    debugPrint('🎨 [AI] Generating menu image for: $name');
+    final prompt =
+        'Professional appetizing food photo of $name on a plate, '
+        'restaurant menu, warm lighting, high quality';
+
+    final result = await _engine.generateImage(
+      prompt: prompt,
+      styleKey: 'realistic',
+      width: 512,
+      height: 512,
+      onStatus: onStatus,
+    );
+    debugPrint('✅ [AI] Done via ${result.provider}');
+    return result;
   }
 
-  /// Create a descriptive prompt for image generation
-  String _createImagePrompt(String itemName) {
-    // Create a professional food/item image prompt
-    return 'Professional high-quality food photography of $itemName, '
-        'restaurant menu style, appetizing, well-lit, clean background, '
-        'commercial food photography, 4k quality';
-  }
-
-  /// Generate image using custom backend API
-  Future<String?> _generateWithCustomAPI(String prompt, String itemName) async {
+  /// Validates that [filePath] from [GeneratedImageResult] exists and is readable.
+  Future<File?> fileFromResult(String filePath) async {
     try {
-      final response = await _dio.post(
-        '${baseURL}ai/generate-image', // Replace with your endpoint
-        data: {
-          'prompt': prompt,
-          'itemName': itemName,
-          'style': 'food_photography',
-          'size': '1024x1024',
-        },
-        options: Options(
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          receiveTimeout: const Duration(seconds: 60),
-          sendTimeout: const Duration(seconds: 60),
-        ),
-      );
-
-      if (response.statusCode == 200 && response.data != null) {
-        // Adjust based on your API response structure
-        final imageUrl =
-            response.data['imageUrl'] ??
-            response.data['url'] ??
-            response.data['data']?['url'];
-        if (imageUrl != null && imageUrl is String) {
-          debugPrint('✅ [AI Image Generator] Image generated: $imageUrl');
-          return imageUrl;
-        }
-      }
-
-      debugPrint('⚠️ [AI Image Generator] Invalid response format');
-      return null;
-    } on DioException catch (e) {
-      debugPrint('❌ [AI Image Generator] API Error: ${e.message}');
-      // For development, return a placeholder
-      // In production, handle this error appropriately
+      final file = File(filePath);
+      if (await file.exists() && await file.length() > 50) return file;
       return null;
     } catch (e) {
-      debugPrint('❌ [AI Image Generator] Error: $e');
-      return null;
-    }
-  }
-
-  /// Download image from URL and save to local file
-  Future<File?> downloadImageToFile(String imageUrl) async {
-    try {
-      debugPrint('📥 [AI Image Generator] Downloading image from: $imageUrl');
-
-      final response = await _dio.get(
-        imageUrl,
-        options: Options(
-          responseType: ResponseType.bytes,
-          receiveTimeout: const Duration(seconds: 30),
-        ),
-      );
-
-      if (response.statusCode == 200 && response.data != null) {
-        // Create temporary file
-        final tempDir = Directory.systemTemp;
-        final file = File(
-          '${tempDir.path}/ai_generated_${DateTime.now().millisecondsSinceEpoch}.jpg',
-        );
-        await file.writeAsBytes(response.data);
-
-        debugPrint('✅ [AI Image Generator] Image saved to: ${file.path}');
-        return file;
-      }
-
-      return null;
-    } catch (e) {
-      debugPrint('❌ [AI Image Generator] Download error: $e');
+      debugPrint('❌ [AI] File error: $e');
       return null;
     }
   }

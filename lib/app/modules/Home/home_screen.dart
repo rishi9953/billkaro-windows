@@ -5,6 +5,7 @@ import 'package:billkaro/app/modules/Home/showcase_controller.dart';
 import 'package:billkaro/app/modules/Home/Widgets/payment_summary_widget.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Items/voice_add_menu_items_bottomsheet.dart';
+import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/config/config.dart';
@@ -29,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final RxInt _currentPage = 0.obs;
   final ScrollController _scrollController = ScrollController();
   Timer? _autoScrollTimer;
+  Timer? _occupiedTickTimer;
 
   static const double _pageHMargin = 16;
   static const double _sectionGap = 18;
@@ -56,6 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _startAutoScroll();
+    _startOccupiedTick();
     // WidgetsBinding.instance.addPostFrameCallback((_) {
     //   checkDeveloperOptionsAndShowSheet();
     // });
@@ -74,9 +77,17 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _startOccupiedTick() {
+    _occupiedTickTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {});
+    });
+  }
+
   @override
   void dispose() {
     _autoScrollTimer?.cancel();
+    _occupiedTickTimer?.cancel();
     _pageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -206,6 +217,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                       _printerStatusBanner(),
                       const SizedBox(height: _sectionGap),
+                      if (HomeMainRoutes.outletShowsTables()) ...[
+                        _occupiedTablesSection(isDesktop: isDesktop),
+                        const SizedBox(height: _sectionGap),
+                      ],
                       _quickActions(loc, isDesktop: isDesktop),
                       const SizedBox(height: _sectionGap),
                       if (isDesktop)
@@ -712,6 +727,194 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ],
     );
+  }
+
+  Widget _occupiedTablesSection({required bool isDesktop}) {
+    return Obx(() {
+      final occupied = controller.occupiedTableOrders;
+      if (occupied.isEmpty) return const SizedBox.shrink();
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionHeader(
+            'Occupied Tables',
+            subtitle: 'Live dine-in tables in progress',
+            trailing: TextButton(
+              onPressed: () => Modular.to.navigate(HomeMainRoutes.tables),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColor.primary,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                visualDensity: VisualDensity.compact,
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('View all', style: TextStyle(fontWeight: FontWeight.w700)),
+                  SizedBox(width: 6),
+                  Icon(Icons.arrow_forward_ios, size: 12),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: _pageHMargin),
+            child: GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: occupied.length,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: isDesktop ? 4 : (Get.width >= 480 ? 3 : 2),
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: isDesktop ? 1.55 : 1.35,
+              ),
+              itemBuilder: (context, index) {
+                final order = occupied[index];
+                return _occupiedTableCard(order);
+              },
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
+  Widget _occupiedTableCard(OrderModel order) {
+    final rawTable = (order.tableNumber ?? '').trim();
+    final tableLabel = rawTable.isEmpty
+        ? 'Table'
+        : (rawTable.toLowerCase().startsWith('table ')
+              ? rawTable
+              : 'Table $rawTable');
+    final billLabel = order.billNumber.trim().isEmpty
+        ? '-'
+        : order.billNumber.trim();
+    final createdAt = DateTime.tryParse(order.createdAt);
+    final occupiedDuration = createdAt == null
+        ? null
+        : DateTime.now().difference(createdAt);
+
+    final statusColor = AppColor.secondaryPrimary;
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        hoverColor: statusColor.withOpacity(0.10),
+        onTap: () {
+          Modular.to.pushNamed(
+            HomeMainRoutes.createOrder,
+            arguments: {'order': order, 'isEdit': true},
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: statusColor.withOpacity(0.35),
+              width: 1.4,
+            ),
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.14),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.person, size: 18, color: statusColor),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      'Occupied',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: statusColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              Text(
+                tableLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Tap to continue order',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Bill #$billLabel',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              if (occupiedDuration != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Occupied ${_formatDuration(occupiedDuration)}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: statusColor,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours.toString().padLeft(2, '0');
+    final minutes = (duration.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
   }
 
   Widget _buildQuickActionCard({

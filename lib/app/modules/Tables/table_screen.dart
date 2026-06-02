@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Tables/table_controller.dart';
 import 'package:billkaro/config/config.dart';
@@ -457,6 +459,52 @@ class _TableCard extends StatefulWidget {
 
 class _TableCardState extends State<_TableCard> {
   bool _hovered = false;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant _TableCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _syncTimer() {
+    final shouldRun = _occupiedStartTime != null;
+    if (!shouldRun) {
+      _timer?.cancel();
+      _timer = null;
+      return;
+    }
+    if (_timer != null) return;
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  DateTime? get _occupiedStartTime {
+    final order = widget.tableWithStatus.currentOrder;
+    if (order == null) return null;
+    if (widget.tableWithStatus.status != TableStatus.occupied) return null;
+    return DateTime.tryParse(order.createdAt);
+  }
+
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours.toString().padLeft(2, '0');
+    final minutes = (duration.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -615,6 +663,17 @@ class _TableCardState extends State<_TableCard> {
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: colorScheme.onSurface,
+                    ),
+                  ),
+                ],
+                if (_occupiedStartTime != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Occupied ${_formatDuration(DateTime.now().difference(_occupiedStartTime!))}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: statusColor,
                     ),
                   ),
                 ],

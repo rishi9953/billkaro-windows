@@ -23,6 +23,7 @@ class HomeScreenController extends BaseController {
   var yesterdayOrders = 0.obs;
   var selectedIndex = 0.obs;
   final RxList<OrderModel> allOrders = <OrderModel>[].obs;
+  final RxList<OrderModel> occupiedTableOrders = <OrderModel>[].obs;
   final RxList<OrderModel> ordersL = <OrderModel>[].obs;
   final printerservice2 = PrinterService2.to;
   final Map<String, String> _itemImageById = <String, String>{};
@@ -163,6 +164,7 @@ class HomeScreenController extends BaseController {
       /// 📦 STEP 1 → ALWAYS LOAD SQLITE
       /// ===============================
       final localOrders = await db.getAllOrders(outletId: outletId);
+      occupiedTableOrders.value = _buildOccupiedTableOrders(localOrders);
 
       allOrders.value = localOrders.where((e) => e.status == 'closed').toList();
 
@@ -180,15 +182,14 @@ class HomeScreenController extends BaseController {
         );
 
         if (response?.status == 'success') {
-          final apiOrders = response!.data
-              .where((e) => e.status == 'closed')
-              .toList();
+          final apiOrders = response!.data;
 
           /// Save to SQLite
           await db.insertOrders(apiOrders, outletId, isSyncedFromApi: true);
 
           /// Reload from SQLite (single source of truth)
           final updatedOrders = await db.getAllOrders(outletId: outletId);
+          occupiedTableOrders.value = _buildOccupiedTableOrders(updatedOrders);
 
           allOrders.value = updatedOrders
               .where((e) => e.status == 'closed')
@@ -337,6 +338,52 @@ class HomeScreenController extends BaseController {
     debugPrint(
       '📊 Yesterday: ₹$yesterdaySalesTotal ($yesterdayOrdersCount orders)',
     );
+  }
+
+  String _normalizeTableNumber(String raw) {
+    var value = raw.trim().toLowerCase();
+    value = value.replaceFirst(RegExp(r'^table\s*'), '');
+    value = value.replaceAll(RegExp(r'\s+'), '');
+    return value;
+  }
+
+  DateTime _parseSafeDate(String? value) {
+    if (value == null || value.isEmpty) {
+      return DateTime.fromMillisecondsSinceEpoch(0);
+    }
+    return DateTime.tryParse(value) ?? DateTime.fromMillisecondsSinceEpoch(0);
+  }
+
+  List<OrderModel> _buildOccupiedTableOrders(List<OrderModel> orders) {
+    final Map<String, OrderModel> latestOrderByTable = {};
+
+    for (final order in orders) {
+      final status = order.status.trim().toLowerCase();
+      if (status == 'closed') continue;
+
+      final orderFrom = order.orderFrom.trim().toLowerCase();
+      if (orderFrom != 'dine in') continue;
+
+      final rawTable = (order.tableNumber ?? '').trim();
+      final tableKey = _normalizeTableNumber(rawTable);
+      if (tableKey.isEmpty) continue;
+
+      final existing = latestOrderByTable[tableKey];
+      if (existing == null) {
+        latestOrderByTable[tableKey] = order;
+        continue;
+      }
+
+      if (_parseSafeDate(order.updatedAt).isAfter(_parseSafeDate(existing.updatedAt))) {
+        latestOrderByTable[tableKey] = order;
+      }
+    }
+
+    final rows = latestOrderByTable.values.toList(growable: false)
+      ..sort(
+        (a, b) => _parseSafeDate(b.updatedAt).compareTo(_parseSafeDate(a.updatedAt)),
+      );
+    return rows;
   }
 
   void _calculateChartSalesData() {
@@ -565,6 +612,7 @@ class HomeScreenController extends BaseController {
     chartSalesData.value = List.filled(7, 0.0);
     todayCategorySales.clear();
     topSellingItems.clear();
+    occupiedTableOrders.clear();
     _hasLoadedFromApi = false;
 
     getOrderList(forceApiRefresh: true);
