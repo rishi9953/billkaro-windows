@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Tables/table_controller.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/qr_menu_url_config.dart';
+import 'package:billkaro/utils/qr_menu_url_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:get/get.dart';
@@ -38,6 +40,11 @@ class TableScreen extends StatelessWidget {
         elevation: 0,
         title: const Text('Tables'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.qr_code_2),
+            onPressed: () => _showQrMenuOptions(context),
+            tooltip: 'QR Menu',
+          ),
           IconButton(
             icon: const Icon(Icons.restart_alt),
             onPressed: () => _showResetAllTablesDialog(context),
@@ -122,6 +129,7 @@ class TableScreen extends StatelessWidget {
                                         enableHover: isWindows,
                                         tableWithStatus: tws,
                                         onTap: () => controller.onTableTap(tws),
+                                        onQrPrint: () => controller.printTableQr(tws.table),
                                         onDelete: tws.isAvailable
                                             ? () => _showDeleteTableDialog(
                                                 context,
@@ -142,6 +150,52 @@ class TableScreen extends StatelessWidget {
           ),
         );
       }),
+    );
+  }
+
+  void _showQrMenuOptions(BuildContext context) {
+    final controller = Get.find<TableController>();
+    final appPref = Get.find<AppPref>();
+    final menuBase = QrMenuUrlConfig.effectiveBaseUrl(appPref);
+
+    Get.dialog(
+      AlertDialog(
+        title: const Text('QR Menu'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Generate QR codes for tables so customers can scan, order, and pay from their phone.',
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Current URL base:\n$menuBase',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              if (Get.isDialogOpen == true) Get.back();
+              await showQrMenuUrlEditor(context);
+            },
+            child: const Text('Change URL'),
+          ),
+          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              if (Get.isDialogOpen == true) Get.back();
+              await controller.generateAllQrsAndPrint();
+            },
+            child: const Text('Print All Table QR'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -443,12 +497,14 @@ class _ErrorState extends StatelessWidget {
 class _TableCard extends StatefulWidget {
   final TableWithStatus tableWithStatus;
   final VoidCallback onTap;
+  final VoidCallback? onQrPrint;
   final VoidCallback? onDelete;
   final bool enableHover;
 
   const _TableCard({
     required this.tableWithStatus,
     required this.onTap,
+    this.onQrPrint,
     this.onDelete,
     required this.enableHover,
   });
@@ -623,6 +679,29 @@ class _TableCardState extends State<_TableCard> {
                             child: Icon(
                               Icons.delete_outline,
                               color: colorScheme.error,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (widget.onQrPrint != null) ...[
+                      const SizedBox(width: 6),
+                      Tooltip(
+                        message: 'Print QR menu',
+                        child: InkWell(
+                          onTap: widget.onQrPrint,
+                          borderRadius: BorderRadius.circular(18),
+                          child: Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: colorScheme.primary.withOpacity(0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.qr_code_2,
+                              color: colorScheme.primary,
                               size: 16,
                             ),
                           ),

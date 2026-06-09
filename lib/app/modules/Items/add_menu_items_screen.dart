@@ -580,6 +580,17 @@ class AddMenuItemScreen extends StatelessWidget {
               ),
               const SizedBox(height: 18),
 
+              fieldLabel('Kitchen prep time (minutes)'),
+              const SizedBox(height: 8),
+              TextField(
+                controller: controller.prepTimeController,
+                keyboardType: TextInputType.number,
+                decoration: inputDecoration(
+                  hintText: 'e.g. 15',
+                ),
+              ),
+              const SizedBox(height: 18),
+
               fieldLabel(loc.tax_percentage),
               const SizedBox(height: 8),
               Obx(

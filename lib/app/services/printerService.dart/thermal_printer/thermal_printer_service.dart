@@ -1249,34 +1249,26 @@ class ThermalPrinterService extends GetxController {
 
     builder.line();
 
-    // Items
-    if (receiptW >= 48) {
-      builder.bold(
-        TextHelper.padRight('Item', 36) + TextHelper.padLeft('Qty', 12) + '\n',
-      );
-    } else {
-      builder.bold(
-        TextHelper.padRight('Item', 20) + TextHelper.padLeft('Qty', 12) + '\n',
-      );
-    }
+    // Items — same row layout as ThermalKOTReceipt preview
+    builder.bold(
+      '${TextHelper.formatRow('Description', 'Qty.', receiptW)}\n',
+    );
     builder.line();
 
     for (var item in items) {
-      final itemMax = receiptW >= 48 ? 34 : 20;
-      String itemName = item.itemName.length > itemMax
-          ? item.itemName.substring(0, itemMax)
-          : item.itemName;
-      String qty = 'x${item.quantity}';
-      builder.text(
-        (receiptW >= 48
-                ? TextHelper.padRight(itemName, 36)
-                : TextHelper.padRight(itemName, 20)) +
-            TextHelper.padLeft(qty, 12) +
-            '\n',
-      );
-
-      if (item.category.isNotEmpty) {
-        builder.text('  (${item.category})\n');
+      for (final line in TextHelper.kotNameQtyLines(
+        item.itemName,
+        item.quantity,
+        receiptW,
+      )) {
+        builder.text('$line\n');
+      }
+      for (final line in TextHelper.kotSublineLines(
+        category: item.category,
+        remark: item.itemRemark,
+        receiptWidth: receiptW,
+      )) {
+        builder.text('$line\n');
       }
     }
 
@@ -1512,6 +1504,137 @@ class ThermalPrinterService extends GetxController {
 
     builder.feed(3).cut();
     await _printBytes(builder.bytes, forRole: PrintRole.bill);
+  }
+
+  /// Prints a table QR menu sticker/receipt on the bill printer.
+  Future<void> printTableQrMenu({
+    required String businessName,
+    required String tableDisplayName,
+    required String menuUrl,
+  }) async {
+    if (menuUrl.trim().isEmpty) {
+      throw Exception('QR menu URL is empty');
+    }
+
+    final ok = await ensureConnectedForRole(PrintRole.bill);
+    if (!ok) throw Exception('No bill printer connected');
+
+    if (!kIsWeb && Platform.isWindows && !hasActiveThermalPath) {
+      await _printTableQrWindowsPdf(
+        businessName: businessName,
+        tableDisplayName: tableDisplayName,
+        menuUrl: menuUrl,
+      );
+      return;
+    }
+
+    final receiptW = _detectReceiptWidth();
+    final builder = PrintBuilder(receiptWidth: receiptW);
+
+    builder
+      ..center()
+      ..feed(1);
+
+    if (businessName.trim().isNotEmpty) {
+      builder.bold('${businessName.trim()}\n');
+    }
+
+    builder
+      ..boldDoubleHeight('${tableDisplayName.trim()}\n')
+      ..boldNormal('')
+      ..line()
+      ..text('\n')
+      ..bold('Scan to Order & Pay\n')
+      ..text('\n');
+
+    final qrBytes = await QRGenerator.generateUrlBitmap(menuUrl.trim());
+    if (qrBytes.isNotEmpty) {
+      builder.bytes.addAll(qrBytes);
+      builder.text('\n');
+    } else {
+      builder.text('(QR generation failed)\n');
+    }
+
+    builder
+      ..text('\n')
+      ..text('Open camera & scan QR\n')
+      ..line()
+      ..text('Powered by Billkaro\n')
+      ..feed(3)
+      ..cut();
+
+    await _printBytes(builder.bytes, forRole: PrintRole.bill);
+  }
+
+  /// Prints QR menu codes for multiple tables (one cut per table).
+  Future<void> printAllTableQrMenus({
+    required String businessName,
+    required List<({String tableDisplayName, String menuUrl})> tables,
+  }) async {
+    final valid = tables
+        .where((t) => t.menuUrl.trim().isNotEmpty)
+        .toList(growable: false);
+    if (valid.isEmpty) {
+      throw Exception('No QR menu URLs to print');
+    }
+
+    for (final table in valid) {
+      await printTableQrMenu(
+        businessName: businessName,
+        tableDisplayName: table.tableDisplayName,
+        menuUrl: table.menuUrl,
+      );
+    }
+  }
+
+  Future<void> _printTableQrWindowsPdf({
+    required String businessName,
+    required String tableDisplayName,
+    required String menuUrl,
+  }) async {
+    final qrPainter = QrPainter(
+      data: menuUrl,
+      version: QrVersions.auto,
+      gapless: true,
+    );
+    final image = await qrPainter.toImage(240);
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    final pngBytes = byteData!.buffer.asUint8List();
+
+    final doc = pw.Document();
+    doc.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a6,
+        build: (context) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            pw.SizedBox(height: 16),
+            pw.Text(
+              businessName,
+              style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+              textAlign: pw.TextAlign.center,
+            ),
+            pw.SizedBox(height: 8),
+            pw.Text(
+              tableDisplayName,
+              style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 16),
+            pw.Center(
+              child: pw.Image(pw.MemoryImage(pngBytes), width: 180, height: 180),
+            ),
+            pw.SizedBox(height: 12),
+            pw.Text('Scan to order & pay', style: const pw.TextStyle(fontSize: 12)),
+            pw.SizedBox(height: 4),
+            pw.Text(
+              'Powered by Billkaro',
+              style: pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+            ),
+          ],
+        ),
+      ),
+    );
+    await Printing.layoutPdf(onLayout: (_) async => doc.save());
   }
 
   Future<void> _printInvoiceWindowsPdf({
@@ -1947,54 +2070,45 @@ class ThermalPrinterService extends GetxController {
           if (customerName.isNotEmpty)
             pw.Text('Customer: $customerName', style: t()),
           pw.Divider(),
-          pw.Table(
-            columnWidths: const {
-              0: pw.FlexColumnWidth(8),
-              1: pw.FlexColumnWidth(4),
-            },
-            border: pw.TableBorder(
-              horizontalInside: pw.BorderSide(
-                width: 0.4,
-                color: PdfColors.grey,
-              ),
-              top: pw.BorderSide(width: 0.6),
-              bottom: pw.BorderSide(width: 0.6),
-            ),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              pw.TableRow(
-                children: [
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 4),
-                    child: pw.Text('Item', style: t(b: true)),
-                  ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 4),
-                    child: pw.Align(
-                      alignment: pw.Alignment.centerRight,
-                      child: pw.Text('Qty', style: t(b: true)),
-                    ),
-                  ),
-                ],
-              ),
-              ...items.map(
-                (it) => pw.TableRow(
-                  children: [
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                      child: pw.Text(it.itemName, style: t()),
-                    ),
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                      child: pw.Align(
-                        alignment: pw.Alignment.centerRight,
-                        child: pw.Text('x${it.quantity}', style: t()),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              pw.Expanded(child: pw.Text('Description', style: t(b: true))),
+              pw.Text('Qty.', style: t(b: true)),
             ],
           ),
+          pw.Divider(),
+          ...items.map((it) {
+            final category = it.category.trim();
+            final remark = it.itemRemark?.trim() ?? '';
+            final sublineStyle = t().copyWith(
+              fontStyle: pw.FontStyle.italic,
+              color: PdfColors.grey700,
+            );
+            return pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 4),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Row(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Expanded(child: pw.Text(it.itemName, style: t())),
+                      pw.Text('x${it.quantity}', style: t(b: true)),
+                    ],
+                  ),
+                  if (category.isNotEmpty) ...[
+                    pw.SizedBox(height: 2),
+                    pw.Text('($category)', style: sublineStyle),
+                  ],
+                  if (remark.isNotEmpty) ...[
+                    pw.SizedBox(height: 2),
+                    pw.Text('* $remark', style: sublineStyle),
+                  ],
+                ],
+              ),
+            );
+          }),
           pw.SizedBox(height: 6),
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,

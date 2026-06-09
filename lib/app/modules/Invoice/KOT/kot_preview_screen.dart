@@ -1,13 +1,28 @@
 import 'package:billkaro/app/modules/Invoice/KOT/kot_preview_controller.dart';
+import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
 import 'package:billkaro/config/config.dart';
 
-class ThermalKOTReceipt extends StatelessWidget {
+class ThermalKOTReceipt extends StatefulWidget {
   const ThermalKOTReceipt({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final controller = Get.put(KOTPreviewController());
+  State<ThermalKOTReceipt> createState() => _ThermalKOTReceiptState();
+}
 
+class _ThermalKOTReceiptState extends State<ThermalKOTReceipt> {
+  late final KOTPreviewController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    if (Get.isRegistered<KOTPreviewController>()) {
+      Get.delete<KOTPreviewController>(force: true);
+    }
+    controller = Get.put(KOTPreviewController());
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[200],
       appBar: AppBar(
@@ -207,13 +222,11 @@ class ThermalKOTReceipt extends StatelessWidget {
                           bottom: BorderSide(color: Colors.grey[400]!),
                         ),
                       ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            flex: 4,
-                            child: Padding(
-                              padding: EdgeInsets.only(left: 8),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8),
+                        child: Row(
+                          children: [
+                            Expanded(
                               child: Text(
                                 'Description',
                                 style: TextStyle(
@@ -222,19 +235,15 @@ class ThermalKOTReceipt extends StatelessWidget {
                                 ),
                               ),
                             ),
-                          ),
-                          SizedBox(
-                            width: 50,
-                            child: Text(
+                            Text(
                               'Qty.',
-                              textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -253,65 +262,7 @@ class ThermalKOTReceipt extends StatelessWidget {
                         ),
                       )
                     else
-                      ...controller.itemList.map((item) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                flex: 4,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(left: 8),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        item.itemName,
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                      if (item.category.isNotEmpty) ...[
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          '(${item.category})',
-                                          style: TextStyle(
-                                            fontSize: 9,
-                                            color: Colors.grey[600],
-                                            fontStyle: FontStyle.italic,
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                width: 50,
-                                alignment: Alignment.center,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.grey[400]!),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  'x${item.quantity}',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
+                      ...controller.itemList.map(_buildKotItemRow),
 
                     const SizedBox(height: 12),
                     _buildDottedLine(),
@@ -447,6 +398,74 @@ class ThermalKOTReceipt extends StatelessWidget {
       //   icon: const Icon(Icons.picture_as_pdf),
       //   label: const Text('Generate PDF'),
       // ),
+    );
+  }
+
+  Widget _buildKotItemRow(OrderItem item) {
+    final category = item.category.trim();
+    final remark = item.itemRemark?.trim() ?? '';
+    final sublineStyle = TextStyle(
+      fontSize: 9,
+      color: Colors.grey[700],
+      fontStyle: FontStyle.italic,
+      fontWeight: FontWeight.w500,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  item.itemName,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Text(
+                'x${item.quantity}',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          if (category.isNotEmpty) ...[
+            const SizedBox(height: 3),
+            Text('($category)', style: sublineStyle),
+          ],
+          if (remark.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Remark:',
+                  style: sublineStyle.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    remark,
+                    style: sublineStyle.copyWith(
+                      fontSize: 10,
+                      color: AppColor.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 

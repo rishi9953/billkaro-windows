@@ -4,6 +4,7 @@ import 'dart:io' show Platform;
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/helpers/storage_helper.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_thermal_printer/flutter_thermal_printer.dart';
 import 'package:flutter_thermal_printer/utils/printer.dart';
@@ -58,6 +59,11 @@ class PrinterController extends BaseController
     _listenToPrinterService();
 
     checkBluetoothPermission();
+    if (!kIsWeb && Platform.isWindows) {
+      tabController.index = 1;
+      selectedTabIndex.value = 1;
+      startUsbScan();
+    }
   }
 
   void _listenToPrinterService() {
@@ -261,8 +267,13 @@ class PrinterController extends BaseController
   // ------------------ Bluetooth Permissions ------------------
   Future<void> checkBluetoothPermission() async {
     try {
+      if (!kIsWeb && Platform.isWindows) {
+        return;
+      }
       if (await FlutterBluePlus.isSupported == false) {
-        showError(description: 'Bluetooth not supported on this device');
+        if (Platform.isAndroid) {
+          showError(description: 'Bluetooth not supported on this device');
+        }
         return;
       }
       // turnOn() is Android-only; desktop uses the OS Bluetooth toggle.

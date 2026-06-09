@@ -169,9 +169,16 @@ class OrderReportsController extends BaseController {
             ? DateFormat('yyyy-MM-dd').format(range.end)
             : null;
 
+        final userId = appPref.user?.id;
+        final outletId = appPref.selectedOutlet?.id;
+        if (userId == null || outletId == null) {
+          showError(description: 'User or outlet information is missing.');
+          return;
+        }
+
         final response = await callApi(
           apiClient.getOrders(
-            appPref.user!.id!,
+            userId,
             outletId,
             page,
             limit,

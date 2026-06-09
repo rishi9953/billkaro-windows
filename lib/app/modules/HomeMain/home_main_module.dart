@@ -12,8 +12,10 @@ import 'package:billkaro/app/modules/Invoice/invoice_screen.dart';
 import 'package:billkaro/app/modules/Items/add_menu_items_screen.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_item_screen.dart';
 import 'package:billkaro/app/modules/KOTHistory/kot_history_screen.dart';
+import 'package:billkaro/app/modules/KitchenDisplay/kitchen_display_screen.dart';
 import 'package:billkaro/app/modules/Language/language_screen.dart';
 import 'package:billkaro/app/modules/Menu/menu_screen.dart';
+import 'package:billkaro/app/modules/Notifications/app_notifications_screen.dart';
 import 'package:billkaro/app/modules/Order/ClosedOrders/closed_orders_screen.dart';
 import 'package:billkaro/app/modules/Order/HoldOrders/hold_orders_screen.dart';
 import 'package:billkaro/app/modules/OrderPrefrences/order_prefrences_screen.dart';
@@ -57,6 +59,10 @@ class HomeMainModule extends Module {
           child: (_) => BusinessOverviewScreen(),
         ),
         ChildRoute(HomeMainRoutes.kotHistory, child: (_) => KotHistoryScreen()),
+        ChildRoute(
+          HomeMainRoutes.kitchenDisplay,
+          child: (_) => const KitchenDisplayScreen(),
+        ),
         ChildRoute(
           HomeMainRoutes.kotReceipt,
           child: (_) => ThermalKOTReceipt(),
@@ -117,6 +123,10 @@ class HomeMainModule extends Module {
           child: (_) => WhatsappMarketingScreen(),
         ),
         ChildRoute(HomeMainRoutes.settings, child: (_) => AppSettingsScreen()),
+        ChildRoute(
+          HomeMainRoutes.notifications,
+          child: (_) => AppNotificationsScreen(),
+        ),
         ChildRoute(
           HomeMainRoutes.changeLanguage,
           child: (_) => LanguageScreen(),

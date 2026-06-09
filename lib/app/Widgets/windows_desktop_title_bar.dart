@@ -6,11 +6,20 @@ import 'package:url_launcher/url_launcher.dart';
 /// Custom title bar for Windows when using [bitsdojo_window] with a frameless
 /// window — native min/max/close are hidden, so these controls must be drawn.
 class WindowsDesktopTitleBar extends StatelessWidget {
-  const WindowsDesktopTitleBar({super.key, this.actions});
+  const WindowsDesktopTitleBar({
+    super.key,
+    this.actions,
+    this.title = 'Billkaro ChillKaro',
+    this.confirmOnClose = true,
+    this.onBeforeClose,
+  });
 
   /// Shown on the right, immediately before the minimize / maximize / close
   /// buttons (e.g. language or settings on onboarding screens).
   final List<Widget>? actions;
+  final String title;
+  final bool confirmOnClose;
+  final VoidCallback? onBeforeClose;
 
   @override
   Widget build(BuildContext context) {
@@ -41,15 +50,17 @@ class WindowsDesktopTitleBar extends StatelessWidget {
         color: const Color(0xFF15191D),
         child: Row(
           children: [
-            const SizedBox(
+            SizedBox(
               width: 180,
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'Billkaro ChillKaro',
-                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                    title,
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
@@ -125,10 +136,15 @@ class WindowsDesktopTitleBar extends StatelessWidget {
                   ),
                   onPressed: () async {
                     if (!context.mounted) return;
-                    if (await ExitConfirmHelper.shouldExitAfterPrompt(context)) {
-                      if (!context.mounted) return;
-                      appWindow.close();
+                    if (confirmOnClose &&
+                        !await ExitConfirmHelper.shouldExitAfterPrompt(
+                          context,
+                        )) {
+                      return;
                     }
+                    if (!context.mounted) return;
+                    onBeforeClose?.call();
+                    appWindow.close();
                   },
                 ),
               ],

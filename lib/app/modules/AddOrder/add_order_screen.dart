@@ -818,58 +818,53 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
           }),
         ],
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final isWide = constraints.maxWidth >= 1000;
-
-          if (!isWide) {
-            // Mobile / narrow layout – keep existing single-column behaviour
-            return buildMainContent();
-          }
-
-          // For wide layout, only show right cart panel when items are added
-          return Obx(() {
-            if (!controller.hasSelectedItems) {
-              // No items → use full-width main content, hide cart panel
-              return Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1500),
-                  child: buildMainContent(),
-                ),
-              );
+      body: Column(
+        children: [
+          Obx(() {
+            controller.homeController.selectedOutlet.value;
+            if (!HomeMainRoutes.outletIsCafeOrRestaurant()) {
+              return const SizedBox.shrink();
             }
-
-            // Desktop / wide layout – items on the left, cart panel on the right
-            return Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1500),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(flex: 3, child: buildMainContent()),
-                    const SizedBox(width: 16),
-                    SizedBox(
-                      width: 390,
-                      child: _CartPanel(controller: controller),
-                    ),
-                  ],
-                ),
-              ),
+            return _OrderTypeBar(
+              controller: controller,
+              orderSourceIcon: _orderSourceIcon,
             );
-          });
-        },
+          }),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isWide = constraints.maxWidth >= 1000;
+
+                if (!isWide) {
+                  return buildMainContent();
+                }
+
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1500),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(flex: 3, child: buildMainContent()),
+                        SizedBox(
+                          width: 400,
+                          child: _CartPanel(controller: controller),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: Obx(() {
         controller.itemQuantities.length;
         controller.isKOT.value;
+        controller.pendingKotItemCount;
         controller.homeController.selectedOutlet.value;
-        final secondaryLabel = controller.isKotFeatureActive
-            ? loc.kot_and_hold
-            : loc.save_and_hold;
-        final primaryLabel = controller.isKotFeatureActive
-            ? loc.kot_and_bill
-            : loc.save_and_bill;
-        final showViewInvoice = controller.hasSelectedItems;
+        final kotEnabled = controller.isKotFeatureActive;
 
         if (_isWindows) {
           return Container(
@@ -885,37 +880,11 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
             padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
-              mainAxisSize: MainAxisSize.max,
               children: [
-                if (showViewInvoice) ...[
-                  OutlinedButton(
-                    onPressed: () => controller.viewInvoicePreview(),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, _windowsFooterButtonHeight),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      foregroundColor: theme.colorScheme.onSurface,
-                      side: BorderSide(color: theme.colorScheme.outline),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                          _windowsFooterButtonRadius,
-                        ),
-                      ),
-                    ),
-                    child: const Text(
-                      'View Invoice',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                ],
                 OutlinedButton(
-                  onPressed: () =>
-                      controller.showConfirmOrderBottomSheet('pending'),
+                  onPressed: controller.hasSelectedItems
+                      ? () => controller.viewInvoicePreview()
+                      : null,
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size(0, _windowsFooterButtonHeight),
                     padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -928,22 +897,80 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                       ),
                     ),
                   ),
+                  child: const Text(
+                    'Preview',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                if (kotEnabled) ...[
+                  OutlinedButton(
+                    onPressed: controller.hasSelectedItems
+                        ? () => controller.executePosAction(PosOrderAction.kot)
+                        : null,
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, _windowsFooterButtonHeight),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      foregroundColor: const Color(0xFFE65100),
+                      side: const BorderSide(color: Color(0xFFE65100)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          _windowsFooterButtonRadius,
+                        ),
+                      ),
+                    ),
+                    child: Text(
+                      controller.pendingKotItemCount > 0
+                          ? 'KOT (${controller.pendingKotItemCount})'
+                          : 'KOT',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                OutlinedButton(
+                  onPressed: controller.hasSelectedItems
+                      ? () => controller.showConfirmOrderBottomSheet(
+                            PosOrderAction.hold,
+                          )
+                      : null,
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, _windowsFooterButtonHeight),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    foregroundColor: theme.colorScheme.onSurface,
+                    side: BorderSide(color: theme.colorScheme.outline),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        _windowsFooterButtonRadius,
+                      ),
+                    ),
+                  ),
                   child: Text(
-                    secondaryLabel,
+                    kotEnabled ? 'Save' : loc.save_and_hold,
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      letterSpacing: 0.3,
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 FilledButton(
-                  onPressed: () =>
-                      controller.showConfirmOrderBottomSheet('closed'),
+                  onPressed: controller.hasSelectedItems
+                      ? () => controller.showConfirmOrderBottomSheet(
+                            PosOrderAction.bill,
+                          )
+                      : null,
                   style: FilledButton.styleFrom(
                     minimumSize: const Size(0, _windowsFooterButtonHeight),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     backgroundColor: AppColor.primary,
                     foregroundColor: AppColor.white,
@@ -955,11 +982,10 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                     ),
                   ),
                   child: Text(
-                    primaryLabel,
+                    kotEnabled ? 'Bill' : loc.save_and_bill,
                     style: const TextStyle(
                       fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.3,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -967,6 +993,9 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
             ),
           );
         }
+
+        final secondaryLabel = kotEnabled ? 'Save' : loc.save_and_hold;
+        final primaryLabel = kotEnabled ? 'Bill' : loc.save_and_bill;
 
         return Container(
           padding: EdgeInsets.symmetric(
@@ -978,12 +1007,40 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
             mainAxisAlignment: MainAxisAlignment.end,
             mainAxisSize: MainAxisSize.max,
             children: [
-              if (showViewInvoice) ...[
+              ElevatedButton(
+                onPressed: controller.hasSelectedItems
+                    ? () => controller.viewInvoicePreview()
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.surface,
+                  foregroundColor: theme.colorScheme.onSurface,
+                  elevation: 0,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: _isDesktopPlatform ? 14 : 12,
+                    vertical: _isDesktopPlatform ? 14 : 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(color: theme.dividerColor),
+                    borderRadius: BorderRadius.circular(
+                      _isDesktopPlatform ? _desktopRadius : 12,
+                    ),
+                  ),
+                ),
+                child: const Text(
+                  'Preview',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+              ),
+              const SizedBox(width: 12),
+              if (kotEnabled) ...[
                 ElevatedButton(
-                  onPressed: () => controller.viewInvoicePreview(),
+                  onPressed: controller.hasSelectedItems
+                      ? () => controller.executePosAction(PosOrderAction.kot)
+                      : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.colorScheme.surface,
-                    foregroundColor: theme.colorScheme.onSurface,
+                    foregroundColor: const Color(0xFFE65100),
                     elevation: 0,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     padding: EdgeInsets.symmetric(
@@ -991,22 +1048,30 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                       vertical: _isDesktopPlatform ? 14 : 16,
                     ),
                     shape: RoundedRectangleBorder(
-                      side: BorderSide(color: theme.dividerColor),
+                      side: const BorderSide(color: Color(0xFFE65100)),
                       borderRadius: BorderRadius.circular(
                         _isDesktopPlatform ? _desktopRadius : 12,
                       ),
                     ),
                   ),
-                  child: const Text(
-                    'View Invoice',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  child: Text(
+                    controller.pendingKotItemCount > 0
+                        ? 'KOT (${controller.pendingKotItemCount})'
+                        : 'KOT',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
               ],
               ElevatedButton(
-                onPressed: () =>
-                    controller.showConfirmOrderBottomSheet('pending'),
+                onPressed: controller.hasSelectedItems
+                    ? () => controller.showConfirmOrderBottomSheet(
+                          PosOrderAction.hold,
+                        )
+                    : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.colorScheme.surface,
                   foregroundColor: theme.colorScheme.onSurface,
@@ -1033,8 +1098,11 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
               ),
               const SizedBox(width: 12),
               ElevatedButton(
-                onPressed: () =>
-                    controller.showConfirmOrderBottomSheet('closed'),
+                onPressed: controller.hasSelectedItems
+                    ? () => controller.showConfirmOrderBottomSheet(
+                          PosOrderAction.bill,
+                        )
+                    : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColor.primary,
                   foregroundColor: AppColor.white,
@@ -1094,6 +1162,74 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
   }
 }
 
+class _OrderTypeBar extends StatelessWidget {
+  final AddOrderController controller;
+  final Widget Function(String source) orderSourceIcon;
+
+  const _OrderTypeBar({
+    required this.controller,
+    required this.orderSourceIcon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Obx(() {
+      final selected = controller.selectedOrderSource.value;
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          border: Border(
+            bottom: BorderSide(
+              color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+            ),
+          ),
+        ),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: controller.ordersList.map((source) {
+              final isSelected = selected == source;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      orderSourceIcon(source),
+                      const SizedBox(width: 8),
+                      Text(source),
+                    ],
+                  ),
+                  selected: isSelected,
+                  onSelected: controller.isFromTableScreen.value &&
+                          source != 'Dine In'
+                      ? null
+                      : (_) => controller.setOrderSource(source),
+                  selectedColor: AppColor.primary.withOpacity(0.15),
+                  labelStyle: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: isSelected
+                        ? AppColor.primary
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
+                  side: BorderSide(
+                    color: isSelected
+                        ? AppColor.primary
+                        : theme.colorScheme.outline.withOpacity(0.4),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      );
+    });
+  }
+}
+
 class _CartPanel extends StatelessWidget {
   final AddOrderController controller;
 
@@ -1136,10 +1272,11 @@ class _CartPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Obx(() {
-      // Subscribe to customer/details updates from Order Details screen.
       controller.orderDetailsVersion.value;
+      controller.selectedOrderSource.value;
       final entries = controller.itemQuantities.entries
           .where((e) => e.value > 0)
           .toList();
@@ -1149,229 +1286,314 @@ class _CartPanel extends StatelessWidget {
         final item = controller.allItemsMap[entry.key];
         if (item == null) continue;
         final price = double.tryParse(item.salePrice.toString()) ?? 0.0;
+        final sent = controller.kotPrintedQuantities[entry.key] ?? 0;
+        final pending = entry.value - sent;
         cartItems.add({
           'id': item.id,
           'name': item.itemName,
           'qty': entry.value,
+          'pendingKot': pending,
           'price': price,
           'total': price * entry.value,
           'image': item.itemImage,
+          'remark': controller.itemRemarks[item.id] ?? '',
         });
       }
 
-      if (cartItems.isEmpty) {
-        // No items in cart → hide the entire card
-        return const SizedBox.shrink();
-      }
+      final selectedTable = (controller.orderDetails['tableNumber'] ?? '')
+          .toString()
+          .trim();
+      final isDineIn = controller.selectedOrderSource.value.toLowerCase() ==
+          'dine in';
 
       return Container(
-        margin: const EdgeInsets.all(12),
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.fromLTRB(0, 8, 12, 8),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey[300]!),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+          color: theme.colorScheme.surface,
+          border: Border(
+            left: BorderSide(
+              color: theme.colorScheme.outlineVariant.withOpacity(0.6),
             ),
-          ],
+          ),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  loc.order_summary,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  '${controller.selectedItemsCount} ${controller.selectedItemsCount == 1 ? loc.item_selected : loc.items_selected}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const Divider(height: 1),
-            const SizedBox(height: 8),
-            // Totals breakdown (cart summary)
-            Builder(
-              builder: (_) {
-                final customerName =
-                    (controller.orderDetails['customerName'] ?? '')
-                        .toString()
-                        .trim();
-                final phoneNumber =
-                    (controller.orderDetails['phoneNumber'] ?? '')
-                        .toString()
-                        .trim();
-                final subtotal = controller.subtotal.value;
-                final tax = controller.totalTax.value;
-                final discount = _num(controller.orderDetails['discount']);
-                final serviceCharge = _num(
-                  controller.orderDetails['serviceCharge'],
-                );
-                final total = controller.totalAmount.value;
-
-                return Column(
-                  children: [
-                    if (customerName.isNotEmpty) _row('Customer', customerName),
-                    if (phoneNumber.isNotEmpty) _row('Phone', phoneNumber),
-                    if (customerName.isNotEmpty || phoneNumber.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Divider(
-                        height: 12,
-                        color: Colors.black.withOpacity(0.08),
-                      ),
-                    ],
-                    _row('Subtotal', '₹${subtotal.toStringAsFixed(2)}'),
-                    _row('Tax', '₹${tax.toStringAsFixed(2)}'),
-                    _row('Discount', '-₹${discount.toStringAsFixed(2)}'),
-                    _row(
-                      'Service charge',
-                      '₹${serviceCharge.toStringAsFixed(2)}',
-                    ),
-                    const SizedBox(height: 6),
-                    Divider(height: 12, color: Colors.black.withOpacity(0.08)),
-                    _row(
-                      loc.total_amount,
-                      '₹${total.toStringAsFixed(2)}',
-                      strong: true,
-                    ),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: 10),
-            const Divider(height: 1),
-            const SizedBox(height: 8),
-            Expanded(
-              child: ListView.separated(
-                itemCount: cartItems.length,
-                separatorBuilder: (_, __) => const Divider(height: 16),
-                itemBuilder: (context, index) {
-                  final item = cartItems[index];
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      // Item image thumbnail
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: SizedBox(
-                          width: 46,
-                          height: 46,
-                          child:
-                              (item['image'] as String?) == null ||
-                                  (item['image'] as String).isEmpty
-                              ? Assets.svg.placeholder.svg(fit: BoxFit.cover)
-                              : Image.network(
-                                  item['image'] as String,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Assets
-                                      .svg
-                                      .placeholder
-                                      .svg(fit: BoxFit.cover),
-                                ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item['name'] as String,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '₹${(item['price'] as double).toStringAsFixed(2)}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.remove, size: 18),
-                              splashRadius: 18,
-                              onPressed: () => controller.decrementItemQuantity(
-                                item['id'] as String,
-                              ),
-                            ),
-                            Text(
-                              (item['qty'] as int).toString(),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.add, size: 18),
-                              splashRadius: 18,
-                              onPressed: () => controller.incrementItemQuantity(
-                                item['id'] as String,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
                       Text(
-                        '₹${(item['total'] as double).toStringAsFixed(2)}',
-                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        'Bill #${controller.displayBillNumber}',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
-                      const SizedBox(width: 8),
-                      InkWell(
-                        onTap: () {
-                          controller.removeItemCompletely(item['id'] as String);
+                      const Spacer(),
+                      if (controller.isEdit.value)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            'Running',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFFE65100),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (isDineIn && HomeMainRoutes.outletShowsTables())
+                    controller.availableTables.isEmpty
+                        ? Text(
+                            selectedTable.isEmpty
+                                ? 'Select table from Tables screen'
+                                : 'Table: $selectedTable',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          )
+                        : DropdownButtonFormField<String>(
+                            value: selectedTable.isEmpty
+                                ? null
+                                : controller.availableTables.any(
+                                    (t) => t.displayName == selectedTable,
+                                  )
+                                ? selectedTable
+                                : null,
+                            isExpanded: true,
+                            decoration: InputDecoration(
+                              labelText: loc.table_number,
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            items: controller.availableTables
+                                .map(
+                                  (t) => DropdownMenuItem(
+                                    value: t.displayName,
+                                    child: Text(t.displayName),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: controller.setTableNumber,
+                          ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      TextButton.icon(
+                        onPressed: () async {
+                          final result = await Modular.to.pushNamed(
+                            HomeMainRoutes.orderDetails,
+                            arguments: {
+                              ...controller.orderDetails,
+                              'orderFrom':
+                                  controller.selectedOrderSource.value,
+                              'totalAmount': controller.totalAmount.value,
+                            },
+                          );
+                          if (result != null &&
+                              result is CreateorderRequest) {
+                            controller.setOrderDetails(result.toJson());
+                          }
                         },
-                        child: Assets.svg.delete.svg(height: 20, width: 20),
+                        icon: const Icon(Icons.receipt_long_outlined, size: 18),
+                        label: Text(loc.add_details),
+                      ),
+                      TextButton.icon(
+                        onPressed: controller.showRemarkDialog,
+                        icon: const Icon(Icons.note_alt_outlined, size: 18),
+                        label: const Text('Remark'),
                       ),
                     ],
-                  );
-                },
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
             const Divider(height: 1),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  loc.total_amount,
-                  style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                ),
-                Text(
-                  '₹${controller.totalAmount.value.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
+            Expanded(
+              child: cartItems.isEmpty
+                  ? Center(
+                      child: Text(
+                        'Tap items to add to order',
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontSize: 14,
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: cartItems.length,
+                      separatorBuilder: (_, __) => const Divider(height: 14),
+                      itemBuilder: (context, index) {
+                        final item = cartItems[index];
+                        final pendingKot = item['pendingKot'] as int;
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item['name'] as String,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '₹${(item['price'] as double).toStringAsFixed(2)} × ${item['qty']}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  if (pendingKot > 0 &&
+                                      controller.isKotFeatureActive)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Text(
+                                        '$pendingKot new for kitchen',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFFE65100),
+                                        ),
+                                      ),
+                                    ),
+                                  if ((item['remark'] as String).isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Text(
+                                        '📝 ${item['remark']}',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontStyle: FontStyle.italic,
+                                          color: theme.colorScheme.primary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: 'Item remark',
+                              icon: Icon(
+                                (item['remark'] as String).isNotEmpty
+                                    ? Icons.chat_bubble
+                                    : Icons.chat_bubble_outline,
+                                size: 20,
+                                color: (item['remark'] as String).isNotEmpty
+                                    ? AppColor.primary
+                                    : Colors.grey,
+                              ),
+                              onPressed: () => controller.showItemRemarkDialog(
+                                item['id'] as String,
+                                item['name'] as String,
+                              ),
+                            ),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surfaceContainerHighest
+                                    .withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.remove, size: 16),
+                                    splashRadius: 16,
+                                    onPressed: () =>
+                                        controller.decrementItemQuantity(
+                                      item['id'] as String,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${item['qty']}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.add, size: 16),
+                                    splashRadius: 16,
+                                    onPressed: () =>
+                                        controller.incrementItemQuantity(
+                                      item['id'] as String,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '₹${(item['total'] as double).toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+            ),
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _row('Subtotal', '₹${controller.subtotal.value.toStringAsFixed(2)}'),
+                  _row('Tax', '₹${controller.totalTax.value.toStringAsFixed(2)}'),
+                  _row(
+                    'Discount',
+                    '-₹${_num(controller.orderDetails['discount']).toStringAsFixed(2)}',
                   ),
-                ),
-              ],
+                  _row(
+                    'Service',
+                    '₹${_num(controller.orderDetails['serviceCharge']).toStringAsFixed(2)}',
+                  ),
+                  const SizedBox(height: 6),
+                  _row(
+                    loc.total_amount,
+                    '₹${controller.totalAmount.value.toStringAsFixed(2)}',
+                    strong: true,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${controller.totalSelectedQuantity} items · ${controller.selectedItemsCount} SKU',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -1676,6 +1898,7 @@ class OrderItemCard extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onIncrement;
   final VoidCallback onDecrement;
+  final VoidCallback? onQuickAdd;
 
   const OrderItemCard({
     super.key,
@@ -1684,6 +1907,7 @@ class OrderItemCard extends StatelessWidget {
     required this.onDelete,
     required this.onIncrement,
     required this.onDecrement,
+    this.onQuickAdd,
     this.imageUrl,
     this.quantity = 0,
   });
@@ -1692,13 +1916,19 @@ class OrderItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDesktop =
         GetPlatform.isWindows || GetPlatform.isMacOS || GetPlatform.isLinux;
-    return Container(
+    return InkWell(
+      onTap: onQuickAdd ?? onIncrement,
+      borderRadius: BorderRadius.circular(isDesktop ? 10 : 16),
+      child: Container(
       width: 150,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(isDesktop ? 10 : 16),
         border: Border.all(
-          color: isDesktop ? Colors.grey[300]! : Colors.grey[200]!,
+          color: quantity > 0
+              ? AppColor.primary.withOpacity(0.55)
+              : (isDesktop ? Colors.grey[300]! : Colors.grey[200]!),
+          width: quantity > 0 ? 1.5 : 1,
         ),
         boxShadow: [
           BoxShadow(
@@ -1818,6 +2048,7 @@ class OrderItemCard extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }

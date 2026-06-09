@@ -1,4 +1,10 @@
+import 'dart:async';
+
 import 'package:billkaro/app/Database/app_database.dart';
+import 'package:billkaro/app/services/notification/app_notification_store.dart';
+import 'package:billkaro/app/services/kds/kds_realtime_service.dart';
+import 'package:billkaro/app/services/notification/kitchen_bump_monitor.dart';
+import 'package:billkaro/app/services/notification/kitchen_new_order_monitor.dart';
 import 'package:billkaro/app/modules/Theme/theme_controller.dart';
 import 'package:billkaro/config/config.dart';
 
@@ -50,6 +56,12 @@ void showLogoutDialog(BuildContext context, AppLocalizations loc) {
 
 void onLogOut() async {
   final appPref = Get.find<AppPref>();
+  KitchenBumpMonitor.instance.stop();
+  KitchenNewOrderMonitor.instance.stop();
+  KdsRealtimeService.instance.disconnect();
+  if (Get.isRegistered<AppNotificationStore>()) {
+    unawaited(AppNotificationStore.to.clearAll());
+  }
 
   // Clear user token first
   appPref.token = '';

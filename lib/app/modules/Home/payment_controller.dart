@@ -86,10 +86,7 @@ class PaymentController extends BaseController {
               }
 
               // Add to period totals
-              if (!orderUtc.isBefore(todayStartUtc) &&
-                  orderUtc.isBefore(todayEndUtc)) {
-                todayTotal += amount;
-              } else if (!orderUtc.isBefore(yesterdayStartUtc) &&
+              if (!orderUtc.isBefore(yesterdayStartUtc) &&
                   orderUtc.isBefore(todayStartUtc)) {
                 yesterdayTotal += amount;
               }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:billkaro/app/Widgets/notification_bell_button.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/Home/showcase_controller.dart';
 import 'package:billkaro/app/modules/Home/Widgets/payment_summary_widget.dart';
@@ -9,6 +10,7 @@ import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/kitchen_display_browser.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart' as m;
 import 'package:flutter_modular/flutter_modular.dart';
@@ -158,6 +160,10 @@ class _HomeScreenState extends State<HomeScreen> {
         }),
         leadingWidth: 160,
         actions: [
+          const NotificationBellButton(
+            iconColor: Colors.white,
+            iconSize: 24,
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 12, bottom: 8, top: 8),
             child: _headerAvatarAction(),
@@ -674,6 +680,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   'onTap': () =>
                       Modular.to.pushNamed(HomeMainRoutes.kotHistory),
                 },
+              if (kotVisible)
+                {
+                  'icon': Icons.open_in_browser_rounded,
+                  'label': 'Kitchen (Web)',
+                  'onTap': () async {
+                    await KitchenDisplayBrowser.open();
+                  },
+                },
             ];
 
             return GridView.builder(
@@ -758,21 +772,19 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: _pageHMargin),
-            child: GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
+          SizedBox(
+            height: isDesktop ? 142 : 146,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: _pageHMargin),
               itemCount: occupied.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: isDesktop ? 4 : (Get.width >= 480 ? 3 : 2),
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: isDesktop ? 1.55 : 1.35,
-              ),
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
               itemBuilder: (context, index) {
-                final order = occupied[index];
-                return _occupiedTableCard(order);
+                return SizedBox(
+                  width: isDesktop ? 250 : 220,
+                  height: isDesktop ? 142 : 146,
+                  child: _occupiedTableCard(occupied[index]),
+                );
               },
             ),
           ),
@@ -798,7 +810,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final statusColor = AppColor.secondaryPrimary;
 
-    return Material(
+    return Tooltip(
+      message: tableLabel,
+      child: Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
@@ -811,7 +825,7 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         },
         child: Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
@@ -829,32 +843,34 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
                   Container(
-                    width: 34,
-                    height: 34,
+                    width: 30,
+                    height: 30,
                     decoration: BoxDecoration(
                       color: statusColor.withOpacity(0.14),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(Icons.person, size: 18, color: statusColor),
+                    child: Icon(Icons.table_restaurant_rounded,
+                        size: 16, color: statusColor),
                   ),
                   const Spacer(),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                      horizontal: 7,
+                      vertical: 3,
                     ),
                     decoration: BoxDecoration(
                       color: statusColor.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     child: Text(
                       'Occupied',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 10,
                         color: statusColor,
                         fontWeight: FontWeight.w700,
                       ),
@@ -862,51 +878,58 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              const Spacer(),
-              Text(
-                tableLabel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+              SizedBox(
+                width: double.infinity,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    tableLabel,
+                    maxLines: 1,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Tap to continue order',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[700],
-                ),
-              ),
-              const SizedBox(height: 8),
               Text(
                 'Bill #$billLabel',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: Colors.black87,
                 ),
               ),
-              if (occupiedDuration != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  'Occupied ${_formatDuration(occupiedDuration)}',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: statusColor,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      occupiedDuration == null
+                          ? 'Tap to continue order'
+                          : 'Occupied ${_formatDuration(occupiedDuration)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: occupiedDuration == null
+                            ? Colors.grey[700]
+                            : statusColor,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                  Icon(Icons.chevron_right_rounded, size: 16, color: statusColor),
+                ],
+              ),
             ],
           ),
         ),
       ),
+    ),
     );
   }
 

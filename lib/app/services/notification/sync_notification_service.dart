@@ -1,5 +1,8 @@
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'dart:io';
+
+import 'package:billkaro/app/services/Network/api_handler.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Service to show sync progress notifications
 class SyncNotificationService {
@@ -197,6 +200,19 @@ class SyncNotificationService {
     required int totalCount,
     bool hasErrors = false,
   }) async {
+    final message = hasErrors
+        ? '$syncedCount of $totalCount orders synced'
+        : 'All $syncedCount orders synced successfully';
+
+    if (!kIsWeb && Platform.isWindows) {
+      if (hasErrors) {
+        showError(description: message);
+      } else {
+        showSuccess(description: message);
+      }
+      return;
+    }
+
     if (!_isInitialized || _notifications == null) return;
 
     try {
@@ -246,11 +262,16 @@ class SyncNotificationService {
 
   /// Show sync failed notification
   Future<void> showSyncFailed({String? errorMessage}) async {
+    final message = errorMessage ?? 'Synchronization failed. Please try again.';
+
+    if (!kIsWeb && Platform.isWindows) {
+      showError(description: message);
+      return;
+    }
+
     if (!_isInitialized || _notifications == null) return;
 
     try {
-      final message = errorMessage ?? 'Synchronization failed. Please try again.';
-
       final androidDetails = AndroidNotificationDetails(
         syncChannelId,
         syncChannelName,

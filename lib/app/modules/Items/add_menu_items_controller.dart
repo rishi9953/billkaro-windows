@@ -15,6 +15,7 @@ import 'package:flutter_modular/flutter_modular.dart';
 class AddMenuItemController extends BaseController {
   final itemNameController = TextEditingController();
   final salePriceController = TextEditingController();
+  final prepTimeController = TextEditingController(text: '15');
   late MenuItemController menuItemController;
 
   var selectedCategory = 'None'.obs;
@@ -476,6 +477,7 @@ class AddMenuItemController extends BaseController {
           ? 'none'
           : selectedCategory.value,
       orderFrom: 'None',
+      prepTimeMinutes: _parsedPrepTimeMinutes(),
     );
     final response = await callApi(
       apiClient.updateItem(request, itemId.value.trim()),
@@ -518,6 +520,7 @@ class AddMenuItemController extends BaseController {
     isEdit.value = false;
     itemNameController.clear();
     salePriceController.clear();
+    prepTimeController.text = '15';
     selectedCategory.value = 'none';
     selectedTaxPercentage.value = 'None';
     isWithTax.value = false;
@@ -534,6 +537,7 @@ class AddMenuItemController extends BaseController {
 
     itemNameController.text = item.itemName;
     salePriceController.text = item.salePrice.toString();
+    prepTimeController.text = item.prepTimeMinutes.toString();
 
     selectedCategory.value = categories.contains(item.category)
         ? item.category
@@ -548,10 +552,17 @@ class AddMenuItemController extends BaseController {
         : '${double.parse(item.gst.toString()).toInt()}';
   }
 
+  int _parsedPrepTimeMinutes() {
+    final parsed = int.tryParse(prepTimeController.text.trim());
+    if (parsed == null || parsed < 1) return 15;
+    return parsed;
+  }
+
   // Save API Call
   void resetForm() {
     itemNameController.clear();
     salePriceController.clear();
+    prepTimeController.text = '15';
     selectedCategory.value = 'none';
     selectedTaxPercentage.value = 'None';
     isWithTax.value = false;
@@ -588,6 +599,7 @@ class AddMenuItemController extends BaseController {
           ? 'none'
           : selectedCategory.value,
       orderFrom: 'None',
+      prepTimeMinutes: _parsedPrepTimeMinutes(),
     );
 
     final response = await callApi(apiClient.addItem(request));
@@ -701,6 +713,7 @@ class AddMenuItemController extends BaseController {
   void onClose() {
     itemNameController.dispose();
     salePriceController.dispose();
+    prepTimeController.dispose();
     super.onClose();
   }
 }

@@ -600,7 +600,7 @@ class BusinessOverviewScreen extends StatelessWidget {
         _buildSimpleButton(
           text: loc.view_Item_Reports,
           icon: Icons.arrow_forward_ios,
-          onTap: () => Get.toNamed(AppRoute.itemReports),
+          onTap: () => Modular.to.navigate(HomeMainRoutes.itemsReport),
         ),
       ],
     );

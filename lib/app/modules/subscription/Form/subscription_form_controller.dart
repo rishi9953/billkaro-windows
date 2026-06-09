@@ -1,8 +1,11 @@
-import 'package:billkaro/app/routes/app_routes.dart';
+import 'package:billkaro/app/modules/subscription/review/subscription_review_controller.dart';
+import 'package:billkaro/app/modules/subscription/review/subscription_review_screen.dart';
 import 'package:billkaro/app/services/Modals/PrinterOrderRequest/printer_order_request.dart';
+import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/app/services/Modals/Subscriptions/subscription_response.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 import 'package:get/get.dart';
 import 'package:billkaro/app/services/razorpay/razorpay_service.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
@@ -20,11 +23,28 @@ class SubscriptionFormController extends BaseController {
   bool isProcessingPayment = false;
   Map<String, String> _latestFormData = const {};
 
-  // Passed from subscription screen when plan.withPrinter is true
-  SubscriptionPlan? get subscriptionPlan {
-    final args = Get.arguments as Map<String, dynamic>?;
-    if (args == null) return null;
-    return args['subscription'] as SubscriptionPlan?;
+  /// Cached from route args when opened via Buy Now with Printer.
+  SubscriptionPlan? _subscriptionPlan;
+
+  SubscriptionPlan? get subscriptionPlan => _subscriptionPlan;
+
+  Map<String, dynamic>? _resolveRouteArgs() {
+    final dynamic modularArgs = Modular.args.data;
+    if (modularArgs is Map<String, dynamic>) return modularArgs;
+    if (modularArgs is Map) return Map<String, dynamic>.from(modularArgs);
+    final getArgs = Get.arguments;
+    if (getArgs is Map<String, dynamic>) return getArgs;
+    if (getArgs is Map) return Map<String, dynamic>.from(getArgs);
+    return null;
+  }
+
+  void _loadSubscriptionPlanFromRoute() {
+    final args = _resolveRouteArgs();
+    if (args == null) return;
+    final plan = args['subscription'];
+    if (plan is SubscriptionPlan) {
+      _subscriptionPlan = plan;
+    }
   }
 
   // Outlet details
@@ -40,6 +60,7 @@ class SubscriptionFormController extends BaseController {
   @override
   void onInit() {
     super.onInit();
+    _loadSubscriptionPlanFromRoute();
     _fillFromSelectedOutlet();
     razorpayService.initialize(
       onSuccess: _handlePaymentSuccess,
@@ -217,6 +238,7 @@ class SubscriptionFormController extends BaseController {
 
   /// Submit: validates form and returns collected data; caller can then API or navigate.
   Future<void> submitSubscription() async {
+    _loadSubscriptionPlanFromRoute();
     if (formKey.currentState == null) {
       showError(description: 'Form not initialized. Please try again.');
       return;
@@ -231,10 +253,57 @@ class SubscriptionFormController extends BaseController {
   Future<void> onSubmit(Map<String, String> data) async {
     final plan = subscriptionPlan;
     if (plan != null) {
-      await processPaymentFromDetails(data);
+      _openSubscriptionReview(plan: plan, formData: data);
     } else {
-      showSuccess(description: 'Details saved. You can proceed to payment.');
+      showError(
+        title: 'Plan not found',
+        description:
+            'Subscription plan was not passed. Please go back and select a plan again.',
+      );
     }
+  }
+
+  void _finishSubscriptionCheckout() {
+    try {
+      while (Get.isDialogOpen == true) {
+        Get.back();
+      }
+    } catch (e) {
+      debugPrint('Error closing subscription dialogs: $e');
+    }
+
+    try {
+      if (Modular.to.canPop()) {
+        Modular.to.pop();
+      }
+    } catch (e) {
+      debugPrint('Error popping subscription form route: $e');
+    }
+  }
+
+  void _openSubscriptionReview({
+    required SubscriptionPlan plan,
+    required Map<String, String> formData,
+  }) {
+    if (Get.isRegistered<SubscriptionReviewController>()) {
+      Get.delete<SubscriptionReviewController>(force: true);
+    }
+
+    Get.dialog(
+      Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 80, vertical: 40),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520, maxHeight: 640),
+          child: SubscriptionReviewScreen(
+            subscription: plan,
+            formData: formData,
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
   }
 
   int _toPaise(double rupees) => (rupees * 100).round();
@@ -316,6 +385,14 @@ class SubscriptionFormController extends BaseController {
       return;
     }
 
+    if (outletHasAnyActiveSubscription(appPref.selectedOutlet)) {
+      showError(
+        title: 'Already Subscribed',
+        description: 'This outlet already has an active subscription.',
+      );
+      return;
+    }
+
     _latestFormData = data;
     planId = plan.id;
     expectedAmount = _calculateTotalAmount(plan);
@@ -375,7 +452,7 @@ class SubscriptionFormController extends BaseController {
       if (paymentResponse != null && paymentResponse['status'] == 'success') {
         await _createPrinterOrderAfterSuccess();
         showSuccess(description: 'Payment successful. Subscription activated.');
-        Get.offAllNamed(AppRoute.homeMain);
+        _finishSubscriptionCheckout();
       } else {
         showError(
           title: 'Payment Failed',

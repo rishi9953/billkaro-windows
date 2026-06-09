@@ -17,13 +17,20 @@ class AppPref {
   static const String keyShowcaseCompleted = 'showcase_completed';
   static const String keyIsListView = 'is_list_view';
   static const String keyNotificationsEnabled = 'notifications_enabled';
+  static const String keyKitchenBumpLastSince = 'kitchen_bump_last_since_iso';
+  static const String keyKitchenBumpNotifiedKeys = 'kitchen_bump_notified_keys';
+  static const String keyKitchenNewOrderNotifiedKeys =
+      'kitchen_new_order_notified_keys';
+  static const String keyAppNotificationsJson = 'app_notifications_json';
   static const String keyShowQrOnBill = 'show_qr_on_bill';
   static const String keyShowAddDetailsOnCreateOrder =
       'show_add_details_on_create_order';
   static const String keyDownloadPath = 'download_path';
+  static const String keyQrMenuBaseUrl = 'qr_menu_base_url';
 
   /// True when the user signed in via the staff tab (`auth/staff/login`).
   static const String keyStaffSession = 'staff_session';
+  static const String keyStaffPermissions = 'staff_permissions';
 
   AppPref(this._preferences);
 
@@ -126,6 +133,32 @@ class AppPref {
   set notificationsEnabled(bool value) =>
       _preferences.setBool(keyNotificationsEnabled, value);
 
+  String get kitchenBumpLastSinceIso =>
+      _preferences.getString(keyKitchenBumpLastSince) ?? '';
+  set kitchenBumpLastSinceIso(String value) =>
+      _preferences.setString(keyKitchenBumpLastSince, value);
+
+  String get kitchenBumpNotifiedKeys =>
+      _preferences.getString(keyKitchenBumpNotifiedKeys) ?? '';
+  set kitchenBumpNotifiedKeys(String value) =>
+      _preferences.setString(keyKitchenBumpNotifiedKeys, value);
+
+  void clearKitchenBumpNotifiedKeys() =>
+      _preferences.remove(keyKitchenBumpNotifiedKeys);
+
+  String get kitchenNewOrderNotifiedKeys =>
+      _preferences.getString(keyKitchenNewOrderNotifiedKeys) ?? '';
+  set kitchenNewOrderNotifiedKeys(String value) =>
+      _preferences.setString(keyKitchenNewOrderNotifiedKeys, value);
+
+  void clearKitchenNewOrderNotifiedKeys() =>
+      _preferences.remove(keyKitchenNewOrderNotifiedKeys);
+
+  String get appNotificationsJson =>
+      _preferences.getString(keyAppNotificationsJson) ?? '';
+  set appNotificationsJson(String value) =>
+      _preferences.setString(keyAppNotificationsJson, value);
+
   /// 👉 Show QR code on bill/invoice (UPI scan to pay)
   bool get showQrOnBill => _preferences.getBool(keyShowQrOnBill) ?? true;
   set showQrOnBill(bool value) => _preferences.setBool(keyShowQrOnBill, value);
@@ -141,10 +174,35 @@ class AppPref {
   set downloadPath(String value) =>
       _preferences.setString(keyDownloadPath, value);
 
+  /// 👉 Custom base URL for table QR menu (empty = use API URL from .env)
+  String get qrMenuBaseUrl => _preferences.getString(keyQrMenuBaseUrl) ?? '';
+  set qrMenuBaseUrl(String value) =>
+      _preferences.setString(keyQrMenuBaseUrl, value.trim());
+
   /// 👉 Staff sign-in path (role from API may be missing or inconsistent).
   bool get isStaffSession => _preferences.getBool(keyStaffSession) ?? false;
   set isStaffSession(bool value) =>
       _preferences.setBool(keyStaffSession, value);
+
+  List<String> get staffPermissions {
+    final raw = _preferences.getString(keyStaffPermissions);
+    if (raw == null || raw.isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        return decoded.map((e) => e.toString()).toList();
+      }
+    } catch (_) {}
+    return const [];
+  }
+
+  set staffPermissions(List<String> value) {
+    if (value.isEmpty) {
+      _preferences.remove(keyStaffPermissions);
+    } else {
+      _preferences.setString(keyStaffPermissions, jsonEncode(value));
+    }
+  }
 
   /// Clear all
   Future<bool> clear() async => await _preferences.clear();
@@ -157,6 +215,7 @@ class AppPref {
     await _preferences.remove(keySelectedOutlet);
     await _preferences.remove(keyIsKOT);
     await _preferences.remove(keyStaffSession);
+    await _preferences.remove(keyStaffPermissions);
     await _preferences.remove(keyShowcaseCompleted); // Reset showcase on logout
     // Keeping saved users & recent users
     return true;

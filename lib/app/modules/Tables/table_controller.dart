@@ -1,4 +1,6 @@
+import 'package:billkaro/app/modules/Tables/table_qr_print_service.dart';
 import 'package:billkaro/app/Database/app_database.dart' as dbs;
+import 'package:billkaro/utils/qr_menu_url_config.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/Modals/tables/tables_response.dart';
@@ -70,8 +72,12 @@ class TableController extends BaseController {
     }
 
     if (tableList.isEmpty) {
-      tableList = _defaultTables();
+      if (errorMessage.value.isEmpty) {
+        errorMessage.value = 'No tables configured for this outlet';
+      }
     }
+
+    await _trySyncOrdersForOutlet();
 
     List<OrderModel> orders = <OrderModel>[];
     try {
@@ -153,23 +159,7 @@ class TableController extends BaseController {
       return TableStatus.occupied;
     }
 
-    // Prefer local history when there is no active local order for this table.
-    // This avoids stale "occupied" UI right after an order is closed.
-    if (hasLocalHistory) {
-      return TableStatus.available;
-    }
-
-    final apiStatus = table.status.trim().toLowerCase();
-    if (apiStatus == 'billing') return TableStatus.billing;
-    if (apiStatus == 'occupied' ||
-        apiStatus == 'busy' ||
-        apiStatus == 'reserved') {
-      return TableStatus.occupied;
-    }
-    if ((table.currentBillNumber ?? '').trim().isNotEmpty) {
-      return TableStatus.billing;
-    }
-
+    // No active order on this table — show available (ignore stale API occupied).
     return TableStatus.available;
   }
 
@@ -316,33 +306,27 @@ class TableController extends BaseController {
 
   Future<void> onTableTap(TableWithStatus tws) async {
     if (tws.isAvailable) {
-      Modular.to.pushNamed(
+      await Modular.to.pushNamed(
         HomeMainRoutes.createOrder,
         arguments: {
           'orderFrom': 'Dine In',
           'tableNumber': tws.table.displayName,
+          'fromTables': true,
         },
       );
-      // await Get.toNamed(
-      //   AppRoute.addOrder,
-      //   arguments: {
-      //     'orderFrom': 'Dine In',
-      //     'tableNumber': tws.table.displayName,
-      //   },
-      // );
       await loadTables();
       return;
     }
 
     if (tws.currentOrder != null) {
-      Modular.to.pushNamed(
+      await Modular.to.pushNamed(
         HomeMainRoutes.createOrder,
-        arguments: {'order': tws.currentOrder, 'isEdit': true},
+        arguments: {
+          'order': tws.currentOrder,
+          'isEdit': true,
+          'fromTables': true,
+        },
       );
-      // await Get.toNamed(
-      //   AppRoute.addOrder,
-      //   arguments: {'order': tws.currentOrder, 'isEdit': true},
-      // );
       await loadTables();
       return;
     }
@@ -360,7 +344,11 @@ class TableController extends BaseController {
       if (updated?.currentOrder != null) {
         await Modular.to.pushNamed(
           HomeMainRoutes.createOrder,
-          arguments: {'order': updated!.currentOrder, 'isEdit': true},
+          arguments: {
+            'order': updated!.currentOrder,
+            'isEdit': true,
+            'fromTables': true,
+          },
         );
         await loadTables();
         return;
@@ -369,12 +357,80 @@ class TableController extends BaseController {
 
     await Modular.to.pushNamed(
       HomeMainRoutes.createOrder,
-      arguments: {'orderFrom': 'Dine In', 'tableNumber': tws.table.displayName},
+      arguments: {
+        'orderFrom': 'Dine In',
+        'tableNumber': tws.table.displayName,
+        'fromTables': true,
+      },
     );
     await loadTables();
   }
 
   Future<void> refresh() => loadTables();
+
+  Future<String?> _ensureTableMenuUrl(TableModel table) async {
+    var url = TableQrPrintService.menuUrlForTable(table);
+    if (url.isNotEmpty) return url;
+
+    try {
+      final response = await callApi(
+        apiClient.generateTableQr(table.id),
+        showLoader: true,
+      );
+      final data = response?['data'] as Map<String, dynamic>?;
+      final token =
+          (data?['qrToken'] as String?)?.trim() ?? table.qrToken?.trim();
+      if (token != null && token.isNotEmpty) {
+        url = QrMenuUrlConfig.buildTableMenuUrl(token, pref: appPref);
+      }
+      if (url.isNotEmpty) {
+        await loadTables();
+      }
+      return url.isNotEmpty ? url : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> printTableQr(TableModel table) async {
+    final url = await _ensureTableMenuUrl(table);
+    if (url == null || url.isEmpty) {
+      showError(description: 'Could not generate QR for this table');
+      return;
+    }
+    final businessName = appPref.selectedOutlet?.businessName ?? 'Restaurant';
+    try {
+      await TableQrPrintService.printTableQr(
+        businessName: businessName,
+        table: table,
+        menuUrl: url,
+      );
+    } catch (e) {
+      showError(description: 'Print failed: $e');
+    }
+  }
+
+  Future<void> generateAllQrsAndPrint() async {
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null) return;
+
+    try {
+      await callApi(
+        apiClient.generateAllTableQr(outletId),
+        showLoader: true,
+      );
+      await loadTables();
+
+      final businessName = appPref.selectedOutlet?.businessName ?? 'Restaurant';
+      final tableModels = tables.map((t) => t.table).toList();
+      await TableQrPrintService.printAllTableQrs(
+        businessName: businessName,
+        tables: tableModels,
+      );
+    } catch (e) {
+      showError(description: 'Failed to generate/print QR codes: $e');
+    }
+  }
 
   Future<bool> _trySyncOrdersForOutlet() async {
     final outletId = appPref.selectedOutlet?.id;
@@ -420,14 +476,16 @@ class TableController extends BaseController {
 
   /// CALL THIS AFTER PAYMENT SUCCESS
   Future<void> closeOrderAndFreeTable(OrderModel order) async {
-    // await db.updateOrder(
-    //   order.copyWith(
-    //     status: 'Closed',
-    //     paymentStatus: 'Completed',
-    //     closedAt: DateTime.now(),
-    //   ),
-    // );
+    try {
+      await db.updateOrderStatus(
+        orderId: order.id,
+        status: 'Closed',
+        paymentStatus: 'Completed',
+      );
+    } catch (e) {
+      debugPrint('Failed to close order locally: $e');
+    }
 
-    loadTables();
+    await loadTables();
   }
 }

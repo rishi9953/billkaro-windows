@@ -14,6 +14,7 @@ class ItemRequest {
   final String category;
   final String itemImage;
   final bool showItem;
+  final int prepTimeMinutes;
 
   ItemRequest({
     required this.itemName,
@@ -26,6 +27,7 @@ class ItemRequest {
     required this.outletId,
     required this.showItem,
     this.itemImage = '',
+    this.prepTimeMinutes = 15,
   });
 
   factory ItemRequest.fromJson(Map<String, dynamic> json) =>

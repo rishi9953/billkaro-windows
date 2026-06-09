@@ -1,23 +1,28 @@
-import 'dart:convert';
-import 'package:billkaro/app/services/Network/api_handler.dart';
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:http/http.dart' as http;
+import 'package:billkaro/app/services/Modals/whatsapp/whatsapp_marketing_request.dart';
+import 'package:billkaro/app/services/Modals/whatsapp/whatsapp_marketing_response.dart';
+import 'package:billkaro/config/config.dart';
+import 'package:dio/dio.dart';
 
-class WhatsappMarketingController extends GetxController
+class WhatsappMarketingController extends BaseController
     with WidgetsBindingObserver {
   final restaurantNameController = TextEditingController(text: '');
   final discountValueController = TextEditingController(text: '10');
+  final festivalNameController = TextEditingController(text: '');
 
-  // Observable variables for UI state
   final isSending = false.obs;
   final sendingProgress = 0.obs;
   final totalMessages = 0.obs;
+  final recipientCount = 0.obs;
 
   @override
   void onInit() {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
+    final outletName = Get.find<AppPref>().selectedOutlet?.businessName;
+    if (outletName != null && outletName.trim().isNotEmpty) {
+      restaurantNameController.text = outletName.trim();
+    }
+    _loadRecipientCount();
   }
 
   @override
@@ -25,91 +30,203 @@ class WhatsappMarketingController extends GetxController
     WidgetsBinding.instance.removeObserver(this);
     restaurantNameController.dispose();
     discountValueController.dispose();
+    festivalNameController.dispose();
     super.onClose();
   }
 
   @override
-  void didChangeMetrics() {
-    // Handle metrics changes if needed
-  }
+  void didChangeMetrics() {}
 
-  // List of phone numbers to send messages to
-  List<String> getCustomerPhoneNumbers() {
-    // Replace this with your actual customer list from database
-    return [
-      '+919350413656',
-      '+919582222724',
-      '+918587911863',
-      "+919643166233",
-      // Add more numbers
-    ];
-  }
-
-  /// NEW FUNCTION: Send message via your ngrok API
-  Future<void> sendNgrokBulkMessage({
-    required String title,
-    required String description,
-  }) async {
-    final url = Uri.parse(
-      'https://294f69e62943.ngrok-free.app/send-bulk-whatsapp',
-    );
-
-    final body = {
-      "numbers": [
-        "+919350413656",
-        "+919643166233",
-        "+919582222724",
-        "+918587911863",
-      ],
-      "message": "$title\n\n$description",
-    };
+  Future<void> _loadRecipientCount() async {
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null) return;
 
     try {
-      isSending.value = true;
+      final response = await callApi(
+        apiClient.getRegularCustomer(outletId),
+        showLoader: false,
+      );
 
-      // Optional progress dialog
+      if (response?.status == 'success') {
+        recipientCount.value = response!.data
+            .map((c) => c.phoneNumber.trim())
+            .where((phone) => phone.isNotEmpty)
+            .toSet()
+            .length;
+      }
+    } catch (_) {}
+  }
+
+  Future<void> sendBulkWhatsAppMessages(String templateType) async {
+    if (restaurantNameController.text.trim().isEmpty) {
+      showError(description: 'Please enter restaurant name');
+      return;
+    }
+
+    if (templateType == 'discount' &&
+        discountValueController.text.trim().isEmpty) {
+      showError(description: 'Please enter discount value');
+      return;
+    }
+
+    if (templateType == 'festival' &&
+        festivalNameController.text.trim().isEmpty) {
+      showError(description: 'Please enter festival name');
+      return;
+    }
+
+    final outletId = appPref.selectedOutlet?.id;
+    final userId = appPref.user?.id;
+    if (outletId == null || userId == null) {
+      showError(description: 'Outlet or user information is missing');
+      return;
+    }
+
+    final count = recipientCount.value;
+    if (count == 0) {
+      showError(
+        description:
+            'No customers with phone numbers found. Add regular customers first.',
+      );
+      return;
+    }
+
+    final confirm = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('Confirm Bulk Message'),
+        content: Text(
+          'Send WhatsApp messages to $count customers via the server?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('Send'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    isSending.value = true;
+    sendingProgress.value = 0;
+    totalMessages.value = count;
+
+    try {
+      final message = generateMessage(templateType);
+
       Get.dialog(
         PopScope(
           canPop: false,
           child: AlertDialog(
-            title: const Text('Sending WhatsApp Message'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Please wait...'),
-              ],
+            title: const Text('Sending Messages'),
+            content: Obx(
+              () => Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text('Sending to ${totalMessages.value} customers...'),
+                  const SizedBox(height: 8),
+                  const Text('Please wait, this may take a minute.'),
+                ],
+              ),
             ),
           ),
         ),
         barrierDismissible: false,
       );
 
-      final response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(body),
-      );
+      final dio = Get.find<Dio>();
+      final previousReceiveTimeout = dio.options.receiveTimeout;
+      final previousSendTimeout = dio.options.sendTimeout;
+      final bulkTimeout = Duration(seconds: (count * 3).clamp(60, 600));
 
-      // Close loader
+      dio.options.receiveTimeout = bulkTimeout;
+      dio.options.sendTimeout = bulkTimeout;
+
+      WhatsappMarketingResponse? response;
+      try {
+        response = await callApi(
+          apiClient.sendBulkWhatsappMarketing(
+            outletId,
+            WhatsappMarketingRequest(
+              userId: userId,
+              templateType: templateType,
+              message: message,
+              restaurantName: restaurantNameController.text.trim(),
+              discountValue: templateType == 'discount'
+                  ? discountValueController.text.trim()
+                  : null,
+              festivalName: templateType == 'festival'
+                  ? festivalNameController.text.trim()
+                  : null,
+            ),
+          ),
+          showLoader: false,
+        );
+      } finally {
+        dio.options.receiveTimeout = previousReceiveTimeout;
+        dio.options.sendTimeout = previousSendTimeout;
+      }
+
       if (Get.isDialogOpen == true) Get.back();
 
-      if (response.statusCode == 200) {
-        showSuccess(description: 'Messages sent successfully via Ngrok API!');
-      } else {
-        debugPrint(response.body);
-        showError(description: 'API Error: ${response.body}');
+      final result = response?.data;
+      if (result == null) {
+        showError(
+          description:
+              'Request timed out or failed. If you have many customers, wait and check campaign history in the database before resending.',
+        );
+        return;
       }
+
+      if (result.success) {
+        showSuccess(
+          description: 'Successfully sent ${result.successCount} messages',
+        );
+      } else {
+        showError(
+          description:
+              'Sent: ${result.successCount}, Failed: ${result.failureCount}',
+        );
+      }
+
+      showResultsDialog({
+        'success': result.success,
+        'total': result.total,
+        'successCount': result.successCount,
+        'failureCount': result.failureCount,
+        'results': result.results
+            .map(
+              (item) => {
+                'success': item.success,
+                'to': item.to,
+                'error': item.error,
+              },
+            )
+            .toList(),
+      });
     } catch (e) {
       if (Get.isDialogOpen == true) Get.back();
-      showError(description: 'Something went wrong: $e');
+      showError(description: 'Failed to send messages: $e');
     } finally {
       isSending.value = false;
     }
   }
 
-  // Generate message based on template type
+  /// Backward-compatible entry used by existing UI hooks.
+  Future<void> sendNgrokBulkMessage({
+    required String title,
+    required String description,
+  }) async {
+    await sendBulkWhatsAppMessages('custom');
+  }
+
   String generateMessage(String templateType) {
     final restaurantName = restaurantNameController.text.trim();
 
@@ -124,7 +241,9 @@ This is a limited time offer. Use code: SAVE$discount
 Order now and enjoy delicious food with amazing savings!
 
 Thank you for being a valued customer! ❤️''';
-    } else if (templateType == 'new_menu') {
+    }
+
+    if (templateType == 'menu') {
       return '''Hello! 🍽️
 
 Exciting news from $restaurantName!
@@ -135,148 +254,29 @@ Visit us today and enjoy great food! 😊
 
 Best regards,
 $restaurantName Team''';
-    } else {
-      // General announcement
-      return '''Hello from $restaurantName! 👋
+    }
+
+    if (templateType == 'festival') {
+      final festival = festivalNameController.text.trim();
+      return '''Hello! 🎊
+
+$restaurantName wishes you a very Happy $festival!
+
+Visit us for our special festival menu and exclusive discounts.
+
+Celebrate with great food! 🍽️
+
+Warm wishes,
+$restaurantName Team''';
+    }
+
+    return '''Hello from $restaurantName! 👋
 
 We have an important update for you. Thank you for being a loyal customer!
 
 Visit us soon! ❤️''';
-    }
   }
 
-  // Send bulk WhatsApp messages
-  // Future<void> sendBulkWhatsAppMessages(String templateType) async {
-  //   // Validation
-  //   if (restaurantNameController.text.trim().isEmpty) {
-  //     showError(description: 'Please enter restaurant name');
-  //     return;
-  //   }
-
-  //   if (templateType == 'discount' &&
-  //       discountValueController.text.trim().isEmpty) {
-  //     showError(description: 'Please enter discount value');
-  //     return;
-  //   }
-
-  //   // Get customer phone numbers
-  //   final phoneNumbers = getCustomerPhoneNumbers();
-
-  //   if (phoneNumbers.isEmpty) {
-  //     showError(description: 'No customers found to send messages');
-  //     return;
-  //   }
-
-  //   // Show confirmation dialog
-  //   final confirm = await Get.dialog<bool>(
-  //     AlertDialog(
-  //       title: const Text('Confirm Bulk Message'),
-  //       content: Text(
-  //         'Do you want to send WhatsApp messages to ${phoneNumbers.length} customers?',
-  //       ),
-  //       actions: [
-  //         TextButton(
-  //           onPressed: () => Get.back(result: false),
-  //           child: const Text('Cancel'),
-  //         ),
-  //         ElevatedButton(
-  //           onPressed: () => Get.back(result: true),
-  //           style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-  //           child: const Text('Send'),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-
-  //   if (confirm != true) return;
-
-  //   // Start sending
-  //   isSending.value = true;
-  //   sendingProgress.value = 0;
-  //   totalMessages.value = phoneNumbers.length;
-
-  //   try {
-  //     // Generate message
-  //     final message = generateMessage(templateType);
-
-  //     // Format phone numbers
-  //     final formattedNumbers = phoneNumbers
-  //         .map((num) => TwilioWhatsAppService.formatPhoneNumber(num))
-  //         .toList();
-
-  //     // Show progress dialog
-  //     Get.dialog(
-  //       PopScope(
-  //         canPop: false,
-  //         child: AlertDialog(
-  //           title: const Text('Sending Messages'),
-  //           content: Obx(
-  //             () => Column(
-  //               mainAxisSize: MainAxisSize.min,
-  //               children: [
-  //                 CircularProgressIndicator(
-  //                   value: totalMessages.value > 0
-  //                       ? sendingProgress.value / totalMessages.value
-  //                       : 0,
-  //                 ),
-  //                 const SizedBox(height: 16),
-  //                 Text(
-  //                   '${sendingProgress.value} / ${totalMessages.value}',
-  //                   style: const TextStyle(
-  //                     fontSize: 18,
-  //                     fontWeight: FontWeight.bold,
-  //                   ),
-  //                 ),
-  //                 const SizedBox(height: 8),
-  //                 const Text('Please wait...'),
-  //               ],
-  //             ),
-  //           ),
-  //         ),
-  //       ),
-  //       barrierDismissible: false,
-  //     );
-
-  //     // Send bulk messages
-  //     final result = await TwilioWhatsAppService.sendBulkMessages(
-  //       phoneNumbers: formattedNumbers,
-  //       message: message,
-  //       delayBetweenMessages: const Duration(seconds: 2),
-  //       onProgress: (current, total) {
-  //         sendingProgress.value = current;
-  //       },
-  //     );
-
-  //     // Close progress dialog
-  //     Get.back();
-
-  //     // Show result
-  //     if (result['success'] == true) {
-  //       showSuccess(
-  //         description: 'Successfully sent ${result['successCount']} messages',
-  //       );
-  //     } else {
-  //       showError(
-  //         description:
-  //             'Sent: ${result['successCount']}, Failed: ${result['failureCount']}',
-  //       );
-  //     }
-
-  //     // Show detailed results dialog
-  //     showResultsDialog(result);
-  //   } catch (e) {
-  //     // Close progress dialog if it's still open
-  //     if (Get.isDialogOpen == true) {
-  //       Get.back();
-  //     }
-  //     showError(description: 'Failed to send messages: $e');
-  //     debugPrint("Error sending messages: $e");
-  //   } finally {
-  //     isSending.value = false;
-  //   }
-  // }
-
-  // Show results dialog
   void showResultsDialog(Map<String, dynamic> result) {
     final results = result['results'] as List<dynamic>? ?? [];
     final total = result['total'] ?? 0;
@@ -310,49 +310,29 @@ Visit us soon! ❤️''';
                 ],
               ),
               const SizedBox(height: 20),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Details:',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(height: 10),
               if (results.isEmpty)
                 const Padding(
-                  padding: EdgeInsets.all(20.0),
+                  padding: EdgeInsets.all(20),
                   child: Text('No results available'),
                 )
               else
                 Expanded(
                   child: ListView.builder(
-                    physics: BouncingScrollPhysics(),
-
                     shrinkWrap: true,
                     itemCount: results.length,
                     itemBuilder: (context, index) {
                       final item = results[index] as Map<String, dynamic>;
                       final isSuccess = item['success'] == true;
-                      final phoneNumber = item['to']?.toString() ?? 'Unknown';
-                      final errorMessage =
-                          item['error']?.toString() ?? 'Unknown error';
-
                       return ListTile(
                         leading: Icon(
                           isSuccess ? Icons.check_circle : Icons.error,
                           color: isSuccess ? Colors.green : Colors.red,
                         ),
-                        title: Text(phoneNumber),
+                        title: Text(item['to']?.toString() ?? 'Unknown'),
                         subtitle: Text(
                           isSuccess
                               ? 'Sent successfully'
-                              : 'Failed: $errorMessage',
-                          style: TextStyle(
-                            color: isSuccess
-                                ? Colors.green[700]
-                                : Colors.red[700],
-                            fontSize: 12,
-                          ),
+                              : 'Failed: ${item['error'] ?? 'Unknown error'}',
                         ),
                       );
                     },
@@ -377,9 +357,9 @@ Visit us soon! ❤️''';
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -398,7 +378,11 @@ Visit us soon! ❤️''';
     );
   }
 
-  void showCustomFieldsDialog(String templateType, String title, description) {
+  void showCustomFieldsDialog(
+    String templateType,
+    String title,
+    String description,
+  ) {
     final theme = Get.theme;
     final cs = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -409,7 +393,6 @@ Visit us soon! ❤️''';
           constraints: const BoxConstraints(maxWidth: 520),
           child: Material(
             color: cs.surface,
-            elevation: 0,
             borderRadius: BorderRadius.circular(16),
             clipBehavior: Clip.antiAlias,
             child: Container(
@@ -418,105 +401,46 @@ Visit us soon! ❤️''';
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Enter Custom Fields',
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.close, color: cs.onSurfaceVariant),
-                        tooltip: 'Close',
-                        onPressed: () => Get.back(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
                   Text(
-                    'Restaurant Name',
-                    style: textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+                    'Enter Custom Fields',
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 8),
+                  if (recipientCount.value > 0)
+                    Text(
+                      '${recipientCount.value} customers will receive this message',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  const SizedBox(height: 16),
                   TextField(
                     controller: restaurantNameController,
-                    decoration: InputDecoration(
-                      isDense: true,
-                      filled: true,
-                      fillColor: cs.surfaceVariant.withOpacity(0.10),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 14,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: cs.outline.withOpacity(0.8),
-                        ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: cs.outline.withOpacity(0.8),
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: cs.primary, width: 2),
-                      ),
+                    decoration: const InputDecoration(
+                      labelText: 'Restaurant Name',
                     ),
                   ),
-
                   if (templateType == 'discount') ...[
                     const SizedBox(height: 14),
-                    Text(
-                      'Discount value',
-                      style: textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
                     TextField(
                       controller: discountValueController,
                       keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        isDense: true,
-                        filled: true,
-                        fillColor: cs.surfaceVariant.withOpacity(0.10),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 14,
-                        ),
-                        suffixText: '%',
-                        suffixStyle: theme.textTheme.bodyMedium?.copyWith(
-                          color: cs.onSurfaceVariant.withOpacity(0.9),
-                          fontWeight: FontWeight.w600,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: cs.outline.withOpacity(0.8),
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: cs.outline.withOpacity(0.8),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: cs.primary, width: 2),
-                        ),
+                      decoration: const InputDecoration(
+                        labelText: 'Discount value (%)',
                       ),
                     ),
                   ],
-
+                  if (templateType == 'festival') ...[
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: festivalNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Festival Name',
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 18),
                   Obx(
                     () => SizedBox(
@@ -526,22 +450,8 @@ Visit us soon! ❤️''';
                             ? null
                             : () {
                                 Get.back();
-                                sendNgrokBulkMessage(
-                                  title: title,
-                                  description: description,
-                                );
+                                sendBulkWhatsAppMessages(templateType);
                               },
-                        style: ElevatedButton.styleFrom(
-                          elevation: 0,
-                          backgroundColor: isSending.value
-                              ? cs.onSurfaceVariant.withOpacity(0.18)
-                              : cs.primary,
-                          foregroundColor: cs.onPrimary,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
                         child: isSending.value
                             ? const SizedBox(
                                 height: 20,
@@ -550,13 +460,7 @@ Visit us soon! ❤️''';
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text(
-                                'Send Bulk Message',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                            : const Text('Send Bulk Message'),
                       ),
                     ),
                   ),

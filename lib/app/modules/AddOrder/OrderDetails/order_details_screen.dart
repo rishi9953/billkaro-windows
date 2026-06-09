@@ -379,11 +379,16 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
           Obx(() {
             final tables = c.availableTables;
             final selectedTable = c.tableNumber.text.trim();
-            final dropdownValue = selectedTable.isEmpty
-                ? null
-                : tables.any((t) => t.displayName == selectedTable)
-                ? selectedTable
-                : null;
+            String? dropdownValue;
+            if (selectedTable.isNotEmpty) {
+              for (final t in tables) {
+                if (t.displayName == selectedTable ||
+                    t.tableNumber == selectedTable) {
+                  dropdownValue = t.displayName;
+                  break;
+                }
+              }
+            }
 
             return DropdownButtonFormField<String>(
               value: dropdownValue,

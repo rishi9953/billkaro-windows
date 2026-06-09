@@ -4,17 +4,11 @@ import 'package:billkaro/config/config.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-/// Bottom sheet to confirm order items, then choose Save & Hold or Save & Bill.
-class ConfirmOrderBottomSheet extends StatefulWidget {
-  const ConfirmOrderBottomSheet({super.key});
+/// Bottom sheet to review order items, then confirm Save or Bill.
+class ConfirmOrderBottomSheet extends StatelessWidget {
+  const ConfirmOrderBottomSheet({super.key, required this.action});
 
-  @override
-  State<ConfirmOrderBottomSheet> createState() =>
-      _ConfirmOrderBottomSheetState();
-}
-
-class _ConfirmOrderBottomSheetState extends State<ConfirmOrderBottomSheet> {
-  bool _confirmed = false;
+  final PosOrderAction action;
 
   @override
   Widget build(BuildContext context) {
@@ -143,7 +137,7 @@ class _ConfirmOrderBottomSheetState extends State<ConfirmOrderBottomSheet> {
             }),
           ),
           const Divider(height: 1),
-          // Bottom bar: Total + Confirm or Save & Hold / Save & Bill
+          // Bottom bar: Total + Confirm
           Container(
             padding: EdgeInsets.only(
               left: 16,
@@ -154,142 +148,69 @@ class _ConfirmOrderBottomSheetState extends State<ConfirmOrderBottomSheet> {
             decoration: BoxDecoration(color: Colors.grey[100]),
             child: Obx(() {
               final total = controller.totalAmount.value;
-              return Column(
-                mainAxisSize: MainAxisSize.min,
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              loc.total_amount,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '₹${total.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (!_confirmed) ...[
-                        SizedBox(
-                          width: 120,
-                          child: ElevatedButton(
-                            onPressed: () => setState(() => _confirmed = true),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColor.primary,
-                              foregroundColor: AppColor.white,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 12,
-                                horizontal: 16,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: const Text(
-                              'Confirm',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ] else
-                        ...[],
-                    ],
-                  ),
-                  Gap(12),
-                  if (_confirmed)
-                    Row(
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () {
-                              Get.back();
-                              controller.saveAndBill('pending');
-                            },
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColor.primary,
-                              side: BorderSide(
-                                color: AppColor.primary,
-                                width: 1.5,
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 12,
-                                horizontal: 16,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: Text(
-                              controller.isKotFeatureActive
-                                  ? loc.kot_and_hold
-                                  : loc.save_and_hold,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                        Text(
+                          loc.total_amount,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Get.back();
-                              controller.saveAndBill('closed');
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColor.primary,
-                              foregroundColor: AppColor.white,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 12,
-                                horizontal: 16,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: Text(
-                              controller.isKotFeatureActive
-                                  ? loc.kot_and_bill
-                                  : loc.save_and_bill,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                        Text(
+                          '₹${total.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black87,
                           ),
                         ),
                       ],
                     ),
+                  ),
+                  SizedBox(
+                    width: 120,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Get.back();
+                        controller.executePosAction(action);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColor.primary,
+                        foregroundColor: AppColor.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        'Confirm',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               );
             }),

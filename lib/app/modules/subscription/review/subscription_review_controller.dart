@@ -1,14 +1,23 @@
 import 'package:billkaro/app/services/Modals/Subscriptions/subscription_response.dart';
 import 'package:billkaro/app/services/Modals/PrinterOrderRequest/printer_order_request.dart';
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
+import 'package:billkaro/app/services/check_gstIn.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/app/services/razorpay/razorpay_service.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/app_snackbar.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 class SubscriptionReviewController extends BaseController {
-  SubscriptionReviewController({SubscriptionPlan? initialPlan})
-    : _initialPlan = initialPlan;
+  SubscriptionReviewController({
+    SubscriptionPlan? initialPlan,
+    Map<String, String>? initialFormData,
+  }) : _initialPlan = initialPlan {
+    if (initialFormData != null && initialFormData.isNotEmpty) {
+      _formData = Map<String, String>.from(initialFormData);
+    }
+  }
 
   final SubscriptionPlan? _initialPlan;
 
@@ -29,11 +38,20 @@ class SubscriptionReviewController extends BaseController {
   /// -------------------------------
   final couponCode = ''.obs;
   final gstin = ''.obs;
+  final isVerifyingGstin = false.obs;
+  final isGstinVerified = false.obs;
+  final gstinVerificationMessage = ''.obs;
+  final verifiedGstin = ''.obs;
 
   /// Selected subscription plan
   final Rxn<SubscriptionPlan> _plan = Rxn<SubscriptionPlan>();
 
+  /// Delivery details collected on the printer subscription form.
+  Map<String, String>? _formData;
+
   SubscriptionPlan? get plan => _plan.value;
+
+  Map<String, String>? get formData => _formData;
 
   /// -------------------------------
   /// Product Details (Safe Getters)
@@ -88,8 +106,106 @@ class SubscriptionReviewController extends BaseController {
     couponCode.value = value;
   }
 
+  bool get isGstinFilledAndValid {
+    final current = gstin.value.trim().toUpperCase();
+    return current.isNotEmpty &&
+        isGstinVerified.value &&
+        verifiedGstin.value == current;
+  }
+
   void updateGstin(String value) {
-    gstin.value = value;
+    final normalized = value.trim().toUpperCase();
+    gstin.value = normalized.length > 15
+        ? normalized.substring(0, 15)
+        : normalized;
+    _resetGstinVerificationIfChanged();
+  }
+
+  void _resetGstinVerificationIfChanged() {
+    final current = gstin.value.trim().toUpperCase();
+    if (current == verifiedGstin.value) return;
+    if (gstinVerificationMessage.value.isNotEmpty || isGstinVerified.value) {
+      isGstinVerified.value = false;
+      verifiedGstin.value = '';
+      gstinVerificationMessage.value = '';
+    }
+  }
+
+  Future<void> verifyGstin() async {
+    final value = gstin.value.trim().toUpperCase();
+    if (value.isEmpty) {
+      isGstinVerified.value = false;
+      verifiedGstin.value = '';
+      gstinVerificationMessage.value = 'Please enter GSTIN number first';
+      showError(description: gstinVerificationMessage.value);
+      return;
+    }
+
+    if (value.length != 15) {
+      isGstinVerified.value = false;
+      verifiedGstin.value = '';
+      gstinVerificationMessage.value = 'GSTIN must be 15 characters';
+      showError(description: gstinVerificationMessage.value);
+      return;
+    }
+
+    try {
+      isVerifyingGstin.value = true;
+      gstinVerificationMessage.value = '';
+
+      final response = await CheckGstinApi().checkGstNumber(gstin: value);
+      final dynamic body = response?.data;
+
+      if (response == null || response.statusCode != 200 || body == null) {
+        isGstinVerified.value = false;
+        verifiedGstin.value = '';
+        gstinVerificationMessage.value = 'Unable to verify GSTIN right now';
+        showError(description: gstinVerificationMessage.value);
+        return;
+      }
+
+      bool verified = false;
+      String message = 'GSTIN verified successfully';
+
+      if (body is Map) {
+        final dynamic validValue =
+            body['flag'] ?? body['valid'] ?? body['isValid'] ?? body['status'];
+        final String normalized = validValue?.toString().toLowerCase() ?? '';
+        verified =
+            validValue == true ||
+            normalized == 'true' ||
+            normalized == 'valid' ||
+            normalized == 'success' ||
+            normalized == '1';
+
+        message =
+            (body['message'] ??
+                    body['msg'] ??
+                    body['errorMsg'] ??
+                    body['error'] ??
+                    body['status'] ??
+                    message)
+                .toString()
+                .trim();
+      }
+
+      isGstinVerified.value = verified;
+      verifiedGstin.value = verified ? value : '';
+      gstinVerificationMessage.value = message;
+
+      if (verified) {
+        showSuccess(description: message);
+      } else {
+        showError(description: message);
+      }
+    } catch (_) {
+      isGstinVerified.value = false;
+      verifiedGstin.value = '';
+      gstinVerificationMessage.value = 'Unable to verify GSTIN right now';
+      showError(description: gstinVerificationMessage.value);
+    } finally {
+      isVerifyingGstin.value = false;
+    }
   }
 
   void applyCoupon() {
@@ -121,12 +237,17 @@ class SubscriptionReviewController extends BaseController {
 
     if (_initialPlan != null) {
       _plan.value = _initialPlan;
-      return;
     }
 
-    final args = Get.arguments;
-    if (args is Map && args['subscription'] is SubscriptionPlan) {
-      _plan.value = args['subscription'];
+    final dynamic modularArgs = Modular.args.data;
+    final dynamic rawArgs = modularArgs ?? Get.arguments;
+    if (rawArgs is Map) {
+      if (_plan.value == null && rawArgs['subscription'] is SubscriptionPlan) {
+        _plan.value = rawArgs['subscription'];
+      }
+      if (_formData == null && rawArgs['formData'] is Map) {
+        _formData = Map<String, String>.from(rawArgs['formData'] as Map);
+      }
     }
   }
 
@@ -188,39 +309,25 @@ class SubscriptionReviewController extends BaseController {
             final outlet = appPref.selectedOutlet;
 
             if (user != null && outlet != null) {
-              final deliveryAddressBuffer = StringBuffer();
-
-              if (user.address != null && user.address!.isNotEmpty) {
-                deliveryAddressBuffer.write(user.address);
-              }
-              if (user.city != null && user.city!.isNotEmpty) {
-                if (deliveryAddressBuffer.isNotEmpty)
-                  deliveryAddressBuffer.write(', ');
-                deliveryAddressBuffer.write(user.city);
-              }
-              if (user.state != null && user.state!.isNotEmpty) {
-                if (deliveryAddressBuffer.isNotEmpty)
-                  deliveryAddressBuffer.write(', ');
-                deliveryAddressBuffer.write(user.state);
-              }
-              if (user.country != null && user.country!.isNotEmpty) {
-                if (deliveryAddressBuffer.isNotEmpty)
-                  deliveryAddressBuffer.write(', ');
-                deliveryAddressBuffer.write(user.country);
-              }
-
+              final form = _formData;
               final printerOrder = PrinterOrderRequest(
                 userId: user.id ?? '',
                 outletId: outlet.id ?? '',
                 subscriptionId: planId,
-                outletName: outlet.businessName ?? '',
-                outletAddress: outlet.outletAddress ?? '',
-                email: user.email ?? '',
-                phoneNumber: outlet.phoneNumber ?? user.mobile ?? '',
-                deliveryAddress: deliveryAddressBuffer.isNotEmpty
-                    ? deliveryAddressBuffer.toString()
-                    : (outlet.outletAddress ?? ''),
-                pincode: user.zipcode ?? '',
+                outletName:
+                    form?['outletName'] ?? outlet.businessName ?? '',
+                outletAddress:
+                    form?['outletAddress'] ?? outlet.outletAddress ?? '',
+                email: form?['email'] ?? user.email ?? '',
+                phoneNumber: form?['phone'] ??
+                    outlet.phoneNumber ??
+                    user.mobile ??
+                    '',
+                deliveryAddress: form?['deliveryAddress'] ??
+                    form?['outletAddress'] ??
+                    outlet.outletAddress ??
+                    '',
+                pincode: form?['pincode'] ?? user.zipcode ?? '',
                 status: 'placed',
               );
 
@@ -238,11 +345,7 @@ class SubscriptionReviewController extends BaseController {
           title: loc.payment_successful,
           description: loc.payment_successful_description,
         );
-        try {
-          Get.back();
-        } catch (e) {
-          debugPrint('Error navigating back: $e');
-        }
+        _finishSubscriptionFlow();
       } else {
         String errorMsg =
             'Payment successful but subscription activation failed. Please contact support.';
@@ -393,13 +496,22 @@ class SubscriptionReviewController extends BaseController {
   /// Payment Flow (called from Pay button)
   /// -------------------------------
   Future<void> processPayment() async {
-    if (gstin.value.isNotEmpty && gstin.value.length != 15) {
-      AppSnackbar.show(
-        title: 'Invalid GSTIN',
-        message: 'GSTIN must be exactly 15 characters',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return;
+    final currentGstin = gstin.value.trim().toUpperCase();
+    if (currentGstin.isNotEmpty) {
+      if (currentGstin.length != 15) {
+        showError(
+          title: 'Invalid GSTIN',
+          description: 'GSTIN must be 15 characters',
+        );
+        return;
+      }
+      if (!isGstinVerified.value || verifiedGstin.value != currentGstin) {
+        showError(
+          title: 'Verify GSTIN',
+          description: 'Please verify GSTIN before payment',
+        );
+        return;
+      }
     }
 
     if (plan == null) {
@@ -462,18 +574,23 @@ class SubscriptionReviewController extends BaseController {
         return;
       }
 
+      final form = _formData;
       razorpayService.openCheckout(
         orderId: orderId,
         amountInPaise: expectedAmountInPaise,
         name: appPref.user!.brandName ?? appPref.user!.firstName ?? 'Customer',
-        email: appPref.user?.email ?? '',
-        contact: appPref.user?.mobile ?? '',
+        email: form?['email'] ?? appPref.user?.email ?? '',
+        contact: form?['phone'] ?? appPref.user?.mobile ?? '',
         description: 'Subscription Purchase - ${productName}',
         notes: {
           'subscriptionId': planId,
-          if (gstin.value.isNotEmpty) 'gstin': gstin.value,
+          if (gstin.value.trim().isNotEmpty) 'gstin': gstin.value.trim().toUpperCase(),
         },
-        prefill: {'name': appPref.user!.firstName ?? 'Customer'},
+        prefill: {
+          'name': appPref.user!.firstName ?? 'Customer',
+          'email': form?['email'] ?? appPref.user?.email ?? '',
+          'contact': form?['phone'] ?? appPref.user?.mobile ?? '',
+        },
       );
     } else {
       final context = Get.context;
@@ -486,6 +603,29 @@ class SubscriptionReviewController extends BaseController {
               'Failed to create payment order. Please try again.',
         );
       }
+    }
+  }
+
+  /// Closes checkout overlays/routes after payment without breaking navigation.
+  void _finishSubscriptionFlow() {
+    try {
+      while (Get.isDialogOpen == true) {
+        Get.back();
+      }
+    } catch (e) {
+      debugPrint('Error closing subscription dialogs: $e');
+    }
+
+    try {
+      final path = Modular.to.path;
+      if (path.contains(HomeMainRoutes.subscriptionForm) ||
+          path.contains(HomeMainRoutes.subscriptionReview)) {
+        if (Modular.to.canPop()) {
+          Modular.to.pop();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error popping subscription checkout route: $e');
     }
   }
 
@@ -581,8 +721,8 @@ class SubscriptionReviewController extends BaseController {
                           width: 120,
                           child: FilledButton(
                             onPressed: () {
+                              // Close only the dialog; navigation runs after await.
                               Get.back();
-                              Get.offAllNamed(AppRoute.homeMain);
                             },
                             style: FilledButton.styleFrom(
                               backgroundColor: Theme.of(
@@ -642,8 +782,8 @@ class SubscriptionReviewController extends BaseController {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
+                          // Close only the dialog; navigation runs after await.
                           Get.back();
-                          Get.offAllNamed(AppRoute.homeMain);
                         },
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),

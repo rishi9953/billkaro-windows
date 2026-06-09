@@ -3,6 +3,7 @@ import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Theme/theme_controller.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/kitchen_display_browser.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 
 class AppSettingsScreen extends StatelessWidget {
@@ -65,22 +66,50 @@ class AppSettingsScreen extends StatelessWidget {
                       if (!HomeMainRoutes.outletIsCafeOrRestaurant()) {
                         return const SizedBox.shrink();
                       }
-                      return _buildSwitchTile(
-                        icon: Icons.restaurant_menu_outlined,
-                        title: loc.kot_mode,
-                        subtitle: loc.printKOT_desc.replaceAll('\n', ' '),
-                        value: controller.kotModeEnabled,
-                        onChanged: controller.setKotMode,
+                      final kotOn = controller.kotModeEnabled.value;
+                      return Column(
+                        children: [
+                          _buildSwitchTile(
+                            icon: Icons.restaurant_menu_outlined,
+                            title: loc.kot_mode,
+                            subtitle: loc.printKOT_desc.replaceAll('\n', ' '),
+                            value: controller.kotModeEnabled,
+                            onChanged: controller.setKotMode,
+                          ),
+                          if (kotOn)
+                            _buildActionOrNavTile(
+                              icon: Icons.open_in_browser_rounded,
+                              title: 'Kitchen Display in browser',
+                              subtitle:
+                                  'Open the web kitchen screen on a second monitor or TV',
+                              onTap: KitchenDisplayBrowser.open,
+                            ),
+                        ],
                       );
                     })
                   else if (HomeMainRoutes.outletIsCafeOrRestaurant())
-                    _buildSwitchTile(
-                      icon: Icons.restaurant_menu_outlined,
-                      title: loc.kot_mode,
-                      subtitle: loc.printKOT_desc.replaceAll('\n', ' '),
-                      value: controller.kotModeEnabled,
-                      onChanged: controller.setKotMode,
-                    ),
+                    Obx(() {
+                      final kotOn = controller.kotModeEnabled.value;
+                      return Column(
+                        children: [
+                          _buildSwitchTile(
+                            icon: Icons.restaurant_menu_outlined,
+                            title: loc.kot_mode,
+                            subtitle: loc.printKOT_desc.replaceAll('\n', ' '),
+                            value: controller.kotModeEnabled,
+                            onChanged: controller.setKotMode,
+                          ),
+                          if (kotOn)
+                            _buildActionOrNavTile(
+                              icon: Icons.open_in_browser_rounded,
+                              title: 'Kitchen Display in browser',
+                              subtitle:
+                                  'Open the web kitchen screen on a second monitor or TV',
+                              onTap: KitchenDisplayBrowser.open,
+                            ),
+                        ],
+                      );
+                    }),
                   _buildActionOrNavTile(
                     icon: Icons.tour_outlined,
                     title: 'Show onboarding again',
@@ -114,6 +143,18 @@ class AppSettingsScreen extends StatelessWidget {
                   subtitle: 'Order and reminder notifications',
                   value: controller.notificationsEnabled,
                   onChanged: controller.setNotificationsEnabled,
+                ),
+                _buildTile(
+                  icon: Icons.inbox_outlined,
+                  title: 'Notification history',
+                  subtitle: 'Kitchen ready and other alerts',
+                  trailing: Icon(
+                    Icons.chevron_right,
+                    color: Colors.grey[400],
+                    size: 20,
+                  ),
+                  onTap: () =>
+                      Modular.to.pushNamed(HomeMainRoutes.notifications),
                 ),
               ]),
               const Gap(24),

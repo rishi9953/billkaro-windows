@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:billkaro/app/services/Modals/login_modal.dart';
 import 'package:billkaro/config/config.dart';
 
@@ -49,21 +48,21 @@ class LoginController extends BaseController {
   // Validation methods
   String? validateRegistrationKey(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Please enter email';
+      return 'Please enter your email';
     }
     if (!GetUtils.isEmail(value)) {
-      return 'Please enter a valid email';
+      return 'Please enter a valid email address';
     }
     return null;
   }
 
   String? validateDeviceLabel(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Please enter password';
+      return 'Please enter your password';
     }
-    if (value.length < 3) {
-      return 'Password must be at least 3 characters';
-    }
+    // if (value.length < 8) {
+    //   return 'Password must be at least 8 characters';
+    // }
     return null;
   }
 
@@ -99,36 +98,12 @@ class LoginController extends BaseController {
     return null;
   }
 
-  // Add Device functionality
+  // Add Device functionality (not yet wired to backend)
   Future<void> onAddDevice() async {
-    if (!addDeviceFormKey.currentState!.validate()) {
-      return;
-    }
-
-    try {
-      isLoading.value = true;
-
-      // String registrationKey = registrationKeyController.text.trim();
-      // String deviceLabel = deviceLabelController.text.trim();
-      await Future.delayed(Duration(seconds: 2)); // Simulating API call
-
-      // Simulate API response
-      // bool success = true; // Replace with actual API response
-
-      showSuccess(description: 'Device added successfully');
-      // Clear the form
-      clearAllFields();
-
-      // Navigate to home or dashboard
-      // Get.offAllNamed('/home');
-    } catch (e) {
-      showError(
-        description:
-            'Failed to add device. Please check your registration key and try again.',
-      );
-    } finally {
-      isLoading.value = false;
-    }
+    showError(
+      description:
+          'Device registration is not available yet. Please sign in with your email and password.',
+    );
   }
 
   // Forgot Password functionality
@@ -177,9 +152,6 @@ class LoginController extends BaseController {
       return;
     }
 
-    // Set up SSL bypass (call once, preferably in main())
-    HttpOverrides.global = MyHttpOverrides();
-
     try {
       isLoading.value = true;
       final isStaff = signInTabIndex.value == 1;
@@ -192,18 +164,36 @@ class LoginController extends BaseController {
         isStaff ? apiClient.onStaffLogin(request) : apiClient.onLogin(request),
       );
       debugPrint('Login Response: $response');
-      if (response != null) {
-        appPref.token = response.accessToken;
-        appPref.isStaffSession = isStaff;
-        appPref.user = response.user;
-        final outlets = response.user.outletData;
-        if (outlets != null && outlets.isNotEmpty) {
-          appPref.selectedOutlet = outlets.first;
-        }
-        Get.offAllNamed(AppRoute.homeMain);
+      if (response == null) {
+        showError(
+          description:
+              'Login failed. Please check your credentials and try again.',
+        );
+        return;
       }
+
+      appPref.token = response.accessToken;
+      appPref.isStaffSession = isStaff;
+      appPref.user = response.user;
+      appPref.staffPermissions = response.user.permissions ?? [];
+
+      final outlets = response.user.outletData;
+      if (outlets == null || outlets.isEmpty) {
+        showError(
+          description:
+              'No outlet is linked to this account. Please contact support or complete outlet setup.',
+        );
+        return;
+      }
+
+      appPref.selectedOutlet = outlets.first;
+      Get.offAllNamed(AppRoute.homeMain);
     } catch (e) {
       debugPrint('Error during login: $e');
+      showError(
+        description:
+            'Login failed. Please check your credentials and try again.',
+      );
     } finally {
       isLoading.value = false;
     }
@@ -216,9 +206,7 @@ class LoginController extends BaseController {
 
     await Get.dialog(
       Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -236,10 +224,7 @@ class LoginController extends BaseController {
               const Text(
                 'Check Your Email',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Text(
@@ -268,10 +253,7 @@ class LoginController extends BaseController {
                   ),
                   child: const Text(
                     'Got It',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -290,9 +272,7 @@ class LoginController extends BaseController {
 
     await Get.dialog(
       Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -301,19 +281,13 @@ class LoginController extends BaseController {
               // Error Lottie Animation
               SizedBox(
                 height: 140,
-                child: Lottie.asset(
-                  'assets/lottie/Fail.json',
-                  repeat: false,
-                ),
+                child: Lottie.asset('assets/lottie/Fail.json', repeat: false),
               ),
               const SizedBox(height: 16),
               const Text(
                 'Failed to Send Reset Link',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Text(
@@ -340,10 +314,7 @@ class LoginController extends BaseController {
                   ),
                   child: const Text(
                     'OK',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),

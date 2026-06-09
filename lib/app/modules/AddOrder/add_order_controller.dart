@@ -1,5 +1,6 @@
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/app/Database/app_database.dart' as dbs;
+import 'package:billkaro/app/modules/AddOrder/confirm_order_bottomsheet.dart';
 import 'package:billkaro/app/modules/AddOrder/quick_addItem_bottomsheet.dart';
 import 'package:billkaro/app/modules/BusinessOverview/business_overview_controller.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
@@ -13,9 +14,11 @@ import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_req
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart'
     as api;
 import 'package:billkaro/app/services/Modals/orders/split_payment.dart';
+import 'package:billkaro/app/services/Modals/tables/tables_response.dart';
 import 'package:billkaro/app/Widgets/desktop_camera_capture_dialog.dart';
 import 'package:billkaro/app/services/ai/menu_ai_scanner.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
+import 'package:billkaro/app/services/sync/sync_manager.dart';
 import 'package:billkaro/utils/date_util.dart';
 import 'package:billkaro/utils/kot_print_tracker.dart';
 import 'dart:async';
@@ -24,6 +27,9 @@ import 'package:billkaro/config/config.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Invoice/invoice_controller.dart';
+import 'package:billkaro/app/modules/Tables/table_controller.dart';
+
+enum PosOrderAction { kot, hold, bill }
 
 class AddOrderController extends BaseController {
   // Controllers
@@ -43,7 +49,7 @@ class AddOrderController extends BaseController {
 
   // Pagination variables
   final RxInt currentPage = 1.obs;
-  final RxInt itemsPerPage = 10.obs;
+  final RxInt itemsPerPage = 50.obs;
   final RxBool hasMoreItems = true.obs;
   final RxBool isLoadingMore = false.obs;
   final RxString searchQuery = ''.obs;
@@ -51,6 +57,9 @@ class AddOrderController extends BaseController {
 
   // State
   final RxMap<String, int> itemQuantities = <String, int>{}.obs;
+
+  /// Per-line remarks (itemId → note), sent as `itemRemark` on each order item.
+  final RxMap<String, String> itemRemarks = <String, String>{}.obs;
   final RxString selectedTaxOption = 'Without Tax'.obs;
   final RxString selectedGSTRate = 'None'.obs;
   final RxString selectedOrderSource = ''.obs;
@@ -79,6 +88,8 @@ class AddOrderController extends BaseController {
   RxBool isListView = false.obs;
   late final RxBool showAddDetailsOnCreateOrder;
   final RxBool isFromTableScreen = false.obs;
+  final RxList<TableModel> availableTables = <TableModel>[].obs;
+  final RxBool isLoadingTables = false.obs;
 
   var selectedCategory = 'none'.obs;
   String category = 'none';
@@ -96,6 +107,11 @@ class AddOrderController extends BaseController {
 
   Timer? _searchDebounce;
 
+  double _asDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse('${value ?? 0}') ?? 0.0;
+  }
+
   void setOrderDetails(Map<String, dynamic> details) {
     orderDetails = details;
     orderDetailsVersion.value++;
@@ -104,6 +120,7 @@ class AddOrderController extends BaseController {
 
   void clearOrderDraft() {
     itemQuantities.clear();
+    itemRemarks.clear();
     kotPrintedQuantities.clear();
     orderDetails.clear();
     orders = null;
@@ -137,8 +154,9 @@ class AddOrderController extends BaseController {
       isEdit.value = args['isEdit'] ?? false;
       orders = args['order'];
       isFromTableScreen.value =
-          !isEdit.value &&
-          (args['tableNumber']?.toString().trim().isNotEmpty ?? false);
+          args['fromTables'] == true ||
+          (args['tableNumber']?.toString().trim().isNotEmpty ?? false) ||
+          (isEdit.value && (orders?.tableNumber?.trim().isNotEmpty ?? false));
 
       if (orders != null) {
         selectedOrderSource.value = orders!.orderFrom ?? '';
@@ -153,6 +171,9 @@ class AddOrderController extends BaseController {
           ..['serviceCharge'] = orders!.serviceCharge ?? 0.0
           ..['paymentReceivedIn'] = orders!.paymentReceivedIn ?? ''
           ..['status'] = orders!.status;
+        if (orders!.specialInstructions?.trim().isNotEmpty ?? false) {
+          remarkController.text = orders!.specialInstructions!.trim();
+        }
       } else {
         // Handle new order with table number from table selection
         if (args['orderFrom'] != null) {
@@ -175,46 +196,69 @@ class AddOrderController extends BaseController {
 
     await getCategories();
     await getItems();
+    if (HomeMainRoutes.outletShowsTables()) {
+      await loadAvailableTables();
+    }
 
     if (isEdit.value && orders != null) {
       _loadOrderForEdit();
       await _syncKotPrintedFromStorage();
     } else {
-      // Only show dialog if order source is not already set (e.g., from table screen).
-      // Cafe / restaurant: user picks channel; other outlets: default without blocking.
+      // Petpooja-style: order type tabs in UI — no blocking dialog.
       if (selectedOrderSource.value.isEmpty) {
-        if (HomeMainRoutes.outletIsCafeOrRestaurant()) {
-          _showOrderSourceDialog();
-        } else {
-          selectedOrderSource.value = 'Takeaway';
-        }
+        selectedOrderSource.value = HomeMainRoutes.outletIsCafeOrRestaurant()
+            ? 'Dine In'
+            : 'Takeaway';
       }
     }
   }
 
   void _loadOrderForEdit() {
     itemQuantities.clear();
+    itemRemarks.clear();
 
     for (final item in orders!.items) {
       itemQuantities[item.itemId] = item.quantity ?? 1;
+      final remark = item.itemRemark?.trim();
+      if (remark != null && remark.isNotEmpty) {
+        itemRemarks[item.itemId] = remark;
+      }
     }
 
     calculateTotals();
   }
 
   Future<void> _syncKotPrintedFromStorage() async {
+    if (isEdit.value && orders != null) {
+      final hasServerKot = orders!.items.any(
+        (item) => item.kotSentQuantity > 0,
+      );
+      if (hasServerKot) {
+        kotPrintedQuantities.clear();
+        for (final item in orders!.items) {
+          if (item.kotSentQuantity > 0) {
+            kotPrintedQuantities[item.itemId] = item.kotSentQuantity;
+          }
+        }
+        return;
+      }
+    }
+
     final outletId = appPref.selectedOutlet?.id;
     final orderId = orders?.id ?? orderDetails['id']?.toString();
     if (outletId == null || orderId == null || orderId.isEmpty) {
       if (isEdit.value && orders != null) {
         for (final item in orders!.items) {
-          kotPrintedQuantities[item.itemId] = item.quantity;
+          kotPrintedQuantities[item.itemId] = item.kotSentQuantity;
         }
       }
       return;
     }
 
-    final saved = await KotPrintTracker.loadPrintedQuantities(outletId, orderId);
+    final saved = await KotPrintTracker.loadPrintedQuantities(
+      outletId,
+      orderId,
+    );
     if (saved.isNotEmpty) {
       kotPrintedQuantities
         ..clear()
@@ -224,7 +268,7 @@ class AddOrderController extends BaseController {
 
     if (isEdit.value && orders != null) {
       for (final item in orders!.items) {
-        kotPrintedQuantities[item.itemId] = item.quantity;
+        kotPrintedQuantities[item.itemId] = item.kotSentQuantity;
       }
     }
   }
@@ -243,16 +287,7 @@ class AddOrderController extends BaseController {
       final item = allItemsMap[entry.key];
       if (item == null) continue;
 
-      delta.add(
-        OrderItem(
-          itemId: item.id,
-          itemName: item.itemName,
-          category: item.category,
-          quantity: diff,
-          salePrice: item.salePrice,
-          gst: item.gst?.toDouble() ?? 0.0,
-        ),
-      );
+      delta.add(_cartOrderItem(entry.key, diff));
     }
     return delta;
   }
@@ -284,6 +319,45 @@ class AddOrderController extends BaseController {
         resolvedOrderId,
         kotPrintedQuantities,
       );
+    }
+  }
+
+  /// Marks pending cart lines as sent to kitchen (for KDS + kotSentQuantity sync).
+  Future<void> _markPendingItemsAsSentToKitchen() async {
+    for (final entry in itemQuantities.entries) {
+      if (entry.value < 1) continue;
+      final sent = kotPrintedQuantities[entry.key] ?? 0;
+      if (entry.value > sent) {
+        kotPrintedQuantities[entry.key] = entry.value;
+      }
+    }
+  }
+
+  bool _shouldSendToKitchen({
+    required bool skipKotPrint,
+    required bool requireKotPrint,
+    required bool hadKitchenDelta,
+  }) {
+    if (!isKotFeatureActive) return false;
+    if (requireKotPrint) return true;
+    if (skipKotPrint) return false;
+    return hadKitchenDelta;
+  }
+
+  Future<void> _syncKitchenQuantitiesToServer(
+    String orderId,
+    CreateorderRequest request,
+  ) async {
+    final kotPayload = _buildCartPayload();
+    final response = await callApi(
+      apiClient.updateOrder(orderId, {
+        ...request.toJson(),
+        'items': kotPayload.map((e) => e.toJson()).toList(),
+      }),
+      showLoader: false,
+    );
+    if (response == null || response['status'] != 'success') {
+      debugPrint('⚠️ Kitchen sync to server failed for order $orderId');
     }
   }
 
@@ -384,6 +458,7 @@ class AddOrderController extends BaseController {
     final current = itemQuantities[itemId] ?? 0;
     if (current <= 1) {
       itemQuantities.remove(itemId);
+      itemRemarks.remove(itemId);
     } else {
       itemQuantities[itemId] = current - 1;
     }
@@ -392,7 +467,32 @@ class AddOrderController extends BaseController {
 
   void removeItemCompletely(String itemId) {
     itemQuantities.remove(itemId);
+    itemRemarks.remove(itemId);
     calculateTotals();
+  }
+
+  String? _itemRemarkFor(String itemId) {
+    final remark = itemRemarks[itemId]?.trim();
+    if (remark == null || remark.isEmpty) return null;
+    return remark;
+  }
+
+  OrderItem _cartOrderItem(
+    String itemId,
+    int quantity, {
+    int kotSentQuantity = 0,
+  }) {
+    final item = allItemsMap[itemId]!;
+    return OrderItem(
+      itemId: item.id,
+      itemName: item.itemName,
+      category: item.category,
+      quantity: quantity,
+      salePrice: item.salePrice,
+      gst: item.gst.toDouble(),
+      kotSentQuantity: kotSentQuantity,
+      itemRemark: _itemRemarkFor(itemId),
+    );
   }
 
   /// Get count of selected items (items with quantity >= 1)
@@ -407,6 +507,221 @@ class AddOrderController extends BaseController {
 
   /// Check if there are any selected items
   bool get hasSelectedItems => selectedItemsCount > 0;
+
+  int get pendingKotItemCount {
+    var count = 0;
+    for (final entry in itemQuantities.entries) {
+      if (entry.value < 1) continue;
+      final sent = kotPrintedQuantities[entry.key] ?? 0;
+      final diff = entry.value - sent;
+      if (diff > 0) count += diff;
+    }
+    return count;
+  }
+
+  String get displayBillNumber {
+    final bill = orderDetails['billNumber']?.toString().trim();
+    if (bill != null && bill.isNotEmpty) return bill;
+    return isEdit.value ? '—' : 'New';
+  }
+
+  Future<void> loadAvailableTables() async {
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null) return;
+
+    isLoadingTables.value = true;
+    try {
+      final response = await callApi(
+        apiClient.getOutletTables(outletId),
+        showLoader: false,
+      );
+      if (response?.status == 'success') {
+        availableTables.value = response!.data
+            .map((e) => TableModel.fromTableData(e))
+            .toList();
+      }
+    } catch (_) {
+      // Tables optional for non-restaurant outlets.
+    } finally {
+      isLoadingTables.value = false;
+    }
+  }
+
+  void setOrderSource(String source) {
+    selectedOrderSource.value = source;
+    if (source.trim().toLowerCase() != 'dine in') {
+      if (!isEdit.value && !isFromTableScreen.value) {
+        orderDetails.remove('tableNumber');
+        orderDetailsVersion.value++;
+      }
+    } else if (HomeMainRoutes.outletShowsTables() && availableTables.isEmpty) {
+      loadAvailableTables();
+    }
+  }
+
+  void setTableNumber(String? table) {
+    if (table == null || table.trim().isEmpty) {
+      orderDetails.remove('tableNumber');
+    } else {
+      orderDetails['tableNumber'] = table.trim();
+    }
+    orderDetailsVersion.value++;
+  }
+
+  Future<bool> ensureBillDetails() async {
+    final payment = (orderDetails['paymentReceivedIn'] ?? '').toString().trim();
+    if (payment.isNotEmpty) return true;
+
+    final result = await Modular.to.pushNamed(
+      HomeMainRoutes.orderDetails,
+      arguments: {
+        ...orderDetails,
+        'orderFrom': selectedOrderSource.value,
+        'tableNumber': orderDetails['tableNumber'] ?? '',
+        'totalAmount': totalAmount.value,
+        'requirePayment': true,
+      },
+    );
+    if (result != null && result is CreateorderRequest) {
+      setOrderDetails(result.toJson());
+      return true;
+    }
+    return false;
+  }
+
+  /// Petpooja-style POS: KOT stays on screen; Hold saves & exits; Bill settles.
+  Future<void> executePosAction(PosOrderAction action) async {
+    if (!hasTrialOrSubscription(appPref)) {
+      checkSubscription();
+      return;
+    }
+
+    if (itemQuantities.isEmpty) {
+      showError(description: AppLocalizations.of(Get.context!)!.add_items);
+      return;
+    }
+
+    if (action == PosOrderAction.bill) {
+      final ready = await ensureBillDetails();
+      if (!ready) return;
+    } else if (appPref.showAddDetailsOnCreateOrder &&
+        orderDetails.isEmpty &&
+        action != PosOrderAction.kot) {
+      showError(description: 'Please enter the order details');
+      return;
+    }
+
+    if (action == PosOrderAction.kot && isKotFeatureActive) {
+      if (pendingKotItemCount == 0) {
+        showError(description: 'No new items to send to kitchen');
+        return;
+      }
+      await showRemarkDialog();
+    }
+
+    final status = action == PosOrderAction.bill ? 'closed' : 'pending';
+    await saveAndBill(
+      status,
+      stayOnScreen: action == PosOrderAction.kot && isKotFeatureActive,
+      skipKotPrint: action == PosOrderAction.hold,
+      requireKotPrint: action == PosOrderAction.kot && isKotFeatureActive,
+    );
+  }
+
+  void confirmBillAction() {
+    final context = Get.context!;
+    final loc = AppLocalizations.of(context)!;
+    final actionLabel = isKotFeatureActive ? 'KOT & Bill' : loc.save_and_bill;
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Settle Bill'),
+        content: Text(
+          'Confirm $actionLabel for ₹${totalAmount.value.toStringAsFixed(2)}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(dialogCtx).pop();
+              executePosAction(PosOrderAction.bill);
+            },
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<OrderItem> _buildCartPayload() {
+    final payload = <OrderItem>[];
+    for (final e in itemQuantities.entries) {
+      if (e.value < 1) continue;
+      final item = allItemsMap[e.key];
+      if (item == null) continue;
+
+      payload.add(
+        _cartOrderItem(
+          e.key,
+          e.value,
+          kotSentQuantity: kotPrintedQuantities[e.key] ?? 0,
+        ),
+      );
+    }
+    return payload;
+  }
+
+  String? _existingOrderId() {
+    final fromDetails = orderDetails['id']?.toString().trim();
+    if (fromDetails != null && fromDetails.isNotEmpty) return fromDetails;
+    final fromOrder = orders?.id.trim();
+    if (fromOrder != null && fromOrder.isNotEmpty) return fromOrder;
+    return null;
+  }
+
+  Future<void> _enterEditModeAfterSave({
+    required Map<String, dynamic> responseData,
+    required CreateorderRequest request,
+  }) async {
+    final savedId = responseData['id']?.toString();
+    if (savedId == null || savedId.isEmpty) return;
+
+    isEdit.value = true;
+    orderDetails['id'] = savedId;
+    orderDetails['billNumber'] =
+        responseData['billNumber']?.toString() ?? request.billNumber;
+    orderDetails['status'] = 'pending';
+    orderDetailsVersion.value++;
+
+    orders = _mapToOrderModel(
+      CreateorderRequest(
+        billNumber:
+            responseData['billNumber']?.toString() ?? request.billNumber,
+        userId: request.userId,
+        outletId: request.outletId,
+        tableNumber: request.tableNumber,
+        customerName: request.customerName,
+        phoneNumber: request.phoneNumber,
+        subtotal: request.subtotal,
+        totalTax: request.totalTax,
+        discount: request.discount,
+        serviceCharge: request.serviceCharge,
+        totalAmount: request.totalAmount,
+        paymentReceivedIn: request.paymentReceivedIn,
+        splitPayments: request.splitPayments,
+        status: 'pending',
+        orderFrom: request.orderFrom,
+        items: _buildCartPayload(),
+        specialInstructions: request.specialInstructions,
+      ),
+      savedId,
+      statusOverride: 'pending',
+    );
+  }
 
   // --------------------
   // Utility
@@ -786,10 +1101,14 @@ class AddOrderController extends BaseController {
     );
   }
 
-  /// Opens a simple confirmation prompt before placing the order.
-  void showConfirmOrderBottomSheet(String status) {
-    final context = Get.context!;
-    final loc = AppLocalizations.of(context)!;
+  bool _isConfirmOrderBottomSheetOpen = false;
+
+  /// Review items in a bottom sheet, then confirm Save or Bill.
+  void showConfirmOrderBottomSheet(PosOrderAction action) {
+    if (action != PosOrderAction.hold && action != PosOrderAction.bill) return;
+    if (_isConfirmOrderBottomSheetOpen) return;
+
+    final loc = AppLocalizations.of(Get.context!)!;
     if (itemQuantities.isEmpty) {
       showError(description: loc.add_items);
       return;
@@ -802,31 +1121,17 @@ class AddOrderController extends BaseController {
       checkSubscription();
       return;
     }
-    final isBilling = status == 'closed';
-    final actionLabel = isBilling
-        ? (isKotFeatureActive ? 'KOT & Bill' : loc.save_and_bill)
-        : (isKotFeatureActive ? loc.kot_and_hold : loc.save_and_hold);
 
-    showDialog(
-      context: context,
-      builder: (dialogCtx) => AlertDialog(
-        title: const Text('Confirm Order'),
-        content: Text('Are you sure you want to $actionLabel?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(dialogCtx).pop();
-              saveAndBill(status);
-            },
-            child: const Text('Confirm'),
-          ),
-        ],
+    _isConfirmOrderBottomSheetOpen = true;
+    showModalBottomSheet(
+      context: Get.context!,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-    );
+      builder: (_) => ConfirmOrderBottomSheet(action: action),
+    ).whenComplete(() => _isConfirmOrderBottomSheetOpen = false);
   }
 
   void selectTaxOption(String option) => selectedTaxOption.value = option;
@@ -1074,40 +1379,132 @@ class AddOrderController extends BaseController {
   final TextEditingController remarkController = TextEditingController();
 
   Future<void> showRemarkDialog() async {
-    remarkController.clear();
+    final loc = AppLocalizations.of(Get.context!)!;
     await Get.dialog(
       Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [CloseButton()],
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 12, 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColor.primary.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.edit_note_outlined,
+                        color: AppColor.primary,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Add remark',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Optional note for kitchen or billing',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Close',
+                      onPressed: Get.back,
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
               ),
-              const Text(
-                'Add Remark',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: remarkController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: 'Enter remark for this order',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: TextField(
+                  controller: remarkController,
+                  autofocus: true,
+                  maxLines: 4,
+                  minLines: 3,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: InputDecoration(
+                    hintText: 'Enter remark for this order',
+                    hintStyle: TextStyle(color: Colors.grey.shade500),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                        color: AppColor.primary,
+                        width: 1.5,
+                      ),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  Get.back(result: remarkController.text.trim());
-                },
-                child: Text(AppLocalizations.of(Get.context!)!.save_remark),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: Get.back,
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 12),
+                    FilledButton.icon(
+                      onPressed: () {
+                        Get.back(result: remarkController.text.trim());
+                      },
+                      icon: const Icon(Icons.check, size: 18),
+                      label: Text(loc.save_remark),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColor.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -1115,6 +1512,116 @@ class AddOrderController extends BaseController {
       ),
       barrierDismissible: false,
     );
+  }
+
+  Future<void> showItemRemarkDialog(String itemId, String itemName) async {
+    final existing = itemRemarks[itemId] ?? '';
+    final itemRemarkController = TextEditingController(text: existing);
+
+    final result = await Get.dialog<String>(
+      Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 12, 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Item remark',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            itemName,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: Get.back,
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: TextField(
+                  controller: itemRemarkController,
+                  autofocus: true,
+                  maxLines: 3,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: InputDecoration(
+                    hintText: 'e.g. less spicy, no onion',
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Get.back(result: ''),
+                      child: const Text('Clear'),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: Get.back,
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: () =>
+                          Get.back(result: itemRemarkController.text.trim()),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColor.primary,
+                      ),
+                      child: const Text('Save'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    itemRemarkController.dispose();
+
+    if (result == null) return;
+    if (result.isEmpty) {
+      itemRemarks.remove(itemId);
+    } else {
+      itemRemarks[itemId] = result;
+    }
+    orderDetailsVersion.value++;
   }
 
   Future<void> showKOTPrintDialog() async {
@@ -1239,16 +1746,7 @@ class AddOrderController extends BaseController {
       if (entry.value < 1) continue;
       final item = allItemsMap[entry.key];
       if (item == null) continue;
-      kotItems.add(
-        OrderItem(
-          itemId: item.id,
-          itemName: item.itemName,
-          category: item.category,
-          quantity: entry.value,
-          salePrice: item.salePrice,
-          gst: item.gst?.toDouble() ?? 0.0,
-        ),
-      );
+      kotItems.add(_cartOrderItem(entry.key, entry.value));
     }
     return kotItems;
   }
@@ -1256,10 +1754,11 @@ class AddOrderController extends BaseController {
   Future<void> _maybeAutoPrintKOT(
     CreateorderRequest request, {
     String? orderId,
+    List<OrderItem>? kotItemsOverride,
   }) async {
     if (!isKotFeatureActive) return;
 
-    final kotItems = buildKotDeltaItems();
+    final kotItems = kotItemsOverride ?? buildKotDeltaItems();
     if (kotItems.isEmpty) return;
 
     try {
@@ -1269,11 +1768,15 @@ class AddOrderController extends BaseController {
       final connected = await printerService.ensureConnectedForRole(
         PrintRole.kot,
       );
-      if (!connected) return;
+      if (!connected) {
+        debugPrint(
+          '⚠️ KOT printer not connected — kitchen display will still update',
+        );
+        return;
+      }
 
-      final billNo = orderDetails['billNumber']?.toString() ??
-          request.billNumber ??
-          '';
+      final billNo =
+          orderDetails['billNumber']?.toString() ?? request.billNumber ?? '';
       final kotNumber = await _nextKotNumber(billNo);
 
       final now = DateTime.now().toString();
@@ -1300,8 +1803,6 @@ class AddOrderController extends BaseController {
         specialInstructions: remarkController.text.trim(),
         totalQuantity: totalQty,
       );
-
-      await _commitKotPrintedBaseline(orderId: orderId);
     } catch (e) {
       debugPrint('⚠️ Auto KOT print failed: $e');
     }
@@ -1329,16 +1830,7 @@ class AddOrderController extends BaseController {
       final item = allItemsMap[e.key];
       if (item == null) continue;
 
-      payload.add(
-        OrderItem(
-          itemId: item.id,
-          itemName: item.itemName,
-          category: item.category,
-          quantity: e.value,
-          salePrice: item.salePrice,
-          gst: item.gst.toDouble(),
-        ),
-      );
+      payload.add(_cartOrderItem(e.key, e.value));
     }
 
     if (payload.isEmpty) {
@@ -1386,8 +1878,8 @@ class AddOrderController extends BaseController {
       tableNumber: orderDetails['tableNumber'] ?? '',
       customerName: orderDetails['customerName'] ?? '',
       phoneNumber: orderDetails['phoneNumber'] ?? '',
-      discount: (orderDetails['discount'] ?? 0).toDouble(),
-      serviceCharge: (orderDetails['serviceCharge'] ?? 0).toDouble(),
+      discount: _asDouble(orderDetails['discount']),
+      serviceCharge: _asDouble(orderDetails['serviceCharge']),
       paymentReceivedIn: orderDetails['paymentReceivedIn'],
       splitPayments: splitPaymentsList,
       status: 'pending',
@@ -1417,7 +1909,12 @@ class AddOrderController extends BaseController {
   // Save & Bill (with Edit support)
   // --------------------
 
-  Future<void> saveAndBill(String status) async {
+  Future<void> saveAndBill(
+    String status, {
+    bool stayOnScreen = false,
+    bool skipKotPrint = false,
+    bool requireKotPrint = false,
+  }) async {
     final loc = AppLocalizations.of(Get.context!)!;
     final normalizedStatus = status.trim().toLowerCase();
     // API expects 'pending' for billing flow, but the app UI/table status relies on
@@ -1428,9 +1925,17 @@ class AddOrderController extends BaseController {
         : normalizedStatus;
     final isBilling =
         normalizedStatus == 'closed' || normalizedStatus == 'billing';
-    final isKotHold = isKotFeatureActive && !isBilling;
+    final isHoldOnly = !isBilling && skipKotPrint;
 
-    if (isKotFeatureActive && buildKotDeltaItems().isNotEmpty) {
+    if (requireKotPrint && buildKotDeltaItems().isEmpty) {
+      showError(description: 'No new items to send to kitchen');
+      return;
+    }
+
+    if (isKotFeatureActive &&
+        !skipKotPrint &&
+        buildKotDeltaItems().isNotEmpty &&
+        !requireKotPrint) {
       await showRemarkDialog();
     }
 
@@ -1446,34 +1951,37 @@ class AddOrderController extends BaseController {
         return;
       }
 
-      final hasConflict = await _hasAnotherActiveOrderOnTable(tableNumber);
-      if (hasConflict) {
-        showError(description: 'This table already has an active order');
-        return;
+      if (!isEdit.value) {
+        final hasConflict = await _hasAnotherActiveOrderOnTable(tableNumber);
+        if (hasConflict) {
+          showError(description: 'This table already has an active order');
+          return;
+        }
       }
     }
 
-    final List<OrderItem> payload = [];
+    final kotDeltaForPrint = buildKotDeltaItems();
+    final hadKitchenDelta = kotDeltaForPrint.isNotEmpty;
+    final sendToKitchen = _shouldSendToKitchen(
+      skipKotPrint: skipKotPrint,
+      requireKotPrint: requireKotPrint,
+      hadKitchenDelta: hadKitchenDelta,
+    );
+    final shouldTryKotPrint =
+        isKotFeatureActive && !skipKotPrint && hadKitchenDelta;
 
-    for (final e in itemQuantities.entries) {
-      final item = allItemsMap[e.key];
-      if (item == null) continue;
-
-      payload.add(
-        OrderItem(
-          itemId: item.id,
-          itemName: item.itemName,
-          category: item.category,
-          quantity: e.value,
-          salePrice: item.salePrice,
-          gst: item.gst.toDouble(),
-        ),
-      );
+    if (sendToKitchen) {
+      await _markPendingItemsAsSentToKitchen();
     }
+
+    final payload = _buildCartPayload();
 
     String? finalBillNumber;
     if (isEdit.value) {
-      finalBillNumber = orderDetails['billNumber'];
+      finalBillNumber = orderDetails['billNumber']?.toString().trim();
+      if (finalBillNumber == null || finalBillNumber.isEmpty) {
+        finalBillNumber = orders?.billNumber;
+      }
     } else {
       if (orderDetails['billNumber'] != null &&
           orderDetails['billNumber'].toString().isNotEmpty) {
@@ -1515,8 +2023,8 @@ class AddOrderController extends BaseController {
       tableNumber: orderDetails['tableNumber'] ?? '',
       customerName: orderDetails['customerName'] ?? '',
       phoneNumber: orderDetails['phoneNumber'] ?? '',
-      discount: (orderDetails['discount'] ?? 0).toDouble(),
-      serviceCharge: (orderDetails['serviceCharge'] ?? 0).toDouble(),
+      discount: _asDouble(orderDetails['discount']),
+      serviceCharge: _asDouble(orderDetails['serviceCharge']),
       paymentReceivedIn: orderDetails['paymentReceivedIn'],
       splitPayments: splitPaymentsList,
       status: orderStatusForApi,
@@ -1525,21 +2033,37 @@ class AddOrderController extends BaseController {
       totalTax: totalTax.value,
       totalAmount: totalAmount.value,
       items: payload,
+      specialInstructions: remarkController.text.trim().isEmpty
+          ? null
+          : remarkController.text.trim(),
     );
+
+    final shouldPrintKot = shouldTryKotPrint;
 
     final hasInternet = await NetworkUtils.hasInternetConnection();
 
+    final existingOrderId = _existingOrderId();
+    final shouldUpdate =
+        isEdit.value && existingOrderId != null && existingOrderId.isNotEmpty;
+
     if (hasInternet) {
-      final response = isEdit.value
+      final response = shouldUpdate
           ? await callApi(
-              apiClient.updateOrder(orderDetails['id'], request.toJson()),
+              apiClient.updateOrder(existingOrderId!, request.toJson()),
             )
           : await callApi(apiClient.addOrder(request.toJson()));
 
       if (response != null && response['status'] == 'success') {
+        final savedId =
+            response['data']?['id']?.toString() ?? existingOrderId ?? '';
+        if (savedId.isEmpty) {
+          showError(description: loc.order_failed);
+          return;
+        }
+
         final orderModel = _mapToOrderModel(
           request,
-          response['data']?['id'] ?? orderDetails['id'],
+          savedId,
           statusOverride: localStatusForUi,
         );
 
@@ -1562,31 +2086,51 @@ class AddOrderController extends BaseController {
           );
         }
 
-        final loc = AppLocalizations.of(Get.context!)!;
-        final savedOrderId =
-            response['data']?['id']?.toString() ?? orderDetails['id']?.toString();
-        if (savedOrderId != null && savedOrderId.isNotEmpty) {
-          orderDetails['id'] = savedOrderId;
+        final savedOrderId = savedId;
+        orderDetails['id'] = savedOrderId;
+        if (response['data']?['billNumber'] != null) {
+          orderDetails['billNumber'] = response['data']['billNumber']
+              .toString();
         }
 
-        final hadKotDelta = buildKotDeltaItems().isNotEmpty;
-        await _maybeAutoPrintKOT(request, orderId: savedOrderId);
+        if (sendToKitchen) {
+          if (shouldPrintKot) {
+            await _maybeAutoPrintKOT(
+              request,
+              orderId: savedOrderId,
+              kotItemsOverride: kotDeltaForPrint,
+            );
+          }
+          await _commitKotPrintedBaseline(orderId: savedOrderId);
+          await _syncKitchenQuantitiesToServer(savedOrderId, request);
+        }
+
+        if (stayOnScreen) {
+          await _enterEditModeAfterSave(
+            responseData: response['data'] ?? {},
+            request: request,
+          );
+          await _refreshTablesAfterOrderSave();
+          showSuccess(description: 'KOT sent — continue adding items');
+          return;
+        }
 
         clearOrderDraft();
 
-        if (isKotHold) {
-          showSuccess(
-            description: hadKotDelta
-                ? loc.order_saved
-                : '${loc.order_saved} (no new kitchen items)',
-          );
-          if (Modular.to.canPop()) {
-            Modular.to.pop();
-          }
+        if (isHoldOnly) {
+          showSuccess(description: loc.order_saved);
+          await _returnAfterOrderSave();
+          return;
+        }
+
+        if (!isBilling) {
+          showSuccess(description: loc.order_saved);
+          await _returnAfterOrderSave();
           return;
         }
 
         showSuccess(description: loc.order_saved);
+        await _refreshTablesAfterOrderSave();
 
         await Modular.to.pushNamed(
           HomeMainRoutes.invoiceScreen,
@@ -1616,6 +2160,10 @@ class AddOrderController extends BaseController {
           isSyncedFromApi: false,
         );
 
+        if (await NetworkUtils.hasInternetConnection()) {
+          unawaited(SyncManager().triggerSync(immediate: true));
+        }
+
         await homeController.getOrderList(forceApiRefresh: true);
         if (Get.isRegistered<BusinessOverviewController>()) {
           await Get.find<BusinessOverviewController>().getOrderList(
@@ -1623,21 +2171,43 @@ class AddOrderController extends BaseController {
           );
         }
 
+        await _syncTableStatusForDineInOrder(
+          orderStatus: normalizedStatus,
+          tableNumber: request.tableNumber,
+          currentBillNumber: request.billNumber,
+        );
+
         final loc = AppLocalizations.of(Get.context!)!;
-        final hadKotDelta = buildKotDeltaItems().isNotEmpty;
-        await _maybeAutoPrintKOT(request, orderId: tempOrderId);
+        if (sendToKitchen || shouldPrintKot) {
+          if (shouldPrintKot) {
+            await _maybeAutoPrintKOT(
+              request,
+              orderId: tempOrderId,
+              kotItemsOverride: kotDeltaForPrint,
+            );
+          }
+          await _commitKotPrintedBaseline(orderId: tempOrderId);
+        }
+
+        if (stayOnScreen) {
+          orderDetails['id'] = tempOrderId;
+          orderDetails['billNumber'] = request.billNumber;
+          await _enterEditModeAfterSave(
+            responseData: {'id': tempOrderId, 'billNumber': request.billNumber},
+            request: request,
+          );
+          await _refreshTablesAfterOrderSave();
+          showSuccess(
+            description: 'KOT sent (offline) — continue adding items',
+          );
+          return;
+        }
 
         clearOrderDraft();
 
-        if (isKotHold) {
-          showSuccess(
-            description: hadKotDelta
-                ? loc.order_saved_offline
-                : '${loc.order_saved_offline} (no new kitchen items)',
-          );
-          if (Modular.to.canPop()) {
-            Modular.to.pop();
-          }
+        if (isHoldOnly || !isBilling) {
+          showSuccess(description: loc.order_saved_offline);
+          await _returnAfterOrderSave();
           return;
         }
 
@@ -1653,7 +2223,11 @@ class AddOrderController extends BaseController {
           },
         );
       } catch (e) {
-        showError(description: loc.failed_to_save_order_offline);
+        debugPrint('Offline order save failed: $e');
+        showError(
+          description:
+              '${loc.failed_to_save_order_offline} (${e.toString()})',
+        );
       }
     }
   }
@@ -1736,8 +2310,8 @@ class AddOrderController extends BaseController {
           ? outletBillNumber
           : maxOrderBillNumber;
 
-      // If bill number is 0, set it to 1
-      final finalBillNumber = baseBillNumber == 0 ? 1 : baseBillNumber;
+      // Generate the next integer bill number.
+      final finalBillNumber = baseBillNumber == 0 ? 1 : (baseBillNumber + 1);
 
       debugPrint('📊 Bill number calculation:');
       debugPrint('   Outlet billNumber: $outletBillNumber');
@@ -1816,25 +2390,25 @@ class AddOrderController extends BaseController {
     String? statusOverride,
   }) {
     return api.OrderModel(
-      outletId: r.outletId!,
+      outletId: r.outletId ?? appPref.selectedOutlet!.id!,
       id: id,
-      billNumber: r.billNumber!,
-      userId: r.userId!,
+      billNumber: r.billNumber ?? '',
+      userId: r.userId ?? appPref.user!.id ?? '',
       tableNumber: r.tableNumber,
       customerName: r.customerName,
       phoneNumber: r.phoneNumber,
-      subtotal: r.subtotal!,
-      totalTax: r.totalTax!,
-      discount: r.discount!,
-      serviceCharge: r.serviceCharge!,
-      totalAmount: r.totalAmount!,
+      subtotal: r.subtotal ?? 0,
+      totalTax: r.totalTax ?? 0,
+      discount: r.discount ?? 0,
+      serviceCharge: r.serviceCharge ?? 0,
+      totalAmount: r.totalAmount ?? 0,
       paymentReceivedIn: r.paymentReceivedIn,
       splitPayments: r.splitPayments,
-      status: (statusOverride ?? r.status!),
-      orderFrom: r.orderFrom!,
+      status: (statusOverride ?? r.status ?? 'pending'),
+      orderFrom: r.orderFrom ?? selectedOrderSource.value,
       createdAt: DateTime.now().toIso8601String(),
       updatedAt: DateTime.now().toIso8601String(),
-      items: r.items!.map((oi) {
+      items: (r.items ?? []).map((oi) {
         return api.OrderItem(
           itemId: oi.itemId,
           itemName: oi.itemName,
@@ -1842,6 +2416,8 @@ class AddOrderController extends BaseController {
           quantity: oi.quantity,
           salePrice: oi.salePrice,
           gst: oi.gst,
+          kotSentQuantity: oi.kotSentQuantity,
+          itemRemark: oi.itemRemark,
         );
       }).toList(),
     );
@@ -1900,9 +2476,9 @@ class AddOrderController extends BaseController {
   bool _isDineInOrder() =>
       selectedOrderSource.value.trim().toLowerCase() == 'dine in';
 
-  /// Table is mandatory for Dine In only when the Add Details flow is available.
+  /// Table is mandatory for Dine In when outlet uses table management.
   bool _requiresDineInTable() =>
-      _isDineInOrder() && appPref.showAddDetailsOnCreateOrder;
+      _isDineInOrder() && HomeMainRoutes.outletShowsTables();
 
   String _normalizeTableNumber(String value) {
     var normalized = value.trim().toLowerCase();
@@ -1921,7 +2497,35 @@ class AddOrderController extends BaseController {
 
     try {
       final allOrders = await db.getAllOrders(outletId: outletId);
-      return allOrders.any((order) {
+      final hasLocalConflict = allOrders.any((order) {
+        final status = order.status.trim().toLowerCase();
+        if (status == 'closed') return false;
+        if (currentOrderId != null && order.id == currentOrderId) return false;
+
+        final orderTable = _normalizeTableNumber(order.tableNumber ?? '');
+        return orderTable.isNotEmpty && orderTable == targetTable;
+      });
+      if (hasLocalConflict) return true;
+
+      final isOnline = await NetworkUtils.hasInternetConnection();
+      if (!isOnline) return false;
+
+      final response = await callApi(
+        apiClient.getOrders(
+          appPref.user!.id!,
+          outletId,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+        ),
+        showLoader: false,
+      );
+      if (response?.status != 'success') return false;
+
+      return response!.data.any((order) {
         final status = order.status.trim().toLowerCase();
         if (status == 'closed') return false;
         if (currentOrderId != null && order.id == currentOrderId) return false;
@@ -1931,6 +2535,23 @@ class AddOrderController extends BaseController {
       });
     } catch (_) {
       return false;
+    }
+  }
+
+  Future<void> _returnAfterOrderSave() async {
+    await _refreshTablesAfterOrderSave();
+    if (isFromTableScreen.value) {
+      Modular.to.navigate(HomeMainRoutes.tables);
+      return;
+    }
+    if (Modular.to.canPop()) {
+      Modular.to.pop();
+    }
+  }
+
+  Future<void> _refreshTablesAfterOrderSave() async {
+    if (Get.isRegistered<TableController>()) {
+      await Get.find<TableController>().refresh();
     }
   }
 
@@ -1954,12 +2575,25 @@ class AddOrderController extends BaseController {
       if (tablesResponse?.status != 'success') return;
 
       final normalizedTarget = _normalizeTableNumber(rawTable);
-      final table = tablesResponse!.data.firstWhereOrNull((t) {
-        final rawKey = _normalizeTableNumber(t.tableNumber);
-        final displayKey = _normalizeTableNumber('Table ${t.tableNumber}');
-        return rawKey == normalizedTarget || displayKey == normalizedTarget;
-      });
-      if (table == null) return;
+      TableData? table;
+      for (final t in tablesResponse!.data) {
+        final keys = {
+          _normalizeTableNumber(t.tableNumber),
+          _normalizeTableNumber('Table ${t.tableNumber}'),
+        };
+        if (t.tableNumber.toLowerCase().startsWith('table ')) {
+          keys.add(_normalizeTableNumber(t.tableNumber));
+        }
+        keys.removeWhere((e) => e.isEmpty);
+        if (keys.contains(normalizedTarget)) {
+          table = t;
+          break;
+        }
+      }
+      if (table == null) {
+        debugPrint('⚠️ Table not found for sync: $rawTable');
+        return;
+      }
 
       final normalizedStatus = orderStatus.trim().toLowerCase();
       final nextStatus = switch (normalizedStatus) {
@@ -2000,6 +2634,7 @@ class AddOrderController extends BaseController {
   void onClose() {
     itemNameController.dispose();
     salePriceController.dispose();
+    remarkController.dispose();
     _searchDebounce?.cancel();
     super.onClose();
   }

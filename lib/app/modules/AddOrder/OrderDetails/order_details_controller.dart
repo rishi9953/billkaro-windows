@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:billkaro/app/services/Modals/login_response.dart';
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
@@ -32,6 +34,12 @@ class OrderDetailsController extends BaseController {
 
   final RxBool isLoading = true.obs;
   final RxList<TableModel> availableTables = <TableModel>[].obs;
+  Timer? _phoneLookupTimer;
+
+  double _asDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse('${value ?? 0}') ?? 0.0;
+  }
 
   String _normalizePaymentMethod(dynamic value) {
     final method = (value ?? '').toString().trim().toLowerCase();
@@ -188,7 +196,7 @@ class OrderDetailsController extends BaseController {
       serviceCharge.text = '${args['serviceCharge'] ?? 0.0}';
       status.value = args['status'] ?? '';
       paymentRecieved.value = _normalizePaymentMethod(args['paymentReceivedIn']);
-      totalAmount = args['totalAmount']?.toDouble();
+      totalAmount = _asDouble(args['totalAmount']);
 
       // Load split payments if available
       if (args['splitPayments'] != null && args['splitPayments'] is List) {
@@ -213,7 +221,63 @@ class OrderDetailsController extends BaseController {
       tableNumber.text = '';
     }
 
+    phoneNumber.addListener(_onPhoneChanged);
     super.onInit();
+  }
+
+  void _onPhoneChanged() {
+    _phoneLookupTimer?.cancel();
+    _phoneLookupTimer = Timer(const Duration(milliseconds: 500), () {
+      lookupRegularCustomer();
+    });
+  }
+
+  Future<void> lookupRegularCustomer() async {
+    final digits = phoneNumber.text.replaceAll(RegExp(r'\D'), '');
+    if (digits.length != 10) return;
+
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null) return;
+
+    try {
+      final response = await callApi(
+        apiClient.lookupRegularCustomerByPhone(outletId, digits),
+        showLoader: false,
+      );
+
+      if (response?.status == 'success' && response?.data != null) {
+        final customer = response!.data!;
+        if (customerName.text.trim().isEmpty) {
+          customerName.text = customer.customerName;
+        }
+        if (customer.loyalityDiscount > 0) {
+          final context = Get.context;
+          if (context != null) {
+            discountType.value = AppLocalizations.of(context)!.percentage;
+          } else {
+            discountType.value = 'Percentage';
+          }
+          discount.text = customer.loyalityDiscount.toString();
+        }
+      }
+    } catch (e) {
+      debugPrint('Regular customer lookup failed: $e');
+    }
+  }
+
+  String _normalizeTableNumber(String raw) {
+    var value = raw.trim().toLowerCase();
+    value = value.replaceFirst(RegExp(r'^table\s*'), '');
+    value = value.replaceAll(RegExp(r'\s+'), '');
+    return value;
+  }
+
+  bool _tableMatchesSelection(TableModel table, String selected) {
+    if (selected.trim().isEmpty) return false;
+    final target = _normalizeTableNumber(selected);
+    if (target.isEmpty) return false;
+    return _normalizeTableNumber(table.tableNumber) == target ||
+        _normalizeTableNumber(table.displayName) == target;
   }
 
   Future<void> loadAvailableTables() async {
@@ -235,10 +299,27 @@ class OrderDetailsController extends BaseController {
       );
 
       if (response?.status == 'success') {
-        final tables = response!.data
+        final allTables = response!.data
             .map((e) => TableModel.fromTableData(e))
-            .where((t) => t.isAvailableFromApi)
             .toList();
+        final currentTable = tableNumber.text.trim();
+
+        final tables = allTables.where((t) {
+          if (t.isAvailableFromApi) return true;
+          return _tableMatchesSelection(t, currentTable);
+        }).toList(growable: true);
+
+        if (currentTable.isNotEmpty &&
+            !tables.any((t) => _tableMatchesSelection(t, currentTable))) {
+          tables.insert(
+            0,
+            TableModel(
+              id: 'current_table',
+              tableNumber: currentTable,
+              status: 'occupied',
+            ),
+          );
+        }
 
         availableTables.assignAll(tables);
         return;
@@ -247,7 +328,18 @@ class OrderDetailsController extends BaseController {
       debugPrint('⚠️ Failed to load available tables: $e');
     }
 
-    availableTables.clear();
+    final currentTable = tableNumber.text.trim();
+    if (currentTable.isNotEmpty) {
+      availableTables.assignAll([
+        TableModel(
+          id: 'current_table',
+          tableNumber: currentTable,
+          status: 'occupied',
+        ),
+      ]);
+    } else {
+      availableTables.clear();
+    }
   }
 
   /// Fetch orders & set latest bill number
@@ -494,6 +586,8 @@ class OrderDetailsController extends BaseController {
 
   @override
   void onClose() {
+    _phoneLookupTimer?.cancel();
+    phoneNumber.removeListener(_onPhoneChanged);
     tableNumber.dispose();
     customerName.dispose();
     phoneNumber.dispose();

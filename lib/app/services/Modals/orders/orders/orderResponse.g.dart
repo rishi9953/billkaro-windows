@@ -46,6 +46,7 @@ OrderModel _$OrderModelFromJson(Map<String, dynamic> json) => OrderModel(
       .map((e) => OrderItem.fromJson(e as Map<String, dynamic>))
       .toList(),
   orderFrom: json['orderFrom'] as String,
+  specialInstructions: json['specialInstructions'] as String?,
 );
 
 Map<String, dynamic> _$OrderModelToJson(OrderModel instance) =>
@@ -69,6 +70,7 @@ Map<String, dynamic> _$OrderModelToJson(OrderModel instance) =>
       'status': instance.status,
       'orderFrom': instance.orderFrom,
       'items': instance.items,
+      'specialInstructions': instance.specialInstructions,
     };
 
 OrderItem _$OrderItemFromJson(Map<String, dynamic> json) => OrderItem(
@@ -78,6 +80,8 @@ OrderItem _$OrderItemFromJson(Map<String, dynamic> json) => OrderItem(
   quantity: (json['quantity'] as num).toInt(),
   salePrice: (json['salePrice'] as num).toDouble(),
   gst: (json['gst'] as num).toDouble(),
+  kotSentQuantity: (json['kotSentQuantity'] as num?)?.toInt() ?? 0,
+  itemRemark: json['itemRemark'] as String?,
 );
 
 Map<String, dynamic> _$OrderItemToJson(OrderItem instance) => <String, dynamic>{
@@ -87,4 +91,6 @@ Map<String, dynamic> _$OrderItemToJson(OrderItem instance) => <String, dynamic>{
   'quantity': instance.quantity,
   'salePrice': instance.salePrice,
   'gst': instance.gst,
+  'kotSentQuantity': instance.kotSentQuantity,
+  'itemRemark': instance.itemRemark,
 };

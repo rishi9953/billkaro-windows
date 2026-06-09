@@ -63,6 +63,9 @@ class User {
   @JsonKey(readValue: _readUserIsTrial)
   final bool? isTrial;
   final List<OutletData>? outletData;
+  final String? role;
+  final String? staffRole;
+  final List<String>? permissions;
 
   User({
     this.createdAt,
@@ -81,6 +84,9 @@ class User {
     this.mobile,
     this.isTrial,
     this.outletData,
+    this.role,
+    this.staffRole,
+    this.permissions,
   });
 
   factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);

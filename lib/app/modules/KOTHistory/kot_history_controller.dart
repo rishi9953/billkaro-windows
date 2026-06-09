@@ -22,9 +22,12 @@ class KotHistoryController extends BaseController {
 
   Timer? _searchDebounce;
 
+  final loadError = ''.obs;
+
   Future<void> load() async {
     if (isLoading.value) return;
     isLoading.value = true;
+    loadError.value = '';
     try {
       final outletId = appPref.selectedOutlet?.id;
       if (outletId == null) {
@@ -43,6 +46,7 @@ class KotHistoryController extends BaseController {
       hasMoreData.value = page.hasMore;
     } catch (e) {
       debugPrint('❌ KOT history load failed: $e');
+      loadError.value = 'Unable to load KOT history. Please try again.';
     } finally {
       isLoading.value = false;
     }
@@ -66,6 +70,7 @@ class KotHistoryController extends BaseController {
       hasMoreData.value = page.hasMore;
     } catch (e) {
       debugPrint('❌ KOT history load more failed: $e');
+      showError(description: 'Unable to load more KOT history.');
     } finally {
       isLoadingMore.value = false;
     }
@@ -102,6 +107,7 @@ class KotHistoryController extends BaseController {
               quantity: i.quantity,
               salePrice: i.salePrice,
               gst: i.gst,
+              itemRemark: i.itemRemark,
             ),
           )
           .toList(growable: false),
@@ -148,6 +154,7 @@ class KotHistoryController extends BaseController {
                 quantity: i.quantity,
                 salePrice: i.salePrice,
                 gst: i.gst,
+                itemRemark: i.itemRemark,
               ),
             )
             .toList(growable: false),

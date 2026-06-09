@@ -65,7 +65,7 @@ class NetworkUtils {
     try {
       // First check if connected to network (WiFi/Cellular)
       final connectivityResult = await Connectivity().checkConnectivity();
-      if (connectivityResult == ConnectivityResult.none) {
+      if (connectivityResult.contains(ConnectivityResult.none)) {
         return false;
       }
 

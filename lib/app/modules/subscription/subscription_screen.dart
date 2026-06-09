@@ -27,7 +27,7 @@ class SubscriptionScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColor.backGroundColor,
       appBar: AppBar(
-        title: const Text('Subscription Plans'),
+        title: const Text('Plans & Pricing'),
         elevation: isWindowsDesktop ? 0 : null,
         scrolledUnderElevation: isWindowsDesktop ? 0 : null,
         surfaceTintColor: isWindowsDesktop ? Colors.transparent : null,
@@ -84,6 +84,8 @@ class SubscriptionScreen extends StatelessWidget {
                             _buildHeaderSection(
                               isWindowsStyle: isWindowsDesktop,
                             ),
+                            SizedBox(height: isWindowsDesktop ? 14 : 16),
+                            _buildTrustBadges(isWindowsStyle: isWindowsDesktop),
                             SizedBox(height: isWindowsDesktop ? 20 : 24),
                             Obx(
                               () => _buildPlansSection(
@@ -228,7 +230,7 @@ class SubscriptionScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'BillKaro Premium',
+                          'Plans & Pricing',
                           style: TextStyle(
                             color: AppColor.white,
                             fontSize: isWindowsStyle ? 22 : 24,
@@ -238,7 +240,7 @@ class SubscriptionScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Unlock all features and boost your business',
+                          'Choose a plan — printer bundles include free home delivery',
                           style: TextStyle(
                             color: AppColor.white.withOpacity(0.9),
                             fontSize: isWindowsStyle ? 13 : 14,
@@ -251,6 +253,86 @@ class SubscriptionScreen extends StatelessWidget {
                 ],
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrustBadges({required bool isWindowsStyle}) {
+    final gap = isWindowsStyle ? 12.0 : 10.0;
+    return Row(
+      children: [
+        Expanded(
+          child: _trustBadge(
+            Icons.verified_user_outlined,
+            'Secure Payment',
+            isWindowsStyle: isWindowsStyle,
+          ),
+        ),
+        SizedBox(width: gap),
+        Expanded(
+          child: _trustBadge(
+            Icons.local_shipping_outlined,
+            'Free Printer Delivery',
+            isWindowsStyle: isWindowsStyle,
+          ),
+        ),
+        SizedBox(width: gap),
+        Expanded(
+          child: _trustBadge(
+            Icons.support_agent_outlined,
+            '24/7 Support',
+            isWindowsStyle: isWindowsStyle,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _trustBadge(
+    IconData icon,
+    String label, {
+    required bool isWindowsStyle,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        vertical: isWindowsStyle ? 10 : 12,
+        horizontal: isWindowsStyle ? 10 : 8,
+      ),
+      decoration: BoxDecoration(
+        color: AppColor.white,
+        borderRadius: BorderRadius.circular(isWindowsStyle ? 8 : 12),
+        border: Border.all(
+          color: isWindowsStyle
+              ? Colors.black.withOpacity(0.08)
+              : Colors.grey.shade200,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isWindowsStyle ? 0.03 : 0.04),
+            blurRadius: isWindowsStyle ? 4 : 6,
+            offset: Offset(0, isWindowsStyle ? 1 : 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: AppColor.primary, size: isWindowsStyle ? 18 : 22),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: isWindowsStyle ? 12 : 11,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade700,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+            ),
           ),
         ],
       ),
@@ -320,6 +402,7 @@ class SubscriptionScreen extends StatelessWidget {
     bool isCurrentPlan = false,
   }) {
     final discount = ((originalPrice - price) / originalPrice * 100).round();
+    final isPrinterPlan = plan.withPrinter;
     final cardRadius = isWindowsStyle ? 8.0 : 16.0;
     final innerPadding = isWindowsStyle ? 18.0 : 20.0;
 
@@ -328,12 +411,14 @@ class SubscriptionScreen extends StatelessWidget {
         color: AppColor.white,
         borderRadius: BorderRadius.circular(cardRadius),
         border: Border.all(
-          color: isPopular
+          color: isPrinterPlan
               ? AppColor.secondaryPrimary
-              : (isWindowsStyle
-                    ? Colors.black.withOpacity(0.10)
-                    : Colors.grey.shade200),
-          width: isPopular ? 2 : 1,
+              : (isPopular
+                    ? AppColor.secondaryPrimary
+                    : (isWindowsStyle
+                          ? Colors.black.withOpacity(0.10)
+                          : Colors.grey.shade200)),
+          width: isPrinterPlan || isPopular ? 2 : 1,
         ),
         boxShadow: [
           BoxShadow(
@@ -356,6 +441,39 @@ class SubscriptionScreen extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (isPrinterPlan)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColor.secondaryPrimary,
+                        AppColor.secondaryPrimary.withOpacity(0.85),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(cardRadius),
+                      topRight: Radius.circular(cardRadius),
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.print, color: AppColor.white, size: 16),
+                      SizedBox(width: 6),
+                      Text(
+                        'Includes Thermal Printer',
+                        style: TextStyle(
+                          color: AppColor.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               // Badge
               if (badge != null)
                 Container(
@@ -751,6 +869,18 @@ class SubscriptionScreen extends StatelessWidget {
                             )
                           : ElevatedButton(
                               onPressed: () {
+                                final ctrl = Get.find<SubscriptionController>();
+                                final outlet = ctrl.appPref.selectedOutlet;
+                                final activeIds =
+                                    _activeSubscriptionPlanIds(outlet);
+                                if (activeIds.isNotEmpty) {
+                                  showError(
+                                    title: 'Already Subscribed',
+                                    description:
+                                        'This outlet already has an active subscription.',
+                                  );
+                                  return;
+                                }
                                 if (plan.withPrinter) {
                                   Modular.to.pushNamed(
                                     HomeMainRoutes.subscriptionForm,
@@ -765,17 +895,17 @@ class SubscriptionScreen extends StatelessWidget {
                                     Get.dialog(
                                       Dialog(
                                         insetPadding: const EdgeInsets.symmetric(
-                                          horizontal: 64,
-                                          vertical: 36,
+                                          horizontal: 80,
+                                          vertical: 40,
                                         ),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(10),
                                         ),
                                         clipBehavior: Clip.antiAlias,
                                         child: ConstrainedBox(
                                           constraints: const BoxConstraints(
-                                            maxWidth: 980,
-                                            maxHeight: 760,
+                                            maxWidth: 520,
+                                            maxHeight: 640,
                                           ),
                                           child: SubscriptionReviewScreen(
                                             subscription: plan,
@@ -811,14 +941,26 @@ class SubscriptionScreen extends StatelessWidget {
                                 ),
                                 elevation: 0,
                               ),
-                              child: Text(
-                                'Buy Now',
-                                style: TextStyle(
-                                  color: AppColor.white,
-                                  fontSize: isWindowsStyle ? 14 : 16,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: isWindowsStyle ? 0.25 : 0.5,
-                                ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  if (plan.withPrinter) ...[
+                                    const Icon(Icons.print, size: 17),
+                                    const SizedBox(width: 8),
+                                  ],
+                                  Text(
+                                    plan.withPrinter
+                                        ? 'Buy Now with Printer'
+                                        : 'Buy Now',
+                                    style: TextStyle(
+                                      color: AppColor.white,
+                                      fontSize: isWindowsStyle ? 14 : 16,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing:
+                                          isWindowsStyle ? 0.25 : 0.5,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                     ),

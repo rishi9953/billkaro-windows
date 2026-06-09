@@ -1,3 +1,4 @@
+import 'package:billkaro/app/Widgets/notification_bell_button.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Menu/menu_controller.dart';
 import 'package:billkaro/app/Widgets/logout_dialog.dart';
@@ -25,6 +26,13 @@ class MenuScreen extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
+        actions: const [
+          NotificationBellButton(
+            iconColor: AppColor.white,
+            iconSize: 24,
+          ),
+          SizedBox(width: 8),
+        ],
       ),
       body: Column(
         children: [
@@ -263,6 +271,16 @@ class MenuScreen extends StatelessWidget {
                           //   iconColor: const Color(0xff9B59B6),
                           //   onTap: () => Get.toNamed(AppRoute.changeLanguage),
                           // ),
+                          _buildDivider(),
+                          _buildMenuItem(
+                            icon: Icons.notifications_outlined,
+                            title: 'Notifications',
+                            subtitle: 'Kitchen ready and other alerts',
+                            iconColor: const Color(0xFF2E7D32),
+                            onTap: () => Modular.to.pushNamed(
+                              HomeMainRoutes.notifications,
+                            ),
+                          ),
                           _buildDivider(),
                           _buildMenuItem(
                             icon: Icons.settings_outlined,

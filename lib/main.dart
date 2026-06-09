@@ -8,15 +8,19 @@ import 'package:billkaro/app/services/PrinterService2/printer_service2.dart';
 import 'package:billkaro/app/services/Synchronisatioin/synchronisation.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/app/services/sync/sync_manager.dart';
+import 'package:billkaro/app/services/Network/api_config.dart';
 import 'package:billkaro/config/app_binding.dart';
 import 'package:billkaro/config/app_theme.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
+import 'package:billkaro/app/services/kds/kds_realtime_service.dart';
+import 'package:billkaro/kitchen_display_window_app.dart';
 import 'package:billkaro/utils/app_info.dart';
+import 'package:billkaro/utils/kitchen_display_window_launcher.dart';
 import 'package:billkaro/utils/exit_confirm_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:workmanager/workmanager.dart';
@@ -36,7 +40,7 @@ void _clearHardwareKeyboardStateSafely() {
   }
 }
 
-void main() async {
+void main(List<String> args) async {
   // Setup log filtering to reduce noise from harmless warnings
   // LogFilter.setupLogFiltering(); // Uncomment if you want to filter logs
 
@@ -67,8 +71,24 @@ void main() async {
   };
 
   try {
-    HttpOverrides.global = MyHttpOverrides();
+    if (kDebugMode) {
+      HttpOverrides.global = MyHttpOverrides();
+    }
     WidgetsFlutterBinding.ensureInitialized();
+
+    final isKitchenDisplayWindow =
+        KitchenDisplayWindowLauncher.isKitchenDisplayLaunch(args);
+
+    if (isKitchenDisplayWindow &&
+        !kIsWeb &&
+        Platform.isWindows &&
+        await KitchenDisplayWindowLauncher.shouldAbortDuplicateLaunch()) {
+      return;
+    }
+
+    if (!isKitchenDisplayWindow && !kIsWeb && Platform.isWindows) {
+      await KitchenDisplayWindowLauncher.clearStaleLockIfNeeded();
+    }
 
     // Load environment variables
     try {
@@ -76,6 +96,12 @@ void main() async {
     } catch (e) {
       debugPrint('⚠️ [INIT] Failed to load .env file: $e');
       // Continue without .env file - keys will use defaults
+    }
+
+    try {
+      ApiConfig.loadFromEnv();
+    } catch (e) {
+      debugPrint('⚠️ [INIT] ApiConfig.loadFromEnv failed: $e');
     }
 
     // Initialize SharedPreferences
@@ -111,23 +137,29 @@ void main() async {
     }
 
     // Initialize Thermal Printer Service (onInit may auto-connect only when logged in)
-    try {
-      Get.put(ThermalPrinterService(), permanent: true);
-    } catch (e) {
-      debugPrint('⚠️ [INIT] ThermalPrinterService failed: $e');
+    if (!isKitchenDisplayWindow) {
+      try {
+        Get.put(ThermalPrinterService(), permanent: true);
+      } catch (e) {
+        debugPrint('⚠️ [INIT] ThermalPrinterService failed: $e');
+      }
     }
 
     // Initialize Database (only once)
-    try {
-      if (!Get.isRegistered<dbs.AppDatabase>()) {
-        Get.put<dbs.AppDatabase>(dbs.AppDatabase(), permanent: true);
+    if (!isKitchenDisplayWindow) {
+      try {
+        if (!Get.isRegistered<dbs.AppDatabase>()) {
+          Get.put<dbs.AppDatabase>(dbs.AppDatabase(), permanent: true);
+        }
+      } catch (e) {
+        debugPrint('⚠️ [INIT] AppDatabase failed: $e');
       }
-    } catch (e) {
-      debugPrint('⚠️ [INIT] AppDatabase failed: $e');
     }
 
     // Initialize WorkManager (Android/iOS only; not implemented on Windows)
-    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+    if (!isKitchenDisplayWindow &&
+        !kIsWeb &&
+        (Platform.isAndroid || Platform.isIOS)) {
       try {
         await Workmanager().initialize(
           callbackDispatcher,
@@ -141,22 +173,47 @@ void main() async {
     }
 
     // Register PrinterService2 WITHOUT initializing Bluetooth at app launch.
-    // (Bluetooth init triggers "Nearby devices" permission on Android 12+)
-    try {
-      if (!Get.isRegistered<PrinterService2>()) {
-        Get.put(PrinterService2(), permanent: true);
+    if (!isKitchenDisplayWindow) {
+      try {
+        if (!Get.isRegistered<PrinterService2>()) {
+          Get.put(PrinterService2(), permanent: true);
+        }
+      } catch (e) {
+        debugPrint('⚠️ [INIT] PrinterService2 registration failed: $e');
       }
-    } catch (e) {
-      debugPrint('⚠️ [INIT] PrinterService2 registration failed: $e');
-      // Continue without printer service
     }
 
     // Initialize Sync Manager for automatic synchronization
-    try {
-      await SyncManager().initialize();
-    } catch (e) {
-      debugPrint('⚠️ [INIT] SyncManager failed: $e');
-      // Continue without sync manager
+    if (!isKitchenDisplayWindow) {
+      try {
+        await SyncManager().initialize();
+      } catch (e) {
+        debugPrint('⚠️ [INIT] SyncManager failed: $e');
+      }
+    }
+
+    if (isKitchenDisplayWindow) {
+      try {
+        final pref = Get.find<AppPref>();
+        final outletId = pref.selectedOutlet?.id;
+        if (outletId != null) {
+          KdsRealtimeService.instance.connect(outletId);
+        }
+      } catch (e) {
+        debugPrint('⚠️ [INIT] KDS window WebSocket connect skipped: $e');
+      }
+      runApp(const KitchenDisplayWindowApp());
+      if (!kIsWeb && Platform.isWindows) {
+        doWhenWindowReady(() {
+          appWindow.minSize = const Size(1024, 640);
+          appWindow.size = const Size(1440, 900);
+          appWindow.alignment = Alignment.center;
+          appWindow.title = 'Billkaro — Kitchen Display';
+          appWindow.show();
+          KitchenDisplayWindowLauncher.registerRunningInstance();
+        });
+      }
+      return;
     }
 
     // Run the app
@@ -197,8 +254,7 @@ void main() async {
                 const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () {
-                    // Try to restart
-                    main();
+                    main(const []);
                   },
                   child: const Text('Retry'),
                 ),

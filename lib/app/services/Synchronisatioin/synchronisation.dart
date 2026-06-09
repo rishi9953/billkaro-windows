@@ -45,10 +45,12 @@ class Synchronisation {
         return false;
       }
 
-      // Get pending orders for the selected outlet only
+      // Get all pending orders (across outlets for this device)
       final allPendingOrders = await db.getPendingOrders();
-      final orders = allPendingOrders.where((order) => order.outletId == selectedOutletId).toList();
-      debugPrint('📦 [SYNC] Found ${orders.length} pending orders for outlet $selectedOutletId (out of ${allPendingOrders.length} total)');
+      final orders = allPendingOrders;
+      debugPrint(
+        '📦 [SYNC] Found ${orders.length} pending orders (${allPendingOrders.length} total pending)',
+      );
 
       if (orders.isEmpty) {
         debugPrint('✅ [SYNC] No orders to sync for selected outlet');
@@ -106,7 +108,10 @@ class Synchronisation {
           // Don't retry on client errors (4xx), but retry on server errors (5xx)
           final statusCode = e.response?.statusCode;
           if (statusCode != null && statusCode >= 400 && statusCode < 500) {
-            debugPrint('⚠️ [SYNC] Client error for order ${order.id}, will not retry');
+            debugPrint(
+              '⚠️ [SYNC] Client error for order ${order.id}, marking as failed',
+            );
+            await db.markOrderSyncFailed(order.id);
           }
 
           // Update progress even on failure
@@ -138,6 +143,12 @@ class Synchronisation {
       
       if (failedOrderIds.isNotEmpty) {
         debugPrint('❌ [SYNC] Failed order IDs: ${failedOrderIds.join(", ")}');
+        if (Get.isRegistered<AppPref>()) {
+          showError(
+            description:
+                '$failCount order(s) could not sync. Check order details and try again.',
+          );
+        }
       }
 
       // Show completion notification
@@ -188,9 +199,9 @@ class Synchronisation {
         orElse: () => throw Exception('Order not found'),
       );
 
-      // Check if order belongs to selected outlet
-      if (order.outletId != selectedOutletId) {
-        debugPrint('⚠️ [SYNC] Order $orderId belongs to outlet ${order.outletId}, but selected outlet is $selectedOutletId. Skipping sync.');
+      // Check order belongs to a known outlet (still sync even if not currently selected)
+      if (order.outletId.isEmpty) {
+        debugPrint('⚠️ [SYNC] Order $orderId has no outletId. Skipping sync.');
         return false;
       }
 

@@ -15,7 +15,35 @@ class CustomerListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      if (controller.customerList.isEmpty) {
+      if (controller.isLoading.value && !controller.hasLoadedOnce.value) {
+        return const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        );
+      }
+
+      if (controller.loadError.value.isNotEmpty) {
+        return Scaffold(
+          appBar: AppBar(title: AppText.regular('Customers')),
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(controller.loadError.value, textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: controller.getCustomerList,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+
+      if (controller.hasLoadedOnce.value && controller.customerList.isEmpty) {
         return CustomerTrackingScreen();
       }
 

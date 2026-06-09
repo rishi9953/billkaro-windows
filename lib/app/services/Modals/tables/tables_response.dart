@@ -29,6 +29,9 @@ class TableData {
   final String tableNumber;
   final String status;
   final String? currentBillNumber;
+  final String? qrToken;
+  final String? qrMenuUrl;
+  final bool? qrEnabled;
 
   TableData({
     required this.id,
@@ -38,6 +41,9 @@ class TableData {
     required this.tableNumber,
     required this.status,
     this.currentBillNumber,
+    this.qrToken,
+    this.qrMenuUrl,
+    this.qrEnabled,
   });
 
   factory TableData.fromJson(Map<String, dynamic> json) =>
@@ -52,12 +58,18 @@ class TableModel {
   final String tableNumber;
   final String status;
   final String? currentBillNumber;
+  final String? qrToken;
+  final String? qrMenuUrl;
+  final bool qrEnabled;
 
   TableModel({
     required this.id,
     required this.tableNumber,
     required this.status,
     this.currentBillNumber,
+    this.qrToken,
+    this.qrMenuUrl,
+    this.qrEnabled = true,
   });
 
   String get displayName =>
@@ -74,6 +86,9 @@ class TableModel {
       tableNumber: d.tableNumber,
       status: d.status,
       currentBillNumber: d.currentBillNumber,
+      qrToken: d.qrToken,
+      qrMenuUrl: d.qrMenuUrl,
+      qrEnabled: d.qrEnabled ?? true,
     );
   }
 }

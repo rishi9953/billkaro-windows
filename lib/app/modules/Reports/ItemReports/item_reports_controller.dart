@@ -286,7 +286,7 @@ class ItemReportsController extends BaseController {
     // Filter by payment type
     if (selectedPaymentType.value != 'All') {
       filtered = filtered.where((order) {
-        return order.paymentReceivedIn!.toLowerCase() ==
+        return order.paymentReceivedIn?.toLowerCase() ==
             selectedPaymentType.value.toLowerCase();
       }).toList();
     }

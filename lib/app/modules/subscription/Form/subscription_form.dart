@@ -74,27 +74,43 @@ class SubscriptionFormScreen extends GetView<SubscriptionFormController> {
                               builder: (context, inner) {
                                 final wide =
                                     isWindowsDesktop && inner.maxWidth >= 880;
-                                if (wide) {
-                                  return Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Expanded(
-                                        child: _buildOutletCard(context),
-                                      ),
-                                      const SizedBox(width: 24),
-                                      Expanded(
-                                        child: _buildDeliveryCard(context),
-                                      ),
-                                    ],
-                                  );
-                                }
+                                final formBody = wide
+                                    ? Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                            child: _buildOutletCard(context),
+                                          ),
+                                          const SizedBox(width: 24),
+                                          Expanded(
+                                            child: _buildDeliveryCard(context),
+                                          ),
+                                        ],
+                                      )
+                                    : Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          _buildOutletCard(context),
+                                          const SizedBox(height: 24),
+                                          _buildDeliveryCard(context),
+                                        ],
+                                      );
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _buildOutletCard(context),
-                                    const SizedBox(height: 24),
-                                    _buildDeliveryCard(context),
+                                    if (controller
+                                            .subscriptionPlan?.withPrinter ==
+                                        true) ...[
+                                      _buildPrinterDeliveryBanner(
+                                        isWindowsDesktop: isWindowsDesktop,
+                                      ),
+                                      SizedBox(
+                                        height: isWindowsDesktop ? 20 : 16,
+                                      ),
+                                    ],
+                                    formBody,
                                   ],
                                 );
                               },
@@ -110,6 +126,63 @@ class SubscriptionFormScreen extends GetView<SubscriptionFormController> {
             _buildSubmitSection(isWindowsDesktop: isWindowsDesktop),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPrinterDeliveryBanner({required bool isWindowsDesktop}) {
+    final plan = controller.subscriptionPlan;
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(isWindowsDesktop ? 18 : 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColor.primary, AppColor.primary.withOpacity(0.88)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(isWindowsDesktop ? 8 : 12),
+        border: isWindowsDesktop
+            ? Border.all(color: Colors.black.withOpacity(0.08))
+            : null,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.print, color: Colors.white, size: 26),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  plan?.title ?? 'Printer Plan',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isWindowsDesktop ? 15 : 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Enter delivery details below. Your thermal printer ships after successful payment.',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.85),
+                    fontSize: isWindowsDesktop ? 12 : 13,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -287,7 +360,7 @@ class SubscriptionFormScreen extends GetView<SubscriptionFormController> {
 
   Widget _buildSubmitSection({required bool isWindowsDesktop}) {
     final hasPlan = controller.subscriptionPlan != null;
-    final buttonLabel = hasPlan ? 'Continue & Pay' : 'Continue';
+    final buttonLabel = hasPlan ? 'Continue to Review' : 'Continue';
 
     return Container(
       padding: EdgeInsets.symmetric(

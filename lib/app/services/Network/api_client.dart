@@ -9,6 +9,8 @@ import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
 import 'package:billkaro/app/services/Modals/businessType/businesst_type_response.dart';
 import 'package:billkaro/app/services/Modals/customer/customerRequest.dart';
 import 'package:billkaro/app/services/Modals/customer/customerResponse.dart';
+import 'package:billkaro/app/services/Modals/kds/kds_bump_events_response.dart';
+import 'package:billkaro/app/services/Modals/kds/kds_response.dart';
 import 'package:billkaro/app/services/Modals/login_modal.dart';
 import 'package:billkaro/app/services/Modals/login_response.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
@@ -16,13 +18,15 @@ import 'package:billkaro/app/services/Modals/outlets/outlet_request.dart';
 import 'package:billkaro/app/services/Modals/registration_modal.dart';
 import 'package:billkaro/app/services/Modals/tables/tables_response.dart';
 import 'package:billkaro/app/services/Modals/user/user_response.dart';
+import 'package:billkaro/app/services/Modals/whatsapp/whatsapp_marketing_request.dart';
+import 'package:billkaro/app/services/Modals/whatsapp/whatsapp_marketing_response.dart';
 import 'package:billkaro/app/services/Network/urls.dart';
 import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 
 part 'api_client.g.dart';
 
-@RestApi(baseUrl: baseURL)
+@RestApi(baseUrl: ApiConstants.prod)
 abstract class ApiClient {
   factory ApiClient(Dio dio, {String? baseUrl}) = _ApiClient;
 
@@ -55,7 +59,7 @@ abstract class ApiClient {
 
   @POST(items)
   Future<dynamic> addItem(@Body() ItemRequest itemRequest);
-  
+
   @POST(bulkItems)
   Future<dynamic> addBulkItem(@Body() BulkItemRequest bulkItemRequest);
 
@@ -119,6 +123,20 @@ abstract class ApiClient {
     @Path('outletId') String outletId,
   );
 
+  @GET('$outlets/{outletId}/regular-customers/lookup')
+  Future<CustomerLookupResponse> lookupRegularCustomerByPhone(
+    @Path('outletId') String outletId,
+    @Query('phone') String phone,
+  );
+
+  @GET('$outlets/{outletId}/regular-customers/{id}')
+  Future<CustomerDetailsResponse> getRegularCustomerDetails(
+    @Path('outletId') String outletId,
+    @Path('id') String id,
+    @Query('page') int? page,
+    @Query('limit') int? limit,
+  );
+
   @PATCH('$outlets/{outletId}/regular-customers/{id}')
   Future<dynamic> updateRegularCustomer(
     @Path('outletId') String outletId,
@@ -130,6 +148,14 @@ abstract class ApiClient {
   Future<dynamic> deleteRegularCustomer(
     @Path('outletId') String outletId,
     @Path('id') String id,
+  );
+
+  // -------------------- WHATSAPP MARKETING --------------------
+
+  @POST('$outlets/{outletId}/whatsapp-marketing/send-bulk')
+  Future<WhatsappMarketingResponse> sendBulkWhatsappMarketing(
+    @Path('outletId') String outletId,
+    @Body() WhatsappMarketingRequest request,
   );
 
   // -------------------- Orders --------------------
@@ -220,6 +246,15 @@ abstract class ApiClient {
   @POST('$outletTables/reset/{outletId}')
   Future<dynamic> resetAllTable(@Path('outletId') String outletId);
 
+  @GET('$outletTables/{id}/qr')
+  Future<dynamic> getTableQr(@Path('id') String id);
+
+  @POST('$outletTables/{id}/qr/generate')
+  Future<dynamic> generateTableQr(@Path('id') String id);
+
+  @POST('$outletTables/qr/generate-all/{outletId}')
+  Future<dynamic> generateAllTableQr(@Path('outletId') String outletId);
+
   @POST(printerOrder)
   Future<dynamic> printerOrderRequest(
     @Body() PrinterOrderRequest printerOrderRequest,
@@ -257,4 +292,31 @@ abstract class ApiClient {
     @Query('page') int? page,
     @Query('limit') int? limit,
   });
+
+  // -------------------- Kitchen Display (KDS) --------------------
+
+  @GET('$kds/queue')
+  Future<KdsQueueResponse> getKdsQueue(@Query('outletId') String outletId);
+
+  @GET('$kds/bump-events')
+  Future<KdsBumpEventsResponse> getKdsBumpEvents(
+    @Query('outletId') String outletId,
+    @Query('since') String? since,
+  );
+
+  @PATCH('$kds/orders/{id}/status')
+  Future<dynamic> updateKdsOrderStatus(
+    @Path('id') String id,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @PATCH('$kds/orders/{id}/items/{itemId}/status')
+  Future<dynamic> updateKdsItemStatus(
+    @Path('id') String id,
+    @Path('itemId') String itemId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @PATCH('$kds/orders/{id}/bump')
+  Future<dynamic> bumpKdsTicket(@Path('id') String id);
 }

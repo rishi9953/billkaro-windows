@@ -1,4 +1,9 @@
 import 'package:billkaro/app/services/Modals/login_response.dart';
+import 'package:billkaro/app/services/kds/kds_realtime_service.dart';
+import 'package:billkaro/app/services/notification/app_background_notification_service.dart';
+import 'package:billkaro/app/services/notification/app_notification_store.dart';
+import 'package:billkaro/app/services/notification/kitchen_bump_monitor.dart';
+import 'package:billkaro/app/services/notification/kitchen_new_order_monitor.dart';
 import 'package:billkaro/app/services/notification/sync_notification_service.dart';
 import 'package:billkaro/app/services/permissionService.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
@@ -54,6 +59,17 @@ class HomeMainController extends BaseController {
     // });
     // Initialize Bluetooth/Printer only AFTER login (prevents startup permission popup)
     await _initPrinterServiceAfterLogin();
+    if (!Get.isRegistered<AppNotificationStore>()) {
+      await Get.putAsync(() => AppNotificationStore().init(), permanent: true);
+    }
+    await AppBackgroundNotificationService.instance.initialize();
+    await SyncNotificationService().initialize();
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId != null) {
+      KdsRealtimeService.instance.connect(outletId);
+    }
+    KitchenBumpMonitor.instance.start();
+    KitchenNewOrderMonitor.instance.start();
     super.onReady();
   }
 

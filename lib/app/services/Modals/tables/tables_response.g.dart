@@ -30,6 +30,9 @@ TableData _$TableDataFromJson(Map<String, dynamic> json) => TableData(
   tableNumber: json['tableNumber'] as String,
   status: json['status'] as String,
   currentBillNumber: json['currentBillNumber'] as String?,
+  qrToken: json['qrToken'] as String?,
+  qrMenuUrl: json['qrMenuUrl'] as String?,
+  qrEnabled: json['qrEnabled'] as bool?,
 );
 
 Map<String, dynamic> _$TableDataToJson(TableData instance) => <String, dynamic>{
@@ -40,4 +43,7 @@ Map<String, dynamic> _$TableDataToJson(TableData instance) => <String, dynamic>{
   'tableNumber': instance.tableNumber,
   'status': instance.status,
   'currentBillNumber': instance.currentBillNumber,
+  'qrToken': instance.qrToken,
+  'qrMenuUrl': instance.qrMenuUrl,
+  'qrEnabled': instance.qrEnabled,
 };

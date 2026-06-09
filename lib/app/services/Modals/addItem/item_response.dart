@@ -60,6 +60,8 @@ class ItemData {
   final String? orderFrom; // optional field
   @JsonKey(defaultValue: true)
   final bool showItem;
+  @JsonKey(defaultValue: 15)
+  final int prepTimeMinutes;
 
   ItemData({
     required this.id,
@@ -75,6 +77,7 @@ class ItemData {
     this.orderFrom,
     this.itemImage = '',
     this.showItem = true,
+    this.prepTimeMinutes = 15,
   });
 
   factory ItemData.fromJson(Map<String, dynamic> json) =>

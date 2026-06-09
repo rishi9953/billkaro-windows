@@ -54,12 +54,25 @@ class QRGenerator {
     try {
       String encodedPayeeName = Uri.encodeComponent(payeeName);
       String encodedTransactionNote = Uri.encodeComponent(transactionNote);
-      String upiUrl = 'upi://pay?pa=$upiId&pn=$encodedPayeeName&am=${amount.toStringAsFixed(2)}&cu=INR&tn=$encodedTransactionNote';
-
+      String upiUrl =
+          'upi://pay?pa=$upiId&pn=$encodedPayeeName&am=${amount.toStringAsFixed(2)}&cu=INR&tn=$encodedTransactionNote';
       print('QR Code Bitmap Data: $upiUrl');
+      return generateUrlBitmap(upiUrl);
+    } catch (e) {
+      print('QR bitmap generation error: $e');
+      return [];
+    }
+  }
 
-      // Create QR code
-      final qrCode = QrCode.fromData(data: upiUrl, errorCorrectLevel: QrErrorCorrectLevel.M);
+  /// ESC/POS bitmap QR for any URL (table menu, links, etc.).
+  static Future<List<int>> generateUrlBitmap(String data) async {
+    try {
+      if (data.trim().isEmpty) return [];
+
+      final qrCode = QrCode.fromData(
+        data: data,
+        errorCorrectLevel: QrErrorCorrectLevel.M,
+      );
       final qrPainter = QrPainter.withQr(
         qr: qrCode,
         color: const Color(0xFF000000),
@@ -67,7 +80,6 @@ class QRGenerator {
         gapless: true,
       );
 
-      // Generate image
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
       qrPainter.paint(canvas, const Size(200, 200));
@@ -85,15 +97,13 @@ class QRGenerator {
       final monoImage = img.grayscale(decodedImage);
       List<int> bytes = [];
 
-      // Center alignment
       bytes.addAll([0x1B, 0x61, 0x01]);
 
       int width = monoImage.width;
       int height = monoImage.height;
 
-      // Convert to ESC/POS bitmap format
       for (int y = 0; y < height; y += 24) {
-        bytes.addAll([0x1B, 0x2A, 0x21]); // 24-dot double-density
+        bytes.addAll([0x1B, 0x2A, 0x21]);
         bytes.addAll([width % 256, width ~/ 256]);
 
         for (int x = 0; x < width; x++) {
@@ -112,15 +122,14 @@ class QRGenerator {
             bytes.add(slice);
           }
         }
-        bytes.add(0x0A); // Line feed
+        bytes.add(0x0A);
       }
 
-      // Reset alignment
       bytes.addAll([0x1B, 0x61, 0x01]);
 
       return bytes;
     } catch (e) {
-      print('QR bitmap generation error: $e');
+      print('QR URL bitmap generation error: $e');
       return [];
     }
   }

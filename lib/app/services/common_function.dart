@@ -179,10 +179,42 @@ bool outletHasActiveSubscriptionForPlan(
   return ids.contains(planId.trim());
 }
 
-Future<void> openWhatsApp(String phoneNumber) async {
-  final phone = phoneNumber.replaceAll(RegExp(r'[^\d+]'), ''); // Remove spaces
-  final message = Uri.encodeComponent('Hi');
-  final whatsappUrl = 'https://wa.me/$phone?text=$message';
+String buildRegularCustomerWelcomeMessage({
+  required String outletName,
+  required String customerName,
+  required String phoneNumber,
+  required int loyaltyDiscount,
+}) {
+  final digits = phoneNumber.replaceAll(RegExp(r'\D'), '');
+  final displayPhone = digits.length >= 10
+      ? '+91${digits.substring(digits.length - 10)}'
+      : phoneNumber;
+  final discountLine = loyaltyDiscount > 0
+      ? 'Loyalty Discount: $loyaltyDiscount% on your orders'
+      : 'You are now registered as our regular customer';
+
+  return '''Hello $customerName! 👋
+
+Welcome to $outletName! 🎉
+
+You have been added as our regular customer.
+
+📱 Phone: $displayPhone
+$discountLine
+
+Thank you for choosing $outletName. We look forward to serving you! ❤️''';
+}
+
+Future<void> openWhatsApp(
+  String phoneNumber, {
+  String? message,
+}) async {
+  final digits = phoneNumber.replaceAll(RegExp(r'\D'), '');
+  final phone = digits.length >= 10
+      ? '91${digits.substring(digits.length - 10)}'
+      : digits.replaceAll(RegExp(r'[^\d+]'), '');
+  final encodedMessage = Uri.encodeComponent(message ?? 'Hi');
+  final whatsappUrl = 'https://wa.me/$phone?text=$encodedMessage';
 
   final uri = Uri.parse(whatsappUrl);
 
@@ -191,6 +223,24 @@ Future<void> openWhatsApp(String phoneNumber) async {
   } else {
     showError(description: 'Could not open WhatsApp');
   }
+}
+
+Future<void> sendRegularCustomerWelcomeWhatsApp({
+  required String phoneNumber,
+  required String customerName,
+  required int loyaltyDiscount,
+  required String outletName,
+  bool serverSent = false,
+}) async {
+  if (serverSent) return;
+
+  final message = buildRegularCustomerWelcomeMessage(
+    outletName: outletName,
+    customerName: customerName,
+    phoneNumber: phoneNumber,
+    loyaltyDiscount: loyaltyDiscount,
+  );
+  await openWhatsApp(phoneNumber, message: message);
 }
 
 Future<void> checkSubscription() async {

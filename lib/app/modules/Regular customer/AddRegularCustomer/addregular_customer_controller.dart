@@ -2,6 +2,7 @@ import 'package:billkaro/app/modules/Regular%20customer/AddRegularCustomer/Widge
 import 'package:billkaro/app/modules/Regular%20customer/CustomerList/cutomer_list_controller.dart';
 import 'package:billkaro/app/services/Modals/customer/customerRequest.dart';
 import 'package:billkaro/app/services/Modals/customer/customerResponse.dart';
+import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
@@ -173,37 +174,67 @@ class AddCustomerController extends BaseController {
     Get.back();
   }
 
+  CustomerRequest? _buildCustomerRequest(String outletId) {
+    if (nameController.text.trim().isEmpty) {
+      showError(description: 'Please enter customer name');
+      return null;
+    }
+
+    final phone = fullPhoneNumber;
+    if (phone.length < 13) {
+      showError(description: 'Please enter a valid 10 digit phone number');
+      return null;
+    }
+
+    return CustomerRequest(
+      userId: appPref.user!.id!,
+      outletId: outletId,
+      phoneNumber: phone,
+      customerName: nameController.text.trim(),
+      loyalityDiscount: int.tryParse(discountController.text.trim()) ?? 0,
+    );
+  }
+
   void addRegularCustomer() async {
-    // Add regular customer logic
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) {
       showError(description: 'Please select an outlet first');
       return;
     }
 
-    final phone = fullPhoneNumber;
-    if (phone.length < 13) {
-      showError(description: 'Please enter a valid 10 digit phone number');
-      return;
-    }
-    final customerRequest = CustomerRequest(
-      userId: appPref.user!.id!,
-      outletId: outletId,
-      phoneNumber: phone,
-      customerName: nameController.text.trim(),
-      loyalityDiscount: int.parse(discountController.text.trim()),
-    );
+    final customerRequest = _buildCustomerRequest(outletId);
+    if (customerRequest == null) return;
+
     final response = await callApi(
       apiClient.addRegularCustomer(outletId, customerRequest),
     );
     if (response['status'] == 'success') {
-      cutomerListController.getCustomerList();
-      dismissAllAppLoader();
-      Get.back();
-      showSuccess(description: response['message']);
-
-      clearAllFields();
+      await _handleAddSuccess(response, customerRequest, shouldGoBack: true);
     }
+  }
+
+  Future<void> _handleAddSuccess(
+    Map<String, dynamic> response,
+    CustomerRequest customerRequest, {
+    required bool shouldGoBack,
+  }) async {
+    cutomerListController.getCustomerList();
+    dismissAllAppLoader();
+
+    final serverSent = response['whatsappSent'] == true;
+    await sendRegularCustomerWelcomeWhatsApp(
+      phoneNumber: customerRequest.phoneNumber,
+      customerName: customerRequest.customerName,
+      loyaltyDiscount: customerRequest.loyalityDiscount,
+      outletName: appPref.selectedOutlet?.businessName ?? 'Our Restaurant',
+      serverSent: serverSent,
+    );
+
+    if (shouldGoBack) {
+      Get.back();
+    }
+    showSuccess(description: response['message']?.toString() ?? 'Customer added');
+    clearAllFields();
   }
 
   void updateRegularCustomer() async {
@@ -224,7 +255,7 @@ class AddCustomerController extends BaseController {
       outletId: outletId,
       phoneNumber: phone,
       customerName: nameController.text.trim(),
-      loyalityDiscount: int.parse(discountController.text.trim()),
+      loyalityDiscount: int.tryParse(discountController.text.trim()) ?? 0,
     );
     final response = await callApi(
       apiClient.updateRegularCustomer(
@@ -289,26 +320,25 @@ class AddCustomerController extends BaseController {
   }
 
   void saveCustomer() {
-    if (phoneController.text.trim().length != 10) {
-      showError(description: 'Please enter a valid 10 digit phone number');
-      return;
-    }
-
-    // Save customer logic
-    showSuccess(description: 'Customer saved successfully');
+    addRegularCustomer();
   }
 
-  void saveAndNew() {
-    if (phoneController.text.trim().length != 10) {
-      showError(description: 'Please enter a valid 10 digit phone number');
+  Future<void> saveAndNew() async {
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null) {
+      showError(description: 'Please select an outlet first');
       return;
     }
 
-    // Save and create new customer logic
-    showSuccess(description: 'Customer saved successfully');
-    phoneController.text = '';
-    nameController.clear();
-    discountController.clear();
+    final customerRequest = _buildCustomerRequest(outletId);
+    if (customerRequest == null) return;
+
+    final response = await callApi(
+      apiClient.addRegularCustomer(outletId, customerRequest),
+    );
+    if (response['status'] == 'success') {
+      await _handleAddSuccess(response, customerRequest, shouldGoBack: false);
+    }
   }
 
   @override

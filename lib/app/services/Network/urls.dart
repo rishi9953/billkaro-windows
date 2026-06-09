@@ -1,14 +1,18 @@
+import 'package:billkaro/app/services/Network/api_config.dart';
+
 class ApiConstants {
   static const String local = 'https://nmsmfkdd-3000.inc1.devtunnels.ms/api/';
-  // static const String prod = 'https://65.2.81.212/api/';
   static const String prod = 'https://api.billkrochillkro.com/api/';
+
+  /// Default REST base when `.env` does not set `API_BASE_URL`.
+  static const String defaultBase = prod;
 }
 
-const String baseURL = ApiConstants.local;
+/// Use [ApiConfig.baseUrl] after `ApiConfig.loadFromEnv()` in main.
+String get baseURL => ApiConfig.baseUrl;
 
 /// Stored logo/media paths from the API may be full URLs or relative paths.
-/// Returns a URL suitable for [Image.network].
-String resolvedMediaUrl(String? stored) { 
+String resolvedMediaUrl(String? stored) {
   if (stored == null) return '';
   final s = stored.trim();
   if (s.isEmpty) return '';
@@ -51,3 +55,4 @@ const String printerOrder = 'printer-orders';
 const String staff = 'staff';
 const String staffLogin = 'auth/staff/login';
 const String activities = 'activities';
+const String kds = 'kds';

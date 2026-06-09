@@ -14,13 +14,21 @@ import 'package:billkaro/app/modules/Reports/ItemReports/item_reports_controller
 import 'package:billkaro/app/modules/Reports/OrderReports/order_reports_controller.dart';
 import 'package:billkaro/app/modules/Tables/table_controller.dart';
 import 'package:billkaro/app/modules/subscription/subscription_controller.dart';
+import 'package:billkaro/app/services/kds/kds_realtime_service.dart';
+import 'package:billkaro/app/services/notification/kitchen_bump_monitor.dart';
+import 'package:billkaro/app/services/notification/kitchen_new_order_monitor.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:get/get.dart';
 
 /// Refreshes every registered GetX controller that caches data per outlet.
 /// Call after [AppPref.selectedOutlet] changes (e.g. outlet bottom sheet).
 Future<void> refreshOutletScopedControllers() async {
+  KitchenBumpMonitor.instance.onOutletChanged();
+  KitchenNewOrderMonitor.instance.onOutletChanged();
   final outlet = Get.find<AppPref>().selectedOutlet;
+  if (outlet?.id != null) {
+    KdsRealtimeService.instance.connect(outlet!.id!);
+  }
 
   if (Get.isRegistered<HomeMainController>()) {
     final c = Get.find<HomeMainController>();

@@ -43,7 +43,7 @@ class KotPrintJob extends PrintJob {
 
   @override
   bool validate() {
-    if (kotNumber.isEmpty || waiterName.isEmpty) return false;
+    if (kotNumber.isEmpty) return false;
     if (items.isEmpty) return false;
     return true;
   }
@@ -88,22 +88,24 @@ class KotPrintJob extends PrintJob {
 
     builder.line();
 
-    builder.bold(
-      TextHelper.padRight('Item', 36) + TextHelper.padLeft('Qty', 12) + '\n',
-    );
+    final w = builder.receiptWidth;
+    builder.bold('${TextHelper.formatRow('Description', 'Qty.', w)}\n');
     builder.line();
 
     for (var item in items) {
-      String itemName = item.name.length > 34
-          ? item.name.substring(0, 34)
-          : item.name;
-      String qty = 'x${item.quantity}';
-      builder.text(
-        TextHelper.padRight(itemName, 36) + TextHelper.padLeft(qty, 12) + '\n',
-      );
-
-      if (item.category?.isNotEmpty ?? false) {
-        builder.text('  (${item.category})\n');
+      for (final line in TextHelper.kotNameQtyLines(
+        item.name,
+        item.quantity,
+        w,
+      )) {
+        builder.text('$line\n');
+      }
+      for (final line in TextHelper.kotSublineLines(
+        category: item.category,
+        remark: item.notes,
+        receiptWidth: w,
+      )) {
+        builder.text('$line\n');
       }
     }
 
@@ -138,8 +140,28 @@ class KotPrintJob extends PrintJob {
 
   @override
   pw.Document buildPdf() {
-    // KOT typically doesn't need PDF, but implementing for completeness
-    throw UnimplementedError('KOT PDF generation not required');
+    final doc = pw.Document();
+    doc.addPage(
+      pw.Page(
+        build: (context) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text('KOT #$kotNumber', style: pw.TextStyle(fontSize: 18)),
+            pw.Text('$date $time'),
+            if (businessName.isNotEmpty) pw.Text(businessName),
+            if (tableNumber.isNotEmpty) pw.Text('Table: $tableNumber'),
+            if (customerName.isNotEmpty) pw.Text('Customer: $customerName'),
+            pw.SizedBox(height: 8),
+            ...items.map(
+              (item) => pw.Text('${item.quantity}x ${item.name}'),
+            ),
+            pw.SizedBox(height: 8),
+            pw.Text('Prepared by: ${waiterName.isEmpty ? 'Staff' : waiterName}'),
+          ],
+        ),
+      ),
+    );
+    return doc;
   }
 }
 
@@ -161,6 +183,7 @@ class KotItem {
       name: orderItem.itemName,
       quantity: orderItem.quantity ?? 1,
       category: orderItem.category,
+      notes: orderItem.itemRemark,
     );
   }
 }

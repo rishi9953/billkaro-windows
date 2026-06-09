@@ -42,6 +42,7 @@ class OrderModel {
   final String status;
   final String orderFrom;
   final List<OrderItem> items;
+  final String? specialInstructions;
 
   OrderModel({
     required this.id,
@@ -63,6 +64,7 @@ class OrderModel {
     required this.status,
     required this.items,
     required this.orderFrom,
+    this.specialInstructions,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
@@ -86,6 +88,9 @@ class OrderItem {
   final int quantity;
   final double salePrice;
   final double gst;
+  @JsonKey(defaultValue: 0)
+  final int kotSentQuantity;
+  final String? itemRemark;
 
   OrderItem({
     required this.itemId,
@@ -94,6 +99,8 @@ class OrderItem {
     required this.quantity,
     required this.salePrice,
     required this.gst,
+    this.kotSentQuantity = 0,
+    this.itemRemark,
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> json) =>

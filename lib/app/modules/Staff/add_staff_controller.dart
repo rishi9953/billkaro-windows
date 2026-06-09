@@ -43,7 +43,7 @@ class AddStaffController extends BaseController {
       final permissions =
           rawArgs.permissions.map((item) => item.trim()).toSet();
       canManageBills.value = permissions.contains('create_bill');
-      canEditMenuItems.value = permissions.contains('view_reports');
+      canEditMenuItems.value = permissions.contains('edit_menu');
     }
   }
 
@@ -238,7 +238,7 @@ class AddStaffController extends BaseController {
       permissions.add('create_bill');
     }
     if (canEditMenuItems.value) {
-      permissions.add('view_reports');
+      permissions.add('edit_menu');
     }
     return permissions;
   }

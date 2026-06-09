@@ -1,6 +1,8 @@
 // ignore_for_file: deprecated_member_use
 
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
 class CustomerTrackingScreen extends StatelessWidget {
   const CustomerTrackingScreen({super.key});
@@ -296,8 +298,7 @@ class CustomerTrackingScreen extends StatelessWidget {
         height: 56,
         child: ElevatedButton(
           onPressed: () {
-            // Handle button press
-            Get.toNamed(AppRoute.addRegularCustomer);
+            Modular.to.pushNamed(HomeMainRoutes.addRegularCustomer);
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColor.primary,

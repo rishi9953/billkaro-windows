@@ -1,12 +1,14 @@
 import 'package:billkaro/app/Database/app_database.dart';
 import 'package:billkaro/app/modules/Theme/theme_controller.dart';
+import 'package:billkaro/app/services/Network/api_config.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:dio/dio.dart';
 
-const String baseUrl = String.fromEnvironment(
-  'BASE_URL',
-  defaultValue: baseURL,
-);
+String get _dioBaseUrl {
+  const fromDefine = String.fromEnvironment('BASE_URL');
+  if (fromDefine.isNotEmpty) return fromDefine;
+  return ApiConfig.baseUrl;
+}
 
 class NetworkModule {
   // Flag to track if an error message is already shown
@@ -142,15 +144,10 @@ class NetworkModule {
                 safelyDismissLoader(); // Ensure loader is dismissed even on error
               }
             } else if (error.response?.statusCode == 502) {
-              // Handle server error
-              showError(description: 'Server error. Please try again later.');
-              try {
-                await _handleTokenExpiration();
-              } catch (e) {
-                debugPrint('Error handling 502 error: $e');
-                safelyDismissLoader(); // Ensure loader is dismissed even on error
-              }
-              return;
+              showError(
+                description:
+                    'Server is temporarily unavailable. Please try again shortly.',
+              );
             } else if (error.response?.statusCode == 400) {
               final errorMessage =
                   error.response?.data?['message'] ??
@@ -341,5 +338,5 @@ class NetworkModule {
   }
 
   static ApiClient getApiClient() =>
-      ApiClient(Get.find<Dio>(), baseUrl: baseUrl);
+      ApiClient(Get.find<Dio>(), baseUrl: _dioBaseUrl);
 }

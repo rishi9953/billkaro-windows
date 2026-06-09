@@ -185,7 +185,7 @@ class LoginScreen extends StatelessWidget {
                     ),
                   ),
                   child: const Text(
-                    'Request registration key',
+                    'Forgot password?',
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                   ),
                 ),

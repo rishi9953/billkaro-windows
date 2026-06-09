@@ -277,6 +277,28 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  Future<void> markOrderSyncFailed(String orderId) async {
+    await (update(orders)..where((tbl) => tbl.id.equals(orderId))).write(
+      OrdersCompanion(isSync: const Value('failed')),
+    );
+  }
+
+  Future<void> updateOrderStatus({
+    required String orderId,
+    required String status,
+    String? paymentStatus,
+  }) async {
+    await (update(orders)..where((tbl) => tbl.id.equals(orderId))).write(
+      OrdersCompanion(
+        status: Value(status),
+        paymentReceivedIn: paymentStatus != null
+            ? Value(paymentStatus)
+            : const Value.absent(),
+        updatedAt: Value(DateTime.now().toIso8601String()),
+      ),
+    );
+  }
+
   /// 🔹 CLEAR ORDERS
   Future<void> clearOrders({String? outletId}) async {
     if (outletId != null) {

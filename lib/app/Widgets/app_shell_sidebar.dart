@@ -9,7 +9,10 @@ import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Tables/table_controller.dart';
 import 'package:billkaro/app/modules/Theme/theme_controller.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/kitchen_display_browser.dart';
+import 'package:billkaro/utils/kitchen_display_window_launcher.dart';
 import 'package:billkaro/utils/date_util.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 
 class _SidebarColors {
@@ -201,14 +204,15 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
     final iOrders = 4 + seatOffset;
     final iReports = 5 + seatOffset;
     final iKot = 6 + seatOffset;
-    final iCust = (kotEnabled ? 7 : 6) + seatOffset;
-    final iStaff = (kotEnabled ? 8 : 7) + seatOffset;
-    final iSubs = (kotEnabled ? 10 : 9) + seatOffset;
-    final iWa = (kotEnabled ? 11 : 10) + seatOffset;
-    final iPrinter = (kotEnabled ? 12 : 11) + seatOffset;
-    final iSettings = (kotEnabled ? 13 : 12) + seatOffset;
-    final iProfile = (kotEnabled ? 14 : 13) + seatOffset;
-    final iLogout = (kotEnabled ? 15 : 14) + seatOffset;
+    final iKds = kotEnabled ? (7 + seatOffset) : -1;
+    final iCust = (kotEnabled ? 8 : 6) + seatOffset;
+    final iStaff = (kotEnabled ? 9 : 7) + seatOffset;
+    final iSubs = (kotEnabled ? 11 : 9) + seatOffset;
+    final iWa = (kotEnabled ? 12 : 10) + seatOffset;
+    final iPrinter = (kotEnabled ? 13 : 11) + seatOffset;
+    final iSettings = (kotEnabled ? 14 : 12) + seatOffset;
+    final iProfile = (kotEnabled ? 15 : 13) + seatOffset;
+    final iLogout = (kotEnabled ? 16 : 14) + seatOffset;
     final primary = AppColor.primary;
     final sidebarTop = Color.alphaBlend(
       primary.withOpacity(0.24),
@@ -628,6 +632,39 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
                             : _SidebarColors.iconInactive,
                       ),
                     ),
+                  if (kotEnabled)
+                    _navItem(
+                      context: context,
+                      index: iKds,
+                      label: 'Kitchen Display',
+                      svgIcon: Icon(
+                        Icons.soup_kitchen_rounded,
+                        size: AppShellSidebar.navIconSize,
+                        color: widget.selectedIndex == iKds
+                            ? _SidebarColors.textActive
+                            : _SidebarColors.iconInactive,
+                      ),
+                      onTapOverride: KitchenDisplayWindowLauncher.open,
+                      trailing: !widget.collapsed
+                          ? IconButton(
+                              tooltip: 'Open Kitchen Display in browser',
+                              onPressed: KitchenDisplayBrowser.open,
+                              icon: Icon(
+                                Icons.open_in_browser_rounded,
+                                size: 18,
+                                color: widget.selectedIndex == iKds
+                                    ? _SidebarColors.textActive
+                                    : _SidebarColors.iconInactive,
+                              ),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                minWidth: 32,
+                                minHeight: 32,
+                              ),
+                              visualDensity: VisualDensity.compact,
+                            )
+                          : null,
+                    ),
                   _navItem(
                     context: context,
                     index: iCust,
@@ -643,52 +680,45 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
                       ),
                     ),
                   ),
-                  _navItem(
-                    context: context,
-                    index: iStaff,
-                    label: loc.manage_staff,
-                    svgIcon: Icon(
-                      Icons.group_outlined,
-                      size: AppShellSidebar.navIconSize,
-                      color: widget.selectedIndex == iStaff
-                          ? _SidebarColors.textActive
-                          : _SidebarColors.iconInactive,
+                  if (StaffAccess.canManageStaff)
+                    _navItem(
+                      context: context,
+                      index: iStaff,
+                      label: loc.manage_staff,
+                      svgIcon: Icon(
+                        Icons.group_outlined,
+                        size: AppShellSidebar.navIconSize,
+                        color: widget.selectedIndex == iStaff
+                            ? _SidebarColors.textActive
+                            : _SidebarColors.iconInactive,
+                      ),
                     ),
-                  ),
-                  _navItem(
-                    context: context,
-                    index: iSubs,
-                    label: 'Plans & Pricing',
-                    svgIcon: Assets.plan.image(
-                      width: AppShellSidebar.navIconSize,
-                      height: AppShellSidebar.navIconSize,
-                      color: widget.selectedIndex == iSubs
-                          ? _SidebarColors.textActive
-                          : _SidebarColors.iconInactive,
+                  if (StaffAccess.canManageSubscriptions)
+                    _navItem(
+                      context: context,
+                      index: iSubs,
+                      label: 'Plans & Pricing',
+                      svgIcon: Assets.plan.image(
+                        width: AppShellSidebar.navIconSize,
+                        height: AppShellSidebar.navIconSize,
+                        color: widget.selectedIndex == iSubs
+                            ? _SidebarColors.textActive
+                            : _SidebarColors.iconInactive,
+                      ),
                     ),
-                    //  Assets.svg.menu.svg(
-                    //   width: 22,
-                    //   height: 22,
-                    //   colorFilter: ColorFilter.mode(
-                    //     selectedIndex == 8
-                    //         ? _SidebarColors.textActive
-                    //         : _SidebarColors.iconInactive,
-                    //     BlendMode.srcIn,
-                    //   ),
-                    // ),
-                  ),
-                  _navItem(
-                    context: context,
-                    index: iWa,
-                    label: 'WhatsApp Marketing',
-                    svgIcon: Icon(
-                      Icons.campaign_outlined,
-                      size: AppShellSidebar.navIconSize,
-                      color: widget.selectedIndex == iWa
-                          ? _SidebarColors.textActive
-                          : _SidebarColors.iconInactive,
+                  if (StaffAccess.canUseWhatsAppMarketing)
+                    _navItem(
+                      context: context,
+                      index: iWa,
+                      label: 'WhatsApp Marketing',
+                      svgIcon: Icon(
+                        Icons.campaign_outlined,
+                        size: AppShellSidebar.navIconSize,
+                        color: widget.selectedIndex == iWa
+                            ? _SidebarColors.textActive
+                            : _SidebarColors.iconInactive,
+                      ),
                     ),
-                  ),
                   _navItem(
                     context: context,
                     index: iPrinter,
@@ -890,6 +920,8 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
     required String label,
     required Widget svgIcon,
     bool isSignOut = false,
+    Future<void> Function()? onTapOverride,
+    Widget? trailing,
   }) {
     final isSelected = widget.selectedIndex == index && !isSignOut;
     final isLogout = isSignOut;
@@ -908,7 +940,18 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
               return;
             }
 
+            if (onTapOverride != null) {
+              await onTapOverride();
+              return;
+            }
+
             final targetRoute = HomeMainRoutes.routeForIndex(index);
+            if (!_canNavigateToRoute(targetRoute)) {
+              showError(
+                description: 'You do not have permission to access this section.',
+              );
+              return;
+            }
             final isLeavingCreateOrder =
                 Modular.to.path.startsWith(HomeMainRoutes.createOrder) &&
                 targetRoute != HomeMainRoutes.createOrder;
@@ -975,6 +1018,7 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  if (trailing != null) trailing,
                 ],
               ],
             ),
@@ -1244,6 +1288,19 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
       },
     );
     return shouldLeave ?? false;
+  }
+
+  bool _canNavigateToRoute(String route) {
+    if (route.startsWith(HomeMainRoutes.staff)) {
+      return StaffAccess.canManageStaff;
+    }
+    if (route.startsWith(HomeMainRoutes.subscriptions)) {
+      return StaffAccess.canManageSubscriptions;
+    }
+    if (route.startsWith(HomeMainRoutes.whatsaapMarketing)) {
+      return StaffAccess.canUseWhatsAppMarketing;
+    }
+    return true;
   }
 }
 

@@ -43,9 +43,11 @@ class KOTPreviewController extends BaseController {
   }
 
   void getUserDetails() {
-    phone.value = appPref.user!.mobile ?? '';
-    businessName.value = appPref.user!.outletData!.first.businessName ?? '';
-    waiterName.value = appPref.user!.brandName ?? 'Staff';
+    final user = appPref.user;
+    final outlet = appPref.selectedOutlet ?? user?.outletData?.firstOrNull;
+    phone.value = user?.mobile ?? '';
+    businessName.value = outlet?.businessName ?? user?.brandName ?? '';
+    waiterName.value = user?.brandName ?? 'Staff';
   }
 
   void getKOTDetails() {
@@ -57,7 +59,7 @@ class KOTPreviewController extends BaseController {
       final orderData = map?['invoice'] as CreateorderRequest?;
 
       if (orderData != null) {
-        itemList.value = orderData.items ?? [];
+        itemList.value = _enrichKotItems(orderData.items ?? []);
         kotNumber.value = orderData.billNumber ?? _generateKOTNumber();
         customerName.value = orderData.customerName ?? '';
       }
@@ -71,6 +73,30 @@ class KOTPreviewController extends BaseController {
 
     debugPrint('KOT Items: ${itemList.length}');
     debugPrint('Total Quantity: $totalQuantity');
+  }
+
+  List<OrderItem> _enrichKotItems(List<OrderItem> items) {
+    final cartRemarks = addOrderController?.itemRemarks;
+    return items
+        .map((item) {
+          final cartRemark = cartRemarks?[item.itemId]?.trim();
+          final existing = item.itemRemark?.trim();
+          final remark = (cartRemark != null && cartRemark.isNotEmpty)
+              ? cartRemark
+              : (existing != null && existing.isNotEmpty ? existing : null);
+          if (remark == null || remark == item.itemRemark) return item;
+          return OrderItem(
+            itemId: item.itemId,
+            itemName: item.itemName,
+            category: item.category,
+            quantity: item.quantity,
+            salePrice: item.salePrice,
+            gst: item.gst,
+            kotSentQuantity: item.kotSentQuantity,
+            itemRemark: remark,
+          );
+        })
+        .toList(growable: false);
   }
 
   // Generate KOT number if not provided
@@ -334,9 +360,9 @@ class KOTPreviewController extends BaseController {
                       borderRadius: pw.BorderRadius.circular(4),
                     ),
                     child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: [
                         pw.Expanded(
-                          flex: 4,
                           child: pw.Text(
                             'Item Name',
                             style: pw.TextStyle(
@@ -345,15 +371,11 @@ class KOTPreviewController extends BaseController {
                             ),
                           ),
                         ),
-                        pw.Expanded(
-                          flex: 1,
-                          child: pw.Text(
-                            'Qty',
-                            textAlign: pw.TextAlign.center,
-                            style: pw.TextStyle(
-                              fontSize: 13,
-                              fontWeight: pw.FontWeight.bold,
-                            ),
+                        pw.Text(
+                          'Qty',
+                          style: pw.TextStyle(
+                            fontSize: 13,
+                            fontWeight: pw.FontWeight.bold,
                           ),
                         ),
                       ],
@@ -363,39 +385,44 @@ class KOTPreviewController extends BaseController {
 
                   // Items List
                   ...itemList.map((item) {
-                    final quantity = item.quantity;
+                    final category = item.category.trim();
+                    final remark = item.itemRemark?.trim() ?? '';
+                    final sublineStyle = pw.TextStyle(
+                      fontSize: 11,
+                      fontStyle: pw.FontStyle.italic,
+                      color: PdfColors.grey700,
+                    );
                     return pw.Padding(
                       padding: const pw.EdgeInsets.symmetric(vertical: 6),
-                      child: pw.Row(
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          pw.Expanded(
-                            flex: 4,
-                            child: pw.Text(
-                              item.itemName.toString(),
-                              style: const pw.TextStyle(fontSize: 14),
-                            ),
-                          ),
-                          pw.Expanded(
-                            flex: 1,
-                            child: pw.Container(
-                              padding: const pw.EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
+                          pw.Row(
+                            crossAxisAlignment: pw.CrossAxisAlignment.start,
+                            children: [
+                              pw.Expanded(
+                                child: pw.Text(
+                                  item.itemName,
+                                  style: const pw.TextStyle(fontSize: 14),
+                                ),
                               ),
-                              decoration: pw.BoxDecoration(
-                                border: pw.Border.all(width: 2),
-                                borderRadius: pw.BorderRadius.circular(6),
-                              ),
-                              child: pw.Text(
-                                'x$quantity',
-                                textAlign: pw.TextAlign.center,
+                              pw.Text(
+                                'x${item.quantity}',
                                 style: pw.TextStyle(
                                   fontSize: 14,
                                   fontWeight: pw.FontWeight.bold,
                                 ),
                               ),
-                            ),
+                            ],
                           ),
+                          if (category.isNotEmpty) ...[
+                            pw.SizedBox(height: 3),
+                            pw.Text('($category)', style: sublineStyle),
+                          ],
+                          if (remark.isNotEmpty) ...[
+                            pw.SizedBox(height: 2),
+                            pw.Text('Remark: $remark', style: sublineStyle),
+                          ],
                         ],
                       ),
                     );
