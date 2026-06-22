@@ -20,6 +20,7 @@ class _MenuImportFileDialog extends StatelessWidget {
   static const _templateFileName = 'products_template.xlsx';
 
   Future<void> _downloadTemplate() async {
+    final loc = AppLocalizations.of(Get.context!)!;
     try {
       showAppLoader();
       final workbook = Workbook();
@@ -56,12 +57,12 @@ class _MenuImportFileDialog extends StatelessWidget {
 
       final openResult = await OpenFile.open(fullPath);
       if (openResult.type == ResultType.done) {
-        showSuccess(description: 'Template saved and opened');
+        showSuccess(description: loc.template_saved_opened);
       } else {
-        showSuccess(description: 'Template saved to: $fullPath');
+        showSuccess(description: loc.template_saved_to(fullPath));
       }
     } catch (e) {
-      showError(description: 'Failed to save template: $e');
+      showError(description: loc.failed_to_import_file_error(e.toString()));
     } finally {
       dismissAllAppLoader();
     }
@@ -69,6 +70,7 @@ class _MenuImportFileDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -96,9 +98,9 @@ class _MenuImportFileDialog extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 14),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Import Products - Excel (.xlsx)',
+                      loc.import_from_file,
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -110,8 +112,7 @@ class _MenuImportFileDialog extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Select an Excel (.xlsx) file following the BillKaro template format. '
-                'Required columns: Name and Price. Missing categories will be created automatically.',
+                loc.import_from_file,
                 style: TextStyle(
                   fontSize: 14,
                   height: 1.45,
@@ -168,7 +169,7 @@ class _MenuImportFileDialog extends StatelessWidget {
                   TextButton(
                     onPressed: () => Get.back(),
                     child: Text(
-                      'CANCEL',
+                      loc.cancel.toUpperCase(),
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: Colors.grey.shade600,
@@ -179,7 +180,7 @@ class _MenuImportFileDialog extends StatelessWidget {
                   TextButton(
                     onPressed: () => Get.back(result: true),
                     child: Text(
-                      'Select File',
+                      loc.select_file,
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: AppColor.primary,

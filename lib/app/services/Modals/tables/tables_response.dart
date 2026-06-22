@@ -20,6 +20,21 @@ class TablesResponse {
   Map<String, dynamic> toJson() => _$TablesResponseToJson(this);
 }
 
+int _tableSeatingCapacityFromJson(dynamic json) {
+  const defaultValue = 4;
+  if (json == null) return defaultValue;
+  if (json is int) return json > 0 ? json : defaultValue;
+  if (json is num) {
+    final n = json.toInt();
+    return n > 0 ? n : defaultValue;
+  }
+  if (json is String) {
+    final n = int.tryParse(json.trim());
+    return (n != null && n > 0) ? n : defaultValue;
+  }
+  return defaultValue;
+}
+
 @JsonSerializable()
 class TableData {
   final String id;
@@ -32,6 +47,11 @@ class TableData {
   final String? qrToken;
   final String? qrMenuUrl;
   final bool? qrEnabled;
+  final String? mergedIntoTableId;
+  @JsonKey(name: 'seatingcapacity', fromJson: _tableSeatingCapacityFromJson, defaultValue: 4)
+  final int seatingCapacity;
+  @JsonKey(defaultValue: <String>[])
+  final List<String> mergedTableNumbers;
 
   TableData({
     required this.id,
@@ -44,6 +64,9 @@ class TableData {
     this.qrToken,
     this.qrMenuUrl,
     this.qrEnabled,
+    this.mergedIntoTableId,
+    this.seatingCapacity = 4,
+    this.mergedTableNumbers = const [],
   });
 
   factory TableData.fromJson(Map<String, dynamic> json) =>
@@ -61,6 +84,9 @@ class TableModel {
   final String? qrToken;
   final String? qrMenuUrl;
   final bool qrEnabled;
+  final String? mergedIntoTableId;
+  final List<String> mergedTableNumbers;
+  final int seatingCapacity;
 
   TableModel({
     required this.id,
@@ -70,12 +96,30 @@ class TableModel {
     this.qrToken,
     this.qrMenuUrl,
     this.qrEnabled = true,
+    this.mergedIntoTableId,
+    this.mergedTableNumbers = const [],
+    this.seatingCapacity = 4,
   });
 
   String get displayName =>
       tableNumber.toLowerCase().startsWith('table ')
           ? tableNumber
           : 'Table $tableNumber';
+
+  String get combinedDisplayName {
+    if (mergedTableNumbers.isEmpty) return displayName;
+    final extras = mergedTableNumbers
+        .map(
+          (n) => n.toLowerCase().startsWith('table ') ? n : 'Table $n',
+        )
+        .join(', ');
+    return '$displayName + $extras';
+  }
+
+  bool get isMergedSecondary =>
+      mergedIntoTableId != null && mergedIntoTableId!.isNotEmpty;
+
+  bool get hasMergedTables => mergedTableNumbers.isNotEmpty;
 
   bool get isAvailableFromApi =>
       status.toLowerCase() == 'available' || status.isEmpty;
@@ -89,6 +133,9 @@ class TableModel {
       qrToken: d.qrToken,
       qrMenuUrl: d.qrMenuUrl,
       qrEnabled: d.qrEnabled ?? true,
+      mergedIntoTableId: d.mergedIntoTableId,
+      mergedTableNumbers: d.mergedTableNumbers,
+      seatingCapacity: d.seatingCapacity,
     );
   }
 }

@@ -5,7 +5,6 @@ import 'package:billkaro/app/services/check_gstIn.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/app/services/razorpay/razorpay_service.dart';
 import 'package:billkaro/config/config.dart';
-import 'package:billkaro/utils/app_snackbar.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 
@@ -212,18 +211,16 @@ class SubscriptionReviewController extends BaseController {
     final code = couponCode.value.trim();
 
     if (code.isEmpty) {
-      AppSnackbar.show(
+      showError(
         title: 'Error',
-        message: 'Please enter a coupon code',
-        snackPosition: SnackPosition.BOTTOM,
+        description: 'Please enter a coupon code',
       );
       return;
     }
 
-    AppSnackbar.show(
+    showSuccess(
       title: 'Coupon Applied',
-      message: 'Coupon "$code" applied successfully',
-      snackPosition: SnackPosition.BOTTOM,
+      description: 'Coupon "$code" applied successfully',
     );
   }
 

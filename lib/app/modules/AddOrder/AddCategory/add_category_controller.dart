@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:billkaro/utils/offline/offline_category_loader.dart';
 
 class AddCategoryController extends BaseController {
   RxList<CategoryData> categories = <CategoryData>[].obs;
@@ -213,27 +214,27 @@ class AddCategoryController extends BaseController {
 
   Future<void> getCategories({bool showloader = true}) async {
     try {
-      final response = await callApi(
-        apiClient.getCategories(appPref.selectedOutlet!.id!),
-        showLoader: showloader,
+      final outletId = appPref.selectedOutlet?.id;
+      if (outletId == null) return;
+
+      final loaded = await OfflineCategoryLoader.load(
+        outletId: outletId,
+        fetchFromApi: () => callApi(
+          apiClient.getCategories(outletId),
+          showLoader: showloader,
+        ),
       );
 
-      if (response != null && response.status == 'success') {
-        debugPrint('Response: $response');
-
-        final List<CategoryData> categoryList = response.categories;
-
-        categories.clear();
-        categories.addAll(categoryList);
-        dismissAllAppLoader();
-      } else {
-        dismissAllAppLoader();
-        final loc = AppLocalizations.of(Get.context!)!;
-        showError(description: loc.failed_to_load_categories);
-      }
+      categories.clear();
+      categories.addAll(loaded);
+      dismissAllAppLoader();
     } catch (e) {
       dismissAllAppLoader();
       debugPrint('Error in getCategories: $e');
+      if (Get.context != null) {
+        final loc = AppLocalizations.of(Get.context!)!;
+        showError(description: loc.failed_to_load_categories);
+      }
     }
   }
 

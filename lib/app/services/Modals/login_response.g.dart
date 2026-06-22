@@ -42,6 +42,7 @@ User _$UserFromJson(Map<String, dynamic> json) => User(
   permissions: (json['permissions'] as List<dynamic>?)
       ?.map((e) => e as String)
       .toList(),
+  userId: json['userId'] as String?,
 );
 
 Map<String, dynamic> _$UserToJson(User instance) => <String, dynamic>{
@@ -64,6 +65,7 @@ Map<String, dynamic> _$UserToJson(User instance) => <String, dynamic>{
   'role': instance.role,
   'staffRole': instance.staffRole,
   'permissions': instance.permissions,
+  'userId': instance.userId,
 };
 
 OutletData _$OutletDataFromJson(Map<String, dynamic> json) =>

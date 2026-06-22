@@ -14,6 +14,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:billkaro/utils/date_util.dart';
 import 'package:billkaro/utils/download_path_util.dart';
 import 'package:intl/intl.dart';
+import 'package:billkaro/utils/offline/offline_category_loader.dart';
 
 class ItemReportsController extends BaseController {
   // Connectivity listener
@@ -311,19 +312,19 @@ class ItemReportsController extends BaseController {
     return ['All', ...categoryNames];
   }
 
-  /// Fetch categories from API
+  /// Fetch categories (online API + SQLite fallback)
   Future<void> getCategories() async {
     try {
-      final response = await callApi(
-        apiClient.getCategories(appPref.selectedOutlet!.id!),
-        showLoader: false,
+      final outletId = appPref.selectedOutlet?.id;
+      if (outletId == null) return;
+
+      final loaded = await OfflineCategoryLoader.load(
+        outletId: outletId,
+        fetchFromApi: () =>
+            callApi(apiClient.getCategories(outletId), showLoader: false),
       );
-      if (response != null && response.status == 'success') {
-        categories.value = response.categories ?? [];
-        dismissAllAppLoader();
-      } else {
-        debugPrint('getCategories: unexpected response: $response');
-      }
+      categories.value = loaded;
+      dismissAllAppLoader();
     } catch (e, st) {
       debugPrint('getCategories error: $e\n$st');
     }
@@ -370,17 +371,27 @@ class ItemReportsController extends BaseController {
     }
   }
 
-  /// Get items list from API
+  // Refresh Data
+  Future<void> refreshData() async {
+    await getItemsList(forceApiRefresh: true);
+  }
+
+  /// Get items list from API or SQLite
   Future<void> getItemsList({bool forceApiRefresh = false}) async {
     isLoading.value = true;
 
     try {
-      // Load categories first
       await getCategories();
 
       final db = AppDatabase();
+      final outletId = appPref.selectedOutlet!.id!;
       final isOnline = await NetworkUtils.hasInternetConnection();
       debugPrint('🔄 isOnline: $isOnline');
+
+      /// Always load local orders first
+      final localOrders = await db.getAllOrders(outletId: outletId);
+      allOrders.value = localOrders.where((e) => e.status == 'closed').toList();
+
       if (isOnline && (!_hasLoadedFromApi || forceApiRefresh)) {
         final range = selectedDateRange.value;
         final startDateStr = range != null
@@ -393,14 +404,14 @@ class ItemReportsController extends BaseController {
         final response = await callApi(
           apiClient.getOrders(
             appPref.user!.id!,
-            appPref.selectedOutlet!.id!,
+            outletId,
             null,
             null,
             null,
             null,
             startDateStr,
             endDateStr,
-          ), // page, limit, category, paymentReceivedIn
+          ),
           showLoader: false,
         );
 
@@ -408,34 +419,15 @@ class ItemReportsController extends BaseController {
           allOrders.value = response.data
               .where((e) => e.status == 'closed')
               .toList();
+          await db.insertOrders(allOrders, outletId, isSyncedFromApi: true);
           _hasLoadedFromApi = true;
-          // Apply current date range and filters in memory (do not call filterByTimePeriod – it would refetch and loop)
-          applyAllFilters();
-        } else {
-          allOrders.value = [];
-          ordersL.value = [];
-          itemsList.value = [];
-          filteredItemsList.value = [];
         }
       } else if (!isOnline) {
         _hasLoadedFromApi = false;
-      } else {
-        final localOrders = await db.getAllOrders(
-          outletId: appPref.selectedOutlet!.id!,
-        );
-        if (localOrders.isNotEmpty) {
-          allOrders.value = localOrders
-              .where((e) => e.status == 'closed')
-              .toList();
-          debugPrint(' ✅ Loaded ${allOrders.length.toString()}');
-          applyAllFilters();
-        } else {
-          allOrders.value = [];
-          ordersL.value = [];
-          itemsList.value = [];
-          filteredItemsList.value = [];
-        }
       }
+
+      debugPrint(' ✅ Loaded ${allOrders.length} closed orders');
+      applyAllFilters();
     } catch (e) {
       debugPrint('❌ Error fetching orders: $e');
       final loc = AppLocalizations.of(Get.context!)!;
@@ -464,37 +456,52 @@ class ItemReportsController extends BaseController {
     return '${_formatDate(range.start)} TO ${_formatDate(range.end)}';
   }
 
-  /// Fetch orders from API for a given date range (for export). Applies same payment/order type filters; returns items from those orders.
+  /// Fetch orders for export — uses API when online, local SQLite when offline.
   Future<List<OrderItem>> fetchItemsForExport(DateTimeRange range) async {
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) return [];
 
-    final startDateStr = DateFormat('yyyy-MM-dd').format(range.start);
-    final endDateStr = DateFormat('yyyy-MM-dd').format(range.end);
-    final paymentParam = selectedPaymentType.value == 'All'
-        ? null
-        : selectedPaymentType.value.toLowerCase();
-    const exportLimit = 500;
+    final isOnline = await NetworkUtils.hasInternetConnection();
+    List<OrderModel> orders;
 
-    final response = await callApi(
-      apiClient.getOrders(
-        appPref.user!.id!,
-        outletId,
-        1,
-        exportLimit,
-        null,
-        paymentParam,
-        startDateStr,
-        endDateStr,
-      ),
-      showLoader: false,
-    );
+    if (isOnline) {
+      final startDateStr = DateFormat('yyyy-MM-dd').format(range.start);
+      final endDateStr = DateFormat('yyyy-MM-dd').format(range.end);
+      final paymentParam = selectedPaymentType.value == 'All'
+          ? null
+          : selectedPaymentType.value.toLowerCase();
+      const exportLimit = 500;
 
-    if (response?.status != 'success' || response!.data.isEmpty) {
-      return [];
+      final response = await callApi(
+        apiClient.getOrders(
+          appPref.user!.id!,
+          outletId,
+          1,
+          exportLimit,
+          null,
+          paymentParam,
+          startDateStr,
+          endDateStr,
+        ),
+        showLoader: false,
+      );
+
+      if (response?.status != 'success' || response!.data.isEmpty) {
+        return [];
+      }
+      orders = response.data.where((e) => e.status == 'closed').toList();
+    } else {
+      final localOrders = await AppDatabase().getAllOrders(outletId: outletId);
+      orders = localOrders.where((e) => e.status == 'closed').toList();
+      orders = orders.where((order) {
+        return isOrderCreatedAtInIstRange(
+          order.createdAt.toString(),
+          range.start,
+          range.end,
+        );
+      }).toList();
     }
 
-    var orders = response.data.where((e) => e.status == 'closed').toList();
     if (selectedOrderType.value != 'All') {
       orders = orders
           .where(
@@ -504,14 +511,22 @@ class ItemReportsController extends BaseController {
           )
           .toList();
     }
+    if (selectedPaymentType.value != 'All') {
+      orders = orders
+          .where(
+            (o) =>
+                o.paymentReceivedIn?.toLowerCase() ==
+                selectedPaymentType.value.toLowerCase(),
+          )
+          .toList();
+    }
     return orders.expand((o) => o.items).toList();
   }
 
   /// Show date range dialog then export to Excel or PDF. [isExcel] true = Excel, false = PDF.
   Future<void> showExportDateRangeDialogAndExport(bool isExcel) async {
     final loc = AppLocalizations.of(Get.context!)!;
-    final isWindows =
-        Theme.of(Get.context!).platform == TargetPlatform.windows;
+    final isWindows = Theme.of(Get.context!).platform == TargetPlatform.windows;
     final actionLabel = isExcel ? 'Excel' : 'PDF';
 
     final useCurrent = await Get.dialog<bool>(
@@ -532,7 +547,10 @@ class ItemReportsController extends BaseController {
             Expanded(
               child: Text(
                 '${loc.item_reports} ($actionLabel)',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ],
@@ -823,7 +841,9 @@ class ItemReportsController extends BaseController {
 
       final openResult = await OpenFile.open(fullPath);
       if (openResult.type != ResultType.done) {
-        debugPrint('⚠️ Excel saved but could not auto-open: ${openResult.message}');
+        debugPrint(
+          '⚠️ Excel saved but could not auto-open: ${openResult.message}',
+        );
       }
     } catch (e) {
       if (Get.isDialogOpen ?? false) Get.back();

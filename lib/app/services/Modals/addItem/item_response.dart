@@ -60,6 +60,8 @@ class ItemData {
   final String? orderFrom; // optional field
   @JsonKey(defaultValue: true)
   final bool showItem;
+  @JsonKey(defaultValue: false)
+  final bool isRecommended;
   @JsonKey(defaultValue: 15)
   final int prepTimeMinutes;
 
@@ -77,6 +79,7 @@ class ItemData {
     this.orderFrom,
     this.itemImage = '',
     this.showItem = true,
+    this.isRecommended = false,
     this.prepTimeMinutes = 15,
   });
 

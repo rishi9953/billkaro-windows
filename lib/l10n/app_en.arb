@@ -71,7 +71,6 @@
   "you_havent_added_any_orders_Please_add_an_order_to_see_their_reports": "You haven't added any orders.\nPlease add an order to see their reports.",
   "add_Order": "Add Order",
   "item_Reports": "Item Reports",
-  "no_Orders_Available": "No Orders Available",
   "you_havent_added_any_orders_Please_add_an_order_to_see_item_reports": "You haven't added any orders.\nPlease add an order to see item reports.",
   "add_your_menu_using_photos": "Add Your\nMenu using\nPhotos",
   "save_and_hold": "Save & Hold",
@@ -94,9 +93,7 @@
   "get_help_and_support": "Get help and support",
   "sign_out_of_your_account": "Sign out of your account",
   "unlock_premium_features": "Unlock premium features",
-  "logout": "Logout",
   "are_you_sure_you_want_to_logout_from_your_account": "Are you sure you want to logout from your account?",
-  "cancel": "Cancel",
   "keep_track_of_your_best_customers": "Keep track of your best\ncustomers",
   "whatsapp_marketing_and_offers": "WhatsApp Marketing and Offers",
   "engage_customers_whatsapp_customised_offers": "Engage your customers via WhatsApp with customised offers and promotions",
@@ -111,7 +108,6 @@
   "boost_repeat_business": "Boost Repeat Business",
   "get_visitors_back_targeted_whatsapp": "Get visitors back to your restaurant with targeted WhatsApp messages.",
   "send_bulk_whatsapp": "Send Bulk WhatsApp",
-  "printer": "Printer",
   "bluetooth": "Bluetooth",
   "usb": "USB",
   "paired_devices": "Paired Devices",
@@ -138,7 +134,7 @@
   "save_and_new": "Save & New",
   "save_item": "Save Item",
   "business_details": "Business Details",
-  "business_name": "Business name",
+  "business_name": "Business Name",
   "logo": "Logo",
   "upload_business_logo": "Upload Business Logo",
   "outlet_address": "Outlet Address",
@@ -156,7 +152,6 @@
   "swiggy_link": "Swiggy Link",
   "zomato_link": "Zomato Link",
   "delete_outlet": "Delete Outlet",
-  "cancel": "Cancel",
   "update_details": "Update Details",
   "tap_to_select": "Tap to Select",
   "none": "None",
@@ -188,7 +183,6 @@
   "register_new_business": "Register a new business",
   "already_registered": "Already registered?",
   "business_registration": "Business Registration",
-  "business_name": "Business Name",
   "enter_business_name": "Enter your business name",
   "brand_name": "Brand Name",
   "enter_brand_name": "Enter your brand name",
@@ -196,8 +190,6 @@
   "activation_details_sent": "Activation details will be sent to the email address",
   "password": "Password",
   "enter_password": "Enter your Password",
-  "business_type": "Business Type",
-  "business_address": "Business Address",
   "enter_business_address": "Specify address for your business",
   "primary_contact": "Primary Contact",
   "submit": "Submit",
@@ -399,7 +391,6 @@
   "order_quantity": "Order Quantity",
   "order_amount": "Order Amount",
   "unknown_item": "Unknown Item",
-  "item_name": "Item Name",
   "quantity": "Quantity",
   "no_items_to_export": "No items to export",
   "storage_permission_needed": "Storage permission needed to save Excel file",
@@ -415,6 +406,1857 @@
     }
   },
   "total_items": "Total Items",
-  "contact_permission_needed": "Contact permission is needed to fetch contacts"
-
+  "contact_permission_needed": "Contact permission is needed to fetch contacts",
+  "dashboard": "Dashboard",
+  "dashboardOverview": "Business Dashboard",
+  "dashboardOverviewSubtitle": "Track sales, payments and insights at a glance",
+  "quickInsights": "Quick Insights",
+  "please_select_outlet_first": "Please select an outlet first",
+  "retry": "Retry",
+  "no_new_items_to_send_to_kitchen": "No new items to send to kitchen",
+  "close": "Close",
+  "no_printer_connected": "No printer connected",
+  "use_current_filter": "Use current filter",
+  "choose_date_range": "Choose date range",
+  "remove": "Remove",
+  "saved_printer_removed": "Saved printer removed",
+  "remove_saved_printer_title": "Remove Saved Printer?",
+  "disconnect": "Disconnect",
+  "connect": "Connect",
+  "please_enter_order_details": "Please enter the order details",
+  "please_select_table_for_dine_in": "Please select a table for Dine In order",
+  "failed_to_share_pdf_error": "Failed to share PDF: {error}",
+  "@failed_to_share_pdf_error": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pdf_generation_failed_empty": "PDF generation failed - empty document",
+  "failed_to_pick_image": "Failed to pick image: {error}",
+  "@failed_to_pick_image": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failed_to_disconnect": "Failed to disconnect: {error}",
+  "@failed_to_disconnect": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "form_not_initialized": "Form not initialized. Please try again.",
+  "please_enter_user_name": "Please enter user name",
+  "please_enter_email": "Please enter email",
+  "please_enter_valid_email": "Please enter a valid email address",
+  "please_enter_phone_number": "Please enter phone number",
+  "please_enter_valid_10_digit_phone": "Please enter a valid 10-digit phone number",
+  "failed_to_send_messages": "Failed to send messages: {error}",
+  "@failed_to_send_messages": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "please_enter_valid_10_digit_phone_alt": "Please enter a valid 10 digit phone number",
+  "add_payment_method": "Add Payment Method",
+  "could_not_open_kitchen_display": "Could not open browser for Kitchen Display",
+  "stay": "Stay",
+  "leave": "Leave",
+  "apply": "Apply",
+  "failed_to_capture_image": "Failed to capture image: {error}",
+  "@failed_to_capture_image": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "please_enter_table_number": "Please enter table number",
+  "add": "Add",
+  "please_log_in_again": "Please log in again",
+  "could_not_open_whatsapp": "Could not open WhatsApp",
+  "discard_order_title": "Discard order?",
+  "close_app": "Close App",
+  "continue_action": "Continue",
+  "auto_bluetooth_printer": "Auto Bluetooth Printer",
+  "print_test_receipt": "PRINT TEST RECEIPT",
+  "disconnect_printer_title": "Disconnect Printer?",
+  "use_same_as_bill_printer": "Use same as Bill printer",
+  "table_already_has_active_order": "This table already has an active order",
+  "kot_sent_continue_adding_items": "KOT sent — continue adding items",
+  "kot_sent_offline_continue_adding_items": "KOT sent (offline) — continue adding items",
+  "settle_bill": "Settle Bill",
+  "confirm": "Confirm",
+  "clear": "Clear",
+  "enter_remark_for_order": "Enter remark for this order",
+  "item_remark_hint": "e.g. less spicy, no onion",
+  "address_saved_successfully": "Address saved successfully",
+  "failed_to_load_business_details": "Failed to load business details",
+  "update_failed": "Update failed",
+  "failed_to_delete_outlet": "Failed to delete outlet",
+  "business_details_updated_successfully": "Business details updated successfully",
+  "error_fetching_orders": "Error fetching orders",
+  "failed_to_refresh_outlets": "Failed to refresh outlets",
+  "add_raw_material": "Add Raw Material",
+  "add_supplier": "Add Supplier",
+  "adjust_stock_title": "Adjust Stock — {name}",
+  "@adjust_stock_title": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "update_stock": "Update Stock",
+  "confirm_delete": "Confirm Delete",
+  "low_stock_only": "Low Stock Only",
+  "mark_received": "Mark Received",
+  "failed_to_download_pdf": "Failed to download PDF: {error}",
+  "@failed_to_download_pdf": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failed_to_print_invoice": "Failed to print invoice: {error}",
+  "@failed_to_print_invoice": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failed_to_print_pdf_error": "Failed to print PDF: {error}",
+  "@failed_to_print_pdf_error": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failed_to_save_pdf_file": "Failed to save PDF file",
+  "failed_to_save_pdf_error": "Failed to save PDF: {error}",
+  "@failed_to_save_pdf_error": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "invoice_printed_successfully": "Invoice printed successfully",
+  "invoice_saved_to_downloads": "Invoice saved to Downloads folder",
+  "preview": "Preview",
+  "generate_bill": "Generate Bill",
+  "please_enter_item_name_for_image": "Please enter item name first to generate image",
+  "image_upload_failed": "Image upload failed. Please try again.",
+  "please_select_image_first": "Please select an image first",
+  "ai_image_ready": "AI image ready",
+  "image_removed_successfully": "Image removed successfully",
+  "failed_to_bump_ticket": "Failed to bump ticket",
+  "failed_to_update_item": "Failed to update item",
+  "failed_to_update_kitchen_status": "Failed to update kitchen status",
+  "dismiss": "Dismiss",
+  "view_queue": "View Queue",
+  "start_preparing": "Start Preparing",
+  "ready": "Ready",
+  "bump": "Bump",
+  "please_enable_location_permission": "Please enable location permission in settings",
+  "failed_to_get_address_details": "Failed to get address details",
+  "please_select_location_on_map": "Please select a location on the map",
+  "notifications_cleared": "Notifications cleared",
+  "clear_notifications_title": "Clear notifications?",
+  "clear_notifications_message": "This removes all items from your notification history.",
+  "no_notifications_yet": "No notifications yet",
+  "notifications_empty_hint": "Kitchen ready alerts and other updates will appear here.",
+  "mark_all_read": "Mark all read",
+  "primary_contact_saved_successfully": "Primary contact saved successfully",
+  "failed_to_assign_printer": "Failed to assign printer: {error}",
+  "@failed_to_assign_printer": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "bluetooth_not_supported": "Bluetooth not supported on this device",
+  "failed_to_scan_bluetooth": "Failed to scan Bluetooth: {error}",
+  "@failed_to_scan_bluetooth": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failed_to_connect_printer": "Failed to connect to printer",
+  "error_scanning_usb": "Error scanning USB: {error}",
+  "@error_scanning_usb": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "usb_printer_not_connected": "USB printer is not connected",
+  "failed_to_connect_usb_printer": "Failed to connect to USB printer: {error}",
+  "@failed_to_connect_usb_printer": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "bluetooth_printer_not_connected": "Bluetooth printer not connected",
+  "failed_to_print_via_bluetooth": "Failed to print via Bluetooth: {error}",
+  "@failed_to_print_via_bluetooth": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failed_to_print_via_usb": "Failed to print via USB: {error}",
+  "@failed_to_print_via_usb": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "disconnected_from_printer": "Disconnected from printer",
+  "bluetooth_test_receipt_printed": "Bluetooth test receipt printed successfully",
+  "usb_test_receipt_printed": "USB test receipt printed successfully",
+  "please_add_business_address": "Please add business address",
+  "please_add_primary_contact": "Please add primary contact",
+  "please_complete_address_fields": "Please complete all address fields",
+  "please_complete_contact_fields": "Please complete all contact fields",
+  "registration_failed": "Registration failed. Please try again.",
+  "unable_to_update_staff": "Unable to update staff member",
+  "unable_to_delete_staff": "Unable to delete staff",
+  "staff_deleted_successfully": "Staff deleted successfully",
+  "remove_staff": "Remove Staff",
+  "search_staff_hint": "Search by name, role, phone or email",
+  "plans_and_pricing": "Plans & Pricing",
+  "table_already_exists": "This table already exists",
+  "cannot_delete_table_with_active_order": "Cannot delete table with active order",
+  "table_added_successfully": "Table added successfully",
+  "table_deleted_successfully": "Table deleted successfully",
+  "delete_table": "Delete Table",
+  "please_enter_a_phone_number": "Please enter a phone number",
+  "please_add_at_least_one_phone_number": "Please add at least one phone number",
+  "please_enter_a_message": "Please enter a message",
+  "please_enter_restaurant_name": "Please enter restaurant name",
+  "please_enter_discount_value": "Please enter discount value",
+  "please_enter_festival_name": "Please enter festival name",
+  "outlet_or_user_info_missing": "Outlet or user information is missing",
+  "confirm_bulk_message": "Confirm Bulk Message",
+  "sending_messages": "Sending Messages",
+  "send": "Send",
+  "failed_to_fetch_contacts": "Failed to fetch contacts: {error}",
+  "@failed_to_fetch_contacts": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "please_enter_customer_name": "Please enter customer name",
+  "permission_required": "Permission Required",
+  "customer_details": "Customer Details",
+  "search_customer_hint": "Search by customer name or phone",
+  "search_contacts_hint": "Search contacts...",
+  "failed_to_print_kot": "Failed to print KOT: {error}",
+  "@failed_to_print_kot": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failed_to_generate_kot": "Failed to generate KOT: {error}",
+  "@failed_to_generate_kot": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failed_to_save_kot": "Failed to save KOT: {error}",
+  "@failed_to_save_kot": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failed_to_share_kot": "Failed to share KOT: {error}",
+  "@failed_to_share_kot": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "kot_printed_successfully": "KOT printed successfully",
+  "kot_saved_to": "KOT saved to: {path}",
+  "@kot_saved_to": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "connect_printer": "Connect Printer",
+  "kot_options": "KOT Options",
+  "scan_for_printers": "Scan for Printers",
+  "print_thermal": "Print (Thermal)",
+  "save_pdf": "Save PDF",
+  "share_pdf": "Share PDF",
+  "kot_receipt": "KOT Receipt",
+  "generate_pdf": "Generate PDF",
+  "generate_order": "Generate Order",
+  "gallery": "Gallery",
+  "camera": "Camera",
+  "please_add_at_least_one_payment_method": "Please add at least one payment method",
+  "camera_permission_denied_barcode": "Camera permission denied. Cannot scan barcode.",
+  "camera_permission_needed": "Camera permission needed",
+  "open_settings": "Open settings",
+  "generate_image_first": "Generate an image first.",
+  "set_as_bill_printer": "Set as Bill Printer",
+  "seating_capacity_min_one": "Seating capacity must be at least 1",
+  "filters": "Filters",
+  "category": "Category",
+  "failed_to_scan_menu": "Failed to scan menu: {error}",
+  "@failed_to_scan_menu": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "photo_captured_successfully": "Photo captured successfully.",
+  "order_section_title": "Order",
+  "customer_section_title": "Customer",
+  "charges_section_title": "Charges",
+  "payment_section_title": "Payment",
+  "remark": "Remark",
+  "tables": "Tables",
+  "qr_menu": "QR Menu",
+  "add_table": "Add Table",
+  "reset_all_tables": "Reset All Tables",
+  "change_url": "Change URL",
+  "print_all_table_qr": "Print All Table QR",
+  "reset_all": "Reset All",
+  "ok": "OK",
+  "view_all": "View all",
+  "view": "View",
+  "refresh_usb_devices": "Refresh USB Devices",
+  "check_again": "Check Again",
+  "set_bill_printer_first": "Set a bill printer first",
+  "bill_printer_not_configured": "Bill printer not configured",
+  "bill_printer_not_found": "Bill printer not found. Turn it on and retry.",
+  "kot_printer_same_as_bill": "KOT printer set same as bill printer",
+  "only_available_tables_can_be_deleted": "Only available tables can be deleted",
+  "all_tables_reset_successfully": "All tables reset successfully",
+  "user_or_outlet_info_missing": "User or outlet information is missing.",
+  "payment_subscription_activated": "Payment successful. Subscription activated.",
+  "stock_in": "Stock In (+)",
+  "stock_out": "Stock Out (-)",
+  "wastage": "Wastage",
+  "return_to_supplier": "Return to Supplier",
+  "kilogram_kg": "Kilogram (KG)",
+  "gram_g": "Gram (g)",
+  "liter_l": "Liter (L)",
+  "milliliter_ml": "Milliliter (ml)",
+  "piece": "Piece",
+  "packet": "Packet",
+  "box": "Box",
+  "stock": "Stock",
+  "min": "Min",
+  "unit": "Unit",
+  "value": "Value",
+  "actions": "Actions",
+  "delete_confirm_message": "Delete {name}?",
+  "@delete_confirm_message": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sending_to_customers": "Sending to {count} customers...",
+  "@sending_to_customers": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "please_wait_sending": "Please wait, this may take a minute.",
+  "no_results_available": "No results available",
+  "send_bulk_message": "Send Bulk Message",
+  "choose_an_action": "Choose an action:",
+  "customer_support": "Customer Support :",
+  "failed_to_add_table": "Failed to add table",
+  "failed_to_delete_table": "Failed to delete table",
+  "qr_menu_url_updated": "QR menu URL updated. Re-print table QR codes.",
+  "failed_to_load_orders_error": "Failed to load orders",
+  "create_order": "Create Order",
+  "item_list": "Item List",
+  "add_item": "Add Item",
+  "inventory": "Inventory",
+  "orders": "Orders",
+  "kot_history": "KOT History",
+  "kitchen_display": "Kitchen Display",
+  "open_kitchen_display_in_browser": "Open Kitchen Display in browser",
+  "profile": "Profile",
+  "subscription_label": "Subscription",
+  "free_trial": "Free Trial",
+  "expired": "Expired",
+  "remaining_label": "Remaining: {time}",
+  "@remaining_label": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "valid_till_label": "Valid till: {date}",
+  "@valid_till_label": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "subscription_days_left": "{days} days {label} left",
+  "@subscription_days_left": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      },
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "subscription_days_left_compact": "{days}d\n{label}",
+  "@subscription_days_left_compact": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      },
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "discard_order_message": "You have unsaved order changes. Are you sure you want to leave this screen?",
+  "no_permission_section": "You do not have permission to access this section.",
+  "settings_section_general": "General",
+  "billing_list_view": "Billing list view",
+  "billing_list_view_subtitle": "Show orders as list instead of image grid",
+  "show_qr_on_bill": "Show QR on bill",
+  "show_qr_on_bill_subtitle": "Show UPI scan-to-pay QR on invoice and print",
+  "add_details_on_create_order": "Add details on create order",
+  "add_details_on_create_order_subtitle": "Show Add Details for customer, table, discount, and payment",
+  "kitchen_display_in_browser": "Kitchen Display in browser",
+  "kitchen_display_browser_subtitle": "Open the web kitchen screen on a second monitor or TV",
+  "kitchen_display_browser_subtitle_device": "Open the web kitchen screen on a second device",
+  "show_onboarding_again": "Show onboarding again",
+  "show_onboarding_again_subtitle": "Replay the app intro and tips",
+  "download_path": "Download path",
+  "default_downloads_folder": "Default Downloads folder",
+  "settings_section_notifications": "Notifications",
+  "settings_notifications_subtitle": "Order and reminder notifications",
+  "notification_history": "Notification history",
+  "notification_history_subtitle": "Kitchen ready and other alerts",
+  "settings_section_appearance": "Appearance",
+  "theme_color": "Theme color",
+  "settings_section_language_region": "Language & region",
+  "custom_hex": "Custom hex",
+  "my_colors": "My colors",
+  "presets": "Presets",
+  "hex_format_error": "Use #RRGGBB (e.g. #2196F3) or #AARRGGBB",
+  "download_path_updated": "Download path updated",
+  "unable_to_update_download_path": "Unable to update download path",
+  "select_folder": "Select folder",
+  "settings_section_home_screen": "Home screen",
+  "tutorial": "Tutorial",
+  "tutorial_subtitle": "Video guide section on the home screen",
+  "top_selling_items": "Top selling items",
+  "top_selling_items_subtitle": "Best-selling menu items on the home screen",
+  "recommended_items": "Recommended items",
+  "features_for_you_subtitle": "Recommended setup and tools on the home screen",
+  "what_our_users_say": "What our users say",
+  "what_our_users_say_subtitle": "Customer testimonials carousel on the home screen",
+  "settings_section_haptic": "Haptic feedback",
+  "haptic_feedback": "Haptic feedback",
+  "haptic_feedback_subtitle": "Vibration on tap",
+  "home_outlet_showcase_title": "Outlet",
+  "home_outlet_showcase_desc": "Tap here to switch outlet. Your tables, orders, sales and reports will update for the selected outlet.",
+  "home_ai_voice_add_items": "AI Voice add items",
+  "home_profile_business_title": "Profile / Business",
+  "home_profile_business_desc": "Open business settings, profile and outlet details from here.",
+  "home_profile_business_desc_short": "Open business settings and outlet details from here.",
+  "home_printer_status_title": "Printer Status",
+  "home_printer_status_desc": "When your printer is connected, you can print invoices and KOTs without interruptions.",
+  "home_printer_connected_label": "Printer connected",
+  "home_online": "Online",
+  "home_usb_printer": "USB Printer",
+  "home_printer_fallback": "Printer",
+  "home_printer_connected_name": "Printer Connected",
+  "home_quick_actions_showcase_desc": "Shortcuts to frequently used features like Add Items, KOT History and more.",
+  "home_frequently_used_shortcuts": "Frequently used shortcuts",
+  "home_kitchen_web": "Kitchen (Web)",
+  "home_showcase_closed_orders": "View completed/paid orders and open details anytime.",
+  "home_showcase_hold_orders": "Orders saved on hold. Resume billing anytime.",
+  "home_showcase_add_items": "Add menu items to your inventory (manual / voice).",
+  "home_showcase_kot_history": "View KOT history, open details and reprint KOTs.",
+  "home_tap_to_access_feature": "Tap to access this feature.",
+  "home_occupied_tables": "Occupied Tables",
+  "home_live_dine_in_tables": "Live dine-in tables in progress",
+  "home_table": "Table",
+  "home_table_number": "Table {number}",
+  "@home_table_number": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "home_occupied": "Occupied",
+  "home_bill_number": "Bill #{number}",
+  "@home_bill_number": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "home_tap_continue_order": "Tap to continue order",
+  "home_occupied_duration": "Occupied {duration}",
+  "@home_occupied_duration": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "home_today_vs_yesterday": "Today vs yesterday",
+  "home_business_overview_showcase_desc": "View detailed business insights including sales, orders, and performance metrics for today and yesterday.",
+  "home_performance_summary": "Performance summary",
+  "home_yesterday_value": "Yesterday: {value}",
+  "@home_yesterday_value": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "home_category_wise_today": "Category-wise (Today)",
+  "home_top_count": "Top {count}",
+  "@home_top_count": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "home_weekly_sales_trend": "Weekly Sales Trend",
+  "home_last_7_days_sales": "Last 7 days sales performance",
+  "home_monthly_sales_trend": "Monthly Sales Trend",
+  "home_last_12_months_sales": "Last 12 months sales performance",
+  "home_quarterly_sales_trend": "Quarterly Sales Trend",
+  "home_last_4_quarters_sales": "Last 4 quarters sales performance",
+  "home_yearly_sales_trend": "Yearly Sales Trend",
+  "home_last_5_years_sales": "Last 5 years sales performance",
+  "home_sales_trend": "Sales Trend",
+  "home_sales_trend_showcase_desc": "Track your sales trend by week/month/quarter/year and monitor totals and averages.",
+  "home_no_item_sales_yet": "No item sales yet",
+  "home_features_showcase_desc": "Quick setup tools and recommended features to help you run your business faster.",
+  "home_recommended_setup_tools": "Recommended setup & tools",
+  "badge_new": "New",
+  "home_testimonials": "Testimonials",
+  "home_testimonials_showcase_desc": "See feedback from restaurants using Billkaro. Swipe to read more.",
+  "home_payment_received": "Payment Received",
+  "home_total_payments_collected": "Total payments collected",
+  "refresh": "Refresh",
+  "home_payment_methods_today": "Payment Methods (Today)",
+  "home_no_payments_today": "No payments received today",
+  "home_switch_outlet": "Switch Outlet",
+  "home_no_outlets_available": "No outlets available",
+  "home_manage_outlets": "Manage outlets",
+  "home_unnamed_outlet": "Unnamed Outlet",
+  "home_logged_out": "Logged Out",
+  "home_logged_out_message": "You have been successfully logged out",
+  "home_billing": "Billing",
+  "home_customize_home": "Customize home",
+  "home_customize_home_subtitle": "Show or hide sections on your home screen",
+  "home_section_on_home": "Section on home",
+  "home_open_screen": "Open screen",
+  "home_open_dashboard_tab": "Open Dashboard tab",
+  "home_customize_home_title": "Customize home",
+  "home_search_hint": "Search e.g. orders, payment, staff…",
+  "home_business_details": "Business Details",
+  "home_new_order": "New Order",
+  "home_menu": "Menu",
+  "home_app_settings": "App Settings",
+  "home_order_reports": "Order Reports",
+  "home_item_reports": "Item Reports",
+  "home_business_overview_full": "{overview} (full)",
+  "@home_business_overview_full": {
+    "placeholders": {
+      "overview": {
+        "type": "String"
+      }
+    }
+  },
+  "home_video_guide_subtitle": "Video guide on home",
+  "home_best_selling_subtitle": "Best-selling menu items",
+  "home_customer_testimonials_subtitle": "Customer testimonials",
+  "home_customize_sections_title": "Customize home sections",
+  "home_customize_sections_subtitle": "Choose which sections appear on your home screen",
+  "home_show_section": "Show section",
+  "testimonial_quote_1": "This app is fast, easy to use, and perfect for hassle-free restaurant management.",
+  "testimonial_author_1": "Ankit Kumar",
+  "testimonial_quote_2": "Best billing solution I've used. Makes running my restaurant so much easier!",
+  "testimonial_author_2": "Priya Sharma",
+  "testimonial_quote_3": "Simple, efficient, and reliable. Exactly what every restaurant owner needs.",
+  "testimonial_author_3": "Rahul Verma",
+  "search_outlets_hint": "Search outlets…",
+  "qr_menu_description": "Generate QR codes for tables so customers can scan, order, and pay from their phone.",
+  "qr_menu_current_url_base": "Current URL base:\n{url}",
+  "@qr_menu_current_url_base": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "tables_count_limit": "Seats used: {current} / {limit}",
+  "@tables_count_limit": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "seating_capacity_not_set": "Seating capacity is not set for this outlet.",
+  "table_number_hint": "e.g. 13 or Table 13",
+  "table_number_hint_short": "e.g. 1 or Table 1",
+  "delete_table_confirm_message": "Are you sure you want to delete {name}? This action cannot be undone.",
+  "@delete_table_confirm_message": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "delete_table_confirm_short": "Delete {name}? This cannot be undone.",
+  "@delete_table_confirm_short": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "reset_all_tables_message": "This will remove all tables from this outlet. Do you want to continue?",
+  "search_table": "Search table",
+  "filter_all": "All",
+  "table_status_available": "Available",
+  "table_status_empty": "Empty",
+  "no_tables_match_filter": "No tables match your search/filter",
+  "no_tables_available": "No tables available",
+  "delete_table_tooltip": "Delete table",
+  "print_qr_menu": "Print QR menu",
+  "tap_to_create_new_order": "Tap to create new order",
+  "unable_to_load_tables_from_server": "Unable to load tables from server",
+  "no_tables_configured": "No tables configured for this outlet",
+  "unable_to_load_local_orders": "Unable to load local orders",
+  "set_outlet_seating_capacity_first": "Set outlet seating capacity first before adding tables",
+  "set_outlet_seating_capacity_first_short": "Set outlet seating capacity first",
+  "cannot_add_more_tables": "Outlet seating capacity is {limit} seats",
+  "@cannot_add_more_tables": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "cannot_add_more_tables_short": "Outlet seating capacity is {limit} seats",
+  "@cannot_add_more_tables_short": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "failed_to_reset_all_tables": "Failed to reset all tables",
+  "could_not_generate_qr_for_table": "Could not generate QR for this table",
+  "print_failed_with_error": "Print failed: {error}",
+  "@print_failed_with_error": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failed_to_generate_print_qr": "Failed to generate/print QR codes: {error}",
+  "@failed_to_generate_print_qr": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "table_qr_printed_successfully": "Table QR sent to printer",
+  "all_table_qrs_printed_successfully": "All table QR codes sent to printer",
+  "table_management": "Table Management",
+  "tables_not_available_no_seating": "Tables are not available for outlets with no seating.",
+  "add_new_table": "Add New Table",
+  "table_seats_count": "{count} Seats",
+  "@table_seats_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "edit": "Edit",
+  "no_tables_yet": "No tables yet",
+  "add_first_table_hint": "Add your first table to get started",
+  "edit_table": "Edit Table",
+  "edit_table_subtitle": "Update table number and seating capacity",
+  "tables_count_of_limit": "{current} / {limit} seats",
+  "@tables_count_of_limit": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "seats_label": "Seats",
+  "seats_hint": "e.g. 4",
+  "table_seats_exceed_outlet": "A table cannot have more than {limit} seats for this outlet",
+  "@table_seats_exceed_outlet": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "table_seats_exceed_remaining": "Only {remaining} seats remaining (outlet limit {limit} seats)",
+  "@table_seats_exceed_remaining": {
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "outlet_seating_full": "Outlet seating is full ({limit} seats)",
+  "@outlet_seating_full": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "unable_to_load_tables": "Unable to load tables",
+  "another_table_already_uses_number": "Another table already uses this number",
+  "only_empty_tables_can_be_deleted": "Only empty tables can be deleted",
+  "table_updated_successfully": "Table updated successfully",
+  "failed_to_update_table": "Failed to update table",
+  "table_status_duration": "{status} {duration}",
+  "@table_status_duration": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "loading_menu": "Loading menu...",
+  "note_hold_category_to_edit": "Note: Hold category chip to edit.",
+  "select_items": "Select items",
+  "items_selected_count": "{count} selected",
+  "@items_selected_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "select_items_to_delete": "Select items to delete",
+  "clear_all": "Clear all",
+  "select_all": "Select all",
+  "delete_selected": "Delete selected",
+  "delete_count": "Delete ({count})",
+  "@delete_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "import_from_file": "Import from file",
+  "search_dishes": "Search dishes",
+  "categories_label": "Categories",
+  "select_category_to_edit": "Select a category to edit",
+  "edit_selected_category": "Edit selected category",
+  "tip_right_click_category_edit": "Tip: Right-click / long-press a category to edit.",
+  "no_items_found": "No items found",
+  "try_different_search_term": "Try a different search term",
+  "add_items_to_this_category": "Add items to this category",
+  "no_more_items": "No more items",
+  "scroll_for_more": "Scroll for more",
+  "long_press_edit_category": "Long press to edit category",
+  "more_options": "More options",
+  "close_search": "Close search",
+  "search_tooltip": "Search",
+  "add_new_item": "Add New Item",
+  "delete_item_title": "Delete item",
+  "delete_item_named_confirm": "Delete \"{name}\"? This cannot be undone.",
+  "@delete_item_named_confirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "delete_items_title": "Delete items",
+  "delete_items_confirm": "Delete {count} selected item(s)? This cannot be undone.",
+  "@delete_items_confirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "select_at_least_one_item_to_delete": "Select at least one item to delete",
+  "items_deleted_successfully": "{count} item(s) deleted successfully",
+  "@items_deleted_successfully": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "failed_to_delete_selected_items": "Failed to delete selected items",
+  "failed_to_delete_items_error": "Failed to delete items: {error}",
+  "@failed_to_delete_items_error": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failed_to_read_file_error": "Failed to read file: {error}",
+  "@failed_to_read_file_error": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "no_valid_import_rows": "No valid rows found. Use headers like: Item Name, Price / Price (₹), Category, Tax % or GST. Avoid Item Code / Description / Unit only as names. Prices must be numbers greater than 0.",
+  "items_imported_successfully": "{count} item(s) imported successfully",
+  "@items_imported_successfully": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "failed_to_import_items": "Failed to import items",
+  "failed_to_import_file_error": "Failed to import file: {error}",
+  "@failed_to_import_file_error": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "this_item": "this item",
+  "confirm_delete_item_message": "Are you sure you want to delete this item?",
+  "category_chip_label": "Category",
+  "more_tooltip": "More",
+  "item_deleted_successfully": "Item deleted successfully",
+  "failed_to_delete_item": "Failed to delete item",
+  "inventory_management": "Inventory Management",
+  "inventory_subtitle": "Stock · Suppliers · Recipes",
+  "tab_overview": "Overview",
+  "tab_raw_materials": "Raw Materials",
+  "tab_stock_log": "Stock Log",
+  "tab_suppliers": "Suppliers",
+  "tab_purchase_orders": "Purchase Orders",
+  "tab_recipes": "Recipes",
+  "stat_raw_materials": "Raw Materials",
+  "stat_low_stock_alerts": "Low Stock Alerts",
+  "stat_stock_value": "Stock Value",
+  "stat_pending_pos": "Pending POs",
+  "section_low_stock_alerts": "Low Stock Alerts",
+  "all_materials_above_min": "All materials are above minimum stock levels.",
+  "section_quick_actions": "Quick Actions",
+  "view_stock_log": "View Stock Log",
+  "todays_consumption": "Today's Consumption",
+  "todays_consumption_units": "{count} units",
+  "@todays_consumption_units": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "active_suppliers": "Active Suppliers",
+  "tracked_menu_items": "Tracked Menu Items",
+  "search_raw_materials": "Search raw materials...",
+  "add_material": "Add Material",
+  "material_column": "Material",
+  "status_low": "LOW",
+  "status_ok": "OK",
+  "no_raw_materials_yet": "No raw materials yet. Add your first ingredient.",
+  "no_stock_movements": "No stock movements recorded yet.",
+  "search_suppliers": "Search suppliers...",
+  "no_suppliers_yet": "No suppliers added yet.",
+  "status_active": "ACTIVE",
+  "status_inactive": "INACTIVE",
+  "gst_number_display": "GST: {number}",
+  "@gst_number_display": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "no_purchase_orders_yet": "No purchase orders yet.",
+  "purchase_order_supplier_date": "Supplier: {name} · {date}",
+  "@purchase_order_supplier_date": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "purchase_order_line_item": "• {name}: {quantity} {unit} @ ₹{price}",
+  "@purchase_order_line_item": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "quantity": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "no_recipes_yet": "No recipes mapped yet.\nLink menu items to raw materials for auto stock deduction on sales.",
+  "this_recipe": "this recipe",
+  "search_default_hint": "Search...",
+  "material_name_required": "Material Name *",
+  "category_example_hint": "Category (e.g. Vegetables, Dairy)",
+  "opening_stock": "Opening Stock",
+  "min_stock_alert": "Min Stock Alert",
+  "purchase_price_per_unit": "Purchase Price (per unit)",
+  "supplier_name_required": "Supplier Name *",
+  "phone_label": "Phone",
+  "address_label": "Address",
+  "gst_number_label": "GST Number",
+  "current_stock_label": "Current: {stock} {unit}",
+  "@current_stock_label": {
+    "placeholders": {
+      "stock": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "transaction_type": "Transaction Type",
+  "quantity_with_unit_label": "Quantity ({unit})",
+  "@quantity_with_unit_label": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "notes_label": "Notes",
+  "material_stock_subtitle": "{current} {unit} · Min: {min} · ₹{price}/unit",
+  "@material_stock_subtitle": {
+    "placeholders": {
+      "current": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      },
+      "min": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "adjust_stock_tooltip": "Adjust Stock",
+  "import_products_excel": "Import Products - Excel (.xlsx)",
+  "import_products_description": "Select an Excel (.xlsx) file following the BillKaro template format. Required columns: Name and Price. Missing categories will be created automatically.",
+  "select_file": "Select File",
+  "import_preview": "Import preview",
+  "import_count_items": "Import {count} item(s)",
+  "@import_count_items": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "availability_column": "Availability",
+  "stock_units_suffix": "units",
+  "stock_change_range": "{before} → {after}",
+  "@stock_change_range": {
+    "placeholders": {
+      "before": {
+        "type": "String"
+      },
+      "after": {
+        "type": "String"
+      }
+    }
+  },
+  "gst_label": "GST",
+  "recipe_uses_material": "Uses {quantity} {unit} of {name}",
+  "@recipe_uses_material": {
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "template_saved_opened": "Template saved and opened",
+  "template_saved_to": "Template saved to: {path}",
+  "@template_saved_to": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "hold_orders_title": "Hold Orders",
+  "all_time": "All Time",
+  "last_60_min": "Last 60 Min",
+  "no_more_orders": "No more orders",
+  "no_closed_orders": "No Closed Orders",
+  "closed_orders_empty_hint": "Closed orders will appear here",
+  "no_hold_orders": "No Hold Orders",
+  "hold_orders_empty_hint": "Orders on hold will appear here",
+  "on_hold_badge": "ON HOLD",
+  "order_items_count": "{count, plural, =1{1 item} other{{count} items}}",
+  "@order_items_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "edit_order": "Edit Order",
+  "update_order": "Update Order",
+  "modify_order_details_subtitle": "Modify order details",
+  "delete_order_permanently_subtitle": "Remove this order permanently",
+  "delete_order_confirm_message": "Are you sure you want to delete this order? This action cannot be undone.",
+  "customers_count": "{count} Customers",
+  "@customers_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "no_matching_customers": "No matching customers",
+  "unable_to_load_customers": "Unable to load customers. Please try again.",
+  "unable_to_load_customers_connection": "Unable to load customers. Please check your connection.",
+  "fetch_customer_from_contacts": "Fetch customer details directly from your contacts.",
+  "loyalty_discount_label": "Loyalty Discount",
+  "discount_applied_on_orders": "Discount will be applied on orders of this customer.",
+  "save_customer": "Save Customer",
+  "select_contact": "Select Contact",
+  "no_contacts_found": "No contacts found",
+  "no_contacts_match_search": "No contacts match your search",
+  "contact_permission_permanently_denied": "Contact permission is permanently denied. Please enable it from settings.",
+  "customer_added": "Customer added",
+  "name_label": "Name",
+  "clear_search": "Clear search",
+  "edit_regular_customer": "Edit Regular Customer",
+  "staff_list_title": "Staff List",
+  "manage_outlet_staff_access": "Manage your outlet staff access",
+  "check_staff_activity": "Check Staff Activity",
+  "staff_activity_filter_hint": "Filter activity by date range and user",
+  "role_label": "Role",
+  "no_matching_staff_found": "No matching staff found",
+  "no_staff_found": "No staff found",
+  "try_different_staff_search": "Try a different name, role, phone, or email.",
+  "invite_staff_empty_hint": "Invite your first team member to start managing staff permissions.",
+  "unable_to_delete_staff_entry": "Unable to delete this staff entry",
+  "remove_staff_confirm": "Do you want to remove {name}?",
+  "@remove_staff_confirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "this_staff": "this staff",
+  "status_pending": "Pending",
+  "status_active_label": "Active",
+  "status_inactive_label": "Inactive",
+  "edit_staff": "Edit Staff",
+  "update_staff": "Update Staff",
+  "invite_sent_successfully": "Invite sent successfully",
+  "staff_member_updated_successfully": "Staff member updated successfully",
+  "role_overview": "Role Overview",
+  "allow_biller_create_menu_items": "Allow biller to create menu items",
+  "allow_biller_edit_menu_items": "Allow biller to edit existing menu items",
+  "biller_overview_create_orders": "Create and print orders and KOT.",
+  "biller_overview_view_items": "View all items and use them for billing.",
+  "biller_overview_cannot_delete": "Cannot delete any orders (self or others).",
+  "biller_overview_cannot_access_others": "Cannot access orders created by other members.",
+  "select_user_role": "Select User Role",
+  "invite_team_member_subtitle": "Invite a team member and assign a role.",
+  "update_team_member_subtitle": "Update team member details and role.",
+  "plans_pricing_subtitle": "Choose a plan — printer bundles include free home delivery",
+  "secure_payment": "Secure Payment",
+  "free_printer_delivery": "Free Printer Delivery",
+  "support_24_7": "24/7 Support",
+  "no_plans_available": "No plans available",
+  "please_check_back_later": "Please check back later",
+  "printer_feature_free_home_delivery": "Free Home Delivery",
+  "printer_feature_bluetooth_usb": "Bluetooth + USB Support",
+  "printer_feature_one_year_warranty": "1 Year Warranty",
+  "printer_not_included_in_plan": "Printer not included in this plan.",
+  "includes_thermal_printer": "Includes Thermal Printer",
+  "whats_included": "What's Included",
+  "printer_features": "Printer Features",
+  "current_plan": "Current plan",
+  "already_subscribed": "Already Subscribed",
+  "outlet_already_subscribed": "This outlet already has an active subscription.",
+  "buy_now": "Buy Now",
+  "buy_now_with_printer": "Buy Now with Printer",
+  "discount_percent_off": "{percent}% OFF",
+  "@discount_percent_off": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "invalid_duration": "Invalid duration",
+  "duration_months": "{count, plural, =1{1 month} other{{count} months}}",
+  "@duration_months": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "duration_years": "{count, plural, =1{1 year} other{{count} years}}",
+  "@duration_years": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "duration_years_months": "{years, plural, =1{1 year} other{{years} years}} {months, plural, =1{1 month} other{{months} months}}",
+  "@duration_years_months": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      },
+      "months": {
+        "type": "int"
+      }
+    }
+  },
+  "payment_activation_failed": "Payment successful but subscription activation failed. Please contact support.",
+  "failed_create_payment_order": "Failed to create payment order. Please try again.",
+  "user_not_logged_in_retry": "User not logged in. Please login and try again.",
+  "no_outlet_selected_retry": "No outlet selected. Please select an outlet and try again.",
+  "invalid_order_response": "Invalid order response. Please try again.",
+  "subscription_purchase": "Subscription Purchase",
+  "error_occurred_try_again": "An error occurred. Please try again.",
+  "select_message_template": "Select Message Template",
+  "choose_whatsapp_template_hint": "Choose a WhatsApp message template. You can edit it before sending.",
+  "discount_offer": "Discount Offer",
+  "template_discount_preview_prefix": "Special offer for our loyal customers of ",
+  "restaurant_name_placeholder": "Restaurant Name",
+  "template_discount_get": "! Get ",
+  "discount_value_placeholder": "Discount value",
+  "template_discount_suffix": " off on your next visit. Show this message at the restaurant for discount.",
+  "new_menu": "New Menu",
+  "template_new_menu_suffix": " has added new items to their menu. Come and try these items today!",
+  "festival_wishes": "Festival Wishes",
+  "template_festival_wishes_you": " wishes you a happy ",
+  "festival_name_placeholder": "Festival Name",
+  "template_festival_suffix": ". Visit the restaurant for new festival menu and discounts!",
+  "use_template": "Use Template",
+  "discount_offer_from_restaurant": "Discount Offer from {name}",
+  "@discount_offer_from_restaurant": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "enjoy_new_menu_at": "Enjoy New Menu at {name}",
+  "@enjoy_new_menu_at": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "happy_festival_from": "Happy {festival} from {name}",
+  "@happy_festival_from": {
+    "placeholders": {
+      "festival": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "no_customers_with_phone": "No customers with phone numbers found. Add regular customers first.",
+  "send_whatsapp_confirm": "Send WhatsApp messages to {count} customers via the server?",
+  "@send_whatsapp_confirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "request_timed_out_bulk": "Request timed out or failed. If you have many customers, wait and check campaign history in the database before resending.",
+  "successfully_sent_messages": "Successfully sent {count} messages",
+  "@successfully_sent_messages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sent_failed_summary": "Sent: {success}, Failed: {failed}",
+  "@sent_failed_summary": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "sending_results": "Sending Results",
+  "success_label": "Success",
+  "failed_label": "Failed",
+  "sent_successfully": "Sent successfully",
+  "message_failed_error": "Failed: {error}",
+  "@message_failed_error": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "unknown": "Unknown",
+  "unknown_error": "Unknown error",
+  "enter_custom_fields": "Enter Custom Fields",
+  "customers_will_receive": "{count} customers will receive this message",
+  "@customers_will_receive": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "restaurant_name_label": "Restaurant Name",
+  "discount_value_percent_label": "Discount value (%)",
+  "festival_name_label": "Festival Name",
+  "whatsapp_msg_discount": "Hello! 🎉\n\nGet {discount}% OFF on your next order at {restaurant}!\n\nThis is a limited time offer. Use code: SAVE{discount}\n\nOrder now and enjoy delicious food with amazing savings!\n\nThank you for being a valued customer! ❤️",
+  "@whatsapp_msg_discount": {
+    "placeholders": {
+      "discount": {
+        "type": "String"
+      },
+      "restaurant": {
+        "type": "String"
+      }
+    }
+  },
+  "whatsapp_msg_menu": "Hello! 🍽️\n\nExciting news from {restaurant}!\n\nWe've just launched our new menu with amazing dishes. Come try our latest specialties!\n\nVisit us today and enjoy great food! 😊\n\nBest regards,\n{restaurant} Team",
+  "@whatsapp_msg_menu": {
+    "placeholders": {
+      "restaurant": {
+        "type": "String"
+      }
+    }
+  },
+  "whatsapp_msg_festival": "Hello! 🎊\n\n{restaurant} wishes you a very Happy {festival}!\n\nVisit us for our special festival menu and exclusive discounts.\n\nCelebrate with great food! 🍽️\n\nWarm wishes,\n{restaurant} Team",
+  "@whatsapp_msg_festival": {
+    "placeholders": {
+      "restaurant": {
+        "type": "String"
+      },
+      "festival": {
+        "type": "String"
+      }
+    }
+  },
+  "whatsapp_msg_default": "Hello from {restaurant}! 👋\n\nWe have an important update for you. Thank you for being a loyal customer!\n\nVisit us soon! ❤️",
+  "@whatsapp_msg_default": {
+    "placeholders": {
+      "restaurant": {
+        "type": "String"
+      }
+    }
+  },
+  "printer_settings": "Printer Settings",
+  "ethernet": "Ethernet",
+  "available_printers": "Available printers",
+  "printer_help_assign_bill_kot": "Assign Bill for counter receipts and KOT for kitchen tickets. Use USB, Bluetooth, or Ethernet (LAN) depending on your setup.",
+  "print_routing": "Print routing",
+  "print_routing_subtitle": "Assign bill and KOT printers separately.",
+  "bill_printer": "Bill Printer",
+  "kot_printer": "KOT Printer",
+  "use_bill_printer_for_kot": "Use bill printer for KOT",
+  "multiple_printer_settings": "Multiple Printer Settings",
+  "tap_bill_or_kot_below": "Tap Bill or KOT on a device below.",
+  "not_assigned_pick_below": "Not assigned — pick Bill or KOT below",
+  "not_assigned": "Not assigned",
+  "test_print": "Test print",
+  "remove_assignment": "Remove assignment",
+  "bill_label": "Bill",
+  "kot_label": "KOT",
+  "status_online": "ONLINE",
+  "status_offline": "OFFLINE",
+  "bluetooth_ble": "Bluetooth (BLE)",
+  "bluetooth_paired": "Bluetooth (paired)",
+  "ethernet_lan": "Ethernet / LAN",
+  "no_bluetooth_printer_connected": "No Bluetooth printer connected",
+  "no_usb_printer_connected": "No USB printer connected",
+  "no_ethernet_printer_connected": "No Ethernet printer connected",
+  "no_paired_printer_connected": "No paired printer connected",
+  "ble_printer": "BLE Printer",
+  "usb_printer": "USB Printer",
+  "printer_fallback_name": "Printer",
+  "search_bluetooth_devices_hint": "Search Bluetooth devices…",
+  "search_usb_printers_hint": "Search USB printers…",
+  "search_printers_hint": "Search printers…",
+  "scan": "Scan",
+  "scanning": "Scanning",
+  "scanning_nearby_printers": "Scanning for nearby printers…",
+  "no_bluetooth_printers_found": "No Bluetooth printers found.\nTurn on the printer and tap Scan.",
+  "no_devices_match_search": "No devices match your search.",
+  "paired_bluetooth_devices": "Paired Bluetooth Devices",
+  "no_paired_devices_found": "No paired devices found",
+  "scan_devices": "Scan Devices",
+  "looking_for_usb_printers": "Looking for USB printers…",
+  "no_usb_printers_found": "No USB printers found.\nConnect the cable and tap Scan.",
+  "no_usb_printers_match_search": "No USB printers match your search.",
+  "usb_printers": "USB printers",
+  "scan_usb_printers": "Scan USB printers",
+  "scanning_ellipsis": "Scanning…",
+  "printer_ip_network_hint": "Printer IP on your network (port 9100).",
+  "ip_address": "IP address",
+  "port_label": "Port",
+  "enter_ip_above": "Enter IP above",
+  "connected_to_label": "Connected: {label}",
+  "@connected_to_label": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "not_connected": "Not connected",
+  "connected_status": "Connected",
+  "paper_size": "Paper size",
+  "paper_size_subtitle": "Select thermal roll width for bills and KOT receipts.",
+  "paper_size_2inch": "2\" (58mm)",
+  "paper_size_3inch": "3\" (80mm)",
+  "paper_size_4inch": "4\" (104mm)",
+  "paper_size_saved": "Paper size set to {size}",
+  "@paper_size_saved": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "printer_setup": "Printer setup",
+  "same_as_bill": "Same as Bill",
+  "auto_connect_on_launch": "Auto-connect on launch",
+  "remove_saved_printer_message": "This clears the saved printer and turns off auto-connect.",
+  "bill_role_summary": "Bill: {name}",
+  "@bill_role_summary": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "bill_role_not_set": "Bill: not set",
+  "kot_role_summary": "KOT: {name}",
+  "@kot_role_summary": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "kot_role_not_set": "KOT: not set",
+  "assign_from_device_below": "Assign from a device below",
+  "bluetooth_on": "Bluetooth on",
+  "bluetooth_off": "Bluetooth off",
+  "turn_on_bluetooth_to_scan": "Turn on Bluetooth to scan for printers.",
+  "scan_devices_action": "Scan devices",
+  "paired": "Paired",
+  "nearby": "Nearby",
+  "unknown_device": "Unknown device",
+  "assign_label": "Assign:",
+  "connect_via_usb_otg": "Connect via USB OTG, then scan.",
+  "auto_connect_enabled": "Auto-connect enabled",
+  "auto_connect_disabled": "Auto-connect disabled",
+  "enter_valid_ip_example": "Enter a valid IP address (e.g. 192.168.1.100)",
+  "enter_valid_port_default": "Enter a valid port (default 9100)",
+  "ethernet_printer_disconnected": "Ethernet printer disconnected",
+  "connected_to_endpoint": "Connected to {endpoint}",
+  "@connected_to_endpoint": {
+    "placeholders": {
+      "endpoint": {
+        "type": "String"
+      }
+    }
+  },
+  "could_not_connect_network_printer": "Could not connect. Check IP, port, and that the printer is on the same network.",
+  "enter_valid_ip_first": "Enter a valid IP address first",
+  "enter_valid_port": "Enter a valid port",
+  "connect_printer_first": "Connect to the printer first",
+  "role_printer_assigned": "{role} printer: {name}",
+  "@role_printer_assigned": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "role_printer_cleared": "{role} printer cleared",
+  "@role_printer_cleared": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "role_test_print_sent": "{role} test print sent",
+  "@role_test_print_sent": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "operation_failed_error": "Failed: {error}",
+  "@operation_failed_error": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ethernet_printer_name": "Ethernet {ip}",
+  "@ethernet_printer_name": {
+    "placeholders": {
+      "ip": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbar_success": "Success",
+  "snackbar_error": "Error",
+  "snackbar_removed": "Removed",
+  "clear_tooltip": "Clear",
+  "loyalty": "Loyalty",
+  "total_visits": "Total Visits",
+  "customer_order_value": "Order Value",
+  "avg_order": "Avg Order",
+  "customer_total_discount": "Total Discount",
+  "latest_order": "Latest Order",
+  "bill_number_short": "Bill #{number}",
+  "@bill_number_short": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "bill_amount_summary": "Bill #{billNumber} • ₹{amount}",
+  "@bill_amount_summary": {
+    "placeholders": {
+      "billNumber": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "order_history": "Order History",
+  "no_orders_yet_for_customer": "No orders yet for this customer",
+  "status_closed": "Closed",
+  "no_orders": "No orders",
+  "showing_orders_range": "Showing {start}-{end} of {total}",
+  "@showing_orders_range": {
+    "placeholders": {
+      "start": {
+        "type": "int"
+      },
+      "end": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "unable_to_load_customer_details": "Unable to load customer details.",
+  "unable_to_load_customer_details_retry": "Unable to load customer details. Please try again.",
+  "invalid_customer": "Invalid customer",
+  "order_discount_amount": " • Discount ₹{amount}",
+  "@order_discount_amount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "billing_view": "Billing View",
+  "billing_image_view": "Image View",
+  "billing_list_view_option": "List View",
+  "introducing_kot_mode": "INTRODUCING KOT MODE",
+  "kot_mode_choose_handling": "Choose how you want to handle kitchen Order & Billing",
+  "kot_and_hold_description": "Generate KOT without billing. You can add more KOT's to the same order and bill later.",
+  "kot_and_bill_description": "Generate KOT and final bill together in one step.",
+  "kot_buttons_update_info": "Buttons Will Update On The Order Screen:",
+  "save_hold_to_kot_hold": "Save & Hold → KOT & Hold",
+  "save_bill_to_kot_bill": "Save & Bill → KOT & Bill",
+  "got_it": "Got It",
+  "voice_add_menu_items_title": "Voice: Add Menu Items",
+  "mic_stop": "Stop",
+  "mic_start": "Start",
+  "listening_ellipsis": "Listening...",
+  "voice_add_menu_hint": "Tap mic and say e.g. \"Tea 15 in Beverages, Coffee 40 category Beverages\".\nWe'll auto-create rows with categories, you can edit before submit.",
+  "item_name_label": "Item name",
+  "price_label": "Price",
+  "microphone_permission_required": "Microphone permission is required to use voice input.",
+  "voice_input_requires_internet": "Voice input requires an internet connection. Please check your connection and try again.",
+  "voice_error": "Voice error: {error}",
+  "@voice_error": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "no_items_to_add": "No items to add.",
+  "please_fill_item_name_price": "Please fill item name + price.",
+  "added_items_offline": "Added {count} item(s) offline.",
+  "@added_items_offline": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "failed_to_add_item_named": "Failed to add \"{name}\"",
+  "@failed_to_add_item_named": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "added_items_success": "Added {count} item(s) successfully.",
+  "@added_items_success": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "staff_activity_title": "Staff Activity",
+  "activity_log": "Activity log",
+  "staff_activity_filters_hint": "Narrow the activity by time, user and activity type.",
+  "no_activities_yet": "No activities yet",
+  "select_time_period": "Select Time Period",
+  "select_user": "Select User",
+  "select_activity_type": "Select Activity Type",
+  "select_date_range": "Select Date Range",
+  "all_users": "All Users",
+  "no_users_found": "No users found",
+  "from_date": "From Date",
+  "to_date": "To Date",
+  "date_range_to_separator": "TO",
+  "this_financial_year": "This Financial Year",
+  "all_activities": "All Activities",
+  "activity_type": "Activity Type",
+  "order_added": "Order Added",
+  "order_deleted": "Order Deleted",
+  "customer_added": "Customer Added",
+  "customer_deleted": "Customer Deleted",
+  "customer_edited": "Customer Edited",
+  "item_added": "Item Added",
+  "item_deleted": "Item Deleted",
+  "item_edited": "Item Edited",
+  "activity_fallback": "Activity",
+  "users_label": "Users",
+  "activity_entity_name": "Name : {name}",
+  "@activity_entity_name": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "activity_entity_category": "Category : {category}",
+  "@activity_entity_category": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "reset": "Reset",
+  "time_period": "Time period",
+  "time_period_sheet_hint": "Choose the range used for activity and filters.",
+  "time_period_today_subtitle": "From midnight through end of today",
+  "time_period_this_week_subtitle": "Monday through Sunday of this week",
+  "time_period_this_month_subtitle": "First day to last day of this month",
+  "time_period_this_quarter_subtitle": "Current calendar quarter",
+  "time_period_financial_year_subtitle": "Apr–Mar financial year (India)",
+  "time_period_custom_subtitle": "Use the date range chip to pick dates",
+  "activity_type_sheet_title": "Activity type",
+  "activity_type_sheet_hint": "Filter the log by what changed in your outlet.",
+  "show_every_activity_type": "Show every activity type",
+  "staff_filter": "Staff filter",
+  "staff_filter_hint": "Choose whose activity appears in the log.",
+  "no_staff_found": "No staff found",
+  "no_staff_found_hint": "Add staff to this outlet or check your connection.",
+  "all_users_title": "All users",
+  "all_users_subtitle": "Activity from everyone in this outlet",
+  "date_range": "Date range",
+  "date_range_sheet_hint": "Pick start and end dates. The time period chip switches to Custom when you apply.",
+  "from_date_short": "From",
+  "tap_to_choose": "Tap to choose",
+  "table_status_reserved": "Reserved",
+  "filter_reserved": "Reserved",
+  "reserve_table": "Reserve Table",
+  "merge_tables": "Merge Tables",
+  "reservations": "Reservations",
+  "reservation_customer_name": "Customer name",
+  "reservation_phone": "Phone (optional)",
+  "reservation_party_size": "Party size",
+  "reservation_date": "Date",
+  "reservation_time": "Time",
+  "reservation_notes": "Notes (optional)",
+  "reservation_dialog_subtitle": "Booking for {table}",
+  "@reservation_dialog_subtitle": {
+    "placeholders": {
+      "table": {
+        "type": "String"
+      }
+    }
+  },
+  "reservation_guest_section": "Guest details",
+  "reservation_when_section": "Date & time",
+  "reservation_preview_label": "Reservation summary",
+  "reservation_today": "Today",
+  "reservation_tomorrow": "Tomorrow",
+  "reservation_name_required": "Please enter customer name",
+  "reservation_party_size_up_to": "Select up to {capacity} guests for this table",
+  "@reservation_party_size_up_to": {
+    "placeholders": {
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "reservation_combined_seating": "Combined seating: {capacity} guests",
+  "@reservation_combined_seating": {
+    "placeholders": {
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "reservation_party_needs_more_tables": "{party} guests need more seats. Combined capacity is {capacity}. Add tables below or switch to a larger table.",
+  "@reservation_party_needs_more_tables": {
+    "placeholders": {
+      "party": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "reservation_add_tables_to_combine": "Combine with more tables",
+  "reservation_or_switch_table": "Or switch to a larger table",
+  "reservation_no_tables_for_party": "No available tables fit this party size. Try a smaller group or another time.",
+  "reservation_party_size_exceeds_capacity": "Party size cannot exceed table capacity ({capacity} seats)",
+  "@reservation_party_size_exceeds_capacity": {
+    "placeholders": {
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "reservation_tap_hint": "Tap to order · Seat icon to reserve",
+  "reservation_created_successfully": "Table reserved successfully",
+  "reservation_cancelled_successfully": "Reservation cancelled",
+  "reservation_seated_successfully": "Guest seated",
+  "failed_to_create_reservation": "Failed to create reservation",
+  "seat_guest": "Seat guest",
+  "cancel_reservation": "Cancel reservation",
+  "no_reservations_today": "No reservations for this date",
+  "merge_tables_title": "Merge tables",
+  "merge_tables_message": "Choose the main table, then pick other occupied tables to combine into it.",
+  "merge_tables_select_primary": "Tap primary table first, then tables to merge into it",
+  "merge_select_primary_table": "1. Select main table (orders will merge here)",
+  "merge_select_other_tables": "2. Select other tables to merge into it",
+  "merge_step_main": "Main table",
+  "merge_step_join": "Join tables",
+  "merge_join_hint": "Pick one or more tables to combine with the main table",
+  "merge_dialog_subtitle": "Combine tables for large parties — works before or during orders",
+  "merge_preview_label": "Combined result",
+  "no_tables_to_merge": "Need at least 2 tables to merge",
+  "no_other_tables_to_merge": "No other tables available",
+  "merge_available_hint": "You can merge available tables before taking any order",
+  "table_merged_with_others": "Merged with other tables",
+  "unmerge_tables": "Split tables",
+  "unmerge_tables_success": "Tables split successfully",
+  "unmerge_tables_failed": "Failed to split tables",
+  "unmerge_tables_confirm": "Split merged tables from {name}?",
+  "@unmerge_tables_confirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "merge_tables_success": "Tables merged successfully",
+  "merge_tables_failed": "Failed to merge tables",
+  "select_at_least_two_tables_to_merge": "Select a primary table and at least one other occupied table",
+  "whatsapp_bot_reservation_hint": "Customers can WhatsApp your bot code to book tables automatically",
+  "whatsapp_bot_code": "WhatsApp bot code",
+  "enable_whatsapp_reservations": "Enable WhatsApp reservations",
+  "reservation_for_table": "Reservation for {table}",
+  "@reservation_for_table": {
+    "placeholders": {
+      "table": {
+        "type": "String"
+      }
+    }
+  },
+  "reserved_by": "Reserved: {name} at {time}",
+  "@reserved_by": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "source_whatsapp": "WhatsApp",
+  "source_pos": "POS",
+  "filter_merged": "Merged",
+  "merged_tables_badge": "Merged ({count})",
+  "@merged_tables_badge": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "merged_groups_banner": "{groups} merged group(s) · {tables} table(s) combined",
+  "@merged_groups_banner": {
+    "placeholders": {
+      "groups": {
+        "type": "int"
+      },
+      "tables": {
+        "type": "int"
+      }
+    }
+  },
+  "merged_tables_hint": "Tap to order · Split icon to unmerge",
+  "cash_drawer": "Cash drawer (RJ11)",
+  "cash_drawer_subtitle": "Connect the drawer cable to your bill printer DK port. Opens via ESC/POS kick signal.",
+  "open_cash_drawer_on_cash_payment": "Open drawer on cash payment",
+  "open_cash_drawer_on_cash_payment_subtitle": "Automatically open the drawer when a bill is printed with Cash payment",
+  "cash_drawer_kick_pin": "Drawer kick pin",
+  "cash_drawer_kick_pin_subtitle": "Most RJ11 POS drawers use Pin 2. Try Pin 5 if the drawer does not open.",
+  "cash_drawer_pin_2": "Pin 2",
+  "cash_drawer_pin_5": "Pin 5",
+  "test_cash_drawer": "Test open drawer",
+  "cash_drawer_opened": "Cash drawer signal sent",
+  "cash_drawer_failed": "Could not open cash drawer: {error}",
+  "@cash_drawer_failed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cash_drawer_printer_help": "Uses your assigned bill printer. Plug the RJ11 cable into the printer drawer port.",
+  "cash_drawer_assign_bill_printer_first": "Assign a bill printer above before testing the drawer.",
+  "remove_image": "Remove image"
 }

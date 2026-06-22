@@ -124,6 +124,7 @@ void _showRawSnackBar({
   Widget? icon,
   bool closeAllSnackbars = false,
   bool? isTop = false,
+  Color? backgroundColor,
 }) async {
   if (closeAllSnackbars) {
     Get.closeAllSnackbars();
@@ -134,7 +135,7 @@ void _showRawSnackBar({
   await Future<void>.delayed(const Duration(milliseconds: 50));
 
   AppSnackbar.showRaw(
-    backgroundColor: AppColor.primary,
+    backgroundColor: backgroundColor ?? AppColor.primary,
     titleText: title != null
         ? AppText.bold(title, color: AppColor.white)
         : null,
@@ -158,6 +159,7 @@ void showError({
   bool isTop = false,
 }) {
   _showRawSnackBar(
+    backgroundColor: AppColor.error,
     description: description,
     title: title,
     icon: icon,
@@ -174,6 +176,7 @@ void showSuccess({
   bool isTop = false,
 }) {
   _showRawSnackBar(
+    backgroundColor: AppColor.success,
     description: description,
     title: title,
     icon: icon,

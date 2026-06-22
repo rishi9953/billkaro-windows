@@ -313,6 +313,89 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
+                                      if (controller.showRecommendedSection &&
+                                          controller
+                                              .recommendedItems.isNotEmpty)
+                                        Builder(
+                                          builder: (context) {
+                                            return Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        vertical: 8.0,
+                                                      ),
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(
+                                                        Icons.star_rounded,
+                                                        color: AppColor.primary,
+                                                        size: 20,
+                                                      ),
+                                                      const SizedBox(width: 6),
+                                                      Text(
+                                                        loc.recommended_items,
+                                                        style: const TextStyle(
+                                                          fontSize: 16,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                Wrap(
+                                                  spacing: 12,
+                                                  runSpacing: 12,
+                                                  children: controller
+                                                      .recommendedItems
+                                                      .map((item) {
+                                                    return Obx(
+                                                      () => OrderItemCard(
+                                                        imageUrl:
+                                                            item.itemImage,
+                                                        itemName:
+                                                            item.itemName
+                                                                    .capitalize ??
+                                                                '',
+                                                        price: double.tryParse(
+                                                              item.salePrice
+                                                                  .toString(),
+                                                            ) ??
+                                                            0.0,
+                                                        quantity: controller
+                                                            .getItemQuantity(
+                                                          item.id,
+                                                        ),
+                                                        onDelete: () {
+                                                          controller
+                                                              .removeItemCompletely(
+                                                            item.id,
+                                                          );
+                                                        },
+                                                        onIncrement: () {
+                                                          controller
+                                                              .incrementItemQuantity(
+                                                            item.id,
+                                                          );
+                                                        },
+                                                        onDecrement: () {
+                                                          controller
+                                                              .decrementItemQuantity(
+                                                            item.id,
+                                                          );
+                                                        },
+                                                      ),
+                                                    );
+                                                  }).toList(),
+                                                ),
+                                                const SizedBox(height: 16),
+                                              ],
+                                            );
+                                          },
+                                        ),
                                       // Show "None" category items FIRST (top)
                                       Builder(
                                         builder: (context) {
@@ -321,7 +404,10 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                                 (item) =>
                                                     item.category
                                                         .toLowerCase() ==
-                                                    'none',
+                                                        'none' &&
+                                                    !controller
+                                                        .bestSellingItemIds
+                                                        .contains(item.id),
                                               )
                                               .toList();
 
@@ -420,8 +506,10 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                             .where(
                                               (item) =>
                                                   item.category.toLowerCase() ==
-                                                  category.categoryName
-                                                      .toLowerCase(),
+                                                      category.categoryName
+                                                          .toLowerCase() &&
+                                                  !controller.bestSellingItemIds
+                                                      .contains(item.id),
                                             )
                                             .toList();
 

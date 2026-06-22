@@ -12,7 +12,7 @@ class OrderPreferencesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var loc = AppLocalizations.of(Get.context!)!;
+    final loc = AppLocalizations.of(context)!;
     return PopScope(
       onPopInvokedWithResult: (bool didPop, dynamic result) {
         if (didPop) {
@@ -70,7 +70,7 @@ class OrderPreferencesScreen extends StatelessWidget {
                     ),
                     Gap(10),
                   ],
-                  _billingView(),
+                  _billingView(loc),
                 ],
               ),
             ),
@@ -80,13 +80,13 @@ class OrderPreferencesScreen extends StatelessWidget {
     );
   }
 
-  Widget _billingView() {
+  Widget _billingView(AppLocalizations loc) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Billing View',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        Text(
+          loc.billing_view,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         Container(
@@ -100,7 +100,7 @@ class OrderPreferencesScreen extends StatelessWidget {
               children: [
                 Expanded(
                   child: _buildViewOption(
-                    title: 'Image View',
+                    title: loc.billing_image_view,
                     icon: Icons.grid_view,
                     isSelected: !controller.isListView.value,
                     onTap: () {
@@ -111,7 +111,7 @@ class OrderPreferencesScreen extends StatelessWidget {
                 const SizedBox(width: 16),
                 Expanded(
                   child: _buildViewOption(
-                    title: 'List View',
+                    title: loc.billing_list_view_option,
                     icon: Icons.list,
                     isSelected: controller.isListView.value,
                     onTap: () {

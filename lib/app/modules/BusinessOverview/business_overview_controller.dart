@@ -76,59 +76,43 @@ class BusinessOverviewController extends BaseController {
       final db = AppDatabase();
       debugPrint('🔄 BusinessOverview isOnline: $isOnline');
 
-      /// ===============================
-      /// 🔌 ONLINE → API + SAVE SQLITE (only if not already loaded or forced)
-      /// ===============================
+      /// Always load from SQLite first (local-first)
+      final localOrders = await db.getAllOrders(outletId: outletId);
+      allOrders.value = localOrders
+          .where((e) => e.status == 'closed')
+          .toList();
+      debugPrint('📦 Loaded ${allOrders.length} orders from SQLite');
+
       if (isOnline && (!_hasLoadedFromApi || forceApiRefresh)) {
         debugPrint('🌐 Internet available → fetching from API');
 
         final res = await callApi(
-          apiClient.getOrders(appPref.user!.id!, outletId, null, null, null, null, null, null), // page, limit, category, paymentReceivedIn
+          apiClient.getOrders(appPref.user!.id!, outletId, null, null, null, null, null, null),
           showLoader: false,
         );
 
-        if (res?.status == "success") {
-          allOrders.value = res!.data
+        if (res?.status == 'success') {
+          final closedOrders = res!.data
               .where((e) => e.status == 'closed')
               .toList();
 
-          /// Save to SQLite
-          await db.insertOrders(
-            allOrders,
-            appPref.selectedOutlet!.id!,
-            isSyncedFromApi: true,
-          );
+          await db.insertOrders(closedOrders, outletId, isSyncedFromApi: true);
+
+          final updatedOrders = await db.getAllOrders(outletId: outletId);
+          allOrders.value = updatedOrders
+              .where((e) => e.status == 'closed')
+              .toList();
 
           _hasLoadedFromApi = true;
           debugPrint('✅ Orders synced to SQLite (${allOrders.length})');
-
-          calculateTodayYesterday();
-          calculateMonthlyAverages();
-          calculateMostSelling();
         }
       } else if (!isOnline) {
         _hasLoadedFromApi = false;
       }
-      /// ===============================
-      /// 📦 OFFLINE → LOAD FROM SQLITE
-      /// ===============================
-      else {
-        debugPrint('📴 No internet → loading from SQLite');
 
-        final localOrders = await db.getAllOrders(
-          outletId: appPref.selectedOutlet!.id!,
-        );
-
-        allOrders.value = localOrders
-            .where((e) => e.status == 'closed')
-            .toList();
-
-        debugPrint('✅ Loaded ${allOrders.length} orders from SQLite');
-
-        calculateTodayYesterday();
-        calculateMonthlyAverages();
-        calculateMostSelling();
-      }
+      calculateTodayYesterday();
+      calculateMonthlyAverages();
+      calculateMostSelling();
     } catch (e) {
       debugPrint('❌ Order load error on business: $e');
       showError(description: "Error fetching orders");

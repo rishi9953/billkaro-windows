@@ -73,6 +73,7 @@ class _MenuImportPreviewDialogState extends State<_MenuImportPreviewDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -89,8 +90,8 @@ class _MenuImportPreviewDialogState extends State<_MenuImportPreviewDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Import preview',
+                        Text(
+                          loc.import_from_file,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
@@ -108,7 +109,7 @@ class _MenuImportPreviewDialogState extends State<_MenuImportPreviewDialog> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${_items.length} item(s) ready to import',
+                          loc.items_selected_count(_items.length),
                           style: TextStyle(
                             fontSize: 13,
                             color: AppColor.primary,
@@ -119,7 +120,7 @@ class _MenuImportPreviewDialogState extends State<_MenuImportPreviewDialog> {
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Close',
+                    tooltip: loc.close_search,
                     onPressed: () => Get.back(),
                     icon: const Icon(Icons.close),
                   ),
@@ -148,7 +149,7 @@ class _MenuImportPreviewDialogState extends State<_MenuImportPreviewDialog> {
                 children: [
                   TextButton(
                     onPressed: () => Get.back(),
-                    child: const Text('Cancel'),
+                    child: Text(loc.cancel),
                   ),
                   const SizedBox(width: 12),
                   ElevatedButton.icon(
@@ -156,7 +157,7 @@ class _MenuImportPreviewDialogState extends State<_MenuImportPreviewDialog> {
                         ? null
                         : () => Get.back(result: _buildResultRows()),
                     icon: const Icon(Icons.cloud_upload_outlined, size: 20),
-                    label: Text('Import ${_items.length} item(s)'),
+                    label: Text(loc.import_from_file),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColor.primary,
                       foregroundColor: Colors.white,
@@ -179,10 +180,11 @@ class _MenuImportPreviewDialogState extends State<_MenuImportPreviewDialog> {
   }
 
   Widget _buildTableHeader() {
+    final loc = AppLocalizations.of(context)!;
     return Container(
       color: Colors.grey.shade50,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: const Row(
+      child: Row(
         children: [
           SizedBox(
             width: 32,
@@ -193,31 +195,31 @@ class _MenuImportPreviewDialogState extends State<_MenuImportPreviewDialog> {
           ),
           Expanded(
             child: Text(
-              'Item name',
+              loc.item_name,
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
             ),
           ),
           Expanded(
             child: Text(
-              'Price',
+              loc.sale_price,
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
             ),
           ),
           Expanded(
             child: Text(
-              'Category',
+              loc.category,
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
             ),
           ),
           Expanded(
             child: Text(
-              'GST',
+              loc.gst_label,
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
             ),
           ),
           Expanded(
             child: Text(
-              'Availability',
+              loc.availability_column,
               textAlign: TextAlign.center,
 
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
@@ -225,7 +227,7 @@ class _MenuImportPreviewDialogState extends State<_MenuImportPreviewDialog> {
           ),
           Expanded(
             child: Text(
-              'Delete',
+              loc.delete,
               textAlign: TextAlign.center,
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
             ),
@@ -236,6 +238,7 @@ class _MenuImportPreviewDialogState extends State<_MenuImportPreviewDialog> {
   }
 
   Widget _buildItemRow(MenuImportPreviewRow item, int index) {
+    final loc = AppLocalizations.of(context)!;
     final categoryLabel =
         item.category.isEmpty || item.category.toLowerCase() == 'none'
         ? '—'
@@ -298,7 +301,7 @@ class _MenuImportPreviewDialogState extends State<_MenuImportPreviewDialog> {
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: IconButton(
-                tooltip: 'Delete',
+                tooltip: loc.delete,
                 onPressed: () => _removeItem(index),
                 icon: const Icon(Icons.delete_outline, size: 20),
                 color: Colors.redAccent,

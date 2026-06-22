@@ -33,6 +33,15 @@ TableData _$TableDataFromJson(Map<String, dynamic> json) => TableData(
   qrToken: json['qrToken'] as String?,
   qrMenuUrl: json['qrMenuUrl'] as String?,
   qrEnabled: json['qrEnabled'] as bool?,
+  mergedIntoTableId: json['mergedIntoTableId'] as String?,
+  seatingCapacity: json['seatingcapacity'] == null
+      ? 4
+      : _tableSeatingCapacityFromJson(json['seatingcapacity']),
+  mergedTableNumbers:
+      (json['mergedTableNumbers'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      [],
 );
 
 Map<String, dynamic> _$TableDataToJson(TableData instance) => <String, dynamic>{
@@ -46,4 +55,7 @@ Map<String, dynamic> _$TableDataToJson(TableData instance) => <String, dynamic>{
   'qrToken': instance.qrToken,
   'qrMenuUrl': instance.qrMenuUrl,
   'qrEnabled': instance.qrEnabled,
+  'mergedIntoTableId': instance.mergedIntoTableId,
+  'seatingcapacity': instance.seatingCapacity,
+  'mergedTableNumbers': instance.mergedTableNumbers,
 };

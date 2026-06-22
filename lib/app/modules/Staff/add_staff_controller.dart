@@ -85,35 +85,36 @@ class AddStaffController extends BaseController {
     final email = emailController.text.trim();
     final phone = phoneNumberController.text.trim();
 
+    final loc = AppLocalizations.of(Get.context!)!;
     if (name.isEmpty) {
-      showError(description: 'Please enter user name');
+      showError(description: loc.please_enter_user_name);
       return;
     }
 
     if (email.isEmpty) {
-      showError(description: 'Please enter email');
+      showError(description: loc.please_enter_email);
       return;
     }
 
     final emailRegex = RegExp(r'^[\w\-\.]+@([\w-]+\.)+[\w-]{2,}$');
     if (!emailRegex.hasMatch(email)) {
-      showError(description: 'Please enter a valid email address');
+      showError(description: loc.please_enter_valid_email);
       return;
     }
 
     if (phone.isEmpty) {
-      showError(description: 'Please enter phone number');
+      showError(description: loc.please_enter_phone_number);
       return;
     }
 
     if (phone.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(phone)) {
-      showError(description: 'Please enter a valid 10-digit phone number');
+      showError(description: loc.please_enter_valid_10_digit_phone);
       return;
     }
 
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null || outletId.isEmpty) {
-      showError(description: 'No outlet selected');
+      showError(description: loc.no_outlet_selected);
       return;
     }
 
@@ -133,7 +134,10 @@ class AddStaffController extends BaseController {
     );
 
     if (response == null) return;
-    _popWithResult({'created': true, 'message': 'Invite sent successfully'});
+    _popWithResult({
+      'created': true,
+      'message': loc.invite_sent_successfully,
+    });
   }
 
   Future<void> onUpdateStaff() async {
@@ -147,40 +151,41 @@ class AddStaffController extends BaseController {
     final phone = phoneNumberController.text.trim();
     final staffId = editingStaff?.id.trim() ?? '';
 
+    final loc = AppLocalizations.of(Get.context!)!;
     if (name.isEmpty) {
-      showError(description: 'Please enter user name');
+      showError(description: loc.please_enter_user_name);
       return;
     }
 
     if (email.isEmpty) {
-      showError(description: 'Please enter email');
+      showError(description: loc.please_enter_email);
       return;
     }
 
     final emailRegex = RegExp(r'^[\w\-\.]+@([\w-]+\.)+[\w-]{2,}$');
     if (!emailRegex.hasMatch(email)) {
-      showError(description: 'Please enter a valid email address');
+      showError(description: loc.please_enter_valid_email);
       return;
     }
 
     if (phone.isEmpty) {
-      showError(description: 'Please enter phone number');
+      showError(description: loc.please_enter_phone_number);
       return;
     }
 
     if (phone.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(phone)) {
-      showError(description: 'Please enter a valid 10-digit phone number');
+      showError(description: loc.please_enter_valid_10_digit_phone);
       return;
     }
 
     if (staffId.isEmpty) {
-      showError(description: 'Unable to update staff member');
+      showError(description: loc.unable_to_update_staff);
       return;
     }
 
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null || outletId.isEmpty) {
-      showError(description: 'No outlet selected');
+      showError(description: loc.no_outlet_selected);
       return;
     }
 
@@ -201,7 +206,7 @@ class AddStaffController extends BaseController {
     if (response == null) return;
     _popWithResult({
       'updated': true,
-      'message': 'Staff member updated successfully',
+      'message': loc.staff_member_updated_successfully,
     });
   }
 
@@ -297,7 +302,7 @@ class _RolePickerBottomSheet extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.only(left: 8),
                         child: Text(
-                          'Select ${loc.user_role}',
+                          loc.select_user_role,
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
@@ -346,7 +351,7 @@ class _RolePickerBottomSheet extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
-                  'Select ${loc.user_role}',
+                  loc.select_user_role,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,

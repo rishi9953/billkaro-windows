@@ -21,6 +21,7 @@ import 'package:billkaro/app/services/printerService.dart/thermal_printer/therma
 import 'package:billkaro/app/services/sync/sync_manager.dart';
 import 'package:billkaro/utils/date_util.dart';
 import 'package:billkaro/utils/kot_print_tracker.dart';
+import 'package:billkaro/utils/offline/offline_category_loader.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:billkaro/config/config.dart';
@@ -65,6 +66,7 @@ class AddOrderController extends BaseController {
   final RxString selectedOrderSource = ''.obs;
 
   final RxList<ItemData> items = <ItemData>[].obs;
+  final RxList<ItemData> recommendedItems = <ItemData>[].obs;
   final RxList<CategoryData> categories = <CategoryData>[].obs;
 
   // Map to store all items for lookup (persists across category changes)
@@ -196,6 +198,7 @@ class AddOrderController extends BaseController {
 
     await getCategories();
     await getItems();
+    await loadRecommendedItems();
     if (HomeMainRoutes.outletShowsTables()) {
       await loadAvailableTables();
     }
@@ -1208,6 +1211,96 @@ class AddOrderController extends BaseController {
     await onAddItem();
   }
 
+  static const int _bestSellingLimit = 5;
+
+  bool get showRecommendedSection =>
+      selectedCategoryId.value == 'none' && searchQuery.value.isEmpty;
+
+  Set<String> get bestSellingItemIds =>
+      recommendedItems.map((item) => item.id).toSet();
+
+  Future<void> loadRecommendedItems() async {
+    try {
+      final outletId = appPref.selectedOutlet?.id;
+      final userId = appPref.user?.id;
+      if (outletId == null || userId == null) {
+        recommendedItems.clear();
+        return;
+      }
+
+      final isOnline = await NetworkUtils.hasInternetConnection();
+      if (!isOnline) {
+        recommendedItems.value = await _loadBestSellingItemsOffline(outletId);
+        return;
+      }
+
+      final response = await callApi(
+        apiClient.getBestSellingItems(userId, outletId, _bestSellingLimit),
+        showLoader: false,
+      );
+
+      if (response is Map && response['status'] == 'success') {
+        final rows = (response['data'] as List?) ?? [];
+        final loaded = <ItemData>[];
+        for (final row in rows) {
+          if (row is! Map) continue;
+          final itemJson = row['item'];
+          if (itemJson is Map<String, dynamic>) {
+            final item = ItemData.fromJson(itemJson);
+            loaded.add(item);
+            allItemsMap[item.id] = item;
+            continue;
+          }
+          final itemId = row['itemId']?.toString() ?? '';
+          if (itemId.isEmpty) continue;
+          final cached =
+              allItemsMap[itemId] ??
+              items.firstWhereOrNull((item) => item.id == itemId);
+          if (cached != null) {
+            loaded.add(cached);
+            allItemsMap[cached.id] = cached;
+          }
+        }
+        recommendedItems.value = loaded;
+      } else {
+        recommendedItems.clear();
+      }
+    } catch (e) {
+      debugPrint('loadRecommendedItems error: $e');
+      recommendedItems.clear();
+    }
+  }
+
+  Future<List<ItemData>> _loadBestSellingItemsOffline(String outletId) async {
+    final db = AppDatabase();
+    final page = await db.getOrdersPage(
+      outletId: outletId,
+      limit: 500,
+      offset: 0,
+    );
+    final qtyByItemId = <String, int>{};
+    for (final order in page.items) {
+      if (order.status?.toLowerCase() != 'closed') continue;
+      for (final line in order.items) {
+        final itemId = line.itemId.trim();
+        if (itemId.isEmpty) continue;
+        qtyByItemId[itemId] = (qtyByItemId[itemId] ?? 0) + line.quantity;
+      }
+    }
+    final sortedIds = qtyByItemId.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final loaded = <ItemData>[];
+    for (final entry in sortedIds.take(_bestSellingLimit)) {
+      final cached =
+          allItemsMap[entry.key] ??
+          items.firstWhereOrNull((item) => item.id == entry.key);
+      if (cached != null && cached.showItem) {
+        loaded.add(cached);
+      }
+    }
+    return loaded;
+  }
+
   // --------------------
   // Fetch data with pagination
   // --------------------
@@ -1256,6 +1349,7 @@ class AddOrderController extends BaseController {
             categoryFilter,
             searchFilter,
             true, // showItem - only available items
+            null,
           ),
           // Avoid showing full-screen loader for incremental search
           showLoader: !append && !isFromSearch,
@@ -1268,6 +1362,9 @@ class AddOrderController extends BaseController {
             items.addAll(newItems);
           } else {
             items.value = newItems;
+            if (!isFromSearch && selectedCategoryId.value == 'none') {
+              await loadRecommendedItems();
+            }
           }
 
           // Add all items to the lookup map for calculating totals across categories
@@ -1360,15 +1457,15 @@ class AddOrderController extends BaseController {
 
   Future<void> getCategories() async {
     try {
-      final response = await callApi(
-        apiClient.getCategories(appPref.selectedOutlet!.id!),
+      final outletId = appPref.selectedOutlet?.id;
+      if (outletId == null) return;
+
+      final loaded = await OfflineCategoryLoader.load(
+        outletId: outletId,
+        fetchFromApi: () => callApi(apiClient.getCategories(outletId)),
       );
-      if (response != null && response.status == 'success') {
-        categories.value = response.categories ?? [];
-        dismissAllAppLoader();
-      } else {
-        debugPrint('getCategories: unexpected response: $response');
-      }
+      categories.value = loaded;
+      dismissAllAppLoader();
     } catch (e, st) {
       debugPrint('getCategories error: $e\n$st');
     }
@@ -2225,8 +2322,7 @@ class AddOrderController extends BaseController {
       } catch (e) {
         debugPrint('Offline order save failed: $e');
         showError(
-          description:
-              '${loc.failed_to_save_order_offline} (${e.toString()})',
+          description: '${loc.failed_to_save_order_offline} (${e.toString()})',
         );
       }
     }

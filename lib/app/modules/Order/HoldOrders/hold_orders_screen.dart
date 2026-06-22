@@ -37,19 +37,27 @@ class _HoldOrdersScreenState extends State<HoldOrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColor.backGroundColor,
       appBar: AppBar(
         elevation: 0,
-        title: const Text(
-          'Hold Orders',
-          style: TextStyle(
+        title: Text(
+          loc.hold_orders_title,
+          style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.3,
           ),
         ),
-        actions: [_buildAddOrderButton(), const SizedBox(width: 8)],
+        actions: [
+          // Refresh Button
+          IconButton(
+            onPressed: () => controller.getOrderList(forceApiRefresh: true),
+            icon: const Icon(Icons.refresh),
+            tooltip: loc.refresh,
+          ),
+        ],
       ),
       body: SafeArea(
         child: LayoutBuilder(
@@ -63,11 +71,22 @@ class _HoldOrdersScreenState extends State<HoldOrdersScreen> {
                 constraints: BoxConstraints(maxWidth: maxWidth),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [Expanded(child: _buildOrdersList())],
+                  children: [Expanded(child: _buildOrdersList(loc))],
                 ),
               ),
             );
           },
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => Modular.to.navigate(HomeMainRoutes.createOrder),
+        backgroundColor: AppColor.secondaryPrimary,
+        foregroundColor: AppColor.white,
+        elevation: 4,
+        icon: Icon(Icons.add, size: 24),
+        label: Text(
+          loc.add_Order,
+          style: TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
     );
@@ -75,10 +94,10 @@ class _HoldOrdersScreenState extends State<HoldOrdersScreen> {
 
   // ---------------- ORDER LIST ----------------
 
-  Widget _buildOrdersList() {
+  Widget _buildOrdersList(AppLocalizations loc) {
     return Obx(() {
       if (controller.allOrders.isEmpty) {
-        return _buildEmptyState();
+        return _buildEmptyState(loc);
       }
 
       return RefreshIndicator(
@@ -125,7 +144,7 @@ class _HoldOrdersScreenState extends State<HoldOrdersScreen> {
     });
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(AppLocalizations loc) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -133,7 +152,7 @@ class _HoldOrdersScreenState extends State<HoldOrdersScreen> {
           Icon(Icons.pause_circle_outline, size: 80, color: Colors.grey[300]),
           const SizedBox(height: 16),
           Text(
-            'No Hold Orders',
+            loc.no_hold_orders,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -142,7 +161,7 @@ class _HoldOrdersScreenState extends State<HoldOrdersScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Orders on hold will appear here',
+            loc.hold_orders_empty_hint,
             style: TextStyle(fontSize: 14, color: Colors.grey[500]),
           ),
         ],
@@ -152,15 +171,15 @@ class _HoldOrdersScreenState extends State<HoldOrdersScreen> {
 
   // ---------------- ADD ORDER BUTTON ----------------
 
-  Widget _buildAddOrderButton() {
+  Widget _buildAddOrderButton(AppLocalizations loc) {
     return Padding(
       padding: const EdgeInsets.only(right: 12),
       child: TextButton.icon(
         onPressed: () => Modular.to.pushNamed(HomeMainRoutes.createOrder),
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text(
-          'Add Order',
-          style: TextStyle(
+        label: Text(
+          loc.add_Order,
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 14,
             fontWeight: FontWeight.w600,
@@ -186,6 +205,7 @@ class _OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     final time = formatDate(
       order.createdAt.toString(),
       format: 'MMM dd, hh:mm a',
@@ -240,7 +260,7 @@ class _OrderCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              'ON HOLD',
+                              loc.on_hold_badge,
                               style: TextStyle(
                                 color: const Color(0xFFF59E0B),
                                 fontSize: 12,
@@ -313,7 +333,7 @@ class _OrderCard extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                'Table ${order.tableNumber}',
+                                loc.home_table_number(order.tableNumber!),
                                 style: TextStyle(
                                   color: Colors.grey[700],
                                   fontSize: 12,
@@ -336,7 +356,7 @@ class _OrderCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          'Bill #${order.billNumber}',
+                          loc.home_bill_number(order.billNumber),
                           style: TextStyle(
                             color: Colors.grey[700],
                             fontSize: 12,
@@ -391,7 +411,7 @@ class _OrderCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '${order.items.length} ${order.items.length == 1 ? 'item' : 'items'}',
+                              loc.order_items_count(order.items.length),
                               style: TextStyle(
                                 fontSize: 13,
                                 color: Colors.grey[600],
@@ -416,7 +436,7 @@ class _OrderCard extends StatelessWidget {
                       ),
                       // Edit Button
                       Tooltip(
-                        message: 'Edit',
+                        message: loc.edit,
                         child: IconButton(
                           onPressed: () => _editOrder(order),
                           icon: const Icon(Icons.edit_outlined, size: 20),

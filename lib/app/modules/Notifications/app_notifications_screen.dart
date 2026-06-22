@@ -2,6 +2,7 @@ import 'package:billkaro/app/modules/Notifications/app_notifications_controller.
 import 'package:billkaro/app/services/notification/app_notification_item.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/date_util.dart';
+
 class AppNotificationsScreen extends StatelessWidget {
   AppNotificationsScreen({super.key});
 
@@ -9,13 +10,14 @@ class AppNotificationsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColor.backGroundColor,
       appBar: AppBar(
         elevation: 0,
-        title: const Text(
-          'Notifications',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        title: Text(
+          loc.settings_section_notifications,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         actions: [
           Obx(() {
@@ -24,12 +26,12 @@ class AppNotificationsScreen extends StatelessWidget {
             }
             return TextButton(
               onPressed: controller.markAllRead,
-              child: const Text('Mark all read'),
+              child: Text(loc.mark_all_read),
             );
           }),
           IconButton(
-            tooltip: 'Clear all',
-            onPressed: () => _confirmClear(context),
+            tooltip: loc.clear_all,
+            onPressed: () => _confirmClear(context, loc),
             icon: const Icon(Icons.delete_outline_rounded),
           ),
         ],
@@ -48,7 +50,7 @@ class AppNotificationsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'No notifications yet',
+                  loc.no_notifications_yet,
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.grey.shade600,
@@ -59,7 +61,7 @@ class AppNotificationsScreen extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 32),
                   child: Text(
-                    'Kitchen ready alerts and other updates will appear here.',
+                    loc.notifications_empty_hint,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
@@ -88,25 +90,23 @@ class AppNotificationsScreen extends StatelessWidget {
     );
   }
 
-  void _confirmClear(BuildContext context) {
+  void _confirmClear(BuildContext context, AppLocalizations loc) {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Clear notifications?'),
-        content: const Text(
-          'This removes all items from your notification history.',
-        ),
+        title: Text(loc.clear_notifications_title),
+        content: Text(loc.clear_notifications_message),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(loc.cancel),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               controller.clearAll();
             },
-            child: const Text('Clear', style: TextStyle(color: Colors.red)),
+            child: Text(loc.clear, style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),

@@ -55,7 +55,7 @@ CustomerDetailsData _$CustomerDetailsDataFromJson(Map<String, dynamic> json) =>
     CustomerDetailsData(
       customer: CustomerData.fromJson(json['customer'] as Map<String, dynamic>),
       stats: CustomerStats.fromJson(json['stats'] as Map<String, dynamic>),
-      orders: (json['orders'] as List<dynamic>? ?? [])
+      orders: (json['orders'] as List<dynamic>)
           .map((e) => CustomerLastOrder.fromJson(e as Map<String, dynamic>))
           .toList(),
       pagination: CustomerOrdersPagination.fromJson(
@@ -68,14 +68,15 @@ CustomerDetailsData _$CustomerDetailsDataFromJson(Map<String, dynamic> json) =>
             ),
     );
 
-Map<String, dynamic> _$CustomerDetailsDataToJson(CustomerDetailsData instance) =>
-    <String, dynamic>{
-      'customer': instance.customer,
-      'stats': instance.stats,
-      'orders': instance.orders,
-      'pagination': instance.pagination,
-      'lastOrder': instance.lastOrder,
-    };
+Map<String, dynamic> _$CustomerDetailsDataToJson(
+  CustomerDetailsData instance,
+) => <String, dynamic>{
+  'customer': instance.customer,
+  'stats': instance.stats,
+  'orders': instance.orders,
+  'lastOrder': instance.lastOrder,
+  'pagination': instance.pagination,
+};
 
 CustomerOrdersPagination _$CustomerOrdersPaginationFromJson(
   Map<String, dynamic> json,
@@ -115,7 +116,7 @@ CustomerLastOrder _$CustomerLastOrderFromJson(Map<String, dynamic> json) =>
     CustomerLastOrder(
       id: json['id'] as String,
       billNumber: json['billNumber'] as String,
-      orderDate: json['orderDate'].toString(),
+      orderDate: json['orderDate'] as String,
       totalAmount: (json['totalAmount'] as num).toDouble(),
       paymentType: json['paymentType'] as String,
       status: json['status'] as String? ?? 'pending',

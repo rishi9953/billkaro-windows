@@ -1,16 +1,14 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+import 'package:billkaro/utils/trusted_http_client.dart';
 
-/// Debug-only TLS override for local dev tunnels. Never enabled in release builds.
+/// Global HTTP overrides so every dart:io client uses the same TLS rules.
 class MyHttpOverrides extends HttpOverrides {
   @override
   HttpClient createHttpClient(SecurityContext? context) {
-    final client = super.createHttpClient(context);
-    if (kDebugMode) {
-      client.badCertificateCallback =
-          (X509Certificate cert, String host, int port) => true;
+    if (context == null) {
+      return createTrustedHttpClient();
     }
-    return client;
+    return super.createHttpClient(context);
   }
 }

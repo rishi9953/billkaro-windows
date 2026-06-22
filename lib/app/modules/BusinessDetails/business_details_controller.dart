@@ -4,6 +4,8 @@ import 'package:billkaro/app/services/Modals/businessType/businesst_type_respons
 import 'package:billkaro/app/services/Modals/login_response.dart';
 import 'package:billkaro/app/services/uploadFile.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/gstin_verify_helper.dart';
+import 'package:billkaro/utils/staff_outlet_sync.dart';
 
 class BusinessDetailsController extends BaseController {
   // ---------------- TEXT CONTROLLERS ----------------
@@ -27,6 +29,7 @@ class BusinessDetailsController extends BaseController {
   final selectedBusinessType = 'none'.obs;
   final selectedBusinessCategory = 'None'.obs;
   final imageUrl = ''.obs;
+  final gstinVerify = GstinVerifyHelper();
 
   final Rx<File?> businessLogo = Rx<File?>(null);
   final Rx<OutletData?> selectedOutlet = Rx<OutletData?>(null);
@@ -56,13 +59,31 @@ class BusinessDetailsController extends BaseController {
   }
 
   void _ensureBusinessTypeSelection() {
+    final outletType =
+        selectedOutlet.value?.businessType?.trim().toLowerCase();
     final opts = businessTypeOptions;
-    final cur = selectedBusinessType.value.toLowerCase();
-    if (!opts.contains(cur)) {
-      selectedBusinessType.value = opts.first;
-    } else if (selectedBusinessType.value != cur) {
-      selectedBusinessType.value = cur;
+    var cur = selectedBusinessType.value.trim().toLowerCase();
+
+    if (cur.isEmpty || cur == 'none') {
+      if (outletType != null && outletType.isNotEmpty) {
+        selectedBusinessType.value = outletType;
+        cur = outletType;
+      }
     }
+
+    if (opts.contains(cur)) {
+      if (selectedBusinessType.value != cur) {
+        selectedBusinessType.value = cur;
+      }
+      return;
+    }
+
+    if (outletType != null && outletType.isNotEmpty) {
+      selectedBusinessType.value = outletType;
+      return;
+    }
+
+    selectedBusinessType.value = opts.first;
   }
 
   /// Seating capacity applies only to cafe and restaurant outlets.
@@ -117,9 +138,12 @@ class BusinessDetailsController extends BaseController {
   @override
   void onInit() {
     super.onInit();
-    final outlet = appPref.selectedOutlet;
-    selectedOutlet.value = outlet;
-    imageUrl.value = outlet?.logo?.trim() ?? '';
+    syncOutletFromAppPref();
+    gstinController.addListener(_handleGstinChanged);
+  }
+
+  void _handleGstinChanged() {
+    gstinVerify.resetIfChanged(gstinController.text);
   }
 
   @override
@@ -137,7 +161,13 @@ class BusinessDetailsController extends BaseController {
     if (response != null && response.status == 'success') {
       businessTypesList.assignAll(response.data);
       _ensureBusinessTypeSelection();
+      syncOutletFromAppPref();
     }
+  }
+
+  void refreshData() {
+    getBusinessTypes();
+    getUserDetails();
   }
 
   // ---------------- IMAGE PICKER ----------------
@@ -187,18 +217,31 @@ class BusinessDetailsController extends BaseController {
   // ---------------- FETCH USER & OUTLET ----------------
   Future<void> getUserDetails() async {
     try {
+      final currentUser = appPref.user;
+      if (currentUser == null) return;
+
+      final bool isStaff = currentUser.role == 'staff';
       final res = await callApi(
-        apiClient.getUserDetails(appPref.user?.id ?? ''),
+        isStaff
+            ? apiClient.getStaffProfile(currentUser.id!)
+            : apiClient.getUserDetails(appPref.ownerUserId ?? ''),
         showLoader: false,
       );
 
       if (res?.status != 'success') return;
 
-      // ✅ Update user data
-      appPref.user = res!.data;
+      if (isStaff) {
+        await StaffOutletSync.enrichAppPrefFromOwner(
+          appPref: appPref,
+          staffUser: res!.data,
+          apiClient: apiClient,
+        );
+      } else {
+        appPref.user = res!.data;
+      }
 
       // ✅ Get fresh outlets list from server response
-      final serverOutlets = res.data.outletData ?? [];
+      final serverOutlets = appPref.user?.outletData ?? [];
       debugPrint('✅ Refreshed ${serverOutlets.length} outlets from server');
 
       // ✅ Find the current outlet by ID in the fresh data
@@ -215,45 +258,7 @@ class BusinessDetailsController extends BaseController {
         selectedOutlet.value = serverOutlets.first;
       }
 
-      // ✅ Populate form with fresh outlet data
-      final outlet = selectedOutlet.value;
-      if (outlet == null) return;
-
-      businessNameController.text = outlet.businessName ?? '';
-      phoneController.text = appPref.user?.mobile ?? '';
-
-      selectedBusinessType.value = outlet.businessType?.toLowerCase() ?? 'none';
-      selectedTaxSlab.value = outlet.taxSlab?.isNotEmpty == true
-          ? outlet.taxSlab!
-          : 'None';
-      selectedSeatingCapacity.value = _seatingCapacityToValue(
-        outlet.seatingCapacity,
-      );
-      selectedBusinessCategory.value =
-          outlet.businessCategory?.isNotEmpty == true
-          ? outlet.businessCategory!
-          : 'None';
-      debugPrint('Logo is : ${outlet.logo}');
-      imageUrl.value = outlet.logo ?? '';
-      outletAddressController.text = outlet.outletAddress ?? '';
-      upiIdController.text = outlet.upiId ?? '';
-      fssaiController.text = outlet.fssaiNumber ?? '';
-      gstinController.text = outlet.gstinNumber ?? '';
-      googleProfileController.text = outlet.googleProfileLink ?? '';
-      swiggyLinkController.text = outlet.swiggyLink ?? '';
-      zomatoLinkController.text = outlet.zomatoLink ?? '';
-
-      // businessAddressController.text = [
-      //   appPref.user?.address,
-      //   appPref.user?.city,
-      //   appPref.user?.state,
-      //   appPref.user?.zipcode,
-      //   appPref.user?.country,
-      // ].whereType<String>().where((e) => e.isNotEmpty).join(', ');
-      businessAddressController.text = appPref.user!.address ?? '';
-
-      debugPrint('✅ Form populated with outlet: ${outlet.businessName}');
-      _ensureBusinessTypeSelection();
+      syncOutletFromAppPref();
     } catch (e) {
       debugPrint('❌ getUserDetails error: $e');
       showError(description: 'Failed to load business details');
@@ -264,6 +269,10 @@ class BusinessDetailsController extends BaseController {
   Future<void> updateBusinessDetails() async {
     try {
       debugPrint('🔄 Updating business details...');
+      if (gstinVerify.requiresVerification(gstinController.text)) {
+        showError(description: 'Please verify GSTIN before updating details');
+        return;
+      }
 
       showAppLoader();
       // ✅ Upload image if selected
@@ -279,8 +288,14 @@ class BusinessDetailsController extends BaseController {
         title: appPref.user?.title,
       ).toJson()..removeWhere((k, v) => v == null || v.toString().isEmpty);
 
+      final ownerId = appPref.ownerUserId;
+      if (ownerId == null) {
+        showError(description: 'Failed to load business details');
+        return;
+      }
+
       final userRes = await callApi(
-        apiClient.updateUser(appPref.user!.id!, userPayload),
+        apiClient.updateUser(ownerId, userPayload),
         showLoader: false,
       );
 
@@ -337,8 +352,11 @@ class BusinessDetailsController extends BaseController {
     final outletPayload = updatedOutlet.toJson()
       ..removeWhere((k, v) => v == null || v.toString().isEmpty);
 
+    final ownerId = appPref.ownerUserId;
+    if (ownerId == null) return false;
+
     final res = await callApi(
-      apiClient.updateOutlet(appPref.user!.id!, outlet.id!, outletPayload),
+      apiClient.updateOutlet(ownerId, outlet.id!, outletPayload),
       showLoader: false,
     );
 
@@ -349,6 +367,31 @@ class BusinessDetailsController extends BaseController {
 
     debugPrint('✅ Outlet updated on server');
     return true;
+  }
+
+  Future<void> verifyGstin() async {
+    final details = await gstinVerify.verify(
+      gstinController.text,
+      onError: ({title, required description}) => showError(
+        title: title,
+        description: description,
+      ),
+      onSuccess: ({title, required description}) => showSuccess(
+        title: title,
+        description: description,
+      ),
+    );
+
+    if (details == null || !gstinVerify.isGstinVerified.value) return;
+
+    if (businessNameController.text.trim().isEmpty &&
+        details.legalName != null) {
+      businessNameController.text = details.legalName!;
+    }
+    if (outletAddressController.text.trim().isEmpty &&
+        details.principalAddress != null) {
+      outletAddressController.text = details.principalAddress!;
+    }
   }
 
   // ---------------- DELETE OUTLET ----------------
@@ -379,8 +422,11 @@ class BusinessDetailsController extends BaseController {
     if (confirm != true) return;
 
     try {
+      final ownerId = appPref.ownerUserId;
+      if (ownerId == null) return;
+
       final res = await callApi(
-        apiClient.deleteOutlet(appPref.user!.id!, outlet.id!),
+        apiClient.deleteOutlet(ownerId, outlet.id!),
       );
 
       if (res['status'] != 'success') {
@@ -400,14 +446,18 @@ class BusinessDetailsController extends BaseController {
 
   // ---------------- IMAGE UPLOAD ----------------
   Future<void> uploadItemImage() async {
-    debugPrint('📤 Uploading image for outlet: ${appPref.selectedOutlet!.id}');
+    final outletId = appPref.selectedOutlet?.id;
+    final ownerId = appPref.ownerUserId;
+    if (outletId == null || ownerId == null) return;
+
+    debugPrint('📤 Uploading image for outlet: $outletId');
 
     final res = await callApi(
       MediaApi().uploadImage(
         file: businessLogo.value!,
         folderName: 'users',
-        outletId: appPref.selectedOutlet!.id!,
-        userId: appPref.user!.id!,
+        outletId: outletId,
+        userId: ownerId,
       ),
       showLoader: false,
     );
@@ -421,6 +471,7 @@ class BusinessDetailsController extends BaseController {
   // ---------------- DISPOSE ----------------
   @override
   void onClose() {
+    gstinController.removeListener(_handleGstinChanged);
     for (final c in [
       businessNameController,
       phoneController,

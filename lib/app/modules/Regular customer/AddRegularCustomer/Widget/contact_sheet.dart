@@ -8,6 +8,8 @@ class ContactPickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+
     return SizedBox(
       height: MediaQuery.of(context).size.height * 0.6,
       child: Column(
@@ -19,7 +21,7 @@ class ContactPickerSheet extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Select Contact',
+                  loc.select_contact,
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
                 ),
                 GestureDetector(
@@ -43,7 +45,7 @@ class ContactPickerSheet extends StatelessWidget {
             child: TextField(
               onChanged: controller.searchContacts,
               decoration: InputDecoration(
-                hintText: 'Search contacts...',
+                hintText: loc.search_contacts_hint,
                 prefixIcon: Icon(Icons.search, color: Color(0xFF5B8DEE)),
                 filled: true,
                 fillColor: Colors.grey[100],
@@ -70,7 +72,7 @@ class ContactPickerSheet extends StatelessWidget {
                 padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 color: AppColor.primary,
                 child: Text(
-                  'None',
+                  loc.none,
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -105,13 +107,13 @@ class ContactPickerSheet extends StatelessWidget {
                       ),
                       SizedBox(height: 16),
                       Text(
-                        'No contacts found',
+                        loc.no_contacts_found,
                         style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                       ),
                       SizedBox(height: 8),
                       TextButton(
                         onPressed: controller.fetchContacts,
-                        child: Text('Retry'),
+                        child: Text(loc.retry),
                       ),
                     ],
                   ),
@@ -127,7 +129,7 @@ class ContactPickerSheet extends StatelessWidget {
                       Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
                       SizedBox(height: 16),
                       Text(
-                        'No contacts match your search',
+                        loc.no_contacts_match_search,
                         style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                       ),
                     ],

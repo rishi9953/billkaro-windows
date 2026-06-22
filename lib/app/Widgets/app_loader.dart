@@ -32,15 +32,15 @@ void dismissAllAppLoader() {
 }
 
 void _closeLoadingDialogIfVisible() {
-  if (_isLoaderDialogVisible && (Get.isDialogOpen ?? false)) {
-    Get.back();
-    return;
-  }
+  if (!_isLoaderDialogVisible) return;
+  final context = Get.overlayContext;
+  if (context == null) return;
 
-  // Fallback if dialog state is out of sync.
-  if (Get.isDialogOpen == true &&
-      Get.rawRoute?.settings.name == 'dialog_loading') {
-    Get.back();
+  final navigator = Navigator.of(context, rootNavigator: true);
+  final route = ModalRoute.of(context);
+  final isLoadingRoute = route?.settings.name == 'dialog_loading';
+  if (navigator.canPop() || isLoadingRoute) {
+    navigator.pop();
   }
 }
 

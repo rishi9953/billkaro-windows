@@ -2,6 +2,7 @@ import 'package:billkaro/app/modules/AppSettings/app_settings_controller.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Theme/theme_controller.dart';
+import 'package:billkaro/app/services/printerService.dart/thermal_printer/helpers/cash_drawer_helper.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/kitchen_display_browser.dart';
 import 'package:flutter_modular/flutter_modular.dart';
@@ -36,30 +37,61 @@ class AppSettingsScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildSection(
-                'General',
+                loc.settings_section_general,
                 _withDividers([
                   _buildSwitchTile(
                     icon: Icons.view_list_rounded,
-                    title: 'Billing list view',
-                    subtitle: 'Show orders as list instead of image grid',
+                    title: loc.billing_list_view,
+                    subtitle: loc.billing_list_view_subtitle,
                     value: controller.isListView,
                     onChanged: controller.setListView,
                   ),
                   _buildSwitchTile(
                     icon: Icons.qr_code_2_outlined,
-                    title: 'Show QR on bill',
-                    subtitle: 'Show UPI scan-to-pay QR on invoice and print',
+                    title: loc.show_qr_on_bill,
+                    subtitle: loc.show_qr_on_bill_subtitle,
                     value: controller.showQrOnBill,
                     onChanged: controller.setShowQrOnBill,
                   ),
                   _buildSwitchTile(
                     icon: Icons.edit_note_outlined,
-                    title: 'Add details on create order',
-                    subtitle:
-                        'Show Add Details for customer, table, discount, and payment',
+                    title: loc.add_details_on_create_order,
+                    subtitle: loc.add_details_on_create_order_subtitle,
                     value: controller.showAddDetailsOnCreateOrder,
                     onChanged: controller.setShowAddDetailsOnCreateOrder,
                   ),
+                  _buildSwitchTile(
+                    icon: Icons.sync_rounded,
+                    title: loc.sync_devices,
+                    subtitle: loc.sync_across_multiple_devices,
+                    value: controller.autoSyncEnabled,
+                    onChanged: controller.setAutoSyncEnabled,
+                  ),
+                  Obx(() {
+                    final drawerOn = controller.cashDrawerEnabled.value;
+                    return Column(
+                      children: [
+                        _buildSwitchTile(
+                          icon: Icons.point_of_sale_outlined,
+                          title: loc.cash_drawer,
+                          subtitle: loc.cash_drawer_subtitle,
+                          value: controller.cashDrawerEnabled,
+                          onChanged: controller.setCashDrawerEnabled,
+                        ),
+                        if (drawerOn) ...[
+                          _buildSwitchTile(
+                            icon: Icons.payments_outlined,
+                            title: loc.open_cash_drawer_on_cash_payment,
+                            subtitle:
+                                loc.open_cash_drawer_on_cash_payment_subtitle,
+                            value: controller.openCashDrawerOnCashPayment,
+                            onChanged: controller.setOpenCashDrawerOnCashPayment,
+                          ),
+                          _buildCashDrawerPinTile(context, loc),
+                        ],
+                      ],
+                    );
+                  }),
                   if (Get.isRegistered<HomeScreenController>())
                     Obx(() {
                       Get.find<HomeScreenController>().selectedOutlet.value;
@@ -79,9 +111,8 @@ class AppSettingsScreen extends StatelessWidget {
                           if (kotOn)
                             _buildActionOrNavTile(
                               icon: Icons.open_in_browser_rounded,
-                              title: 'Kitchen Display in browser',
-                              subtitle:
-                                  'Open the web kitchen screen on a second monitor or TV',
+                              title: loc.kitchen_display_in_browser,
+                              subtitle: loc.kitchen_display_browser_subtitle,
                               onTap: KitchenDisplayBrowser.open,
                             ),
                         ],
@@ -102,9 +133,8 @@ class AppSettingsScreen extends StatelessWidget {
                           if (kotOn)
                             _buildActionOrNavTile(
                               icon: Icons.open_in_browser_rounded,
-                              title: 'Kitchen Display in browser',
-                              subtitle:
-                                  'Open the web kitchen screen on a second monitor or TV',
+                              title: loc.kitchen_display_in_browser,
+                              subtitle: loc.kitchen_display_browser_subtitle,
                               onTap: KitchenDisplayBrowser.open,
                             ),
                         ],
@@ -112,8 +142,8 @@ class AppSettingsScreen extends StatelessWidget {
                     }),
                   _buildActionOrNavTile(
                     icon: Icons.tour_outlined,
-                    title: 'Show onboarding again',
-                    subtitle: 'Replay the app intro and tips',
+                    title: loc.show_onboarding_again,
+                    subtitle: loc.show_onboarding_again_subtitle,
                     onTap: () {
                       controller.resetOnboarding();
                       Get.back();
@@ -125,9 +155,9 @@ class AppSettingsScreen extends StatelessWidget {
                   Obx(
                     () => _buildActionOrNavTile(
                       icon: Icons.folder_open_outlined,
-                      title: 'Download path',
+                      title: loc.download_path,
                       subtitle: controller.downloadPath.value.isEmpty
-                          ? 'Default Downloads folder'
+                          ? loc.default_downloads_folder
                           : controller.downloadPath.value,
                       onTap: controller.pickDownloadPath,
                       showChevron: true,
@@ -136,18 +166,18 @@ class AppSettingsScreen extends StatelessWidget {
                 ]),
               ),
               const Gap(24),
-              _buildSection('Notifications', [
+              _buildSection(loc.settings_section_notifications, [
                 _buildSwitchTile(
                   icon: Icons.notifications_outlined,
-                  title: 'Notifications',
-                  subtitle: 'Order and reminder notifications',
+                  title: loc.settings_section_notifications,
+                  subtitle: loc.settings_notifications_subtitle,
                   value: controller.notificationsEnabled,
                   onChanged: controller.setNotificationsEnabled,
                 ),
                 _buildTile(
                   icon: Icons.inbox_outlined,
-                  title: 'Notification history',
-                  subtitle: 'Kitchen ready and other alerts',
+                  title: loc.notification_history,
+                  subtitle: loc.notification_history_subtitle,
                   trailing: Icon(
                     Icons.chevron_right,
                     color: Colors.grey[400],
@@ -158,11 +188,11 @@ class AppSettingsScreen extends StatelessWidget {
                 ),
               ]),
               const Gap(24),
-              _buildSection('Appearance', [
+              _buildSection(loc.settings_section_appearance, [
                 Obx(
                   () => _buildTile(
                     icon: Icons.palette_outlined,
-                    title: 'Theme color',
+                    title: loc.theme_color,
                     subtitle: themeController.selectedThemeColorName,
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -187,12 +217,12 @@ class AppSettingsScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    onTap: () => _showThemeColorPicker(context),
+                    onTap: () => _showThemeColorPicker(context, loc),
                   ),
                 ),
               ]),
               const Gap(24),
-              _buildSection('Language & region', [
+              _buildSection(loc.settings_section_language_region, [
                 _buildActionOrNavTile(
                   icon: Icons.language,
                   title: loc.language,
@@ -353,6 +383,37 @@ class AppSettingsScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildCashDrawerPinTile(BuildContext context, AppLocalizations loc) {
+    return Obx(() {
+      final selected = cashDrawerPinFromStorage(controller.cashDrawerPin.value);
+      return _buildTile(
+        icon: Icons.settings_input_component_outlined,
+        title: loc.cash_drawer_kick_pin,
+        subtitle: loc.cash_drawer_kick_pin_subtitle,
+        trailing: SegmentedButton<CashDrawerPin>(
+          segments: [
+            ButtonSegment(
+              value: CashDrawerPin.pin2,
+              label: Text(loc.cash_drawer_pin_2),
+            ),
+            ButtonSegment(
+              value: CashDrawerPin.pin5,
+              label: Text(loc.cash_drawer_pin_5),
+            ),
+          ],
+          selected: {selected},
+          onSelectionChanged: (set) {
+            controller.setCashDrawerPin(set.first);
+          },
+          style: const ButtonStyle(
+            visualDensity: VisualDensity.compact,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+      );
+    });
+  }
+
   Widget _buildActionOrNavTile({
     required IconData icon,
     required String title,
@@ -371,7 +432,10 @@ class AppSettingsScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _showThemeColorPicker(BuildContext context) async {
+  Future<void> _showThemeColorPicker(
+    BuildContext context,
+    AppLocalizations loc,
+  ) async {
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -393,7 +457,7 @@ class AppSettingsScreen extends StatelessWidget {
                         const SizedBox(width: 48),
                         Expanded(
                           child: Text(
-                            'Theme color',
+                            loc.theme_color,
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 16,
@@ -407,7 +471,7 @@ class AppSettingsScreen extends StatelessWidget {
                           height: 48,
                           child: IconButton(
                             onPressed: () => Navigator.of(sheetContext).pop(),
-                            tooltip: 'Close',
+                            tooltip: loc.close,
                             icon: Icon(Icons.close, color: Colors.grey[700]),
                           ),
                         ),
@@ -419,7 +483,7 @@ class AppSettingsScreen extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                     child: Text(
-                      'Custom hex',
+                      loc.custom_hex,
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -429,7 +493,10 @@ class AppSettingsScreen extends StatelessWidget {
                   ),
                 ),
                 SliverToBoxAdapter(
-                  child: _ThemeHexInputRow(themeController: themeController),
+                  child: _ThemeHexInputRow(
+                    themeController: themeController,
+                    loc: loc,
+                  ),
                 ),
                 const SliverToBoxAdapter(child: SizedBox(height: 8)),
                 if (customs.isNotEmpty) ...[
@@ -437,7 +504,7 @@ class AppSettingsScreen extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                       child: Text(
-                        'My colors',
+                        loc.my_colors,
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -501,7 +568,7 @@ class AppSettingsScreen extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                     child: Text(
-                      'Presets',
+                      loc.presets,
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -562,9 +629,13 @@ class AppSettingsScreen extends StatelessWidget {
 }
 
 class _ThemeHexInputRow extends StatefulWidget {
-  const _ThemeHexInputRow({required this.themeController});
+  const _ThemeHexInputRow({
+    required this.themeController,
+    required this.loc,
+  });
 
   final ThemeController themeController;
+  final AppLocalizations loc;
 
   @override
   State<_ThemeHexInputRow> createState() => _ThemeHexInputRowState();
@@ -602,7 +673,7 @@ class _ThemeHexInputRowState extends State<_ThemeHexInputRow> {
       );
     } else {
       setState(() {
-        _errorText = 'Use #RRGGBB (e.g. #2196F3) or #AARRGGBB';
+        _errorText = widget.loc.hex_format_error;
       });
     }
   }
@@ -656,7 +727,7 @@ class _ThemeHexInputRowState extends State<_ThemeHexInputRow> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  child: const Text('Apply'),
+                  child: Text(widget.loc.apply),
                 ),
               ),
             ],

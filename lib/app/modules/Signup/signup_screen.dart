@@ -138,15 +138,7 @@ class SignupScreen extends GetView<SignupController> {
                       ),
                       const SizedBox(height: 16),
 
-                      _buildTextField(
-                        context: context,
-                        label: loc.email,
-                        controller: controller.emailController,
-                        validator: controller.validateEmail,
-                        hint: loc.enter_email,
-                        keyboardType: TextInputType.emailAddress,
-                        textInputAction: TextInputAction.next,
-                      ),
+                      _buildEmailField(context, loc),
                       const SizedBox(height: 16),
 
                       Container(
@@ -321,6 +313,77 @@ class SignupScreen extends GetView<SignupController> {
         ],
       ),
     );
+  }
+
+  Widget _buildEmailField(BuildContext context, AppLocalizations loc) {
+    return Obx(() {
+      final Widget? suffixIcon;
+      final String? helperText;
+
+      if (controller.isEmailChecking.value) {
+        suffixIcon = Padding(
+          padding: const EdgeInsets.all(12),
+          child: SizedBox(
+            width: 15,
+            height: 15,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: AppColor.primary,
+            ),
+          ),
+        );
+        helperText = 'Checking email availability...';
+      } else if (controller.isEmailAvailable.value == true) {
+        suffixIcon = const Icon(
+          Icons.check_circle_rounded,
+          color: AppColor.lightgreen,
+        );
+        helperText = 'Email is available';
+      } else if (controller.emailVerificationError.value != null) {
+        suffixIcon = Icon(
+          Icons.info_outline_rounded,
+          color: Colors.orange.shade700,
+        );
+        helperText = controller.emailVerificationError.value;
+      } else if (controller.isEmailAvailable.value == false) {
+        suffixIcon = Icon(
+          Icons.error_outline_rounded,
+          color: Theme.of(context).colorScheme.error,
+        );
+        helperText =
+            'This email is already registered. Please use a different email.';
+      } else {
+        suffixIcon = null;
+        helperText = null;
+      }
+
+      return TextFormField(
+        controller: controller.emailController,
+        validator: controller.validateEmail,
+        keyboardType: TextInputType.emailAddress,
+        textInputAction: TextInputAction.next,
+        onChanged: controller.onEmailChanged,
+        decoration: InputDecoration(
+          hintText: loc.enter_email,
+          label: _requiredLabel(context, loc.email),
+          suffixIcon: suffixIcon,
+          suffixIconConstraints: const BoxConstraints(
+            minWidth: 44,
+            minHeight: 44,
+          ),
+          helperText: helperText,
+          helperStyle: TextStyle(
+            color: controller.isEmailAvailable.value == false
+                ? Theme.of(context).colorScheme.error
+                : controller.emailVerificationError.value != null
+                ? Colors.orange.shade700
+                : controller.isEmailAvailable.value == true
+                ? AppColor.lightgreen
+                : Colors.grey.shade600,
+          ),
+        ),
+      );
+    });
   }
 
   Widget _buildTextField({

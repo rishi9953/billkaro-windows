@@ -71,9 +71,7 @@ void main(List<String> args) async {
   };
 
   try {
-    if (kDebugMode) {
-      HttpOverrides.global = MyHttpOverrides();
-    }
+    HttpOverrides.global = MyHttpOverrides();
     WidgetsFlutterBinding.ensureInitialized();
 
     final isKitchenDisplayWindow =
@@ -443,6 +441,7 @@ Future<void> initDependencies() async {
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     WidgetsFlutterBinding.ensureInitialized();
+    HttpOverrides.global = MyHttpOverrides();
 
     final apiClient = NetworkModule.getApiClient();
 
@@ -458,7 +457,12 @@ void callbackDispatcher() {
         case SyncManager.immediateSyncTask:
           debugPrint('🔄 [WORKMANAGER] Executing sync task: $task');
           // Show notification in background sync
-          await syncService.syncPendingOrders(db, showNotification: true);
+          await syncService.syncPendingOrders(
+            db,
+            showNotification: true,
+            fromReconnect: false,
+            refreshUi: false,
+          );
           debugPrint('✅ [WORKMANAGER] Sync task completed: $task');
           break;
         default:

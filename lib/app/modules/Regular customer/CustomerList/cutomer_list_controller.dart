@@ -9,11 +9,21 @@ class CutomerListController extends BaseController {
   final hasLoadedOnce = false.obs;
 
   Future<void> getCustomerList() async {
+    final loc = AppLocalizations.of(Get.context!)!;
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) {
-      loadError.value = 'No outlet selected';
+      loadError.value = loc.no_outlet_selected;
       customerList.clear();
       hasLoadedOnce.value = true;
+      return;
+    }
+
+    final isOnline = await NetworkUtils.hasInternetConnection();
+    if (!isOnline) {
+      loadError.value = loc.unable_to_load_customers_connection;
+      customerList.clear();
+      hasLoadedOnce.value = true;
+      isLoading.value = false;
       return;
     }
 
@@ -29,12 +39,12 @@ class CutomerListController extends BaseController {
       if (response?.status == 'success') {
         customerList.value = response!.data;
       } else {
-        loadError.value = 'Unable to load customers. Please try again.';
+        loadError.value = loc.unable_to_load_customers;
         customerList.clear();
       }
     } catch (e) {
       debugPrint('Customer list error: $e');
-      loadError.value = 'Unable to load customers. Please check your connection.';
+      loadError.value = loc.unable_to_load_customers_connection;
       customerList.clear();
     } finally {
       isLoading.value = false;

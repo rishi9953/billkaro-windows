@@ -1,9 +1,13 @@
 import 'package:billkaro/app/services/Modals/login_modal.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_outlet_sync.dart';
 
 class LoginController extends BaseController {
   /// 0 = business user (auth/login), 1 = staff (auth/staff/login).
   var signInTabIndex = 0.obs;
+
+  /// 0 = email & password, 1 = phone number (UI only).
+  var loginMethodTabIndex = 0.obs;
 
   // Observable variables
   var toggle = true.obs;
@@ -13,6 +17,7 @@ class LoginController extends BaseController {
   // Text editing controllers for Add Device form
   final registrationKeyController = TextEditingController();
   final deviceLabelController = TextEditingController();
+  final phoneNumberController = TextEditingController();
 
   // Text editing controllers for Request Key form
   final accountNumberController = TextEditingController();
@@ -27,6 +32,7 @@ class LoginController extends BaseController {
     // Dispose controllers to prevent memory leaks
     registrationKeyController.dispose();
     deviceLabelController.dispose();
+    phoneNumberController.dispose();
     accountNumberController.dispose();
     emailOrPhoneController.dispose();
     super.onClose();
@@ -41,6 +47,7 @@ class LoginController extends BaseController {
   void clearAllFields() {
     registrationKeyController.clear();
     deviceLabelController.clear();
+    phoneNumberController.clear();
     accountNumberController.clear();
     emailOrPhoneController.clear();
   }
@@ -162,6 +169,7 @@ class LoginController extends BaseController {
 
       final response = await callApi(
         isStaff ? apiClient.onStaffLogin(request) : apiClient.onLogin(request),
+        showLoader: false,
       );
       debugPrint('Login Response: $response');
       if (response == null) {
@@ -187,6 +195,13 @@ class LoginController extends BaseController {
       }
 
       appPref.selectedOutlet = outlets.first;
+      if (isStaff) {
+        await StaffOutletSync.enrichAppPrefFromOwner(
+          appPref: appPref,
+          staffUser: response.user,
+          apiClient: apiClient,
+        );
+      }
       Get.offAllNamed(AppRoute.homeMain);
     } catch (e) {
       debugPrint('Error during login: $e');
@@ -207,57 +222,63 @@ class LoginController extends BaseController {
     await Get.dialog(
       Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Success Lottie Animation
-              SizedBox(
-                height: 140,
-                child: Lottie.asset(
-                  'assets/lottie/Success.json',
-                  repeat: false,
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.3,
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Success Lottie Animation
+                SizedBox(
+                  height: 140,
+                  child: Lottie.asset(
+                    'assets/lottie/Success.json',
+                    repeat: false,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Check Your Email',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'We\'ve sent password reset instructions to:\n$email',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade700,
-                  height: 1.4,
+                const SizedBox(height: 16),
+                const Text(
+                  'Check Your Email',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Get.back();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xff083c6b),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 8),
+                Text(
+                  'We\'ve sent password reset instructions to:\n$email',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade700,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Get.back();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xff083c6b),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Got It',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                  child: const Text(
-                    'Got It',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

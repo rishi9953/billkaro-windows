@@ -1,7 +1,32 @@
-import 'package:billkaro/config/config.dart';
+import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/notification/sync_notification_service.dart';
+import 'package:billkaro/app/services/sync/order_sync_util.dart';
+import 'package:billkaro/app/services/sync/refresh_online_data.dart';
+import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/offline/offline_category_loader.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+
+/// Result of a full offline → online sync cycle.
+class OrderSyncResult {
+  final int syncedCount;
+  final int failedCount;
+  final int pendingRemaining;
+  final Set<String> affectedOutletIds;
+  final bool pulledFreshData;
+
+  const OrderSyncResult({
+    required this.syncedCount,
+    required this.failedCount,
+    required this.pendingRemaining,
+    required this.affectedOutletIds,
+    this.pulledFreshData = false,
+  });
+
+  bool get hadSuccessfulSync => syncedCount > 0;
+  bool get isFullyComplete => pendingRemaining == 0 && failedCount == 0;
+}
 
 class Synchronisation {
   final ApiClient apiClient;
@@ -9,213 +34,321 @@ class Synchronisation {
 
   Synchronisation({required this.apiClient});
 
-  /// Sync all pending orders to the server
-  /// Returns true if sync was successful, false otherwise
-  Future<bool> syncPendingOrders(AppDatabase db, {bool showNotification = true}) async {
-    debugPrint('🔄 [SYNC] Starting sync process...');
+  /// Push pending orders, reconcile server IDs, then pull fresh outlet data.
+  Future<OrderSyncResult> syncPendingOrders(
+    AppDatabase db, {
+    bool showNotification = true,
+    bool fromReconnect = false,
+    bool refreshUi = true,
+  }) async {
+    debugPrint('🔄 [SYNC] Starting sync (reconnect=$fromReconnect)...');
 
     try {
-      // Initialize notification service
       if (showNotification) {
         await _notificationService.initialize();
       }
 
-      // Check internet
-      final isOnline = await NetworkUtils.hasInternetConnection();
-      if (!isOnline) {
+      if (!await NetworkUtils.hasInternetConnection()) {
         debugPrint('⚠️ [SYNC] No internet connection');
         if (showNotification) {
           await _notificationService.showSyncFailed(
             errorMessage: 'No internet connection',
           );
         }
-        return false;
+        return const OrderSyncResult(
+          syncedCount: 0,
+          failedCount: 0,
+          pendingRemaining: 0,
+          affectedOutletIds: {},
+        );
       }
 
-      // Get selected outlet ID
       final appPref = Get.find<AppPref>();
-      final selectedOutletId = appPref.selectedOutlet?.id;
-      if (selectedOutletId == null) {
-        debugPrint('⚠️ [SYNC] No outlet selected, skipping sync');
-        if (showNotification) {
-          await _notificationService.showSyncFailed(
-            errorMessage: 'No outlet selected',
-          );
-        }
-        return false;
+      final userId = appPref.user?.id;
+      if (userId == null || userId.isEmpty) {
+        debugPrint('⚠️ [SYNC] No logged-in user');
+        return const OrderSyncResult(
+          syncedCount: 0,
+          failedCount: 0,
+          pendingRemaining: 0,
+          affectedOutletIds: {},
+        );
       }
 
-      // Get all pending orders (across outlets for this device)
-      final allPendingOrders = await db.getPendingOrders();
-      final orders = allPendingOrders;
-      debugPrint(
-        '📦 [SYNC] Found ${orders.length} pending orders (${allPendingOrders.length} total pending)',
-      );
+      if (fromReconnect) {
+        final reset = await db.resetFailedOrdersToPending();
+        if (reset > 0) {
+          debugPrint('🔁 [SYNC] Re-queued $reset previously failed order(s)');
+        }
+      }
 
-      if (orders.isEmpty) {
-        debugPrint('✅ [SYNC] No orders to sync for selected outlet');
+      final pendingOrders = await db.getPendingOrders();
+      debugPrint('📦 [SYNC] ${pendingOrders.length} pending order(s)');
+
+      if (pendingOrders.isEmpty) {
         if (showNotification) {
           await _notificationService.cancelSyncNotification();
         }
-        return true;
+        var pulledFreshData = false;
+        if (fromReconnect) {
+          pulledFreshData = await _pullAndRefreshOutlets(
+            db,
+            userId,
+            appPref,
+          );
+          if (refreshUi) {
+            await refreshControllersAfterOnlineSync();
+          }
+        }
+        return OrderSyncResult(
+          syncedCount: 0,
+          failedCount: 0,
+          pendingRemaining: 0,
+          affectedOutletIds: {},
+          pulledFreshData: pulledFreshData,
+        );
       }
 
-      // Show sync started notification
       if (showNotification) {
-        await _notificationService.showSyncStarted(totalOrders: orders.length);
+        await _notificationService.showSyncStarted(
+          totalOrders: pendingOrders.length,
+        );
       }
 
       int successCount = 0;
       int failCount = 0;
-      final List<String> failedOrderIds = [];
-      int currentIndex = 0;
+      final affectedOutlets = <String>{};
+      var currentIndex = 0;
 
-      for (final order in orders) {
+      for (final order in pendingOrders) {
         currentIndex++;
+        final localId = order.id;
+
+        if (showNotification) {
+          await _notificationService.showSyncProgress(
+            current: currentIndex,
+            total: pendingOrders.length,
+            synced: successCount,
+          );
+        }
+
         try {
-          debugPrint('📤 [SYNC] Syncing order: ${order.id} ($currentIndex/${orders.length})');
+          final payload = buildOrderSyncPayload(order);
+          debugPrint('📤 [SYNC] Uploading order $localId');
 
-          // Update progress notification
-          if (showNotification) {
-            await _notificationService.showSyncProgress(
-              current: currentIndex,
-              total: orders.length,
-              synced: successCount,
+          final response = await apiClient.addOrder(payload);
+          final serverOrder = parseSyncedOrderFromResponse(response, order);
+
+          if (serverOrder == null) {
+            throw FormatException(
+              'Invalid addOrder response for $localId: $response',
             );
           }
 
-          // Call API to sync order
-          await apiClient.addOrder(order.toJson());
-          
-          // Mark as synced after successful API call
-          await db.markOrderAsSynced(order.id);
+          if (localId != serverOrder.id) {
+            await db.reconcileSyncedOrder(
+              localOrderId: localId,
+              serverOrder: serverOrder,
+            );
+          } else {
+            await db.markOrderAsSynced(localId);
+          }
+
+          affectedOutlets.add(serverOrder.outletId);
           successCount++;
-          debugPrint('✅ [SYNC] Order ${order.id} synced successfully');
-
-          // Update progress after successful sync
-          if (showNotification) {
-            await _notificationService.showSyncProgress(
-              current: currentIndex,
-              total: orders.length,
-              synced: successCount,
-            );
-          }
+          debugPrint('✅ [SYNC] Order $localId → ${serverOrder.id}');
         } on DioException catch (e) {
           failCount++;
-          failedOrderIds.add(order.id);
-          debugPrint('❌ [SYNC] Failed order ${order.id}: ${e.message}');
-          
-          // Don't retry on client errors (4xx), but retry on server errors (5xx)
           final statusCode = e.response?.statusCode;
-          if (statusCode != null && statusCode >= 400 && statusCode < 500) {
-            debugPrint(
-              '⚠️ [SYNC] Client error for order ${order.id}, marking as failed',
-            );
-            await db.markOrderSyncFailed(order.id);
-          }
+          debugPrint(
+            '❌ [SYNC] Dio error for $localId (${statusCode ?? 'no status'}): ${e.message}',
+          );
 
-          // Update progress even on failure
-          if (showNotification) {
-            await _notificationService.showSyncProgress(
-              current: currentIndex,
-              total: orders.length,
-              synced: successCount,
-            );
+          if (statusCode != null && statusCode >= 400 && statusCode < 500) {
+            await db.markOrderSyncFailed(localId);
           }
         } catch (e, stack) {
           failCount++;
-          failedOrderIds.add(order.id);
-          debugPrint('❌ [SYNC] Failed order ${order.id}: $e');
+          debugPrint('❌ [SYNC] Failed order $localId: $e');
           debugPrint(stack.toString());
-
-          // Update progress even on failure
-          if (showNotification) {
-            await _notificationService.showSyncProgress(
-              current: currentIndex,
-              total: orders.length,
-              synced: successCount,
-            );
-          }
         }
-      }
 
-      debugPrint('📊 [SYNC] Summary: $successCount OK, $failCount failed');
-      
-      if (failedOrderIds.isNotEmpty) {
-        debugPrint('❌ [SYNC] Failed order IDs: ${failedOrderIds.join(", ")}');
-        if (Get.isRegistered<AppPref>()) {
-          showError(
-            description:
-                '$failCount order(s) could not sync. Check order details and try again.',
+        if (showNotification) {
+          await _notificationService.showSyncProgress(
+            current: currentIndex,
+            total: pendingOrders.length,
+            synced: successCount,
           );
         }
       }
 
-      // Show completion notification
+      final pendingRemaining = await db.countPendingOrders();
+      var pulledFreshData = false;
+
+      if (successCount > 0 || fromReconnect) {
+        pulledFreshData = await _pullAndRefreshOutlets(
+          db,
+          userId,
+          appPref,
+          outletIds: affectedOutlets,
+        );
+      }
+
+      if (failCount > 0 && Get.isRegistered<AppPref>()) {
+        showError(
+          description:
+              '$failCount order(s) could not sync. They will retry when you are back online.',
+        );
+      } else if (successCount > 0 && Get.isRegistered<AppPref>()) {
+        showSuccess(
+          description: successCount == 1
+              ? '1 offline order synced successfully'
+              : '$successCount offline orders synced successfully',
+        );
+      }
+
       if (showNotification) {
         await _notificationService.showSyncCompleted(
           syncedCount: successCount,
-          totalCount: orders.length,
+          totalCount: pendingOrders.length,
           hasErrors: failCount > 0,
         );
       }
 
-      // Return true if at least some orders were synced
-      return successCount > 0;
+      if (refreshUi && (successCount > 0 || fromReconnect)) {
+        await refreshControllersAfterOnlineSync();
+      }
+
+      debugPrint(
+        '📊 [SYNC] Done: $successCount synced, $failCount failed, '
+        '$pendingRemaining still pending',
+      );
+
+      return OrderSyncResult(
+        syncedCount: successCount,
+        failedCount: failCount,
+        pendingRemaining: pendingRemaining,
+        affectedOutletIds: affectedOutlets,
+        pulledFreshData: pulledFreshData,
+      );
     } catch (e, stack) {
       debugPrint('🔴 [SYNC] Critical error: $e');
       debugPrint(stack.toString());
-      
+
       if (showNotification) {
         await _notificationService.showSyncFailed(
           errorMessage: 'Sync failed: ${e.toString()}',
         );
       }
-      
-      return false;
+
+      return const OrderSyncResult(
+        syncedCount: 0,
+        failedCount: 0,
+        pendingRemaining: 0,
+        affectedOutletIds: {},
+      );
     }
   }
 
-  /// Sync a single order (useful for retry logic)
+  Future<bool> _pullAndRefreshOutlets(
+    AppDatabase db,
+    String userId,
+    AppPref appPref, {
+    Set<String>? outletIds,
+  }) async {
+    final targets = <String>{};
+
+    if (outletIds != null && outletIds.isNotEmpty) {
+      targets.addAll(outletIds);
+    }
+    final selected = appPref.selectedOutlet?.id;
+    if (selected != null) targets.add(selected);
+
+    if (targets.isEmpty) return false;
+
+    var pulled = false;
+
+    for (final outletId in targets) {
+      try {
+        if (!await NetworkUtils.hasInternetConnection()) break;
+
+        debugPrint('📥 [SYNC] Pulling orders for outlet $outletId');
+        final response = await apiClient.getOrders(
+          userId,
+          outletId,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+        );
+
+        if (response.status == 'success' && response.data.isNotEmpty) {
+          await db.insertOrders(
+            response.data,
+            outletId,
+            isSyncedFromApi: true,
+          );
+          pulled = true;
+          debugPrint(
+            '✅ [SYNC] Cached ${response.data.length} orders for $outletId',
+          );
+        }
+
+        await OfflineCategoryLoader.load(
+          outletId: outletId,
+          fetchFromApi: () async {
+            try {
+              return await apiClient.getCategories(outletId);
+            } catch (_) {
+              return null;
+            }
+          },
+        );
+      } catch (e) {
+        debugPrint('⚠️ [SYNC] Pull failed for outlet $outletId: $e');
+      }
+    }
+
+    return pulled;
+  }
+
+  /// Sync a single order (manual retry).
   Future<bool> syncSingleOrder(AppDatabase db, String orderId) async {
     try {
-      final isOnline = await NetworkUtils.hasInternetConnection();
-      if (!isOnline) {
-        debugPrint('⚠️ [SYNC] No internet connection for order $orderId');
-        return false;
-      }
-
-      // Get selected outlet ID
-      final appPref = Get.find<AppPref>();
-      final selectedOutletId = appPref.selectedOutlet?.id;
-      if (selectedOutletId == null) {
-        debugPrint('⚠️ [SYNC] No outlet selected, cannot sync order $orderId');
+      if (!await NetworkUtils.hasInternetConnection()) {
         return false;
       }
 
       final orders = await db.getPendingOrders();
-      final order = orders.firstWhere(
-        (o) => o.id == orderId,
-        orElse: () => throw Exception('Order not found'),
-      );
-
-      // Check order belongs to a known outlet (still sync even if not currently selected)
-      if (order.outletId.isEmpty) {
-        debugPrint('⚠️ [SYNC] Order $orderId has no outletId. Skipping sync.');
+      OrderModel? order;
+      for (final candidate in orders) {
+        if (candidate.id == orderId) {
+          order = candidate;
+          break;
+        }
+      }
+      if (order == null) {
+        debugPrint('⚠️ [SYNC] Order $orderId not in pending queue');
         return false;
       }
 
-      debugPrint('📤 [SYNC] Syncing single order: $orderId');
+      final response = await apiClient.addOrder(buildOrderSyncPayload(order));
+      final serverOrder = parseSyncedOrderFromResponse(response, order);
+      if (serverOrder == null) return false;
 
-      final response = await apiClient.addOrder(order.toJson());
-      
-      if (response != null) {
+      if (order.id != serverOrder.id) {
+        await db.reconcileSyncedOrder(
+          localOrderId: order.id,
+          serverOrder: serverOrder,
+        );
+      } else {
         await db.markOrderAsSynced(orderId);
-        debugPrint('✅ [SYNC] Order $orderId synced successfully');
-        return true;
       }
 
-      return false;
+      await refreshControllersAfterOnlineSync();
+      return true;
     } catch (e) {
       debugPrint('❌ [SYNC] Failed to sync order $orderId: $e');
       return false;

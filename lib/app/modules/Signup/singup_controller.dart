@@ -1,8 +1,11 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:billkaro/app/services/Modals/businessType/businesst_type_response.dart';
 import 'package:billkaro/app/services/Modals/registration_modal.dart';
-import 'package:billkaro/app/Widgets/email_verification_dialog.dart';
+import 'package:billkaro/app/services/Network/api_config.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/trusted_http_client.dart';
 
 class SignupController extends BaseController {
   final formKey = GlobalKey<FormState>();
@@ -17,6 +20,12 @@ class SignupController extends BaseController {
   var isPasswordVisible = false.obs;
 
   final businessTypesList = <BusinessType>[].obs;
+
+  Timer? _emailCheckDebounce;
+  final isEmailChecking = false.obs;
+  final isEmailAvailable = Rxn<bool>();
+  final emailVerificationError = RxnString();
+  String? _lastCheckedEmail;
 
   static const List<String> _fallbackBusinessTypes = [
     'retail',
@@ -42,8 +51,123 @@ class SignupController extends BaseController {
     getBusinessTypes();
   }
 
+  void onEmailChanged(String value) {
+    final trimmed = value.trim().toLowerCase();
+    emailVerificationError.value = null;
+    if (_emailFormatError(trimmed) != null) {
+      isEmailAvailable.value = null;
+      _lastCheckedEmail = null;
+      isEmailChecking.value = false;
+      return;
+    }
+
+    if (trimmed == _lastCheckedEmail) return;
+
+    _emailCheckDebounce?.cancel();
+    isEmailAvailable.value = null;
+    isEmailChecking.value = true;
+
+    _emailCheckDebounce = Timer(const Duration(milliseconds: 600), () {
+      checkEmailAvailability(trimmed);
+    });
+  }
+
+  Future<Map<String, dynamic>?> _requestEmailAvailability(String email) async {
+    final response = await callApi(
+      apiClient.checkAuthEmail({'email': email}),
+      showLoader: false,
+      apiErrorHandler: (_) async => true,
+    );
+
+    if (response is Map) {
+      return Map<String, dynamic>.from(response);
+    }
+
+    try {
+      final uri = Uri.parse('${ApiConfig.baseUrl}auth/check-email');
+      final httpResponse = await trustedHttpClient().post(
+        uri,
+        headers: const {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+
+      if (httpResponse.statusCode >= 200 && httpResponse.statusCode < 300) {
+        final decoded = jsonDecode(httpResponse.body);
+        if (decoded is Map) {
+          return Map<String, dynamic>.from(decoded);
+        }
+      }
+    } catch (e) {
+      debugPrint('Email availability HTTP fallback failed: $e');
+    }
+
+    return null;
+  }
+
+  Future<bool> checkEmailAvailability(String email) async {
+    final normalizedEmail = email.trim().toLowerCase();
+    if (_emailFormatError(normalizedEmail) != null) {
+      isEmailAvailable.value = null;
+      emailVerificationError.value = null;
+      isEmailChecking.value = false;
+      return false;
+    }
+
+    isEmailChecking.value = true;
+    emailVerificationError.value = null;
+    try {
+      final response = await _requestEmailAvailability(normalizedEmail);
+
+      if (emailController.text.trim().toLowerCase() != normalizedEmail) {
+        return false;
+      }
+
+      if (response == null) {
+        isEmailAvailable.value = null;
+        _lastCheckedEmail = null;
+        emailVerificationError.value =
+            'Could not verify email right now. You can still continue registration.';
+        return false;
+      }
+
+      _lastCheckedEmail = normalizedEmail;
+
+      if (response['available'] == true) {
+        isEmailAvailable.value = true;
+        emailVerificationError.value = null;
+        formKey.currentState?.validate();
+        return true;
+      }
+
+      if (response['available'] == false) {
+        isEmailAvailable.value = false;
+        emailVerificationError.value = null;
+        formKey.currentState?.validate();
+        return false;
+      }
+
+      isEmailAvailable.value = null;
+      emailVerificationError.value =
+          'Could not verify email right now. You can still continue registration.';
+      return false;
+    } catch (_) {
+      if (emailController.text.trim().toLowerCase() == normalizedEmail) {
+        isEmailAvailable.value = null;
+        _lastCheckedEmail = null;
+        emailVerificationError.value =
+            'Could not verify email right now. You can still continue registration.';
+      }
+      return false;
+    } finally {
+      if (emailController.text.trim().toLowerCase() == normalizedEmail) {
+        isEmailChecking.value = false;
+      }
+    }
+  }
+
   @override
   void onClose() {
+    _emailCheckDebounce?.cancel();
     businessNameController.dispose();
     brandNameController.dispose();
     emailController.dispose();
@@ -246,7 +370,7 @@ class SignupController extends BaseController {
     return null;
   }
 
-  void submitRegistration() {
+  void submitRegistration() async {
     // Check if form state is available
     if (formKey.currentState == null) {
       showError(description: 'Form not initialized. Please try again.');
@@ -257,6 +381,26 @@ class SignupController extends BaseController {
     if (!formKey.currentState!.validate()) {
       return;
     }
+
+    final email = emailController.text.trim().toLowerCase();
+    if (isEmailChecking.value) {
+      showError(description: 'Please wait while we verify your email.');
+      return;
+    }
+
+    if (_lastCheckedEmail != email || isEmailAvailable.value == false) {
+      await checkEmailAvailability(email);
+    }
+
+    if (isEmailAvailable.value == false) {
+      showError(
+        description:
+            'This email is already registered. Please use a different email.',
+      );
+      return;
+    }
+
+    // If live check is inconclusive (network/TLS), allow submit — register API validates.
 
     // Validate address
     if (businessAddress.value == null) {
@@ -295,26 +439,34 @@ class SignupController extends BaseController {
     onSubmit();
   }
 
-  String? validateEmail(String? value) {
-    if (value == null || value.trim().isEmpty) {
+  String? _emailFormatError(String trimmed) {
+    if (trimmed.isEmpty) {
       return 'Email is required';
     }
-    final trimmed = value.trim().toLowerCase();
-    // Improved email regex pattern - more comprehensive
     final emailRegex = RegExp(
       r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
     );
     if (!emailRegex.hasMatch(trimmed)) {
       return 'Please enter a valid email address';
     }
-    // Additional check for consecutive dots
     if (trimmed.contains('..')) {
       return 'Email cannot contain consecutive dots';
     }
-    // Check for valid domain
     final parts = trimmed.split('@');
     if (parts.length != 2 || parts[1].isEmpty) {
       return 'Please enter a valid email address';
+    }
+    return null;
+  }
+
+  String? validateEmail(String? value) {
+    final trimmed = value?.trim().toLowerCase() ?? '';
+    final formatError = _emailFormatError(trimmed);
+    if (formatError != null) {
+      return formatError;
+    }
+    if (isEmailAvailable.value == false) {
+      return 'This email is already registered. Please use a different email.';
     }
     return null;
   }
@@ -344,12 +496,11 @@ class SignupController extends BaseController {
       final response = await callApi(apiClient.registration(request));
       debugPrint('Api Response is : $response');
       if (response != null) {
-        Get.dialog(
-          barrierDismissible: false,
-          EmailVerificationDialog(
-            email: emailController.text.trim().toLowerCase(),
-          ),
+        showSuccess(
+          description:
+              'Registration successful. Please check your email to activate your account.',
         );
+        Get.offAllNamed(AppRoute.login);
       }
     } catch (e) {
       print('Error during registration: $e');

@@ -28,6 +28,18 @@ class AddMenuItemScreen extends StatelessWidget {
             ),
           );
         }),
+        actions: [
+          // Reset Form
+          IconButton(
+            tooltip: 'Reset Form',
+            onPressed: controller.resetForm,
+            icon: const Icon(
+              Icons.refresh_rounded,
+              size: 22,
+              color: Colors.white,
+            ),
+          ),
+        ],
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -111,19 +123,17 @@ class AddMenuItemScreen extends StatelessWidget {
                       InteractiveViewer(
                         minScale: 0.8,
                         maxScale: 4,
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: image,
-                        ),
+                        child: SizedBox(width: double.infinity, child: image),
                       ),
                       Positioned(
                         top: 8,
                         right: 8,
                         child: IconButton(
                           tooltip: 'Close',
-                          onPressed: () =>
-                              Navigator.of(dialogContext, rootNavigator: true)
-                                  .pop(),
+                          onPressed: () => Navigator.of(
+                            dialogContext,
+                            rootNavigator: true,
+                          ).pop(),
                           icon: const Icon(Icons.close, color: Colors.white),
                         ),
                       ),
@@ -165,25 +175,7 @@ class AddMenuItemScreen extends StatelessWidget {
                     border: Border.all(color: Colors.grey[300]!),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: controller.isGeneratingImage.value
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const CircularProgressIndicator(),
-                              const SizedBox(height: 14),
-                              Text(
-                                'AI is generating image...',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[700],
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : controller.isScanning.value
+                  child: controller.isScanning.value
                       ? Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -281,6 +273,25 @@ class AddMenuItemScreen extends StatelessWidget {
                             Positioned(
                               top: 10,
                               right: 10,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.55),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: IconButton(
+                                  tooltip: loc.remove_image,
+                                  icon: Icon(
+                                    Icons.delete,
+                                    color: AppColor.error,
+                                    size: 20,
+                                  ),
+                                  onPressed: controller.removeImage,
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 10,
+                              right: 60,
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: Colors.black.withOpacity(0.55),
@@ -402,6 +413,42 @@ class AddMenuItemScreen extends StatelessWidget {
             );
           }
 
+          Widget buildRecommendedTile() {
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                border: Border.all(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.star_rounded, color: AppColor.primary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      loc.mark_this_item_as_favourite,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                  ),
+                  Obx(
+                    () => Switch(
+                      value: controller.markAsFavorite.value,
+                      activeColor: AppColor.primary.withOpacity(0.95),
+                      activeTrackColor: AppColor.primary.withOpacity(0.25),
+                      onChanged: (value) {
+                        controller.markAsFavorite.value = value;
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
           Widget buildButtons() {
             return Obx(() {
               if (controller.isEdit.value) {
@@ -515,6 +562,8 @@ class AddMenuItemScreen extends StatelessWidget {
               const SizedBox(height: 18),
               if (!isWide) ...[
                 buildAvailabilityTile(),
+                const SizedBox(height: 12),
+                buildRecommendedTile(),
                 const SizedBox(height: 16),
                 imageFieldLabel(loc.item_image),
                 const SizedBox(height: 8),
@@ -585,9 +634,7 @@ class AddMenuItemScreen extends StatelessWidget {
               TextField(
                 controller: controller.prepTimeController,
                 keyboardType: TextInputType.number,
-                decoration: inputDecoration(
-                  hintText: 'e.g. 15',
-                ),
+                decoration: inputDecoration(hintText: 'e.g. 15'),
               ),
               const SizedBox(height: 18),
 
@@ -621,6 +668,8 @@ class AddMenuItemScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               buildAvailabilityTile(),
+              const SizedBox(height: 12),
+              buildRecommendedTile(),
               const SizedBox(height: 16),
               imageFieldLabel(loc.item_image),
               const SizedBox(height: 8),

@@ -2,6 +2,7 @@
 import 'dart:convert';
 
 import 'package:billkaro/app/services/Modals/login_response.dart';
+import 'package:billkaro/app/services/Modals/tables/tables_response.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppPref {
@@ -27,10 +28,16 @@ class AppPref {
       'show_add_details_on_create_order';
   static const String keyDownloadPath = 'download_path';
   static const String keyQrMenuBaseUrl = 'qr_menu_base_url';
+  static const String keyAutoSyncEnabled = 'auto_sync_enabled';
+  static const String keyCashDrawerEnabled = 'cash_drawer_enabled';
+  static const String keyOpenCashDrawerOnCashPayment =
+      'open_cash_drawer_on_cash_payment';
+  static const String keyCashDrawerPin = 'cash_drawer_pin';
 
   /// True when the user signed in via the staff tab (`auth/staff/login`).
   static const String keyStaffSession = 'staff_session';
   static const String keyStaffPermissions = 'staff_permissions';
+  static const String keyCachedTablesPrefix = 'cached_tables_';
 
   AppPref(this._preferences);
 
@@ -77,6 +84,14 @@ class AppPref {
 
   /// Get all outlets from user
   List<OutletData> get allOutlets => user?.outletData ?? [];
+
+  /// Owner account id for outlet/user APIs (staff sessions use [User.userId]).
+  String? get ownerUserId {
+    final u = user;
+    if (u == null) return null;
+    final id = (u.userId ?? u.id)?.trim();
+    return (id == null || id.isEmpty) ? null : id;
+  }
 
   /// Check if outlet is selected
   bool get hasSelectedOutlet => selectedOutlet != null;
@@ -179,6 +194,29 @@ class AppPref {
   set qrMenuBaseUrl(String value) =>
       _preferences.setString(keyQrMenuBaseUrl, value.trim());
 
+  /// 👉 Auto sync enabled (offline -> online reconciliation)
+  bool get autoSyncEnabled => _preferences.getBool(keyAutoSyncEnabled) ?? true;
+  set autoSyncEnabled(bool value) =>
+      _preferences.setBool(keyAutoSyncEnabled, value);
+
+  /// 👉 RJ11 cash drawer connected to bill printer DK port
+  bool get cashDrawerEnabled =>
+      _preferences.getBool(keyCashDrawerEnabled) ?? false;
+  set cashDrawerEnabled(bool value) =>
+      _preferences.setBool(keyCashDrawerEnabled, value);
+
+  /// 👉 Open drawer automatically when billing with Cash payment
+  bool get openCashDrawerOnCashPayment =>
+      _preferences.getBool(keyOpenCashDrawerOnCashPayment) ?? true;
+  set openCashDrawerOnCashPayment(bool value) =>
+      _preferences.setBool(keyOpenCashDrawerOnCashPayment, value);
+
+  /// Drawer kick pin: `pin2` (most RJ11 drawers) or `pin5`
+  String get cashDrawerPin =>
+      _preferences.getString(keyCashDrawerPin) ?? 'pin2';
+  set cashDrawerPin(String value) =>
+      _preferences.setString(keyCashDrawerPin, value);
+
   /// 👉 Staff sign-in path (role from API may be missing or inconsistent).
   bool get isStaffSession => _preferences.getBool(keyStaffSession) ?? false;
   set isStaffSession(bool value) =>
@@ -204,6 +242,36 @@ class AppPref {
     }
   }
 
+  /// Cached outlet table layout for offline table screen
+  List<TableData>? getCachedOutletTables(String outletId) {
+    final raw = _preferences.getString('$keyCachedTablesPrefix$outletId');
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final list = jsonDecode(raw) as List<dynamic>;
+      return list
+          .map((e) => TableData.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void setCachedOutletTables(String outletId, List<TableData> tables) {
+    _preferences.setString(
+      '$keyCachedTablesPrefix$outletId',
+      jsonEncode(tables.map((e) => e.toJson()).toList()),
+    );
+  }
+
+  Future<void> clearCachedOutletTables() async {
+    final keys = _preferences
+        .getKeys()
+        .where((k) => k.startsWith(keyCachedTablesPrefix));
+    for (final key in keys) {
+      await _preferences.remove(key);
+    }
+  }
+
   /// Clear all
   Future<bool> clear() async => await _preferences.clear();
 
@@ -226,6 +294,7 @@ class AppPref {
     await clearAuthData();
     await _preferences.remove(keyUsers);
     await _preferences.remove(keyRecentusers);
+    await clearCachedOutletTables();
     return true;
   }
 }

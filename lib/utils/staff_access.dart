@@ -27,6 +27,25 @@ class StaffAccess {
 
   static bool get canViewReports => hasPermission('view_reports');
 
+  /// Business overview, payment summary, and sales trends on the home dashboard.
+  static bool get canViewDashboardInsights =>
+      isOwnerSession || canViewReports;
+
+  static bool get canViewInventory => isOwnerSession || canViewReports;
+
+  static bool canAccessRoute(String path) {
+    if (path.startsWith('/staff')) return canManageStaff;
+    if (path.startsWith('/subscriptions')) return canManageSubscriptions;
+    if (path.startsWith('/whatsaap-marketing')) return canUseWhatsAppMarketing;
+    if (path.startsWith('/reports') ||
+        path.startsWith('/order-report') ||
+        path.startsWith('/item-report')) {
+      return canViewReports;
+    }
+    if (path.startsWith('/inventory')) return canViewInventory;
+    return true;
+  }
+
   static bool get canManageStaff => isOwnerSession;
 
   static bool get canManageSubscriptions => isOwnerSession;

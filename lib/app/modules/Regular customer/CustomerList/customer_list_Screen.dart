@@ -14,16 +14,25 @@ class CustomerListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+
     return Obx(() {
       if (controller.isLoading.value && !controller.hasLoadedOnce.value) {
-        return const Scaffold(
-          body: Center(child: CircularProgressIndicator()),
-        );
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
       }
 
       if (controller.loadError.value.isNotEmpty) {
         return Scaffold(
-          appBar: AppBar(title: AppText.regular('Customers')),
+          appBar: AppBar(
+            title: AppText.regular(loc.customers),
+            actions: [
+              IconButton(
+                onPressed: controller.getCustomerList,
+                icon: const Icon(Icons.refresh),
+                tooltip: loc.refresh,
+              ),
+            ],
+          ),
           body: Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -34,7 +43,7 @@ class CustomerListScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: controller.getCustomerList,
-                    child: const Text('Retry'),
+                    child: Text(loc.refresh),
                   ),
                 ],
               ),
@@ -63,9 +72,16 @@ class CustomerListScreen extends StatelessWidget {
 
       return Scaffold(
         appBar: AppBar(
-          title: AppText.regular('Customers'),
+          title: AppText.regular(loc.customers),
           centerTitle: false,
           elevation: 0.3,
+          actions: [
+            IconButton(
+              onPressed: controller.getCustomerList,
+              icon: const Icon(Icons.refresh),
+              tooltip: loc.refresh,
+            ),
+          ],
         ),
         body: Center(
           child: ConstrainedBox(
@@ -99,12 +115,12 @@ class CustomerListScreen extends StatelessWidget {
                             onChanged: (value) => searchQuery.value = value,
                             decoration: InputDecoration(
                               isDense: true,
-                              hintText: 'Search by customer name or phone',
+                              hintText: loc.search_customer_hint,
                               prefixIcon: const Icon(Icons.search, size: 20),
                               suffixIcon: searchQuery.value.isEmpty
                                   ? null
                                   : IconButton(
-                                      tooltip: 'Clear search',
+                                      tooltip: loc.clear_search,
                                       icon: const Icon(Icons.close, size: 20),
                                       onPressed: () {
                                         searchController.clear();
@@ -128,7 +144,7 @@ class CustomerListScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: AppText.regular(
-                            '${filteredCustomers.length} Customers',
+                            loc.customers_count(filteredCustomers.length),
                           ),
                         ),
                       ],
@@ -144,7 +160,7 @@ class CustomerListScreen extends StatelessWidget {
                       ),
                       child: filteredCustomers.isEmpty
                           ? Center(
-                              child: AppText.regular('No matching customers'),
+                              child: AppText.regular(loc.no_matching_customers),
                             )
                           : ListView.separated(
                               itemCount: filteredCustomers.length,

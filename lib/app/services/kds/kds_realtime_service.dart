@@ -32,6 +32,12 @@ class KdsRealtimeService {
   String? _outletId;
   Timer? _reconnectTimer;
   bool _disposed = false;
+  int _reconnectAttempts = 0;
+  bool _localRefusedHintLogged = false;
+  bool _preferRemote = false;
+
+  static const _baseReconnectDelay = Duration(seconds: 4);
+  static const _maxReconnectDelay = Duration(seconds: 60);
 
   void connect(String outletId) {
     if (outletId.isEmpty) return;
@@ -40,6 +46,9 @@ class KdsRealtimeService {
     disconnect(keepOutlet: true);
     _outletId = outletId;
     _disposed = false;
+    _reconnectAttempts = 0;
+    _localRefusedHintLogged = false;
+    _preferRemote = false;
     _openSocket();
   }
 
@@ -72,7 +81,10 @@ class KdsRealtimeService {
     }
 
     try {
-      final uri = ApiConfig.kdsWebSocketUri(outletId);
+      final uri = ApiConfig.kdsWebSocketUri(
+        outletId,
+        forceRemote: _preferRemote,
+      );
       debugPrint('🔌 [KDS WS] connecting $uri');
       _channel = WebSocketChannel.connect(uri);
       _subscription = _channel!.stream.listen(
@@ -80,6 +92,8 @@ class KdsRealtimeService {
         onError: (e) {
           lastError.value = e.toString();
           debugPrint('❌ [KDS WS] error: $e');
+          if (_tryFallbackToRemote(e, uri)) return;
+          _logLocalConnectionHintIfNeeded(e, uri);
           isConnected.value = false;
           _scheduleReconnect();
         },
@@ -93,12 +107,52 @@ class KdsRealtimeService {
     } catch (e) {
       lastError.value = e.toString();
       debugPrint('❌ [KDS WS] connect failed: $e');
+      final uri = ApiConfig.kdsWebSocketUri(
+        outletId,
+        forceRemote: _preferRemote,
+      );
+      if (_tryFallbackToRemote(e, uri)) return;
+      _logLocalConnectionHintIfNeeded(e, uri);
       isConnected.value = false;
       _scheduleReconnect();
     }
   }
 
+  /// When local Nest is down but REST uses a remote host, switch to remote WSS.
+  bool _tryFallbackToRemote(Object error, Uri uri) {
+    if (_preferRemote || uri.host != '127.0.0.1') return false;
+    if (!ApiConfig.hasRemoteKdsWebSocket) return false;
+
+    final message = error.toString().toLowerCase();
+    if (!message.contains('refused') && !message.contains('1225')) {
+      return false;
+    }
+
+    _preferRemote = true;
+    _reconnectAttempts = 0;
+    _reconnectTimer?.cancel();
+    debugPrint(
+      '💡 [KDS WS] Local backend unavailable — falling back to remote API WebSocket',
+    );
+    isConnected.value = false;
+    _openSocket();
+    return true;
+  }
+
+  void _logLocalConnectionHintIfNeeded(Object error, Uri uri) {
+    if (_localRefusedHintLogged || uri.host != '127.0.0.1') return;
+    final message = error.toString().toLowerCase();
+    if (!message.contains('refused') && !message.contains('1225')) return;
+
+    _localRefusedHintLogged = true;
+    debugPrint(
+      '💡 [KDS WS] No server on $uri. Start billkaro-backend locally '
+      'or set KDS_WS_USE_LOCAL=false in .env to use the REST API host.',
+    );
+  }
+
   void _onMessage(dynamic raw) {
+    _reconnectAttempts = 0;
     isConnected.value = true;
     lastError.value = '';
     try {
@@ -120,7 +174,13 @@ class KdsRealtimeService {
   void _scheduleReconnect() {
     if (_disposed || _outletId == null) return;
     _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(const Duration(seconds: 4), () {
+    _reconnectAttempts++;
+    final multiplier = 1 << (_reconnectAttempts - 1).clamp(0, 4);
+    final delaySeconds = (_baseReconnectDelay.inSeconds * multiplier).clamp(
+      _baseReconnectDelay.inSeconds,
+      _maxReconnectDelay.inSeconds,
+    );
+    _reconnectTimer = Timer(Duration(seconds: delaySeconds), () {
       if (!_disposed && _outletId != null) _openSocket();
     });
   }

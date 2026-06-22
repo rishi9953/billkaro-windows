@@ -103,6 +103,14 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                 color: Colors.white,
               ),
             ),
+            actions: [
+              // Refresh
+              IconButton(
+                tooltip: loc.refresh,
+                onPressed: controller.refreshItems,
+                icon: const Icon(Icons.refresh, color: Colors.white),
+              ),
+            ],
           ),
           body: Center(
             child: Column(
@@ -113,7 +121,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                 ),
                 SizedBox(height: isTablet ? 24 : 16),
                 Text(
-                  'Loading menu...',
+                  loc.loading_menu,
                   style: TextStyle(
                     fontSize: isTablet ? 16 : 14,
                     color: Colors.grey[600],
@@ -151,7 +159,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                       horizontal: isTablet ? 20 : 16,
                     ),
                     child: Text(
-                      'Note: Hold category chip to edit.',
+                      loc.note_hold_category_to_edit,
                       style: TextStyle(color: Colors.grey[600]),
                     ),
                   ),
@@ -190,7 +198,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
         if (controller.isSelectionMode.value) {
           final count = controller.selectedItemIds.length;
           return Text(
-            count == 0 ? 'Select items' : '$count selected',
+            count == 0 ? loc.select_items : loc.items_selected_count(count),
             style: TextStyle(
               fontSize: isTablet ? 22 : 18,
               fontWeight: FontWeight.w700,
@@ -213,7 +221,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
         Obx(() {
           if (!controller.isSelectionMode.value) {
             return IconButton(
-              tooltip: 'Select items to delete',
+              tooltip: loc.select_items_to_delete,
               icon: const Icon(Icons.checklist, color: Colors.white),
               onPressed: controller.toggleSelectionMode,
             );
@@ -231,12 +239,12 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                     ? controller.clearItemSelection
                     : controller.selectAllVisibleItems,
                 child: Text(
-                  allSelected ? 'Clear all' : 'Select all',
+                  allSelected ? loc.clear_all : loc.select_all,
                   style: const TextStyle(color: Colors.white),
                 ),
               ),
               IconButton(
-                tooltip: 'Delete selected',
+                tooltip: loc.delete_selected,
                 icon: controller.isDeletingItems.value
                     ? const SizedBox(
                         width: 22,
@@ -256,6 +264,12 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
             ],
           );
         }),
+        // Refresh
+        IconButton(
+          tooltip: loc.refresh,
+          onPressed: controller.refreshItems,
+          icon: const Icon(Icons.refresh, color: Colors.white),
+        ),
       ],
     );
   }
@@ -272,7 +286,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                 () => TextField(
                   controller: controller.searchController,
                   decoration: InputDecoration(
-                    hintText: 'Search dishes',
+                    hintText: loc.search_dishes,
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: controller.searchQuery.value.isNotEmpty
                         ? IconButton(
@@ -314,7 +328,9 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                       : Icons.checklist,
                 ),
                 label: Text(
-                  controller.isSelectionMode.value ? 'Cancel' : 'Select',
+                  controller.isSelectionMode.value
+                      ? loc.cancel
+                      : loc.select_items,
                 ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: controller.isSelectionMode.value
@@ -346,7 +362,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                             : controller.deleteSelectedItems,
                         icon: const Icon(Icons.delete_outline),
                         label: Text(
-                          'Delete (${controller.selectedItemIds.length})',
+                          loc.delete_count(controller.selectedItemIds.length),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red.shade700,
@@ -366,7 +382,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
             child: OutlinedButton.icon(
               onPressed: controller.importFromFile,
               icon: const Icon(Icons.upload_file_outlined),
-              label: const Text('Import from file'),
+              label: Text(loc.import_from_file),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColor.primary,
                 side: BorderSide(color: AppColor.primary),
@@ -385,7 +401,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                 arguments: {'isEdit': false},
               ),
               icon: const Icon(Icons.add),
-              label: const Text('Add item'),
+              label: Text(loc.add_item),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColor.primary,
                 foregroundColor: Colors.white,
@@ -440,7 +456,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
             Row(
               children: [
                 Text(
-                  'Categories',
+                  loc.categories_label,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -450,8 +466,8 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                 const Spacer(),
                 Tooltip(
                   message: selectedCategory == null
-                      ? 'Select a category to edit'
-                      : 'Edit selected category',
+                      ? loc.select_category_to_edit
+                      : loc.edit_selected_category,
                   child: IconButton(
                     onPressed: selectedCategory == null
                         ? null
@@ -484,7 +500,6 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: () {
-                  final appPref = Get.find<AppPref>();
                   // if (!hasTrialOrSubscription(appPref)) {
                   //   checkSubscription();
                   //   return;
@@ -495,7 +510,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                   );
                 },
                 icon: const Icon(Icons.add),
-                label: const Text('Add category'),
+                label: Text(loc.add_category),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColor.primary,
                   side: BorderSide(color: AppColor.primary),
@@ -554,7 +569,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Tip: Right-click / long-press a category to edit.',
+              loc.tip_right_click_category_edit,
               style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
           ],
@@ -586,7 +601,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No items found',
+                    loc.no_items_found,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -596,8 +611,8 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                   const SizedBox(height: 8),
                   Text(
                     searchQuery.isNotEmpty
-                        ? 'Try a different search term'
-                        : 'Add items to this category',
+                        ? loc.try_different_search_term
+                        : loc.add_items_to_this_category,
                     style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                 ],
@@ -653,7 +668,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
           controller: controller.searchController,
           style: TextStyle(fontSize: isTablet ? 16 : 14),
           decoration: InputDecoration(
-            hintText: 'Search Dishes',
+            hintText: loc.search_dishes,
             prefixIcon: Icon(
               Icons.search,
               color: Colors.grey[600],
@@ -738,6 +753,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                 // );
               },
               isTablet: isTablet,
+              loc: loc,
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -751,6 +767,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                       isSelected: selectedId == 'none',
                       onTap: () => controller.selectCategory('none'),
                       isTablet: isTablet,
+                      loc: loc,
                     ),
                     const SizedBox(width: 8),
                     ...categoriesList.map((category) {
@@ -784,6 +801,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                                 );
                               },
                               isTablet: isTablet,
+                              loc: loc,
                             ),
                           ],
                         ),
@@ -833,7 +851,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                           ? controller.clearItemSelection
                           : controller.selectAllVisibleItems,
                       icon: const Icon(Icons.select_all),
-                      label: Text(allSelected ? 'Clear all' : 'Select all'),
+                      label: Text(allSelected ? loc.clear_all : loc.select_all),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColor.primary,
                         side: BorderSide(color: AppColor.primary),
@@ -851,7 +869,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                           : controller.deleteSelectedItems,
                       icon: const Icon(Icons.delete_outline),
                       label: Text(
-                        'Delete (${controller.selectedItemIds.length})',
+                        loc.delete_count(controller.selectedItemIds.length),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red.shade700,
@@ -893,7 +911,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                           SizedBox(width: isTablet ? 10 : 8),
                           Flexible(
                             child: Text(
-                              'Import from file',
+                              loc.import_from_file,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: fontSize,
@@ -934,7 +952,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                           SizedBox(width: isTablet ? 10 : 8),
                           Flexible(
                             child: Text(
-                              'Add New Item',
+                              loc.add_new_item,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: fontSize,
@@ -978,7 +996,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
               ),
               SizedBox(height: isTablet ? 24 : 16),
               Text(
-                'No items found',
+                loc.no_items_found,
                 style: TextStyle(
                   fontSize: isTablet ? 22 : 18,
                   fontWeight: FontWeight.w600,
@@ -988,8 +1006,8 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
               SizedBox(height: isTablet ? 12 : 8),
               Text(
                 searchQuery.isNotEmpty
-                    ? 'Try a different search term'
-                    : 'Add items to this category',
+                    ? loc.try_different_search_term
+                    : loc.add_items_to_this_category,
                 style: TextStyle(
                   fontSize: isTablet ? 16 : 14,
                   color: Colors.grey[500],
@@ -1023,6 +1041,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
   }
 
   Widget _buildBottomLoader(bool isTablet) {
+    final loc = AppLocalizations.of(context)!;
     return Obx(() {
       // Only show loader/messages when viewing all items without filters
       final isViewingAll =
@@ -1052,7 +1071,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
           padding: EdgeInsets.symmetric(vertical: isTablet ? 20 : 16),
           child: Center(
             child: Text(
-              'No more items',
+              loc.no_more_items,
               style: TextStyle(
                 fontSize: isTablet ? 14 : 12,
                 color: Colors.grey[600],
@@ -1068,7 +1087,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
           padding: EdgeInsets.symmetric(vertical: isTablet ? 20 : 16),
           child: Center(
             child: Text(
-              'Scroll for more',
+              loc.scroll_for_more,
               style: TextStyle(
                 fontSize: isTablet ? 14 : 12,
                 color: Colors.grey[400],
@@ -1134,7 +1153,7 @@ class _DesktopCategoryTile extends StatelessWidget {
               Expanded(
                 child: Row(
                   children: [
-                    if (title != 'ALL')
+                    if (title != AppLocalizations.of(context)!.all)
                       CachedNetworkImage(
                         imageUrl: image,
 
@@ -1191,6 +1210,7 @@ class _CategoryChip extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
   final bool isTablet;
+  final AppLocalizations loc;
 
   const _CategoryChip({
     required this.label,
@@ -1198,6 +1218,7 @@ class _CategoryChip extends StatelessWidget {
     required this.onTap,
     this.onLongPress,
     required this.isTablet,
+    required this.loc,
   });
 
   @override
@@ -1237,7 +1258,7 @@ class _CategoryChip extends StatelessWidget {
       ),
     );
     if (onLongPress != null) {
-      return Tooltip(message: 'Long press to edit category', child: child);
+      return Tooltip(message: loc.long_press_edit_category, child: child);
     }
     return child;
   }
@@ -1250,8 +1271,13 @@ class _CategoryChip extends StatelessWidget {
 class _AddCategoryChip extends StatelessWidget {
   final VoidCallback onTap;
   final bool isTablet;
+  final AppLocalizations loc;
 
-  const _AddCategoryChip({required this.onTap, required this.isTablet});
+  const _AddCategoryChip({
+    required this.onTap,
+    required this.isTablet,
+    required this.loc,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1284,7 +1310,7 @@ class _AddCategoryChip extends StatelessWidget {
               ),
               SizedBox(width: isTablet ? 6 : 4),
               Text(
-                'Category',
+                loc.category_chip_label,
                 style: TextStyle(
                   fontSize: isTablet ? 15 : 13,
                   fontWeight: FontWeight.w600,
@@ -1312,6 +1338,7 @@ class _ItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<MenuItemController>();
+    final loc = AppLocalizations.of(context)!;
     final imageUrl = _resolveItemImageUrl(item.itemImage);
 
     return Obx(() {
@@ -1454,7 +1481,7 @@ class _ItemCard extends StatelessWidget {
                             height: isTablet ? 34 : 30,
                             width: isTablet ? 40 : 36,
                             child: PopupMenuButton<String>(
-                              tooltip: 'More',
+                              tooltip: loc.more_tooltip,
                               padding: EdgeInsets.zero,
                               iconSize: isTablet ? 22 : 20,
                               icon: Icon(
@@ -1471,14 +1498,14 @@ class _ItemCard extends StatelessWidget {
                                   controller.deleteItem(item);
                                 }
                               },
-                              itemBuilder: (context) => const [
+                              itemBuilder: (context) => [
                                 PopupMenuItem(
                                   value: 'edit',
                                   child: Row(
                                     children: [
-                                      Icon(Icons.edit_outlined, size: 18),
-                                      SizedBox(width: 10),
-                                      Text('Edit'),
+                                      const Icon(Icons.edit_outlined, size: 18),
+                                      const SizedBox(width: 10),
+                                      Text(loc.edit),
                                     ],
                                   ),
                                 ),
@@ -1486,9 +1513,12 @@ class _ItemCard extends StatelessWidget {
                                   value: 'delete',
                                   child: Row(
                                     children: [
-                                      Icon(Icons.delete_outlined, size: 18),
-                                      SizedBox(width: 10),
-                                      Text('Delete'),
+                                      const Icon(
+                                        Icons.delete_outlined,
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(loc.delete),
                                     ],
                                   ),
                                 ),

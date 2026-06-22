@@ -17,7 +17,8 @@ class AppNotificationsController extends BaseController {
 
   Future<void> clearAll() async {
     await store.clearAll();
-    showSuccess(description: 'Notifications cleared');
+    final loc = AppLocalizations.of(Get.context!)!;
+    showSuccess(description: loc.notifications_cleared);
   }
 
   IconData iconFor(AppNotificationType type) {

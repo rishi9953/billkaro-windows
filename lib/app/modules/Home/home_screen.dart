@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:billkaro/app/Widgets/notification_bell_button.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/Home/showcase_controller.dart';
+import 'package:billkaro/app/modules/Home/Widgets/outlet_switcher.dart';
 import 'package:billkaro/app/modules/Home/Widgets/payment_summary_widget.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Items/voice_add_menu_items_bottomsheet.dart';
@@ -11,6 +12,7 @@ import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/kitchen_display_browser.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart' as m;
 import 'package:flutter_modular/flutter_modular.dart';
@@ -26,7 +28,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final controller = Get.put(HomeScreenController());
+  late final HomeScreenController controller = Get.find<HomeScreenController>();
   final showcaseController = Get.put(ShowcaseController());
   final PageController _pageController = PageController();
   final RxInt _currentPage = 0.obs;
@@ -38,23 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
   static const double _sectionGap = 18;
   static const double _cardRadius = 16;
 
-  final List<Map<String, String>> testimonials = [
-    {
-      'quote':
-          'This app is fast, easy to use, and perfect for hassle-free restaurant management.',
-      'author': 'Ankit Kumar',
-    },
-    {
-      'quote':
-          'Best billing solution I\'ve used. Makes running my restaurant so much easier!',
-      'author': 'Priya Sharma',
-    },
-    {
-      'quote':
-          'Simple, efficient, and reliable. Exactly what every restaurant owner needs.',
-      'author': 'Rahul Verma',
-    },
-  ];
+  static const int _testimonialCount = 3;
 
   @override
   void initState() {
@@ -69,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _startAutoScroll() {
     _autoScrollTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
       int nextPage = _currentPage.value + 1;
-      if (nextPage >= testimonials.length) nextPage = 0;
+      if (nextPage >= _testimonialCount) nextPage = 0;
       _pageController.animateToPage(
         nextPage,
         duration: const Duration(milliseconds: 500),
@@ -77,6 +63,14 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       _currentPage.value = nextPage;
     });
+  }
+
+  List<Map<String, String>> _testimonials(AppLocalizations loc) {
+    return [
+      {'quote': loc.testimonial_quote_1, 'author': loc.testimonial_author_1},
+      {'quote': loc.testimonial_quote_2, 'author': loc.testimonial_author_2},
+      {'quote': loc.testimonial_quote_3, 'author': loc.testimonial_author_3},
+    ];
   }
 
   void _startOccupiedTick() {
@@ -97,67 +91,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var loc = AppLocalizations.of(Get.context!)!;
+    final loc = AppLocalizations.of(Get.context!)!;
     // var isKOT = controller.appPref.isKOT;
     // ShowCaseWidget is hosted in HomeMainScreen so bottom nav can be included in the tour.
     return Scaffold(
       backgroundColor: AppColor.backGroundColor,
       appBar: AppBar(
         elevation: 0,
-        leading: Obx(() {
-          return Showcase(
-            key: showcaseController.outletSwitcherKey,
-            title: 'Outlet',
-            description:
-                'Tap here to switch outlet. Your tables, orders, sales and reports will update for the selected outlet.',
-            titleTextStyle: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-            descTextStyle: const TextStyle(fontSize: 14, color: Colors.white70),
-            overlayColor: Colors.black54,
-            overlayOpacity: 0.7,
-            tooltipBackgroundColor: AppColor.primary,
-            textColor: Colors.white,
-            child: InkWell(
-              onTap: () => controller.showOutletBottomSheet(context),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.12),
-                  border: Border.all(color: Colors.white.withOpacity(0.22)),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                margin: const EdgeInsets.only(left: 12, top: 8, bottom: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        controller.selectedOutletName.capitalizeFirst!,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      ),
-                    ),
-                    const SizedBox(width: 2),
-                    const Icon(
-                      Icons.keyboard_arrow_down,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }),
+        leading: Showcase(
+          key: showcaseController.outletSwitcherKey,
+          title: loc.home_outlet_showcase_title,
+          description:
+              loc.home_outlet_showcase_desc,
+          titleTextStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+          descTextStyle: const TextStyle(fontSize: 14, color: Colors.white70),
+          overlayColor: Colors.black54,
+          overlayOpacity: 0.7,
+          tooltipBackgroundColor: AppColor.primary,
+          textColor: Colors.white,
+          child: OutletSwitcherButton(controller: controller),
+        ),
         leadingWidth: 160,
         actions: [
           const NotificationBellButton(
@@ -166,7 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           Padding(
             padding: const EdgeInsets.only(right: 12, bottom: 8, top: 8),
-            child: _headerAvatarAction(),
+            child: _headerAvatarAction(loc),
           ),
         ],
       ),
@@ -200,7 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Dashboard',
+                                loc.dashboard,
                                 style: TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.w800,
@@ -209,7 +166,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Overview of your sales, orders and quick tools.',
+                                loc.dashboardOverviewSubtitle,
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: Colors.grey[600],
@@ -221,42 +178,44 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: _sectionGap),
                       ],
-                      _printerStatusBanner(),
+                      _printerStatusBanner(loc),
                       const SizedBox(height: _sectionGap),
                       if (HomeMainRoutes.outletShowsTables()) ...[
-                        _occupiedTablesSection(isDesktop: isDesktop),
+                        _occupiedTablesSection(loc: loc, isDesktop: isDesktop),
                         const SizedBox(height: _sectionGap),
                       ],
                       _quickActions(loc, isDesktop: isDesktop),
-                      const SizedBox(height: _sectionGap),
-                      if (isDesktop)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: _pageHMargin,
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.only(right: 12),
-                                  child: _businessOverview(loc),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              const Expanded(child: PaymentSummaryWidget()),
-                            ],
-                          ),
-                        )
-                      else ...[
-                        _businessOverview(loc),
+                      if (StaffAccess.canViewDashboardInsights) ...[
                         const SizedBox(height: _sectionGap),
-                        const PaymentSummaryWidget(),
+                        if (isDesktop)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: _pageHMargin,
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(right: 12),
+                                    child: _businessOverview(loc),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Expanded(child: PaymentSummaryWidget()),
+                              ],
+                            ),
+                          )
+                        else ...[
+                          _businessOverview(loc),
+                          const SizedBox(height: _sectionGap),
+                          const PaymentSummaryWidget(),
+                        ],
+                        const SizedBox(height: _sectionGap),
+                        _weeklySalesChart(loc),
                       ],
                       const SizedBox(height: _sectionGap),
-                      _weeklySalesChart(loc),
-                      const SizedBox(height: _sectionGap),
-                      _topSellingItemsSection(),
+                      _topSellingItemsSection(loc),
                       const SizedBox(height: _sectionGap),
                       _featuresSection(loc),
                       const SizedBox(height: 22),
@@ -287,7 +246,7 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       ),
       floatingActionButton: Tooltip(
-        message: 'AI Voice add items',
+        message: loc.home_ai_voice_add_items,
         child: Material(
           elevation: 8,
           shadowColor: const Color(0xFF8B5CF6).withOpacity(0.5),
@@ -362,16 +321,16 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _headerAvatarAction() {
+  Widget _headerAvatarAction(AppLocalizations loc) {
     return Obx(() {
       final selectedOutlet = controller.selectedOutlet.value;
 
       if (selectedOutlet == null) {
         return Showcase(
           key: showcaseController.profileKey,
-          title: 'Profile / Business',
+          title: loc.home_profile_business_title,
           description:
-              'Open business settings, profile and outlet details from here.',
+              loc.home_profile_business_desc,
           titleTextStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -392,8 +351,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
       return Showcase(
         key: showcaseController.profileKey,
-        title: 'Profile / Business',
-        description: 'Open business settings and outlet details from here.',
+        title: loc.home_profile_business_title,
+        description: loc.home_profile_business_desc_short,
         titleTextStyle: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.bold,
@@ -501,7 +460,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _printerStatusBanner() {
+  Widget _printerStatusBanner(AppLocalizations loc) {
     final thermalPrinter = ThermalPrinterService.instance;
     return Obx(() {
       final usbConnected = thermalPrinter.isUsbConnected.value;
@@ -517,17 +476,17 @@ class _HomeScreenState extends State<HomeScreen> {
       final String name;
       final IconData statusIcon;
       if (usbConnected) {
-        name = thermalPrinter.connectedUsbPrinter?.name ?? 'USB Printer';
+        name = thermalPrinter.connectedUsbPrinter?.name ?? loc.home_usb_printer;
         statusIcon = Icons.usb;
       } else if (bleConnected) {
         final platformName =
             thermalPrinter.connectedDevice?.platformName ?? '';
-        name = platformName.trim().isNotEmpty ? platformName : 'Printer';
+        name = platformName.trim().isNotEmpty ? platformName : loc.home_printer_fallback;
         statusIcon = Icons.bluetooth_connected;
       } else {
         name =
             controller.printerservice2.selectedPrinter.value?.name ??
-            'Printer Connected';
+            loc.home_printer_connected_name;
         statusIcon = Icons.bluetooth_connected;
       }
 
@@ -535,9 +494,9 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.symmetric(horizontal: _pageHMargin),
         child: Showcase(
           key: showcaseController.printerBannerKey,
-          title: 'Printer Status',
+          title: loc.home_printer_status_title,
           description:
-              'When your printer is connected, you can print invoices and KOTs without interruptions.',
+              loc.home_printer_status_desc,
           titleTextStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -571,7 +530,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Printer connected',
+                        loc.home_printer_connected_label,
                         style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w700,
@@ -599,8 +558,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: Colors.green.withOpacity(0.18)),
                   ),
-                  child: const Text(
-                    'Online',
+                  child: Text(
+                    loc.home_online,
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -622,9 +581,9 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Showcase(
           key: showcaseController.quickActionsHeaderKey,
-          title: 'Quick Actions',
+          title: loc.quickActions,
           description:
-              'Shortcuts to frequently used features like Add Items, KOT History and more.',
+              loc.home_quick_actions_showcase_desc,
           titleTextStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -637,7 +596,7 @@ class _HomeScreenState extends State<HomeScreen> {
           textColor: Colors.white,
           child: _sectionHeader(
             loc.quickActions,
-            subtitle: 'Frequently used shortcuts',
+            subtitle: loc.home_frequently_used_shortcuts,
           ),
         ),
         const SizedBox(height: 12),
@@ -665,7 +624,7 @@ class _HomeScreenState extends State<HomeScreen> {
               if (showTables)
                 {
                   'icon': Icons.table_restaurant_outlined,
-                  'label': 'Tables',
+                  'label': loc.tables,
                   'onTap': () => Modular.to.navigate(HomeMainRoutes.tables),
                 },
               {
@@ -673,17 +632,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 'label': loc.addItems,
                 'onTap': () => Modular.to.pushNamed(HomeMainRoutes.addItem),
               },
+              if (StaffAccess.canViewInventory)
+                {
+                  'icon': Icons.inventory_2_outlined,
+                  'label': loc.inventory,
+                  'onTap': () =>
+                      Modular.to.pushNamed(HomeMainRoutes.inventory),
+                },
               if (kotVisible)
                 {
                   'icon': Icons.receipt_long_outlined,
-                  'label': 'KOT History',
+                  'label': loc.kot_history,
                   'onTap': () =>
                       Modular.to.pushNamed(HomeMainRoutes.kotHistory),
                 },
               if (kotVisible)
                 {
                   'icon': Icons.open_in_browser_rounded,
-                  'label': 'Kitchen (Web)',
+                  'label': loc.home_kitchen_web,
                   'onTap': () async {
                     await KitchenDisplayBrowser.open();
                   },
@@ -712,22 +678,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (label == loc.closedOrders) {
                   showcaseKey = showcaseController.closedOrdersKey;
                   showcaseDescription =
-                      'View completed/paid orders and open details anytime.';
+                      loc.home_showcase_closed_orders;
                 } else if (label == loc.onHoldOrders) {
                   showcaseKey = showcaseController.holdOrdersKey;
                   showcaseDescription =
-                      'Orders saved on hold. Resume billing anytime.';
+                      loc.home_showcase_hold_orders;
                 } else if (label == loc.addItems) {
                   showcaseKey = showcaseController.addItemsKey;
                   showcaseDescription =
-                      'Add menu items to your inventory (manual / voice).';
-                } else if (label == 'KOT History') {
+                      loc.home_showcase_add_items;
+                } else if (label == loc.kot_history) {
                   showcaseKey = showcaseController.kotHistoryKey;
                   showcaseDescription =
-                      'View KOT history, open details and reprint KOTs.';
+                      loc.home_showcase_kot_history;
                 }
 
                 return _buildQuickActionCard(
+                  loc: loc,
                   icon: item['icon'] as IconData,
                   label: label,
                   onTap: item['onTap'] as VoidCallback,
@@ -743,7 +710,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _occupiedTablesSection({required bool isDesktop}) {
+  Widget _occupiedTablesSection({
+    required AppLocalizations loc,
+    required bool isDesktop,
+  }) {
     return Obx(() {
       final occupied = controller.occupiedTableOrders;
       if (occupied.isEmpty) return const SizedBox.shrink();
@@ -752,8 +722,8 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _sectionHeader(
-            'Occupied Tables',
-            subtitle: 'Live dine-in tables in progress',
+            loc.home_occupied_tables,
+            subtitle: loc.home_live_dine_in_tables,
             trailing: TextButton(
               onPressed: () => Modular.to.navigate(HomeMainRoutes.tables),
               style: TextButton.styleFrom(
@@ -761,12 +731,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 visualDensity: VisualDensity.compact,
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('View all', style: TextStyle(fontWeight: FontWeight.w700)),
-                  SizedBox(width: 6),
-                  Icon(Icons.arrow_forward_ios, size: 12),
+                  Text(loc.view_all, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  const SizedBox(width: 6),
+                  const Icon(Icons.arrow_forward_ios, size: 12),
                 ],
               ),
             ),
@@ -783,7 +753,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 return SizedBox(
                   width: isDesktop ? 250 : 220,
                   height: isDesktop ? 142 : 146,
-                  child: _occupiedTableCard(occupied[index]),
+                  child: _occupiedTableCard(occupied[index], loc),
                 );
               },
             ),
@@ -793,13 +763,15 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Widget _occupiedTableCard(OrderModel order) {
+  Widget _occupiedTableCard(OrderModel order, AppLocalizations loc) {
     final rawTable = (order.tableNumber ?? '').trim();
     final tableLabel = rawTable.isEmpty
-        ? 'Table'
-        : (rawTable.toLowerCase().startsWith('table ')
-              ? rawTable
-              : 'Table $rawTable');
+        ? loc.home_table
+        : loc.home_table_number(
+            rawTable.toLowerCase().startsWith('table ')
+                ? rawTable.substring(6).trim()
+                : rawTable,
+          );
     final billLabel = order.billNumber.trim().isEmpty
         ? '-'
         : order.billNumber.trim();
@@ -868,7 +840,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Text(
-                      'Occupied',
+                      loc.home_occupied,
                       style: TextStyle(
                         fontSize: 10,
                         color: statusColor,
@@ -895,7 +867,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               Text(
-                'Bill #$billLabel',
+                loc.home_bill_number(billLabel),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
@@ -909,8 +881,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(
                     child: Text(
                       occupiedDuration == null
-                          ? 'Tap to continue order'
-                          : 'Occupied ${_formatDuration(occupiedDuration)}',
+                          ? loc.home_tap_continue_order
+                          : loc.home_occupied_duration(
+                              _formatDuration(occupiedDuration),
+                            ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -941,6 +915,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildQuickActionCard({
+    required AppLocalizations loc,
     required IconData icon,
     required String label,
     required VoidCallback onTap,
@@ -1008,7 +983,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (showcaseKey != null) {
       return Showcase(
         key: showcaseKey,
-        description: showcaseDescription ?? 'Tap to access this feature.',
+        description: showcaseDescription ?? loc.home_tap_to_access_feature,
         child: card,
         title: label,
         titleTextStyle: const TextStyle(
@@ -1049,7 +1024,7 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         _sectionHeader(
           loc.businessOverview,
-          subtitle: 'Today vs yesterday',
+          subtitle: loc.home_today_vs_yesterday,
           trailing: TextButton(
             onPressed: () =>
                 Modular.to.pushNamed(HomeMainRoutes.businessOverview),
@@ -1058,12 +1033,12 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               visualDensity: VisualDensity.compact,
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('View', style: TextStyle(fontWeight: FontWeight.w700)),
-                SizedBox(width: 6),
-                Icon(Icons.arrow_forward_ios, size: 12),
+                Text(loc.view, style: const TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(width: 6),
+                const Icon(Icons.arrow_forward_ios, size: 12),
               ],
             ),
           ),
@@ -1074,8 +1049,8 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Showcase(
             key: showcaseController.businessOverviewKey,
             description:
-                'View detailed business insights including sales, orders, and performance metrics for today and yesterday.',
-            title: 'Business Overview',
+                loc.home_business_overview_showcase_desc,
+            title: loc.businessOverview,
             titleTextStyle: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -1124,7 +1099,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Today',
+                                  loc.today,
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey[700],
@@ -1133,7 +1108,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  'Performance summary',
+                                  loc.home_performance_summary,
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: Colors.grey[600],
@@ -1159,7 +1134,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               value:
                                   '₹${controller.todaySales.value.toStringAsFixed(0)}',
                               sub:
-                                  'Yesterday: ₹${controller.yesterdaySales.value.toStringAsFixed(0)}',
+                                  loc.home_yesterday_value(
+                                    '₹${controller.yesterdaySales.value.toStringAsFixed(0)}',
+                                  ),
                               icon: Icons.currency_rupee,
                               color: AppColor.primary,
                             ),
@@ -1170,7 +1147,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               title: loc.todaysOrders,
                               value: '${controller.todayOrders.value}',
                               sub:
-                                  'Yesterday: ${controller.yesterdayOrders.value}',
+                                  loc.home_yesterday_value(
+                                    '${controller.yesterdayOrders.value}',
+                                  ),
                               icon: Icons.receipt_long,
                               color: AppColor.secondaryPrimary,
                             ),
@@ -1194,7 +1173,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             Row(
                               children: [
                                 Text(
-                                  'Category-wise (Today)',
+                                  loc.home_category_wise_today,
                                   style: TextStyle(
                                     fontSize: 11.5,
                                     color: Colors.grey[800],
@@ -1203,7 +1182,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 const Spacer(),
                                 Text(
-                                  'Top ${top.length}',
+                                  loc.home_top_count(top.length.toString()),
                                   style: TextStyle(
                                     fontSize: 10.5,
                                     color: Colors.grey[600],
@@ -1343,24 +1322,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
           // Compare using enum index/name since nested enum access is problematic
           if (period.toString().contains('weekly')) {
-            title = 'Weekly Sales Trend';
-            subtitle = 'Last 7 days sales performance';
+            title = loc.home_weekly_sales_trend;
+            subtitle = loc.home_last_7_days_sales;
           } else if (period.toString().contains('monthly')) {
-            title = 'Monthly Sales Trend';
-            subtitle = 'Last 12 months sales performance';
+            title = loc.home_monthly_sales_trend;
+            subtitle = loc.home_last_12_months_sales;
           } else if (period.toString().contains('quarterly')) {
-            title = 'Quarterly Sales Trend';
-            subtitle = 'Last 4 quarters sales performance';
+            title = loc.home_quarterly_sales_trend;
+            subtitle = loc.home_last_4_quarters_sales;
           } else if (period.toString().contains('yearly')) {
-            title = 'Yearly Sales Trend';
-            subtitle = 'Last 5 years sales performance';
+            title = loc.home_yearly_sales_trend;
+            subtitle = loc.home_last_5_years_sales;
           }
 
           return Showcase(
             key: showcaseController.salesChartKey,
-            title: 'Sales Trend',
+            title: loc.home_sales_trend,
             description:
-                'Track your sales trend by week/month/quarter/year and monitor totals and averages.',
+                loc.home_sales_trend_showcase_desc,
             titleTextStyle: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -2113,13 +2092,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _topSellingItemsSection() {
+  Widget _topSellingItemsSection(AppLocalizations loc) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _sectionHeader(
-          'Top Selling Items',
-          subtitle: 'Best performers (all time)',
+          loc.top_selling_items,
+          subtitle: loc.top_selling_items_subtitle,
         ),
         const SizedBox(height: 12),
         Padding(
@@ -2133,7 +2112,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   height: 90,
                   alignment: Alignment.center,
                   child: Text(
-                    'No item sales yet',
+                    loc.home_no_item_sales_yet,
                     style: TextStyle(
                       fontSize: 12.5,
                       color: Colors.grey[700],
@@ -2275,9 +2254,9 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Showcase(
           key: showcaseController.featuresKey,
-          title: 'Features for you',
+          title: loc.featuresForYou,
           description:
-              'Quick setup tools and recommended features to help you run your business faster.',
+              loc.home_features_showcase_desc,
           titleTextStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -2290,7 +2269,7 @@ class _HomeScreenState extends State<HomeScreen> {
           textColor: Colors.white,
           child: _sectionHeader(
             loc.featuresForYou,
-            subtitle: 'Recommended setup & tools',
+            subtitle: loc.home_recommended_setup_tools,
           ),
         ),
         const SizedBox(height: 12),
@@ -2326,7 +2305,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         onTap: () {
                           controller.setKotMode(true);
                         },
-                        badgeText: 'New',
+                        badgeText: loc.badge_new,
                       ),
                     ),
                   );
@@ -2360,7 +2339,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         onTap: () {
                           controller.setKotMode(true);
                         },
-                        badgeText: 'New',
+                        badgeText: loc.badge_new,
                       ),
                   ],
                 );
@@ -2475,9 +2454,9 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Showcase(
           key: showcaseController.testimonialsKey,
-          title: 'Testimonials',
+          title: loc.home_testimonials,
           description:
-              'See feedback from restaurants using Billkaro. Swipe to read more.',
+              loc.home_testimonials_showcase_desc,
           titleTextStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -2489,8 +2468,8 @@ class _HomeScreenState extends State<HomeScreen> {
           tooltipBackgroundColor: AppColor.primary,
           textColor: Colors.white,
           child: _sectionHeader(
-            'What Our Users Say',
-            subtitle: 'Feedback from restaurants using Billkaro',
+            loc.what_our_users_say,
+            subtitle: loc.what_our_users_say_subtitle,
           ),
         ),
         const SizedBox(height: 12),
@@ -2513,7 +2492,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Testimonials',
+                            loc.home_testimonials,
                             style: TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.w900,
@@ -2558,10 +2537,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   height: 132,
                   child: PageView.builder(
                     controller: _pageController,
-                    itemCount: testimonials.length,
+                    itemCount: _testimonials(loc).length,
                     onPageChanged: (index) => _currentPage.value = index,
                     itemBuilder: (context, index) {
-                      final testimonial = testimonials[index];
+                      final testimonial = _testimonials(loc)[index];
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -2634,7 +2613,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   () => Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
-                      testimonials.length,
+                      _testimonials(loc).length,
                       (index) => GestureDetector(
                         onTap: () {
                           _pageController.animateToPage(

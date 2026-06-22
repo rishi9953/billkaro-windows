@@ -32,7 +32,8 @@ class HoldOrdersController extends BaseController {
       final outletId = appPref.selectedOutlet?.id;
 
       if (outletId == null) {
-        showError(description: 'No outlet selected');
+        final loc = AppLocalizations.of(Get.context!)!;
+        showError(description: loc.no_outlet_selected);
         return;
       }
 
@@ -137,7 +138,8 @@ class HoldOrdersController extends BaseController {
       );
     } catch (e) {
       debugPrint('❌ Error fetching pending orders: $e');
-      showError(description: 'Failed to load orders');
+      final loc = AppLocalizations.of(Get.context!)!;
+      showError(description: loc.failed_to_load_orders);
     } finally {
       isLoadingMore.value = false;
     }

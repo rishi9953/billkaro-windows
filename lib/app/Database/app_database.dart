@@ -26,7 +26,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// 🔹 SCHEMA VERSION
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   /// 🔹 MIGRATION STRATEGY (CRITICAL FIX)
   @override
@@ -38,6 +38,10 @@ class AppDatabase extends _$AppDatabase {
       if (from < 5) {
         // Add splitPayments column for version 5
         await m.addColumn(orders, orders.splitPayments);
+      }
+      if (from < 6) {
+        // Add imageURL column for categories cache (fixes missing image_u_r_l)
+        await m.addColumn(categoriesTable, categoriesTable.imageURL);
       }
     },
     beforeOpen: (details) async {
@@ -221,9 +225,9 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<List<OrderModel>> getPendingOrders() async {
-    final orderRows = await (select(
-      orders,
-    )..where((tbl) => tbl.isSync.equals('pending'))).get();
+    final orderRows = await (select(orders)
+          ..where((tbl) => tbl.isSync.equals('pending')))
+        .get();
 
     final List<OrderModel> result = [];
 
@@ -275,6 +279,47 @@ class AppDatabase extends _$AppDatabase {
     await (update(orders)..where((tbl) => tbl.id.equals(orderId))).write(
       OrdersCompanion(isSync: const Value('synced')),
     );
+  }
+
+  /// Re-queue previously failed orders when connectivity is restored.
+  Future<int> resetFailedOrdersToPending() async {
+    final failed = await (select(orders)
+          ..where((tbl) => tbl.isSync.equals('failed')))
+        .get();
+    if (failed.isEmpty) return 0;
+
+    await (update(orders)..where((tbl) => tbl.isSync.equals('failed'))).write(
+      OrdersCompanion(isSync: const Value('pending')),
+    );
+    return failed.length;
+  }
+
+  /// Replace a local offline order with the authoritative server copy.
+  Future<void> reconcileSyncedOrder({
+    required String localOrderId,
+    required OrderModel serverOrder,
+  }) async {
+    await transaction(() async {
+      await (delete(orderItems)
+            ..where((tbl) => tbl.orderId.equals(localOrderId)))
+          .go();
+      await (delete(orders)..where((tbl) => tbl.id.equals(localOrderId))).go();
+      await insertOrders(
+        [serverOrder],
+        serverOrder.outletId,
+        isSyncedFromApi: true,
+      );
+    });
+    debugPrint(
+      '✅ Reconciled offline order $localOrderId → server id ${serverOrder.id}',
+    );
+  }
+
+  Future<int> countPendingOrders() async {
+    final rows = await (select(orders)
+          ..where((tbl) => tbl.isSync.equals('pending')))
+        .get();
+    return rows.length;
   }
 
   Future<void> markOrderSyncFailed(String orderId) async {
@@ -378,21 +423,32 @@ class AppDatabase extends _$AppDatabase {
         .toList();
   }
 
-  Future<void> saveCategories(List<CategoryData> list) async {
-    await batch((batch) {
-      for (final c in list) {
-        batch.insert(
-          categoriesTable,
-          CategoriesTableCompanion(
-            id: Value(c.id),
-            userId: Value(c.userId),
-            categoryName: Value(c.categoryName),
-            createdAt: Value(c.createdAt),
-            updatedAt: Value(c.updatedAt),
-          ),
-          mode: InsertMode.insertOrReplace,
-        );
-      }
+  Future<void> saveCategories(
+    List<CategoryData> list, {
+    required String outletId,
+  }) async {
+    await transaction(() async {
+      await (delete(categoriesTable)
+            ..where((tbl) => tbl.outletId.equals(outletId)))
+          .go();
+
+      await batch((batch) {
+        for (final c in list) {
+          batch.insert(
+            categoriesTable,
+            CategoriesTableCompanion(
+              id: Value(c.id),
+              userId: Value(c.userId),
+              outletId: Value(c.outletId.isNotEmpty ? c.outletId : outletId),
+              categoryName: Value(c.categoryName),
+              imageURL: Value(c.imageURL),
+              createdAt: Value(c.createdAt),
+              updatedAt: Value(c.updatedAt),
+            ),
+            mode: InsertMode.insertOrReplace,
+          );
+        }
+      });
     });
   }
 

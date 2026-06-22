@@ -9,6 +9,7 @@ abstract class HomeMainRoutes {
   static const holdOrders = '/hold-orders';
   static const items = '/items';
   static const addItem = '/add-menu-item';
+  static const inventory = '/inventory';
   static const businessOverview = '/business-overview';
   static const kotHistory = '/kot-history';
   static const kitchenDisplay = '/kitchen-display';
@@ -269,7 +270,9 @@ abstract class HomeMainRoutes {
       if (path.startsWith(tables)) {
         return 0;
       }
-      if (path.startsWith(items) || path.startsWith(addItem)) {
+      if (path.startsWith(items) ||
+          path.startsWith(addItem) ||
+          path.startsWith(inventory)) {
         return 2;
       }
       if (path.startsWith(reports) ||
@@ -330,7 +333,9 @@ abstract class HomeMainRoutes {
     if (path.startsWith(tables)) {
       return 2;
     }
-    if (path.startsWith(items) || path.startsWith(addItem)) {
+    if (path.startsWith(items) ||
+        path.startsWith(addItem) ||
+        path.startsWith(inventory)) {
       return 3;
     }
     // Keep "Reports" tab selected for its sub-pages too (Order/Item reports).

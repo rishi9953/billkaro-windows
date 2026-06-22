@@ -11,7 +11,7 @@ import 'package:billkaro/app/modules/Theme/theme_controller.dart';
 import 'package:billkaro/app/modules/OrderPrefrences/order_prefrences_controller.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/date_util.dart';
-import 'package:billkaro/utils/app_snackbar.dart';
+import 'package:billkaro/utils/staff_outlet_sync.dart';
 
 // Chart period filter enum (must be top-level)
 enum ChartPeriod { weekly, monthly, quarterly, yearly }
@@ -114,13 +114,31 @@ class HomeScreenController extends BaseController {
   }
 
   Future<void> getUserDetails() async {
+    final user = appPref.user;
+    if (user == null) return;
+
+    final bool isStaff = user.role == 'staff';
+    final String? profileId = isStaff ? user.id : appPref.ownerUserId;
+    if (profileId == null || profileId.isEmpty) return;
+
     final response = await callApi(
-      apiClient.getUserDetails(appPref.user!.id!),
+      isStaff
+          ? apiClient.getStaffProfile(profileId)
+          : apiClient.getUserDetails(profileId),
       showLoader: false,
     );
 
-    if (response?.status == 'success') {
+    if (response?.status != 'success' || response?.data == null) return;
+
+    if (isStaff) {
+      await StaffOutletSync.enrichAppPrefFromOwner(
+        appPref: appPref,
+        staffUser: response!.data,
+        apiClient: apiClient,
+      );
+    } else {
       appPref.user = response!.data;
+    }
 
       // 🔁 Re-sync selected outlet from updated outlet list
       final currentSelectedId = appPref.selectedOutlet?.id;
@@ -145,7 +163,6 @@ class HomeScreenController extends BaseController {
       }
 
       update(); // refresh UI
-    }
   }
 
   Future<void> getOrderList({bool forceApiRefresh = false}) async {
@@ -177,7 +194,16 @@ class HomeScreenController extends BaseController {
         debugPrint('🌐 Internet available → fetching from API');
 
         final response = await callApi(
-          apiClient.getOrders(appPref.user!.id!, outletId, null, null, null, null, null, null),
+          apiClient.getOrders(
+            appPref.user!.id!,
+            outletId,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+          ),
           showLoader: false,
         );
 
@@ -221,7 +247,9 @@ class HomeScreenController extends BaseController {
       }
     } catch (e) {
       debugPrint('❌ Order load error on homescreen: $e');
-      showError(description: 'Failed to load orders');
+      showError(
+        description: AppLocalizations.of(Get.context!)!.failed_to_load_orders,
+      );
     } finally {
       isLoadingOrders.value = false;
     }
@@ -374,14 +402,17 @@ class HomeScreenController extends BaseController {
         continue;
       }
 
-      if (_parseSafeDate(order.updatedAt).isAfter(_parseSafeDate(existing.updatedAt))) {
+      if (_parseSafeDate(
+        order.updatedAt,
+      ).isAfter(_parseSafeDate(existing.updatedAt))) {
         latestOrderByTable[tableKey] = order;
       }
     }
 
     final rows = latestOrderByTable.values.toList(growable: false)
       ..sort(
-        (a, b) => _parseSafeDate(b.updatedAt).compareTo(_parseSafeDate(a.updatedAt)),
+        (a, b) =>
+            _parseSafeDate(b.updatedAt).compareTo(_parseSafeDate(a.updatedAt)),
       );
     return rows;
   }
@@ -641,22 +672,27 @@ class HomeScreenController extends BaseController {
       update(); // Refresh UI
     } catch (e) {
       // hideLoading();
-      showError(description: 'Failed to refresh outlets');
+      showError(
+        description: AppLocalizations.of(
+          Get.context!,
+        )!.failed_to_refresh_outlets,
+      );
     }
   }
 
   /// Logout
   Future<void> logout() async {
     // Show confirmation dialog
+    final loc = AppLocalizations.of(Get.context!)!;
     final confirmed = await Get.dialog<bool>(
       AlertDialog(
-        title: Text('Logout'),
-        content: Text('Are you sure you want to logout?'),
+        title: Text(loc.logout),
+        content: Text(loc.logout_confirmation),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         actions: [
           TextButton(
             onPressed: () => Get.back(result: false),
-            child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
+            child: Text(loc.cancel, style: TextStyle(color: Colors.grey[600])),
           ),
           ElevatedButton(
             onPressed: () => Get.back(result: true),
@@ -666,7 +702,7 @@ class HomeScreenController extends BaseController {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: Text('Logout'),
+            child: Text(loc.logout),
           ),
         ],
       ),
@@ -685,11 +721,9 @@ class HomeScreenController extends BaseController {
 
       Get.offAllNamed(AppRoute.login); // Navigate to login screen
 
-      AppSnackbar.show(
-        title: 'Logged Out',
-        message: 'You have been successfully logged out',
-        snackPosition: SnackPosition.BOTTOM,
-        duration: Duration(seconds: 2),
+      showSuccess(
+        title: loc.home_logged_out,
+        description: loc.home_logged_out_message,
       );
     }
   }

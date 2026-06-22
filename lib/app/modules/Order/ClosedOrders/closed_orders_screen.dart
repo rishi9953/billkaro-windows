@@ -22,6 +22,7 @@ class ClosedOrdersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColor.backGroundColor,
       appBar: AppBar(
@@ -30,29 +31,51 @@ class ClosedOrdersScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back),
         ),
         elevation: 0,
-        title: const Text(
-          'Closed Orders',
-          style: TextStyle(
+        title: Text(
+          loc.closedOrders,
+          style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.3,
           ),
         ),
-        actions: [_buildAddOrderButton(), const SizedBox(width: 8)],
+
+        actions: [
+          // Refresh button
+          IconButton(
+            onPressed: () {
+              final controller = Get.find<ClosedOrdersController>();
+              controller.refreshOrders();
+            },
+            icon: const Icon(Icons.refresh),
+            tooltip: loc.refresh,
+          ),
+        ],
       ),
       body: const ClosedOrdersContent(),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => Modular.to.navigate(HomeMainRoutes.createOrder),
+        backgroundColor: AppColor.secondaryPrimary,
+        foregroundColor: AppColor.white,
+        elevation: 4,
+        icon: Icon(Icons.add, size: 24),
+        label: Text(
+          loc.add_Order,
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
     );
   }
 
-  Widget _buildAddOrderButton() {
+  Widget _buildAddOrderButton(AppLocalizations loc) {
     return Padding(
       padding: const EdgeInsets.only(right: 12),
       child: TextButton.icon(
         onPressed: () => Modular.to.navigate(HomeMainRoutes.createOrder),
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text(
-          'Add Order',
-          style: TextStyle(
+        label: Text(
+          loc.add_Order,
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 14,
             fontWeight: FontWeight.w600,
@@ -117,6 +140,7 @@ class _ClosedOrdersContentState extends State<ClosedOrdersContent> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return SafeArea(
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -131,8 +155,8 @@ class _ClosedOrdersContentState extends State<ClosedOrdersContent> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildFilterSection(),
-                  Expanded(child: _buildOrdersList()),
+                  _buildFilterSection(loc),
+                  Expanded(child: _buildOrdersList(loc)),
                 ],
               ),
             ),
@@ -142,7 +166,7 @@ class _ClosedOrdersContentState extends State<ClosedOrdersContent> {
     );
   }
 
-  Widget _buildFilterSection() {
+  Widget _buildFilterSection(AppLocalizations loc) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -172,19 +196,19 @@ class _ClosedOrdersContentState extends State<ClosedOrdersContent> {
           onPressed: (index) {
             controller.setFilter(index == 0 ? 'all' : 'last60');
           },
-          children: const [
+          children: [
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Text(
-                'All Time',
-                style: TextStyle(fontWeight: FontWeight.w600),
+                loc.all_time,
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Text(
-                'Last 60 Min',
-                style: TextStyle(fontWeight: FontWeight.w600),
+                loc.last_60_min,
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
           ],
@@ -194,12 +218,12 @@ class _ClosedOrdersContentState extends State<ClosedOrdersContent> {
   }
 
   // ---------------- ORDER LIST ----------------
-  Widget _buildOrdersList() {
+  Widget _buildOrdersList(AppLocalizations loc) {
     return Obx(() {
       final orders = controller.getFilteredOrders();
 
       if (orders.isEmpty) {
-        return _buildEmptyState();
+        return _buildEmptyState(loc);
       }
 
       return RefreshIndicator(
@@ -216,7 +240,7 @@ class _ClosedOrdersContentState extends State<ClosedOrdersContent> {
           itemBuilder: (context, index) {
             // Loading indicator at the bottom
             if (index == orders.length) {
-              return _buildBottomLoader();
+              return _buildBottomLoader(loc);
             }
             return _OrderCard(order: orders[index]);
           },
@@ -226,7 +250,7 @@ class _ClosedOrdersContentState extends State<ClosedOrdersContent> {
   }
 
   // Bottom loader widget
-  Widget _buildBottomLoader() {
+  Widget _buildBottomLoader(AppLocalizations loc) {
     return Obx(() {
       if (controller.isLoadingMore.value) {
         // Show loading spinner
@@ -241,7 +265,7 @@ class _ClosedOrdersContentState extends State<ClosedOrdersContent> {
           padding: const EdgeInsets.symmetric(vertical: 16),
           child: Center(
             child: Text(
-              'No more orders',
+              loc.no_more_orders,
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[600],
@@ -257,7 +281,7 @@ class _ClosedOrdersContentState extends State<ClosedOrdersContent> {
           padding: const EdgeInsets.symmetric(vertical: 16),
           child: Center(
             child: Text(
-              'Scroll for more',
+              loc.scroll_for_more,
               style: TextStyle(fontSize: 12, color: Colors.grey[400]),
             ),
           ),
@@ -267,7 +291,7 @@ class _ClosedOrdersContentState extends State<ClosedOrdersContent> {
     });
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(AppLocalizations loc) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -275,7 +299,7 @@ class _ClosedOrdersContentState extends State<ClosedOrdersContent> {
           Icon(Icons.receipt_long_outlined, size: 80, color: Colors.grey[300]),
           const SizedBox(height: 16),
           Text(
-            'No Closed Orders',
+            loc.no_closed_orders,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -284,7 +308,7 @@ class _ClosedOrdersContentState extends State<ClosedOrdersContent> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Closed orders will appear here',
+            loc.closed_orders_empty_hint,
             style: TextStyle(fontSize: 14, color: Colors.grey[500]),
           ),
         ],
@@ -303,6 +327,7 @@ class _OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     final time = formatDate(
       order.createdAt.toString(),
       format: 'MMM dd, hh:mm a',
@@ -434,7 +459,7 @@ class _OrderCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              'Table ${order.tableNumber}',
+                              loc.home_table_number(order.tableNumber!),
                               style: TextStyle(
                                 color: Colors.grey[700],
                                 fontSize: 12,
@@ -492,7 +517,7 @@ class _OrderCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${order.items.length} ${order.items.length == 1 ? 'item' : 'items'}',
+                            loc.order_items_count(order.items.length),
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.grey[600],
@@ -517,7 +542,7 @@ class _OrderCard extends StatelessWidget {
                     ),
                     // Print Button
                     Tooltip(
-                      message: 'Print',
+                      message: loc.print,
                       child: IconButton(
                         onPressed: () => _printOrder(order),
                         icon: const Icon(Icons.print_outlined, size: 20),

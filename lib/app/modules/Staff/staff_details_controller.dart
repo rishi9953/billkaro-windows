@@ -92,8 +92,9 @@ class StaffDetailsController extends BaseController {
     final message = result is Map
         ? (result['message']?.toString() ?? '').trim()
         : '';
+    final loc = AppLocalizations.of(Get.context!)!;
     showSuccess(
-      description: message.isNotEmpty ? message : 'Invite sent successfully',
+      description: message.isNotEmpty ? message : loc.invite_sent_successfully,
     );
   }
 
@@ -109,17 +110,19 @@ class StaffDetailsController extends BaseController {
     final message = result is Map
         ? (result['message']?.toString() ?? '').trim()
         : '';
+    final loc = AppLocalizations.of(Get.context!)!;
     showSuccess(
       description: message.isNotEmpty
           ? message
-          : 'Staff member updated successfully',
+          : loc.staff_member_updated_successfully,
     );
   }
 
   Future<void> deleteStaffById(String staffId) async {
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null || outletId.isEmpty || staffId.isEmpty) {
-      showError(description: 'Unable to delete staff');
+      final loc = AppLocalizations.of(Get.context!)!;
+      showError(description: loc.unable_to_delete_staff);
       return;
     }
     if (deletingStaffIds.contains(staffId)) return;
@@ -132,7 +135,8 @@ class StaffDetailsController extends BaseController {
       );
       if (response == null) return;
 
-      showSuccess(description: 'Staff deleted successfully');
+      final loc = AppLocalizations.of(Get.context!)!;
+      showSuccess(description: loc.staff_deleted_successfully);
       await loadStaffList();
     } finally {
       deletingStaffIds.remove(staffId);

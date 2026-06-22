@@ -99,8 +99,7 @@ class SubscriptionController extends BaseController {
         }
       } else {
         // Safely extract message from paymentResponse
-        String errorMsg =
-            'Payment successful but subscription activation failed. Please contact support.';
+        String errorMsg = loc.payment_activation_failed;
         if (paymentResponse != null) {
           if (paymentResponse is Map) {
             errorMsg = paymentResponse['message']?.toString() ?? errorMsg;
@@ -114,8 +113,7 @@ class SubscriptionController extends BaseController {
       debugPrint('Error completing subscription: $e');
       showError(
         title: loc.payment_failed,
-        description:
-            'Payment successful but subscription activation failed. Please contact support.',
+        description: loc.payment_activation_failed,
       );
     } finally {
       isProcessingPayment = false;
@@ -124,8 +122,9 @@ class SubscriptionController extends BaseController {
 
   /// Safely extract message string from response.message which can be String or Map
   String _extractErrorMessage(dynamic message) {
+    final loc = AppLocalizations.of(Get.context!)!;
     if (message == null) {
-      return 'Payment could not be completed. Please try again.';
+      return loc.payment_failed_description;
     }
 
     if (message is String) {
@@ -168,7 +167,8 @@ class SubscriptionController extends BaseController {
       if (context == null) {
         debugPrint('ERROR: Context is null, cannot show failure dialog');
         // Fallback: try to show error using showError
-        showError(title: 'Payment Failed', description: errorMessage);
+        final loc = AppLocalizations.of(Get.context!)!;
+        showError(title: loc.payment_failed, description: errorMessage);
         return;
       }
 
@@ -187,7 +187,8 @@ class SubscriptionController extends BaseController {
       debugPrint('ERROR showing payment failure dialog: $e');
       debugPrint('Stack trace: $stackTrace');
       // Fallback: show error using showError
-      showError(title: 'Payment Failed', description: errorMessage);
+      final loc = AppLocalizations.of(Get.context!)!;
+      showError(title: loc.payment_failed, description: errorMessage);
     }
   }
 
@@ -220,7 +221,7 @@ class SubscriptionController extends BaseController {
       final loc = AppLocalizations.of(Get.context!)!;
       showError(
         title: loc.payment_failed,
-        description: 'Failed to create payment order. Please try again.',
+        description: loc.failed_create_payment_order,
       );
       return null;
     }
@@ -270,22 +271,20 @@ class SubscriptionController extends BaseController {
   Future<void> buyNow(String planIds, double amounts) async {
     debugPrint('Initiating buyNow for Plan ID: $planIds, Amount: $amounts');
     try {
+      final loc = AppLocalizations.of(Get.context!)!;
       // Validate user and outlet
       if (appPref.user == null) {
-        final loc = AppLocalizations.of(Get.context!)!;
         showError(
           title: loc.payment_failed,
-          description: 'User not logged in. Please login and try again.',
+          description: loc.user_not_logged_in_retry,
         );
         return;
       }
 
       if (appPref.selectedOutlet == null) {
-        final loc = AppLocalizations.of(Get.context!)!;
         showError(
           title: loc.payment_failed,
-          description:
-              'No outlet selected. Please select an outlet and try again.',
+          description: loc.no_outlet_selected_retry,
         );
         return;
       }
@@ -293,8 +292,8 @@ class SubscriptionController extends BaseController {
       // Guard: don't allow subscribing when outlet already has an active subscription.
       if (outletHasAnyActiveSubscription(appPref.selectedOutlet)) {
         showError(
-          title: 'Already Subscribed',
-          description: 'This outlet already has an active subscription.',
+          title: loc.already_subscribed,
+          description: loc.outlet_already_subscribed,
         );
         return;
       }
@@ -318,10 +317,9 @@ class SubscriptionController extends BaseController {
 
         // Validate order details
         if (orderId.isEmpty) {
-          final loc = AppLocalizations.of(Get.context!)!;
           showError(
             title: loc.payment_failed,
-            description: 'Invalid order response. Please try again.',
+            description: loc.invalid_order_response,
           );
           return;
         }
@@ -334,17 +332,15 @@ class SubscriptionController extends BaseController {
               appPref.user!.brandName ?? appPref.user!.firstName ?? 'Customer',
           email: appPref.user?.email ?? '',
           contact: appPref.user?.mobile ?? '',
-          description: 'Subscription Purchase',
+          description: loc.subscription_purchase,
           notes: {'subscriptionId': planId},
           prefill: {'name': appPref.user!.firstName ?? 'Customer'},
         );
       } else {
-        final loc = AppLocalizations.of(Get.context!)!;
         showError(
           title: loc.payment_failed,
           description:
-              orderResponse?['message'] ??
-              'Failed to create payment order. Please try again.',
+              orderResponse?['message'] ?? loc.failed_create_payment_order,
         );
       }
     } catch (e) {
@@ -352,7 +348,7 @@ class SubscriptionController extends BaseController {
       final loc = AppLocalizations.of(Get.context!)!;
       showError(
         title: loc.payment_failed,
-        description: 'An error occurred. Please try again.',
+        description: loc.error_occurred_try_again,
       );
     }
   }
@@ -584,7 +580,7 @@ class SubscriptionController extends BaseController {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('OK'),
+                    child: Text(AppLocalizations.of(context)!.ok),
                   ),
                 ),
               ],

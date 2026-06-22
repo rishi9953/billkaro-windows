@@ -4,29 +4,16 @@ import 'package:billkaro/app/services/Modals/activites/activities_response.dart'
 import 'package:billkaro/config/config.dart';
 import 'package:intl/intl.dart';
 
-String _activitySubtitle(ActivityModel a) {
+String _activitySubtitle(ActivityModel a, AppLocalizations loc) {
   final parts = <String>[];
   if (a.entityName.isNotEmpty) {
-    parts.add('Name : ${a.entityName}');
+    parts.add(loc.activity_entity_name(a.entityName));
   }
   final category = a.details.category;
   if (category != null && category.isNotEmpty) {
-    parts.add('Category : $category');
+    parts.add(loc.activity_entity_category(category));
   }
   return parts.join(' · ');
-}
-
-String _displayActivityTypeLabel(String raw) {
-  if (raw.trim().isEmpty) return 'Activity';
-  final normalized = raw.replaceAll('_', ' ').replaceAll('-', ' ').trim();
-  return normalized
-      .split(RegExp(r'\s+'))
-      .where((w) => w.isNotEmpty)
-      .map(
-        (w) =>
-            '${w.substring(0, 1).toUpperCase()}${w.length > 1 ? w.substring(1).toLowerCase() : ''}',
-      )
-      .join(' ');
 }
 
 String _formatActivityTimestamp(String createdAt) {
@@ -59,6 +46,7 @@ class StaffActivityScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     final controller = Get.put(StaffActivityController());
     final colorScheme = Theme.of(context).colorScheme;
     final isWindows = _isWindows(context);
@@ -69,12 +57,12 @@ class StaffActivityScreen extends StatelessWidget {
         elevation: 0,
         scrolledUnderElevation: 0,
         title: Text(
-          'Staff Activity',
-          style: TextStyle(fontWeight: FontWeight.w700),
+          loc.staff_activity_title,
+          style: const TextStyle(fontWeight: FontWeight.w700),
         ),
         actions: [
           IconButton(
-            tooltip: 'Refresh',
+            tooltip: loc.refresh,
             onPressed: controller.refreshStaffActivityData,
             icon: const Icon(Icons.refresh_rounded),
           ),
@@ -94,6 +82,7 @@ class StaffActivityScreen extends StatelessWidget {
     BuildContext context,
     StaffActivityController controller,
   ) {
+    final loc = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
@@ -106,7 +95,10 @@ class StaffActivityScreen extends StatelessWidget {
                 flex: 2,
                 child: Obx(
                   () => _FilterButton(
-                    label: controller.selectedTimePeriod.value,
+                    label: controller.timePeriodLabel(
+                      loc,
+                      controller.selectedTimePeriod.value,
+                    ),
                     icon: Icons.keyboard_arrow_down_rounded,
                     onTap: () => _showTimePeriodSheet(context, controller),
                   ),
@@ -117,7 +109,7 @@ class StaffActivityScreen extends StatelessWidget {
                 flex: 4,
                 child: Obx(
                   () => _FilterButton(
-                    label: controller.selectedDateRangeLabel,
+                    label: controller.selectedDateRangeLabelLocalized(loc),
                     icon: Icons.calendar_today_outlined,
                     onTap: () => _showDateRangeSheet(context, controller),
                   ),
@@ -131,7 +123,7 @@ class StaffActivityScreen extends StatelessWidget {
               Expanded(
                 child: Obx(
                   () => _FilterButton(
-                    label: controller.selectedUserName.value,
+                    label: controller.selectedUserLabelLocalized(loc),
                     icon: Icons.people_outline_rounded,
                     onTap: () => _showUsersSheet(context, controller),
                   ),
@@ -141,7 +133,7 @@ class StaffActivityScreen extends StatelessWidget {
               Expanded(
                 child: Obx(
                   () => _FilterButton(
-                    label: controller.activityTypeFilterLabel,
+                    label: controller.activityTypeFilterLabelLocalized(loc),
                     icon: Icons.edit_note_rounded,
                     onTap: () => _showActivityTypeSheet(context, controller),
                   ),
@@ -151,7 +143,7 @@ class StaffActivityScreen extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            'Activity log',
+            loc.activity_log,
             style: TextStyle(
               color: colorScheme.onSurface,
               fontWeight: FontWeight.w600,
@@ -173,6 +165,7 @@ class StaffActivityScreen extends StatelessWidget {
     BuildContext context,
     StaffActivityController controller,
   ) {
+    final loc = AppLocalizations.of(context)!;
     return NotificationListener<ScrollNotification>(
       onNotification: (ScrollNotification n) {
         if (n.metrics.axis != Axis.vertical) return false;
@@ -202,16 +195,16 @@ class StaffActivityScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Filters',
-                          style: TextStyle(
+                        Text(
+                          loc.filters,
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Narrow the activity by time, user and activity type.',
+                          loc.staff_activity_filters_hint,
                           style: TextStyle(
                             color: Colors.grey.shade700,
                             fontSize: 13,
@@ -228,8 +221,10 @@ class StaffActivityScreen extends StatelessWidget {
                                     flex: 2,
                                     child: Obx(
                                       () => _FilterButton(
-                                        label:
-                                            controller.selectedTimePeriod.value,
+                                        label: controller.timePeriodLabel(
+                                          loc,
+                                          controller.selectedTimePeriod.value,
+                                        ),
                                         icon: Icons.keyboard_arrow_down_rounded,
                                         onTap: () => _showTimePeriodSheet(
                                           context,
@@ -243,8 +238,10 @@ class StaffActivityScreen extends StatelessWidget {
                                     flex: 3,
                                     child: Obx(
                                       () => _FilterButton(
-                                        label:
-                                            controller.selectedDateRangeLabel,
+                                        label: controller
+                                            .selectedDateRangeLabelLocalized(
+                                              loc,
+                                            ),
                                         icon: Icons.calendar_today_outlined,
                                         onTap: () => _showDateRangeSheet(
                                           context,
@@ -258,8 +255,8 @@ class StaffActivityScreen extends StatelessWidget {
                                     flex: 2,
                                     child: Obx(
                                       () => _FilterButton(
-                                        label:
-                                            controller.selectedUserName.value,
+                                        label: controller
+                                            .selectedUserLabelLocalized(loc),
                                         icon: Icons.people_outline_rounded,
                                         onTap: () => _showUsersSheet(
                                           context,
@@ -273,8 +270,10 @@ class StaffActivityScreen extends StatelessWidget {
                                     flex: 2,
                                     child: Obx(
                                       () => _FilterButton(
-                                        label:
-                                            controller.activityTypeFilterLabel,
+                                        label: controller
+                                            .activityTypeFilterLabelLocalized(
+                                              loc,
+                                            ),
                                         icon: Icons.edit_note_rounded,
                                         onTap: () => _showActivityTypeSheet(
                                           context,
@@ -293,9 +292,10 @@ class StaffActivityScreen extends StatelessWidget {
                                     Expanded(
                                       child: Obx(
                                         () => _FilterButton(
-                                          label: controller
-                                              .selectedTimePeriod
-                                              .value,
+                                          label: controller.timePeriodLabel(
+                                            loc,
+                                            controller.selectedTimePeriod.value,
+                                          ),
                                           icon:
                                               Icons.keyboard_arrow_down_rounded,
                                           onTap: () => _showTimePeriodSheet(
@@ -309,8 +309,10 @@ class StaffActivityScreen extends StatelessWidget {
                                     Expanded(
                                       child: Obx(
                                         () => _FilterButton(
-                                          label:
-                                              controller.selectedDateRangeLabel,
+                                          label: controller
+                                              .selectedDateRangeLabelLocalized(
+                                                loc,
+                                              ),
                                           icon: Icons.calendar_today_outlined,
                                           onTap: () => _showDateRangeSheet(
                                             context,
@@ -327,8 +329,8 @@ class StaffActivityScreen extends StatelessWidget {
                                     Expanded(
                                       child: Obx(
                                         () => _FilterButton(
-                                          label:
-                                              controller.selectedUserName.value,
+                                          label: controller
+                                              .selectedUserLabelLocalized(loc),
                                           icon: Icons.people_outline_rounded,
                                           onTap: () => _showUsersSheet(
                                             context,
@@ -342,7 +344,9 @@ class StaffActivityScreen extends StatelessWidget {
                                       child: Obx(
                                         () => _FilterButton(
                                           label: controller
-                                              .activityTypeFilterLabel,
+                                              .activityTypeFilterLabelLocalized(
+                                                loc,
+                                              ),
                                           icon: Icons.edit_note_rounded,
                                           onTap: () => _showActivityTypeSheet(
                                             context,
@@ -372,9 +376,9 @@ class StaffActivityScreen extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            const Text(
-                              'Activity log',
-                              style: TextStyle(
+                            Text(
+                              loc.activity_log,
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -382,7 +386,7 @@ class StaffActivityScreen extends StatelessWidget {
                             const Spacer(),
                             Obx(
                               () => Text(
-                                controller.selectedDateRangeLabel,
+                                controller.selectedDateRangeLabelLocalized(loc),
                                 style: TextStyle(
                                   color: Colors.grey.shade700,
                                   fontSize: 13,
@@ -414,6 +418,7 @@ class StaffActivityScreen extends StatelessWidget {
     StaffActivityController controller, {
     bool isWindows = false,
   }) {
+    final loc = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
 
     return Obx(() {
@@ -425,7 +430,7 @@ class StaffActivityScreen extends StatelessWidget {
       if (items.isEmpty) {
         return Center(
           child: Text(
-            'No activities yet',
+            loc.no_activities_yet,
             style: TextStyle(
               color: isWindows
                   ? Colors.grey.shade600
@@ -488,16 +493,17 @@ class StaffActivityScreen extends StatelessWidget {
     BuildContext context,
     StaffActivityController controller,
   ) async {
+    final loc = AppLocalizations.of(context)!;
     final isWindows = _isWindows(context);
     String tempSelected = controller.selectedTimePeriod.value;
 
     final selected = await _presentChooser<String>(
       context: context,
-      title: 'Select Time Period',
+      title: loc.select_time_period,
       builder: (setState) {
         return Column(
           mainAxisSize: MainAxisSize.min,
-          children: controller.timePeriods.map((option) {
+          children: StaffActivityController.timePeriods.map((option) {
             final isSelected = option == tempSelected;
             return InkWell(
               onTap: () => setState(() => tempSelected = option),
@@ -509,7 +515,7 @@ class StaffActivityScreen extends StatelessWidget {
                   vertical: 12,
                 ),
                 child: Text(
-                  option,
+                  controller.timePeriodLabel(loc, option),
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w400,
@@ -521,8 +527,8 @@ class StaffActivityScreen extends StatelessWidget {
           }).toList(),
         );
       },
-      resetLabel: 'Reset',
-      onReset: () => 'Today',
+      resetLabel: loc.reset,
+      onReset: () => StaffActivityController.timePeriodToday,
       onApply: () => tempSelected,
       isWindows: isWindows,
     );
@@ -535,6 +541,7 @@ class StaffActivityScreen extends StatelessWidget {
     BuildContext context,
     StaffActivityController controller,
   ) async {
+    final loc = AppLocalizations.of(context)!;
     final isWindows = _isWindows(context);
     StaffMember? tempSelected;
     for (final member in controller.staffMembers) {
@@ -546,7 +553,7 @@ class StaffActivityScreen extends StatelessWidget {
 
     final result = await _presentChooser<Map<String, dynamic>>(
       context: context,
-      title: 'Select User',
+      title: loc.select_user,
       builder: (setState) {
         return Obx(() {
           final members = controller.staffMembers;
@@ -560,7 +567,7 @@ class StaffActivityScreen extends StatelessWidget {
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
               child: Text(
-                'No users found',
+                loc.no_users_found,
                 style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
               ),
             );
@@ -578,7 +585,7 @@ class StaffActivityScreen extends StatelessWidget {
                   vertical: 12,
                 ),
                 child: Text(
-                  'All Users',
+                  loc.all_users,
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w400,
@@ -616,7 +623,7 @@ class StaffActivityScreen extends StatelessWidget {
           return Column(mainAxisSize: MainAxisSize.min, children: tiles);
         });
       },
-      resetLabel: 'Reset',
+      resetLabel: loc.reset,
       onReset: () => {'applied': true, 'member': null},
       onApply: () => {'applied': true, 'member': tempSelected},
       isWindows: isWindows,
@@ -630,16 +637,17 @@ class StaffActivityScreen extends StatelessWidget {
     BuildContext context,
     StaffActivityController controller,
   ) async {
+    final loc = AppLocalizations.of(context)!;
     final isWindows = _isWindows(context);
     String tempSelected = controller.selectedActivityType.value;
 
     final selected = await _presentChooser<String>(
       context: context,
-      title: 'Select Activity Type',
+      title: loc.select_activity_type,
       builder: (setState) {
         return Column(
           mainAxisSize: MainAxisSize.min,
-          children: controller.activityTypes.map((option) {
+          children: StaffActivityController.activityTypes.map((option) {
             final isSelected = option == tempSelected;
             return InkWell(
               onTap: () => setState(() => tempSelected = option),
@@ -651,7 +659,7 @@ class StaffActivityScreen extends StatelessWidget {
                   vertical: 12,
                 ),
                 child: Text(
-                  option,
+                  StaffActivityController.activityTypeLabel(loc, option),
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w400,
@@ -663,8 +671,8 @@ class StaffActivityScreen extends StatelessWidget {
           }).toList(),
         );
       },
-      resetLabel: 'Reset',
-      onReset: () => 'All Activities',
+      resetLabel: loc.reset,
+      onReset: () => StaffActivityController.activityTypeAll,
       onApply: () => tempSelected,
       isWindows: isWindows,
     );
@@ -677,13 +685,14 @@ class StaffActivityScreen extends StatelessWidget {
     BuildContext context,
     StaffActivityController controller,
   ) async {
+    final loc = AppLocalizations.of(context)!;
     final isWindows = _isWindows(context);
     DateTime? tempFrom = controller.selectedFromDate.value;
     DateTime? tempTo = controller.selectedToDate.value;
 
     final result = await _presentChooser<Map<String, dynamic>>(
       context: context,
-      title: 'Select Date Range',
+      title: loc.select_date_range,
       builder: (setState) {
         Future<void> pickDate({required bool isFrom}) async {
           final initialDate = isFrom
@@ -715,23 +724,25 @@ class StaffActivityScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _DatePickerTile(
-                label: 'From Date',
+                label: loc.from_date,
                 value: tempFrom == null
-                    ? 'Select date'
+                    ? loc.select_date
                     : _formatDate(tempFrom!),
                 onTap: () => pickDate(isFrom: true),
               ),
               const SizedBox(height: 10),
               _DatePickerTile(
-                label: 'To Date',
-                value: tempTo == null ? 'Select date' : _formatDate(tempTo!),
+                label: loc.to_date,
+                value: tempTo == null
+                    ? loc.select_date
+                    : _formatDate(tempTo!),
                 onTap: () => pickDate(isFrom: false),
               ),
             ],
           ),
         );
       },
-      resetLabel: 'Reset',
+      resetLabel: loc.reset,
       onReset: () => {
         'applied': true,
         'from': DateTime.now(),
@@ -776,6 +787,7 @@ class StaffActivityScreen extends StatelessWidget {
     required T? Function() onApply,
     required bool isWindows,
   }) async {
+    final loc = AppLocalizations.of(context)!;
     if (isWindows) {
       return Get.dialog<T>(
         Dialog(
@@ -857,7 +869,7 @@ class StaffActivityScreen extends StatelessWidget {
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                 ),
-                                child: const Text('Apply'),
+                                child: Text(loc.apply),
                               ),
                             ),
                           ],
@@ -952,9 +964,9 @@ class StaffActivityScreen extends StatelessWidget {
                                     borderRadius: BorderRadius.circular(14),
                                   ),
                                 ),
-                                child: const Text(
-                                  'Apply',
-                                  style: TextStyle(
+                                child: Text(
+                                  loc.apply,
+                                  style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -1113,10 +1125,14 @@ class _StaffActivityListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
-    final subtitle = _activitySubtitle(activity);
+    final subtitle = _activitySubtitle(activity, loc);
     final when = _formatActivityTimestamp(activity.createdAt);
-    final title = _displayActivityTypeLabel(activity.type);
+    final title = StaffActivityController.displayActivityTypeLabel(
+      loc,
+      activity.type,
+    );
     final desc = activity.description.trim();
     final by = activity.createdByName.trim().isNotEmpty
         ? activity.createdByName

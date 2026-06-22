@@ -1,6 +1,5 @@
 import 'package:billkaro/app/services/Network/api_handler.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
-import 'package:billkaro/utils/app_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -417,14 +416,9 @@ class _PrinterPageState extends State<PrinterPage> {
 
                     await _loadSettings();
                   } else {
-                    AppSnackbar.show(
+                    showError(
                       title: 'Connection Failed',
-                      message: 'Unable to connect to printer',
-                      backgroundColor: Colors.red,
-                      colorText: Colors.white,
-                      snackPosition: SnackPosition.BOTTOM,
-                      margin: const EdgeInsets.all(16),
-                      icon: const Icon(Icons.error, color: Colors.white),
+                      description: 'Unable to connect to printer',
                     );
                   }
                 },
@@ -507,27 +501,14 @@ class _PrinterPageState extends State<PrinterPage> {
                             upiId: "demo@upi",
                           );
 
-                          AppSnackbar.show(
+                          showSuccess(
                             title: 'Success',
-                            message: 'Test invoice printed successfully',
-                            backgroundColor: Colors.green,
-                            colorText: Colors.white,
-                            snackPosition: SnackPosition.BOTTOM,
-                            margin: const EdgeInsets.all(16),
-                            icon: const Icon(
-                              Icons.check_circle,
-                              color: Colors.white,
-                            ),
+                            description: 'Test invoice printed successfully',
                           );
                         } catch (e) {
-                          AppSnackbar.show(
+                          showError(
                             title: 'Print Error',
-                            message: 'Failed to print: $e',
-                            backgroundColor: Colors.red,
-                            colorText: Colors.white,
-                            snackPosition: SnackPosition.BOTTOM,
-                            margin: const EdgeInsets.all(16),
-                            icon: const Icon(Icons.error, color: Colors.white),
+                            description: 'Failed to print: $e',
                           );
                         }
                       }

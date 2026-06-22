@@ -57,6 +57,7 @@ ItemData _$ItemDataFromJson(Map<String, dynamic> json) => ItemData(
   orderFrom: json['orderFrom'] as String?,
   itemImage: json['itemImage'] as String? ?? '',
   showItem: json['showItem'] as bool? ?? true,
+  isRecommended: json['isRecommended'] as bool? ?? false,
   prepTimeMinutes: (json['prepTimeMinutes'] as num?)?.toInt() ?? 15,
 );
 
@@ -74,5 +75,6 @@ Map<String, dynamic> _$ItemDataToJson(ItemData instance) => <String, dynamic>{
   'itemImage': instance.itemImage,
   'orderFrom': instance.orderFrom,
   'showItem': instance.showItem,
+  'isRecommended': instance.isRecommended,
   'prepTimeMinutes': instance.prepTimeMinutes,
 };

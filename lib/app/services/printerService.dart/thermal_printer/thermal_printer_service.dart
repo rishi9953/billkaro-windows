@@ -17,8 +17,9 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:printing/printing.dart' hide Printer;
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:billkaro/utils/app_snackbar.dart';
+import 'helpers/cash_drawer_helper.dart';
 import 'helpers/storage_helper.dart';
+import 'helpers/thermal_paper_size.dart';
 import 'helpers/bluetooth_helper.dart';
 import 'helpers/network_printer_helper.dart';
 import 'helpers/windows_usb_printer_probe.dart';
@@ -62,6 +63,8 @@ class ThermalPrinterService extends GetxController {
   final isNetworkConnected = false.obs;
   final connectedNetworkLabel = Rxn<String>();
   final isNetworkConnecting = false.obs;
+
+  final selectedPaperSize = ThermalPaperSize.mm58.obs;
 
   /// True while a user-initiated BLE connect is in progress (suppresses reconnect).
   final isBleConnecting = false.obs;
@@ -114,17 +117,26 @@ class ThermalPrinterService extends GetxController {
     }
   }
 
+  Future<void> loadPaperSize() async {
+    selectedPaperSize.value = await StorageHelper.getThermalPaperSize();
+  }
+
+  Future<void> setPaperSize(ThermalPaperSize size) async {
+    await StorageHelper.saveThermalPaperSize(size);
+    selectedPaperSize.value = size;
+  }
+
+  int _receiptWidth() => selectedPaperSize.value.receiptWidthChars;
+
   @override
   void onInit() {
     super.onInit();
     if (kIsWeb) return;
+    unawaited(loadPaperSize());
     BluetoothHelper.listenToConnectionState(this);
     BluetoothHelper.listenToAdapterState(this);
     _startPrinterHealthMonitor();
-    // Windows: manual connect from Printer Settings only (no background auto-connect).
-    if (!Platform.isWindows) {
-      _initAutoConnect();
-    }
+    _initAutoConnect();
   }
 
   bool _shouldAutoConnectPrinter() {
@@ -290,11 +302,9 @@ class ThermalPrinterService extends GetxController {
       return;
     }
     _lastOfflineNoticeAt = now;
-    AppSnackbar.show(
+    showError(
       title: 'Printer offline',
-      message: message,
-      duration: Duration(seconds: 2),
-      snackPosition: SnackPosition.BOTTOM,
+      description: message,
     );
   }
 
@@ -603,10 +613,9 @@ class ThermalPrinterService extends GetxController {
       _ensureUsbPresenceMonitor();
     } catch (e) {
       debugPrint('USB Scan Error: $e');
-      AppSnackbar.show(
+      showError(
         title: 'USB Scan Error',
-        message: 'Failed to scan for USB printers: $e',
-        snackPosition: SnackPosition.BOTTOM,
+        description: 'Failed to scan for USB printers: $e',
       );
     } finally {
       isUsbScanning.value = false;
@@ -641,10 +650,9 @@ class ThermalPrinterService extends GetxController {
     } catch (e) {
       debugPrint('USB Connect Error: $e');
       connectionStatus.value = 'USB connection error: $e';
-      AppSnackbar.show(
+      showError(
         title: 'Connection Error',
-        message: 'Failed to connect to USB printer: $e',
-        snackPosition: SnackPosition.BOTTOM,
+        description: 'Failed to connect to USB printer: $e',
       );
       return false;
     }
@@ -662,10 +670,9 @@ class ThermalPrinterService extends GetxController {
       syncUsbDisconnected(statusMessage: 'USB printer disconnected');
 
       if (notifyUser) {
-        AppSnackbar.show(
+        showSuccess(
           title: 'Disconnected',
-          message: 'USB printer disconnected',
-          snackPosition: SnackPosition.BOTTOM,
+          description: 'USB printer disconnected',
         );
       }
     } catch (e) {
@@ -745,8 +752,12 @@ class ThermalPrinterService extends GetxController {
   Future<void> clearSavedDevice() => StorageHelper.clearAll();
 
   Future<bool> tryAutoConnect() async {
-    if (Platform.isWindows) return false;
     if (!_shouldAutoConnectPrinter()) return false;
+
+    if (Platform.isWindows) {
+      return _tryAutoConnectWindows();
+    }
+
     if (isConnected.value) return true;
     // Try Bluetooth auto-connect first
     final bluetoothConnected = await BluetoothHelper.tryAutoConnect(this);
@@ -756,8 +767,15 @@ class ThermalPrinterService extends GetxController {
     final savedUsbPrinter = await StorageHelper.getSavedUsbPrinter();
     if (savedUsbPrinter != null && savedUsbPrinter.isNotEmpty) {
       await scanUsbPrinters();
+      final vendorId = await StorageHelper.getSavedUsbVendorId();
+      final productId = await StorageHelper.getSavedUsbProductId();
       final printer = usbPrinters.firstWhereOrNull(
-        (p) => (p.name ?? '') == savedUsbPrinter,
+        (p) => _usbPrinterMatchesSaved(
+          p,
+          name: savedUsbPrinter,
+          vendorId: vendorId,
+          productId: productId,
+        ),
       );
       if (printer != null) {
         return await connectUsbPrinter(printer);
@@ -765,6 +783,71 @@ class ThermalPrinterService extends GetxController {
     }
 
     return false;
+  }
+
+  Future<bool> _isWindowsPrinterAlreadyConnected() async {
+    if (isUsbConnected.value && connectedUsbPrinter != null) return true;
+    if (_network.isConnected) return true;
+    if (isNetworkConnected.value) return true;
+    if (await _isConnectedForRole(PrintRole.bill)) return true;
+    if (await _isConnectedForRole(PrintRole.kot)) return true;
+    return false;
+  }
+
+  Future<bool> _tryAutoConnectWindows() async {
+    if (await _isWindowsPrinterAlreadyConnected()) return true;
+
+    try {
+      isAutoConnecting.value = true;
+      connectionStatus.value = 'Auto-connecting...';
+
+      var connected = false;
+      for (final role in PrintRole.values) {
+        if (!await hasRolePrinter(role)) continue;
+        final type = await StorageHelper.getRoleLastPrinterType(_roleKey(role));
+        // Desktop Windows uses USB / Ethernet; skip BLE auto-connect here.
+        if (type == 'bluetooth') continue;
+        if (await ensureConnectedForRole(role)) {
+          connected = true;
+        }
+      }
+      if (connected) return true;
+
+      final savedUsbPrinter = await StorageHelper.getSavedUsbPrinter();
+      if (savedUsbPrinter != null && savedUsbPrinter.isNotEmpty) {
+        await scanUsbPrinters();
+        if (usbPrinters.isEmpty) {
+          await Future.delayed(const Duration(milliseconds: 500));
+          await scanUsbPrinters();
+        }
+        final vendorId = await StorageHelper.getSavedUsbVendorId();
+        final productId = await StorageHelper.getSavedUsbProductId();
+        final printer = usbPrinters.firstWhereOrNull(
+          (p) => _usbPrinterMatchesSaved(
+            p,
+            name: savedUsbPrinter,
+            vendorId: vendorId,
+            productId: productId,
+          ),
+        );
+        if (printer != null) {
+          return await connectUsbPrinter(printer);
+        }
+      }
+
+      final ip = await StorageHelper.getLastNetworkIp();
+      if (ip != null && ip.trim().isNotEmpty) {
+        final port = await StorageHelper.getLastNetworkPort();
+        return await connectNetworkPrinter(ip.trim(), port: port);
+      }
+
+      return false;
+    } catch (e) {
+      debugPrint('Windows auto-connect error: $e');
+      return false;
+    } finally {
+      isAutoConnecting.value = false;
+    }
   }
 
   String _roleKey(PrintRole role) => role == PrintRole.bill ? 'bill' : 'kot';
@@ -924,40 +1007,8 @@ class ThermalPrinterService extends GetxController {
     return false;
   }
 
-  int _detectReceiptWidth() {
-    // Prefer best-effort inference from connected device/printer name.
-    final name =
-        (connectedUsbPrinter?.name ??
-                connectedDevice?.platformName ??
-                connectedDevice?.advName ??
-                '')
-            .toLowerCase();
-
-    // Heuristics: many models advertise 80/58 or 3inch/2inch in the name.
-    if (name.contains('80') ||
-        name.contains('3 inch') ||
-        name.contains('3inch') ||
-        name.contains('80mm')) {
-      return 48;
-    }
-    if (name.contains('58') ||
-        name.contains('2 inch') ||
-        name.contains('2inch') ||
-        name.contains('58mm')) {
-      return 32;
-    }
-
-    // Default to 32 for safety (less clipping).
-    return 32;
-  }
-
   ({int w, int item, int qty, int price, int amount}) _invoiceColumns(int w) {
-    if (w >= 48) {
-      // 80mm
-      return (w: w, item: 24, qty: 6, price: 8, amount: 10);
-    }
-    // 58mm
-    return (w: w, item: 12, qty: 4, price: 8, amount: 8);
+    return selectedPaperSize.value.invoiceColumns();
   }
 
   Future<bool> ensureConnectedForRole(PrintRole role) async {
@@ -1050,7 +1101,10 @@ class ThermalPrinterService extends GetxController {
 
   Future<List<int>> _buildUsbTestEscPosBytes(PrintRole role) async {
     final profile = await CapabilityProfile.load();
-    final generator = Generator(PaperSize.mm80, profile);
+    final generator = Generator(
+      selectedPaperSize.value.escPosPaperSize,
+      profile,
+    );
     final roleLabel = role == PrintRole.bill ? 'Bill' : 'KOT';
     var bytes = <int>[];
     bytes += generator.text(
@@ -1144,7 +1198,7 @@ class ThermalPrinterService extends GetxController {
     }
 
     if (assignedType == 'network') {
-      final builder = PrintBuilder(receiptWidth: _detectReceiptWidth())
+      final builder = PrintBuilder(receiptWidth: _receiptWidth())
         ..center()
         ..boldDoubleHeight('BillKaro\n')
         ..text('${role == PrintRole.bill ? 'Bill' : 'KOT'} printer test\n')
@@ -1155,7 +1209,7 @@ class ThermalPrinterService extends GetxController {
       return;
     }
 
-    final builder = PrintBuilder(receiptWidth: _detectReceiptWidth())
+    final builder = PrintBuilder(receiptWidth: _receiptWidth())
       ..center()
       ..boldDoubleHeight('BillKaro\n')
       ..text('${role == PrintRole.bill ? 'Bill' : 'KOT'} printer test\n')
@@ -1206,7 +1260,7 @@ class ThermalPrinterService extends GetxController {
       return;
     }
 
-    final receiptW = _detectReceiptWidth();
+    final receiptW = _receiptWidth();
     final builder = PrintBuilder(receiptWidth: receiptW);
 
     // Header
@@ -1375,7 +1429,7 @@ class ThermalPrinterService extends GetxController {
 
     debugPrint('Printer is ${PrinterService2.to.isConnected.value}');
 
-    final receiptW = _detectReceiptWidth();
+    final receiptW = _receiptWidth();
     final cols = _invoiceColumns(receiptW);
     final builder = PrintBuilder(receiptWidth: receiptW);
     // Header
@@ -1504,6 +1558,47 @@ class ThermalPrinterService extends GetxController {
 
     builder.feed(3).cut();
     await _printBytes(builder.bytes, forRole: PrintRole.bill);
+    await maybeOpenCashDrawerForPayment(paymentMode);
+  }
+
+  bool _isCashPayment(String paymentMode) =>
+      paymentMode.trim().toLowerCase() == 'cash';
+
+  /// Sends ESC/POS drawer-kick to the bill printer (RJ11 drawer on DK port).
+  Future<void> openCashDrawer() async {
+    final appPref = Get.find<AppPref>();
+    if (!appPref.cashDrawerEnabled) {
+      throw Exception('Cash drawer is disabled in Settings');
+    }
+
+    final ok = await ensureConnectedForRole(PrintRole.bill);
+    if (!ok) {
+      throw Exception('No bill printer connected');
+    }
+
+    if (!kIsWeb && Platform.isWindows && !hasActiveThermalPath) {
+      throw Exception(
+        'Cash drawer needs a USB, Ethernet, or Bluetooth bill printer',
+      );
+    }
+
+    final pin = cashDrawerPinFromStorage(appPref.cashDrawerPin);
+    final bytes = await CashDrawerHelper.buildKickBytes(pin);
+    await _printBytes(bytes, forRole: PrintRole.bill);
+  }
+
+  Future<void> maybeOpenCashDrawerForPayment(String paymentMode) async {
+    final appPref = Get.find<AppPref>();
+    if (!appPref.cashDrawerEnabled || !appPref.openCashDrawerOnCashPayment) {
+      return;
+    }
+    if (!_isCashPayment(paymentMode)) return;
+
+    try {
+      await openCashDrawer();
+    } catch (e) {
+      debugPrint('Cash drawer open failed: $e');
+    }
   }
 
   /// Prints a table QR menu sticker/receipt on the bill printer.
@@ -1516,9 +1611,6 @@ class ThermalPrinterService extends GetxController {
       throw Exception('QR menu URL is empty');
     }
 
-    final ok = await ensureConnectedForRole(PrintRole.bill);
-    if (!ok) throw Exception('No bill printer connected');
-
     if (!kIsWeb && Platform.isWindows && !hasActiveThermalPath) {
       await _printTableQrWindowsPdf(
         businessName: businessName,
@@ -1528,7 +1620,10 @@ class ThermalPrinterService extends GetxController {
       return;
     }
 
-    final receiptW = _detectReceiptWidth();
+    final ok = await ensureConnectedForRole(PrintRole.bill);
+    if (!ok) throw Exception('No bill printer connected');
+
+    final receiptW = _receiptWidth();
     final builder = PrintBuilder(receiptWidth: receiptW);
 
     builder
@@ -2228,14 +2323,4 @@ class ThermalPrinterService extends GetxController {
     if (autoConnectEnabled) await tryAutoConnect();
   }
 
-  // Utility method to show error dialogs
-  void showError({required String title, required String description}) {
-    AppSnackbar.show(
-      title: title,
-      message: description,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
-      colorText: Get.theme.colorScheme.onError,
-    );
-  }
 }

@@ -58,53 +58,50 @@ class WhatsappMarketingController extends BaseController
   }
 
   Future<void> sendBulkWhatsAppMessages(String templateType) async {
+    final loc = AppLocalizations.of(Get.context!)!;
+
     if (restaurantNameController.text.trim().isEmpty) {
-      showError(description: 'Please enter restaurant name');
+      showError(description: loc.please_enter_restaurant_name);
       return;
     }
 
     if (templateType == 'discount' &&
         discountValueController.text.trim().isEmpty) {
-      showError(description: 'Please enter discount value');
+      showError(description: loc.please_enter_discount_value);
       return;
     }
 
     if (templateType == 'festival' &&
         festivalNameController.text.trim().isEmpty) {
-      showError(description: 'Please enter festival name');
+      showError(description: loc.please_enter_festival_name);
       return;
     }
 
     final outletId = appPref.selectedOutlet?.id;
     final userId = appPref.user?.id;
     if (outletId == null || userId == null) {
-      showError(description: 'Outlet or user information is missing');
+      showError(description: loc.outlet_or_user_info_missing);
       return;
     }
 
     final count = recipientCount.value;
     if (count == 0) {
-      showError(
-        description:
-            'No customers with phone numbers found. Add regular customers first.',
-      );
+      showError(description: loc.no_customers_with_phone);
       return;
     }
 
     final confirm = await Get.dialog<bool>(
       AlertDialog(
-        title: const Text('Confirm Bulk Message'),
-        content: Text(
-          'Send WhatsApp messages to $count customers via the server?',
-        ),
+        title: Text(loc.confirm_bulk_message),
+        content: Text(loc.send_whatsapp_confirm(count)),
         actions: [
           TextButton(
             onPressed: () => Get.back(result: false),
-            child: const Text('Cancel'),
+            child: Text(loc.cancel),
           ),
           ElevatedButton(
             onPressed: () => Get.back(result: true),
-            child: const Text('Send'),
+            child: Text(loc.send),
           ),
         ],
       ),
@@ -123,16 +120,16 @@ class WhatsappMarketingController extends BaseController
         PopScope(
           canPop: false,
           child: AlertDialog(
-            title: const Text('Sending Messages'),
+            title: Text(loc.sending_messages),
             content: Obx(
               () => Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const CircularProgressIndicator(),
                   const SizedBox(height: 16),
-                  Text('Sending to ${totalMessages.value} customers...'),
+                  Text(loc.sending_to_customers(totalMessages.value.toString())),
                   const SizedBox(height: 8),
-                  const Text('Please wait, this may take a minute.'),
+                  Text(loc.please_wait_sending),
                 ],
               ),
             ),
@@ -178,21 +175,20 @@ class WhatsappMarketingController extends BaseController
 
       final result = response?.data;
       if (result == null) {
-        showError(
-          description:
-              'Request timed out or failed. If you have many customers, wait and check campaign history in the database before resending.',
-        );
+        showError(description: loc.request_timed_out_bulk);
         return;
       }
 
       if (result.success) {
         showSuccess(
-          description: 'Successfully sent ${result.successCount} messages',
+          description: loc.successfully_sent_messages(result.successCount),
         );
       } else {
         showError(
-          description:
-              'Sent: ${result.successCount}, Failed: ${result.failureCount}',
+          description: loc.sent_failed_summary(
+            result.successCount,
+            result.failureCount,
+          ),
         );
       }
 
@@ -213,7 +209,7 @@ class WhatsappMarketingController extends BaseController
       });
     } catch (e) {
       if (Get.isDialogOpen == true) Get.back();
-      showError(description: 'Failed to send messages: $e');
+      showError(description: loc.failed_to_send_messages(e.toString()));
     } finally {
       isSending.value = false;
     }
@@ -228,56 +224,28 @@ class WhatsappMarketingController extends BaseController
   }
 
   String generateMessage(String templateType) {
+    final loc = AppLocalizations.of(Get.context!)!;
     final restaurantName = restaurantNameController.text.trim();
 
     if (templateType == 'discount') {
       final discount = discountValueController.text.trim();
-      return '''Hello! 🎉
-
-Get $discount% OFF on your next order at $restaurantName!
-
-This is a limited time offer. Use code: SAVE$discount
-
-Order now and enjoy delicious food with amazing savings!
-
-Thank you for being a valued customer! ❤️''';
+      return loc.whatsapp_msg_discount(discount, restaurantName);
     }
 
     if (templateType == 'menu') {
-      return '''Hello! 🍽️
-
-Exciting news from $restaurantName!
-
-We've just launched our new menu with amazing dishes. Come try our latest specialties!
-
-Visit us today and enjoy great food! 😊
-
-Best regards,
-$restaurantName Team''';
+      return loc.whatsapp_msg_menu(restaurantName);
     }
 
     if (templateType == 'festival') {
       final festival = festivalNameController.text.trim();
-      return '''Hello! 🎊
-
-$restaurantName wishes you a very Happy $festival!
-
-Visit us for our special festival menu and exclusive discounts.
-
-Celebrate with great food! 🍽️
-
-Warm wishes,
-$restaurantName Team''';
+      return loc.whatsapp_msg_festival(restaurantName, festival);
     }
 
-    return '''Hello from $restaurantName! 👋
-
-We have an important update for you. Thank you for being a loyal customer!
-
-Visit us soon! ❤️''';
+    return loc.whatsapp_msg_default(restaurantName);
   }
 
   void showResultsDialog(Map<String, dynamic> result) {
+    final loc = AppLocalizations.of(Get.context!)!;
     final results = result['results'] as List<dynamic>? ?? [];
     final total = result['total'] ?? 0;
     final successCount = result['successCount'] ?? 0;
@@ -292,28 +260,35 @@ Visit us soon! ❤️''';
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Sending Results',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              Text(
+                loc.sending_results,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildStatCard('Total', total.toString(), Colors.blue),
+                  _buildStatCard(loc.total, total.toString(), Colors.blue),
                   _buildStatCard(
-                    'Success',
+                    loc.success_label,
                     successCount.toString(),
                     Colors.green,
                   ),
-                  _buildStatCard('Failed', failureCount.toString(), Colors.red),
+                  _buildStatCard(
+                    loc.failed_label,
+                    failureCount.toString(),
+                    Colors.red,
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
               if (results.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Text('No results available'),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Text(loc.no_results_available),
                 )
               else
                 Expanded(
@@ -323,16 +298,18 @@ Visit us soon! ❤️''';
                     itemBuilder: (context, index) {
                       final item = results[index] as Map<String, dynamic>;
                       final isSuccess = item['success'] == true;
+                      final errorText =
+                          item['error']?.toString() ?? loc.unknown_error;
                       return ListTile(
                         leading: Icon(
                           isSuccess ? Icons.check_circle : Icons.error,
                           color: isSuccess ? Colors.green : Colors.red,
                         ),
-                        title: Text(item['to']?.toString() ?? 'Unknown'),
+                        title: Text(item['to']?.toString() ?? loc.unknown),
                         subtitle: Text(
                           isSuccess
-                              ? 'Sent successfully'
-                              : 'Failed: ${item['error'] ?? 'Unknown error'}',
+                              ? loc.sent_successfully
+                              : loc.message_failed_error(errorText),
                         ),
                       );
                     },
@@ -343,7 +320,7 @@ Visit us soon! ❤️''';
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () => Get.back(),
-                  child: const Text('Close'),
+                  child: Text(loc.close),
                 ),
               ),
             ],
@@ -383,6 +360,7 @@ Visit us soon! ❤️''';
     String title,
     String description,
   ) {
+    final loc = AppLocalizations.of(Get.context!)!;
     final theme = Get.theme;
     final cs = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -402,7 +380,7 @@ Visit us soon! ❤️''';
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Enter Custom Fields',
+                    loc.enter_custom_fields,
                     style: textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -410,7 +388,7 @@ Visit us soon! ❤️''';
                   const SizedBox(height: 8),
                   if (recipientCount.value > 0)
                     Text(
-                      '${recipientCount.value} customers will receive this message',
+                      loc.customers_will_receive(recipientCount.value),
                       style: textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
@@ -418,8 +396,8 @@ Visit us soon! ❤️''';
                   const SizedBox(height: 16),
                   TextField(
                     controller: restaurantNameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Restaurant Name',
+                    decoration: InputDecoration(
+                      labelText: loc.restaurant_name_label,
                     ),
                   ),
                   if (templateType == 'discount') ...[
@@ -427,8 +405,8 @@ Visit us soon! ❤️''';
                     TextField(
                       controller: discountValueController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Discount value (%)',
+                      decoration: InputDecoration(
+                        labelText: loc.discount_value_percent_label,
                       ),
                     ),
                   ],
@@ -436,8 +414,8 @@ Visit us soon! ❤️''';
                     const SizedBox(height: 14),
                     TextField(
                       controller: festivalNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Festival Name',
+                      decoration: InputDecoration(
+                        labelText: loc.festival_name_label,
                       ),
                     ),
                   ],
@@ -460,7 +438,7 @@ Visit us soon! ❤️''';
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text('Send Bulk Message'),
+                            : Text(loc.send_bulk_message),
                       ),
                     ),
                   ),

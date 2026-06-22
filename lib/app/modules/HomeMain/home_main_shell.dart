@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:billkaro/app/Widgets/app_shell_sidebar.dart';
 import 'package:billkaro/app/Widgets/windows_desktop_title_bar.dart';
+import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/Home/showcase_controller.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_controller.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
@@ -24,6 +25,7 @@ class _HomeMainShellState extends State<HomeMainShell> {
   void initState() {
     super.initState();
     Get.put(HomeMainController());
+    Get.put(HomeScreenController());
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {

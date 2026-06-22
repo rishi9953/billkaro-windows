@@ -11,11 +11,12 @@ class CustomerDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FC),
       appBar: AppBar(
         elevation: 0,
-        title: const Text('Customer Details'),
+        title: Text(loc.customer_details),
         actions: [
           IconButton(
             icon: Assets.svg.whatsapp.svg(width: 24, height: 24),
@@ -32,6 +33,12 @@ class CustomerDetailsScreen extends StatelessWidget {
                 },
               );
             },
+          ),
+          // Refresh button
+          IconButton(
+            onPressed: () => controller.loadCustomerDetails(),
+            icon: const Icon(Icons.refresh),
+            tooltip: loc.refresh,
           ),
         ],
       ),
@@ -51,7 +58,7 @@ class CustomerDetailsScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () => controller.loadCustomerDetails(),
-                    child: const Text('Retry'),
+                    child: Text(loc.retry),
                   ),
                 ],
               ),
@@ -78,54 +85,61 @@ class CustomerDetailsScreen extends StatelessWidget {
         final ordersLoadingPages = controller.ordersLoading.value;
         final visiblePages = controller.visiblePageNumbers;
 
-        return SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 920),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildProfileCard(
-                    customerInitial: customerInitial,
-                    customerName: customerName,
-                    phoneNumber: phoneNumber,
-                    loyaltyDiscount: loyaltyDiscount,
-                  ),
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 920),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildProfileCard(
+                  loc: loc,
+                  customerInitial: customerInitial,
+                  customerName: customerName,
+                  phoneNumber: phoneNumber,
+                  loyaltyDiscount: loyaltyDiscount,
+                ),
+                const SizedBox(height: 16),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    return _buildStatsGrid(
+                      loc: loc,
+                      isWide: constraints.maxWidth > 700,
+                      totalVisits: totalVisits,
+                      orderValue: orderValue,
+                      avgOrder: avgOrder,
+                      totalDiscount: totalDiscount,
+                    );
+                  },
+                ),
+                if (lastOrder != null) ...[
                   const SizedBox(height: 16),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      return _buildStatsGrid(
-                        isWide: constraints.maxWidth > 700,
-                        totalVisits: totalVisits,
-                        orderValue: orderValue,
-                        avgOrder: avgOrder,
-                        totalDiscount: totalDiscount,
-                      );
-                    },
-                  ),
-                  if (lastOrder != null) ...[
-                    const SizedBox(height: 16),
-                    _buildLastOrderBanner(lastOrder),
-                  ],
-                  const SizedBox(height: 20),
-                  _buildOrderHistoryHeader(ordersRangeLabel),
-                  const SizedBox(height: 10),
-                  _buildOrderHistory(
-                    orders: orders,
-                    ordersLoading: ordersLoading,
-                    currentPage: currentPage,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildPagination(
-                    totalPages: totalPages,
-                    currentPage: currentPage,
-                    visiblePages: visiblePages,
-                    ordersLoading: ordersLoadingPages,
-                  ),
+                  _buildLastOrderBanner(loc, lastOrder),
                 ],
-              ),
+                const SizedBox(height: 20),
+                _buildOrderHistoryHeader(loc, ordersRangeLabel),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        _buildOrderHistory(
+                          loc: loc,
+                          orders: orders,
+                          ordersLoading: ordersLoading,
+                          currentPage: currentPage,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildPagination(
+                          totalPages: totalPages,
+                          currentPage: currentPage,
+                          visiblePages: visiblePages,
+                          ordersLoading: ordersLoadingPages,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -134,6 +148,7 @@ class CustomerDetailsScreen extends StatelessWidget {
   }
 
   Widget _buildProfileCard({
+    required AppLocalizations loc,
     required String customerInitial,
     required String customerName,
     required String phoneNumber,
@@ -219,7 +234,7 @@ class CustomerDetailsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Loyalty',
+                  loc.loyalty,
                   style: TextStyle(fontSize: 12, color: AppColor.grey.shade700),
                 ),
               ],
@@ -231,6 +246,7 @@ class CustomerDetailsScreen extends StatelessWidget {
   }
 
   Widget _buildStatsGrid({
+    required AppLocalizations loc,
     required bool isWide,
     required int totalVisits,
     required double orderValue,
@@ -240,25 +256,25 @@ class CustomerDetailsScreen extends StatelessWidget {
     final children = [
       _buildStatCard(
         icon: Icons.receipt_long_outlined,
-        label: 'Total Visits',
+        label: loc.total_visits,
         value: '$totalVisits',
         color: Colors.blue,
       ),
       _buildStatCard(
         icon: Icons.payments_outlined,
-        label: 'Order Value',
+        label: loc.customer_order_value,
         value: '₹${orderValue.toStringAsFixed(0)}',
         color: Colors.green,
       ),
       _buildStatCard(
         icon: Icons.trending_up,
-        label: 'Avg Order',
+        label: loc.avg_order,
         value: '₹${avgOrder.toStringAsFixed(0)}',
         color: Colors.orange,
       ),
       _buildStatCard(
         icon: Icons.discount_outlined,
-        label: 'Total Discount',
+        label: loc.customer_total_discount,
         value: '₹${totalDiscount.toStringAsFixed(0)}',
         color: Colors.purple,
       ),
@@ -348,7 +364,7 @@ class CustomerDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLastOrderBanner(CustomerLastOrder order) {
+  Widget _buildLastOrderBanner(AppLocalizations loc, CustomerLastOrder order) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -366,12 +382,15 @@ class CustomerDetailsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Latest Order',
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                Text(
+                  loc.latest_order,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
                 Text(
-                  'Bill #${order.billNumber} • ₹${order.totalAmount.toStringAsFixed(2)}',
+                  loc.bill_amount_summary(
+                    order.billNumber,
+                    order.totalAmount.toStringAsFixed(2),
+                  ),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -390,12 +409,15 @@ class CustomerDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildOrderHistoryHeader(String ordersRangeLabel) {
+  Widget _buildOrderHistoryHeader(
+    AppLocalizations loc,
+    String ordersRangeLabel,
+  ) {
     return Row(
       children: [
-        const Text(
-          'Order History',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        Text(
+          loc.order_history,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const Spacer(),
         Text(
@@ -407,6 +429,7 @@ class CustomerDetailsScreen extends StatelessWidget {
   }
 
   Widget _buildOrderHistory({
+    required AppLocalizations loc,
     required List<CustomerLastOrder> orders,
     required bool ordersLoading,
     required int currentPage,
@@ -440,9 +463,9 @@ class CustomerDetailsScreen extends StatelessWidget {
               color: AppColor.grey.shade400,
             ),
             const SizedBox(height: 10),
-            const Text(
-              'No orders yet for this customer',
-              style: TextStyle(fontSize: 15, color: Colors.black54),
+            Text(
+              loc.no_orders_yet_for_customer,
+              style: const TextStyle(fontSize: 15, color: Colors.black54),
             ),
           ],
         ),
@@ -466,14 +489,21 @@ class CustomerDetailsScreen extends StatelessWidget {
               ((currentPage - 1) * CustomerDetailsController.pageLimit) +
               index +
               1;
-          return _buildOrderTile(orders[index], rowNumber);
+          return _buildOrderTile(loc, orders[index], rowNumber);
         },
       ),
     );
   }
 
-  Widget _buildOrderTile(CustomerLastOrder order, int rowNumber) {
+  Widget _buildOrderTile(
+    AppLocalizations loc,
+    CustomerLastOrder order,
+    int rowNumber,
+  ) {
     final isClosed = order.status.toLowerCase() == 'closed';
+    final discountSuffix = order.discount > 0
+        ? loc.order_discount_amount(order.discount.toStringAsFixed(0))
+        : '';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -502,7 +532,7 @@ class CustomerDetailsScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Bill #${order.billNumber}',
+                  loc.bill_number_short(order.billNumber),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -515,7 +545,7 @@ class CustomerDetailsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${order.paymentType.toUpperCase()}${order.discount > 0 ? ' • Discount ₹${order.discount.toStringAsFixed(0)}' : ''}',
+                  '${order.paymentType.toUpperCase()}$discountSuffix',
                   style: TextStyle(fontSize: 13, color: AppColor.grey.shade600),
                 ),
               ],
@@ -541,7 +571,7 @@ class CustomerDetailsScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  isClosed ? 'Closed' : 'Pending',
+                  isClosed ? loc.status_closed : loc.status_pending,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,

@@ -8,6 +8,7 @@ class AddRegularCustomerScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final bool isDesktop = MediaQuery.of(context).size.width >= 900;
 
@@ -15,9 +16,13 @@ class AddRegularCustomerScreen extends StatelessWidget {
       appBar: AppBar(
         elevation: 0,
         centerTitle: !isDesktop,
-        title: const Text(
-          'Add Regular Customer',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+        title: Obx(
+          () => Text(
+            controller.isEdit.isTrue
+                ? loc.edit_regular_customer
+                : loc.add_regular_customer,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+          ),
         ),
       ),
       body: LayoutBuilder(
@@ -74,10 +79,10 @@ class AddRegularCustomerScreen extends StatelessWidget {
                                               size: 24,
                                             ),
                                             const SizedBox(width: 10),
-                                            const Expanded(
+                                            Expanded(
                                               child: Text(
-                                                'Fetch customer details directly from your contacts.',
-                                                style: TextStyle(
+                                                loc.fetch_customer_from_contacts,
+                                                style: const TextStyle(
                                                   color: Colors.white,
                                                   fontSize: 13,
                                                   fontWeight: FontWeight.w500,
@@ -102,7 +107,7 @@ class AddRegularCustomerScreen extends StatelessWidget {
                               }),
                               _buildLabel(
                                 context,
-                                label: 'Phone Number',
+                                label: loc.phone_number_field,
                                 isRequired: true,
                               ),
                               const SizedBox(height: 8),
@@ -120,24 +125,27 @@ class AddRegularCustomerScreen extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 14),
-                              _buildLabel(context, label: 'Name'),
+                              _buildLabel(context, label: loc.name_label),
                               const SizedBox(height: 8),
                               TextField(
                                 controller: controller.nameController,
                                 decoration: _inputDecoration(
                                   context,
-                                  hintText: 'Enter customer name',
+                                  hintText: loc.enter_customer_name,
                                 ),
                               ),
                               const SizedBox(height: 14),
-                              _buildLabel(context, label: 'Loyalty Discount'),
+                              _buildLabel(
+                                context,
+                                label: loc.loyalty_discount_label,
+                              ),
                               const SizedBox(height: 8),
                               TextField(
                                 controller: controller.discountController,
                                 keyboardType: TextInputType.number,
                                 decoration: _inputDecoration(
                                   context,
-                                  hintText: 'Enter discount',
+                                  hintText: loc.enter_discount,
                                   suffixText: '%',
                                 ),
                               ),
@@ -153,7 +161,7 @@ class AddRegularCustomerScreen extends StatelessWidget {
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
-                                      'Discount will be applied on orders of this customer.',
+                                      loc.discount_applied_on_orders,
                                       style: theme.textTheme.bodySmall,
                                     ),
                                   ),
@@ -212,7 +220,7 @@ class AddRegularCustomerScreen extends StatelessWidget {
                                       minimumSize: const Size(0, 46),
                                       elevation: 0,
                                     ),
-                                    child: const Text('Update Details'),
+                                    child: Text(loc.update_details),
                                   ),
                                 ),
                               ]
@@ -227,7 +235,7 @@ class AddRegularCustomerScreen extends StatelessWidget {
                                         color: theme.dividerColor,
                                       ),
                                     ),
-                                    child: const Text('Save & New'),
+                                    child: Text(loc.save_and_new),
                                   ),
                                 ),
                                 SizedBox(
@@ -238,7 +246,7 @@ class AddRegularCustomerScreen extends StatelessWidget {
                                       minimumSize: const Size(0, 46),
                                       elevation: 0,
                                     ),
-                                    child: const Text('Save Customer'),
+                                    child: Text(loc.save_customer),
                                   ),
                                 ),
                               ],

@@ -24,64 +24,16 @@ class StaffListScreen extends StatelessWidget {
           loc.manage_staff,
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
         ),
-      ),
-      body: isWindows
-          ? _buildWindowsLayout(context, controller, loc)
-          : _buildMobileLayout(context, controller, loc),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // MOBILE LAYOUT
-  // ---------------------------------------------------------------------------
-
-  Widget _buildMobileLayout(
-    BuildContext context,
-    StaffDetailsController controller,
-    AppLocalizations loc,
-  ) {
-    return Column(
-      children: [
-        _StaffActivityEntry(
-          onTap: () => Modular.to.pushNamed(HomeMainRoutes.staffActivityScreen),
-        ),
-        _SearchField(controller: controller, isWindows: false),
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: controller.loadStaffList,
-            child: Obx(() {
-              if (controller.isLoading.value && controller.staffList.isEmpty) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final list = controller.filteredStaff;
-              final isSearching = controller.searchQuery.value
-                  .trim()
-                  .isNotEmpty;
-              if (list.isEmpty) {
-                return _EmptyStaffState(
-                  isSearching: isSearching,
-                  onInviteTap: isSearching ? null : controller.onAddStaff,
-                );
-              }
-              return ListView.separated(
-                physics: const AlwaysScrollableScrollPhysics(
-                  parent: BouncingScrollPhysics(),
-                ),
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                itemCount: list.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  return _StaffCard(
-                    member: list[index],
-                    controller: controller,
-                  );
-                },
-              );
-            }),
+        actions: [
+          // Refresh button for Windows platform
+          IconButton(
+            onPressed: controller.loadStaffList,
+            icon: const Icon(Icons.refresh),
+            tooltip: loc.refresh,
           ),
-        ),
-        _buildBottomButton(context, controller, loc),
-      ],
+        ],
+      ),
+      body: _buildWindowsLayout(context, controller, loc),
     );
   }
 
@@ -128,10 +80,10 @@ class StaffListScreen extends StatelessWidget {
                             children: [
                               Row(
                                 children: [
-                                  const Expanded(
+                                  Expanded(
                                     child: Text(
-                                      'Staff List',
-                                      style: TextStyle(
+                                      loc.staff_list_title,
+                                      style: const TextStyle(
                                         fontSize: 22,
                                         fontWeight: FontWeight.w700,
                                         color: Colors.black,
@@ -149,7 +101,7 @@ class StaffListScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Manage your outlet staff access',
+                                loc.manage_outlet_staff_access,
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: Colors.grey.shade700,
@@ -188,7 +140,7 @@ class StaffListScreen extends StatelessWidget {
                                       CrossAxisAlignment.stretch,
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    _windowsHeaderRow(),
+                                    _windowsHeaderRow(loc),
                                     const SizedBox(height: 8),
                                     ...members.map(
                                       (member) => _WindowsStaffRow(
@@ -215,51 +167,51 @@ class StaffListScreen extends StatelessWidget {
     );
   }
 
-  Widget _windowsHeaderRow() {
+  Widget _windowsHeaderRow(AppLocalizations loc) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: const Color(0xFFF4F6FA),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: const Row(
+      child: Row(
         children: [
           Expanded(
             flex: 3,
             child: Text(
-              'Name',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              loc.name_label,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
             ),
           ),
           Expanded(
             flex: 2,
             child: Text(
-              'Role',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              loc.role_label,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
             ),
           ),
           Expanded(
             flex: 2,
             child: Text(
-              'Phone',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              loc.phone_label,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
             ),
           ),
           Expanded(
             flex: 3,
             child: Text(
-              'Email',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              loc.email,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
             ),
           ),
           Expanded(
             child: Text(
-              'Status',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              loc.status,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
               textAlign: TextAlign.center,
             ),
           ),
-          SizedBox(width: 96),
+          const SizedBox(width: 96),
         ],
       ),
     );
@@ -329,6 +281,7 @@ class _SearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return Padding(
       padding: isWindows
           ? EdgeInsets.zero
@@ -338,7 +291,7 @@ class _SearchField extends StatelessWidget {
         onChanged: controller.onSearchChanged,
         decoration: InputDecoration(
           isDense: isWindows,
-          hintText: 'Search by name, role, phone or email',
+          hintText: loc.search_staff_hint,
           prefixIcon: const Icon(Icons.search),
           filled: true,
           fillColor: isWindows ? Colors.white : const Color(0xFFF9FAFB),
@@ -374,6 +327,7 @@ class _StaffActivityEntry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -388,9 +342,9 @@ class _StaffActivityEntry extends StatelessWidget {
             children: [
               Icon(Icons.people_alt_outlined, color: Colors.blueGrey.shade700),
               const SizedBox(width: 10),
-              const Text(
-                'Check Staff Activity',
-                style: TextStyle(fontSize: 16),
+              Text(
+                loc.check_staff_activity,
+                style: const TextStyle(fontSize: 16),
               ),
               const Spacer(),
               Icon(
@@ -412,6 +366,7 @@ class _WindowsHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
@@ -436,16 +391,16 @@ class _WindowsHeaderCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Check Staff Activity',
-                      style: TextStyle(
+                    Text(
+                      loc.check_staff_activity,
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Filter activity by date range and user',
+                      loc.staff_activity_filter_hint,
                       style: TextStyle(
                         color: Colors.grey.shade700,
                         fontSize: 13,
@@ -474,8 +429,9 @@ class _StaffCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final roleTitle = _normalizedRoleTitle(member.role);
-    final isSecondaryAdmin = roleTitle == 'Secondary Admin';
+    final loc = AppLocalizations.of(context)!;
+    final roleTitle = _localizedRoleTitle(loc, member.role);
+    final isSecondaryAdmin = _isSecondaryAdminRole(member.role);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -548,8 +504,9 @@ class _WindowsStaffRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final roleTitle = _normalizedRoleTitle(member.role);
-    final isSecondaryAdmin = roleTitle == 'Secondary Admin';
+    final loc = AppLocalizations.of(context)!;
+    final roleTitle = _localizedRoleTitle(loc, member.role);
+    final isSecondaryAdmin = _isSecondaryAdminRole(member.role);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -647,6 +604,7 @@ class _StaffActionMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return Obx(() {
       final staffId = member.id.trim();
       final deleting =
@@ -664,7 +622,7 @@ class _StaffActionMenu extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              tooltip: 'Edit',
+              tooltip: loc.edit,
               icon: Icon(
                 Icons.edit_outlined,
                 size: 18,
@@ -679,13 +637,13 @@ class _StaffActionMenu extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             IconButton(
-              tooltip: 'Delete',
+              tooltip: loc.delete,
               icon: const Icon(
                 Icons.delete_outline,
                 size: 18,
                 color: Colors.red,
               ),
-              onPressed: () => _confirmDelete(context, member),
+              onPressed: () => _confirmDelete(context, member, loc),
               style: IconButton.styleFrom(
                 backgroundColor: Colors.red.withValues(alpha: 0.08),
                 minimumSize: const Size(36, 36),
@@ -702,39 +660,45 @@ class _StaffActionMenu extends StatelessWidget {
             await controller.onEditStaff(member);
             return;
           }
-          await _confirmDelete(context, member);
+          await _confirmDelete(context, member, loc);
         },
-        itemBuilder: (_) => const [
-          PopupMenuItem(value: 'edit', child: Text('Edit')),
-          PopupMenuItem(value: 'remove', child: Text('Remove')),
+        itemBuilder: (_) => [
+          PopupMenuItem(value: 'edit', child: Text(loc.edit)),
+          PopupMenuItem(value: 'remove', child: Text(loc.remove)),
         ],
       );
     });
   }
 
-  Future<void> _confirmDelete(BuildContext context, StaffMember member) async {
+  Future<void> _confirmDelete(
+    BuildContext context,
+    StaffMember member,
+    AppLocalizations loc,
+  ) async {
     final staffId = member.id.trim();
     if (staffId.isEmpty) {
-      showError(description: 'Unable to delete this staff entry');
+      showError(description: loc.unable_to_delete_staff_entry);
       return;
     }
 
     final shouldDelete =
         await Get.dialog<bool>(
           AlertDialog(
-            title: const Text('Remove Staff'),
+            title: Text(loc.remove_staff),
             content: Text(
-              'Do you want to remove ${member.name.isEmpty ? "this staff" : member.name}?',
+              loc.remove_staff_confirm(
+                member.name.isEmpty ? loc.this_staff : member.name,
+              ),
             ),
             actions: [
               TextButton(
                 onPressed: () => Get.back(result: false),
-                child: const Text('Cancel'),
+                child: Text(loc.cancel),
               ),
               ElevatedButton(
                 onPressed: () => Get.back(result: true),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                child: const Text('Remove'),
+                child: Text(loc.remove),
               ),
             ],
           ),
@@ -791,6 +755,7 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     final bg = isActive
         ? Colors.green.withValues(alpha: 0.12)
         : Colors.orange.withValues(alpha: 0.12);
@@ -804,7 +769,7 @@ class _StatusChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        isActive ? 'Active' : 'Pending',
+        isActive ? loc.status_active_label : loc.status_pending,
         style: TextStyle(fontSize: 11, color: fg, fontWeight: FontWeight.w600),
       ),
     );
@@ -819,6 +784,7 @@ class _EmptyStaffState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -833,14 +799,14 @@ class _EmptyStaffState extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              isSearching ? 'No matching staff found' : 'No staff found',
+              isSearching ? loc.no_matching_staff_found : loc.no_staff_found,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
               isSearching
-                  ? 'Try a different name, role, phone, or email.'
-                  : 'Invite your first team member to start managing staff permissions.',
+                  ? loc.try_different_staff_search
+                  : loc.invite_staff_empty_hint,
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey.shade600),
             ),
@@ -848,7 +814,7 @@ class _EmptyStaffState extends StatelessWidget {
               const SizedBox(height: 18),
               OutlinedButton(
                 onPressed: onInviteTap,
-                child: const Text('Invite Staff'),
+                child: Text(loc.invite_staff),
               ),
             ],
           ],
@@ -858,8 +824,11 @@ class _EmptyStaffState extends StatelessWidget {
   }
 }
 
-String _normalizedRoleTitle(String role) {
+bool _isSecondaryAdminRole(String role) {
   final normalized = role.trim().toLowerCase().replaceAll('_', ' ');
-  if (normalized == 'secondary admin') return 'Secondary Admin';
-  return 'Biller';
+  return normalized == 'secondary admin';
+}
+
+String _localizedRoleTitle(AppLocalizations loc, String role) {
+  return _isSecondaryAdminRole(role) ? loc.secondary_admin : loc.biller;
 }

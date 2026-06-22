@@ -44,8 +44,10 @@ class CustomerDetailsController extends BaseController {
     final customerId = customer?.id;
     final outletId = appPref.selectedOutlet?.id;
     if (customerId == null || outletId == null) {
-      loadError.value =
-          outletId == null ? 'No outlet selected' : 'Invalid customer';
+      final loc = AppLocalizations.of(Get.context!)!;
+      loadError.value = outletId == null
+          ? loc.no_outlet_selected
+          : loc.invalid_customer;
       isLoading.value = false;
       return;
     }
@@ -85,11 +87,13 @@ class CustomerDetailsController extends BaseController {
         totalPages.value = data.pagination.totalPages;
         totalOrders.value = data.pagination.totalOrders;
       } else {
-        loadError.value = 'Unable to load customer details.';
+        loadError.value =
+            AppLocalizations.of(Get.context!)!.unable_to_load_customer_details;
       }
     } catch (e) {
       debugPrint('Customer details error: $e');
-      loadError.value = 'Unable to load customer details. Please try again.';
+      loadError.value = AppLocalizations.of(Get.context!)!
+          .unable_to_load_customer_details_retry;
     } finally {
       isLoading.value = false;
       ordersLoading.value = false;
@@ -108,10 +112,11 @@ class CustomerDetailsController extends BaseController {
   }
 
   String get ordersRangeLabel {
-    if (totalOrders.value == 0) return 'No orders';
+    final loc = AppLocalizations.of(Get.context!)!;
+    if (totalOrders.value == 0) return loc.no_orders;
     final start = ((currentPage.value - 1) * pageLimit) + 1;
     final end = start + orders.length - 1;
-    return 'Showing $start-$end of ${totalOrders.value}';
+    return loc.showing_orders_range(start, end, totalOrders.value);
   }
 
   List<int> get visiblePageNumbers {

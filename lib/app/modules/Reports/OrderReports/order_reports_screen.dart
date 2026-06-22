@@ -109,6 +109,12 @@ class _OrderReportsScreenState extends State<OrderReportsScreen> {
             tooltip: 'Export to PDF',
           ),
           const SizedBox(width: 8),
+          // Reresh
+          IconButton(
+            tooltip: loc.refresh,
+            onPressed: controller.refreshData,
+            icon: const Icon(Icons.refresh, color: Colors.white),
+          ),
         ],
       ),
       body: SafeArea(
@@ -123,10 +129,6 @@ class _OrderReportsScreenState extends State<OrderReportsScreen> {
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: maxWidth),
                 child: Obx(() {
-                  if (controller.isLoading.value) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
                   return Column(
                     children: [
                       // Filters Section
@@ -135,6 +137,8 @@ class _OrderReportsScreenState extends State<OrderReportsScreen> {
                       // Summary Cards
                       _buildSummaryCards(loc),
 
+                      if (controller.isLoading.value)
+                        Center(child: CircularProgressIndicator()),
                       // Orders List (show loader in list only when changing category or payment type)
                       Expanded(
                         child: controller.isLoadingListOnly.value

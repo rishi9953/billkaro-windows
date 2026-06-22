@@ -10,6 +10,7 @@ import 'package:billkaro/config/config.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_import_file_dialog.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_import_preview_dialog.dart';
 import 'package:file_selector/file_selector.dart';
+import 'package:billkaro/utils/offline/offline_category_loader.dart';
 
 class MenuItemController extends BaseController {
   final RxList<ItemData> items = <ItemData>[].obs;
@@ -121,6 +122,7 @@ class MenuItemController extends BaseController {
             categoryParam,
             search?.trim().isEmpty == true ? null : search?.trim(),
             null, // showItem - null to get all
+            null, // isRecommended - null to get all
           ),
           showLoader: showLoader && !loadMore,
         );
@@ -328,19 +330,19 @@ class MenuItemController extends BaseController {
   /// GET CATEGORIES
   /// ===============================
   Future<void> getCategories() async {
-    final response = await callApi(
-      apiClient.getCategories(appPref.selectedOutlet!.id!),
-      showLoader: false,
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null) return;
+
+    final loaded = await OfflineCategoryLoader.load(
+      outletId: outletId,
+      fetchFromApi: () =>
+          callApi(apiClient.getCategories(outletId), showLoader: false),
     );
 
-    if (response?.status == 'success') {
-      debugPrint('📂 Categories loaded');
-
-      List<CategoryData> categoryList = response!.categories;
-      categories.clear();
-      categories.addAll(categoryList);
-      dismissAllAppLoader();
-    }
+    categories.clear();
+    categories.addAll(loaded);
+    dismissAllAppLoader();
+    debugPrint('📂 Categories loaded (${loaded.length})');
   }
 
   /// ===============================
@@ -392,15 +394,16 @@ class MenuItemController extends BaseController {
       } else {
         // Revert on failure
         itemAvailability[itemId] = current;
+        final loc = AppLocalizations.of(Get.context!)!;
         showError(
-          description: res?['message']?.toString() ?? 'Failed to update',
+          description: res?['message']?.toString() ?? loc.failed_to_update_item,
         );
       }
     } catch (e) {
       // Revert on error
       itemAvailability[itemId] = current;
       final loc = AppLocalizations.of(Get.context!)!;
-      showError(description: loc.failed_to_load_items);
+      showError(description: loc.failed_to_update_item);
     }
   }
 
@@ -446,22 +449,23 @@ class MenuItemController extends BaseController {
   void clearItemSelection() => selectedItemIds.clear();
 
   Future<void> deleteItem(ItemData item) async {
+    final loc = AppLocalizations.of(Get.context!)!;
     final name = item.itemName.trim();
-    final displayName = name.isEmpty ? 'this item' : name;
+    final displayName = name.isEmpty ? loc.this_item : name;
     final shouldDelete =
         await Get.dialog<bool>(
           AlertDialog(
-            title: const Text('Delete item'),
-            content: Text('Delete "$displayName"? This cannot be undone.'),
+            title: Text(loc.delete_item_title),
+            content: Text(loc.delete_item_named_confirm(displayName)),
             actions: [
               TextButton(
                 onPressed: () => Get.back(result: false),
-                child: const Text('Cancel'),
+                child: Text(loc.cancel),
               ),
               ElevatedButton(
                 onPressed: () => Get.back(result: true),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                child: const Text('Delete'),
+                child: Text(loc.delete),
               ),
             ],
           ),
@@ -473,8 +477,9 @@ class MenuItemController extends BaseController {
   }
 
   Future<void> deleteSelectedItems() async {
+    final loc = AppLocalizations.of(Get.context!)!;
     if (selectedItemIds.isEmpty) {
-      showError(description: 'Select at least one item to delete');
+      showError(description: loc.select_at_least_one_item_to_delete);
       return;
     }
 
@@ -482,19 +487,17 @@ class MenuItemController extends BaseController {
     final shouldDelete =
         await Get.dialog<bool>(
           AlertDialog(
-            title: const Text('Delete items'),
-            content: Text(
-              'Delete $count selected item${count == 1 ? '' : 's'}? This cannot be undone.',
-            ),
+            title: Text(loc.delete_items_title),
+            content: Text(loc.delete_items_confirm(count)),
             actions: [
               TextButton(
                 onPressed: () => Get.back(result: false),
-                child: const Text('Cancel'),
+                child: Text(loc.cancel),
               ),
               ElevatedButton(
                 onPressed: () => Get.back(result: true),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                child: const Text('Delete'),
+                child: Text(loc.delete),
               ),
             ],
           ),
@@ -511,10 +514,11 @@ class MenuItemController extends BaseController {
     required bool clearSelection,
   }) async {
     if (ids.isEmpty) return;
+    final loc = AppLocalizations.of(Get.context!)!;
 
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) {
-      showError(description: 'Please select an outlet first');
+      showError(description: loc.please_select_outlet_first);
       return;
     }
 
@@ -538,20 +542,17 @@ class MenuItemController extends BaseController {
         }
         _applyFilters();
         await getItems(showLoader: false, forceApiRefresh: true);
-        showSuccess(
-          description:
-              '${ids.length} item${ids.length == 1 ? '' : 's'} deleted successfully',
-        );
+        showSuccess(description: loc.items_deleted_successfully(ids.length));
       } else {
         final message = res is Map ? res['message']?.toString() : null;
         showError(
           description: message?.isNotEmpty == true
               ? message!
-              : 'Failed to delete selected items',
+              : loc.failed_to_delete_selected_items,
         );
       }
     } catch (e) {
-      showError(description: 'Failed to delete items: $e');
+      showError(description: loc.failed_to_delete_items_error(e.toString()));
     } finally {
       isDeletingItems.value = false;
       dismissAllAppLoader();
@@ -562,6 +563,7 @@ class MenuItemController extends BaseController {
   /// IMPORT FROM FILE (CSV / Excel)
   /// ===============================
   Future<void> importFromFile() async {
+    final loc = AppLocalizations.of(Get.context!)!;
     if (!hasTrialOrSubscription(appPref)) {
       checkSubscription();
       return;
@@ -570,7 +572,7 @@ class MenuItemController extends BaseController {
     final outletId = appPref.selectedOutlet?.id;
     final userId = appPref.user?.id;
     if (outletId == null || userId == null) {
-      showError(description: 'Please select an outlet first');
+      showError(description: loc.please_select_outlet_first);
       return;
     }
 
@@ -589,25 +591,20 @@ class MenuItemController extends BaseController {
       showAppLoader();
       rows = ItemFileService.parseSpreadsheet(file.path);
     } catch (e) {
-      showError(description: 'Failed to read file: $e');
+      showError(description: loc.failed_to_read_file_error(e.toString()));
       return;
     } finally {
       dismissAllAppLoader();
     }
 
     if (rows.isEmpty) {
-      showError(
-        description:
-            'No valid rows found. Use headers like: Item Name, Price / Price (₹), Category, Tax % or GST. '
-            'Avoid Item Code / Description / Unit only as names. '
-            'Prices must be numbers greater than 0.',
-      );
+      showError(description: loc.no_valid_import_rows);
       return;
     }
 
     final fileName = file.name;
     final previewRows = await showMenuImportPreviewDialog(
-      fileName: fileName.isNotEmpty ? fileName : 'Import file',
+      fileName: fileName.isNotEmpty ? fileName : loc.import_from_file,
       items: rows.map((row) {
         debugPrint(
           'Preview Row - Name: ${row.name}, Price: ${row.price}, Category: ${row.category}, GST: ${row.gst}, WithTax: ${row.withTax}',
@@ -652,20 +649,24 @@ class MenuItemController extends BaseController {
 
       if (res != null && res is Map && res['status'] == 'success') {
         final count = previewRows.length;
-        showSuccess(description: '$count item(s) imported successfully');
+        showSuccess(description: loc.items_imported_successfully(count));
       } else {
         final message = res is Map ? res['message']?.toString() : null;
         showError(
           description: message?.isNotEmpty == true
               ? message!
-              : 'Failed to import items',
+              : loc.failed_to_import_items,
         );
       }
     } catch (e) {
-      showError(description: 'Failed to import file: $e');
+      showError(description: loc.failed_to_import_file_error(e.toString()));
     } finally {
       dismissAllAppLoader();
     }
+  }
+
+  void refreshItems() {
+    getItems(showLoader: true, forceApiRefresh: true);
   }
 
   /// ===============================

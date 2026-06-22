@@ -13,9 +13,7 @@ WhatsappMarketingResponse _$WhatsappMarketingResponseFromJson(
   message: json['message'] as String?,
   data: json['data'] == null
       ? null
-      : WhatsappMarketingResult.fromJson(
-          json['data'] as Map<String, dynamic>,
-        ),
+      : WhatsappMarketingResult.fromJson(json['data'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$WhatsappMarketingResponseToJson(

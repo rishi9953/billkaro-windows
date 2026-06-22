@@ -1,11 +1,17 @@
 import 'dart:io';
 import 'package:billkaro/app/services/Network/urls.dart' as appconstants;
+import 'package:billkaro/config/config.dart' show Get, AppPref, Inst;
+import 'package:billkaro/utils/trusted_http_client.dart';
 import 'package:dio/dio.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
 
 class MediaApi {
-  final Dio _dio = Dio();
+  final Dio _dio;
+
+  MediaApi() : _dio = Dio() {
+    configureTrustedDio(_dio);
+  }
   static const int _maxUploadBytes = 4 * 1024 * 1024; // 4 MB
 
   Future<File> _shrinkIfNeeded(File input) async {
@@ -57,6 +63,7 @@ class MediaApi {
     required String userId,
     required String outletId,
   }) async {
+    final appPref = Get.find<AppPref>();
     try {
       String url =
           "${appconstants.baseURL}${appconstants.mediaUrl}?folderName=$folderName&userId=$userId&outletId=$outletId";
@@ -69,13 +76,22 @@ class MediaApi {
       final fileName = p.basename(uploadFile.path);
 
       FormData formData = FormData.fromMap({
-        "file": await MultipartFile.fromFile(uploadFile.path, filename: fileName),
+        "file": await MultipartFile.fromFile(
+          uploadFile.path,
+          filename: fileName,
+        ),
       });
 
       Response response = await _dio.post(
         url,
         data: formData,
-        options: Options(headers: {"Content-Type": "multipart/form-data"}),
+
+        options: Options(
+          headers: {
+            "Content-Type": "multipart/form-data",
+            "authorization": "Bearer ${appPref.token}",
+          },
+        ),
       );
 
       return response;

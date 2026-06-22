@@ -18,7 +18,6 @@
   "change_anytime": "आप इसे कभी भी बदल सकते हैं",
   "language_english": "अंग्रेज़ी",
   "language_hindi": "हिंदी",
-  "Add Staff Securely": "कर्मचारियों को सुरक्षित रूप से जोड़ें",
   "addStaffSecurely_title": "स्टाफ सुरक्षित रूप से जोड़ें",
   "addStaffSecurely_desc": "भूमिका के साथ स्टाफ जोड़ें;\nकहीं भी बिल बनाएं;\nसंपर्क में रहें।",
   "addStaffSecurely_btn": "स्टाफ जोड़ें",
@@ -48,7 +47,7 @@
   "printer": "प्रिंटर",
   "language": "भाषा",
   "support": "सहायता",
-  "logout": "लॉग आउट",
+  "logout": "लॉगआउट",
   "logout_confirmation": "क्या आप वाकई लॉग आउट करना चाहते हैं?",
   "cancel": "रद्द करें",
   "buy_table_gold": "टेबल गोल्ड अपग्रेड करें",
@@ -72,13 +71,12 @@
   "you_havent_added_any_orders_Please_add_an_order_to_see_their_reports": "आपने अभी तक कोई ऑर्डर नहीं जोड़ा है।\nकृपया उनकी रिपोर्ट देखने के लिए एक ऑर्डर जोड़ें।",
   "add_Order": "ऑर्डर जोड़ें",
   "item_Reports": "आइटम रिपोर्ट",
-  "no_Orders_Available": "कोई ऑर्डर उपलब्ध नहीं",
   "you_havent_added_any_orders_Please_add_an_order_to_see_item_reports": "आपने अभी तक कोई ऑर्डर नहीं जोड़ा है।\nकृपया आइटम रिपोर्ट देखने के लिए एक ऑर्डर जोड़ें।",
   "add_your_menu_using_photos": "फोटो का उपयोग करके\nअपना मेन्यू जोड़ें",
   "save_and_hold": "सेव करें और रोकें",
   "save_and_bill": "सेव करें और बिल बनाएं",
   "quick_add_item": "जल्दी आइटम जोड़ें",
-  "item_name": "आइटम का नाम",
+  "item_name": "आइटम नाम",
   "delivery": "डिलीवरी",
   "dine_in": "डाइन इन",
   "swiggy": "Swiggy",
@@ -95,9 +93,7 @@
   "get_help_and_support": "मदद व सपोर्ट प्राप्त करें",
   "sign_out_of_your_account": "अपने अकाउंट से साइन आउट करें",
   "unlock_premium_features": "प्रीमियम फीचर्स अनलॉक करें",
-  "logout": "लॉगआउट",
   "are_you_sure_you_want_to_logout_from_your_account": "क्या आप वाकई अपने अकाउंट से लॉगआउट करना चाहते हैं?",
-  "cancel": "रद्द करें",
   "keep_track_of_your_best_customers": "अपने सबसे अच्छे\nग्राहकों का रिकॉर्ड रखें",
   "whatsapp_marketing_and_offers": "व्हाट्सऐप मार्केटिंग और ऑफ़र",
   "engage_customers_whatsapp_customised_offers": "कस्टमाइज्ड ऑफ़र और प्रमोशन्स के साथ व्हाट्सऐप के माध्यम से ग्राहकों को जोड़ें",
@@ -112,7 +108,6 @@
   "boost_repeat_business": "दोबारा व्यवसाय बढ़ाएँ",
   "get_visitors_back_targeted_whatsapp": "लक्षित व्हाट्सऐप संदेशों के साथ आगंतुकों को अपने रेस्टोरेंट में वापस लाएँ।",
   "send_bulk_whatsapp": "बुल्क व्हाट्सऐप भेजें",
-  "printer": "प्रिंटर",
   "bluetooth": "ब्लूटूथ",
   "usb": "यूएसबी",
   "paired_devices": "पेयर किए गए डिवाइस",
@@ -149,7 +144,7 @@
   "fssai_number": "FSSAI नंबर",
   "tax_slab": "टैक्स स्लैब",
   "seating_capacity": "सीटिंग क्षमता",
-  "business_type": "व्यवसाय प्रकार",
+  "business_type": "व्यवसाय का प्रकार",
   "business_category_question": "आपका व्यवसाय श्रेणी क्या है?",
   "gstin_number": "GSTIN नंबर",
   "business_address": "व्यवसाय का पता",
@@ -157,7 +152,6 @@
   "swiggy_link": "स्विगी लिंक",
   "zomato_link": "जोमैटो लिंक",
   "delete_outlet": "आउटलेट हटाएँ",
-  "cancel": "रद्द करें",
   "update_details": "विवरण अपडेट करें",
   "tap_to_select": "चुनने के लिए टैप करें",
   "none": "कोई नहीं",
@@ -189,7 +183,6 @@
   "register_new_business": "नया व्यवसाय रजिस्टर करें",
   "already_registered": "पहले से रजिस्टर किया है?",
   "business_registration": "व्यवसाय पंजीकरण",
-  "business_name": "व्यवसाय का नाम",
   "enter_business_name": "अपना व्यवसाय नाम दर्ज करें",
   "brand_name": "ब्रांड नाम",
   "enter_brand_name": "अपना ब्रांड नाम दर्ज करें",
@@ -197,8 +190,6 @@
   "activation_details_sent": "सक्रियण विवरण ईमेल पते पर भेजे जाएंगे",
   "password": "पासवर्ड",
   "enter_password": "अपना पासवर्ड दर्ज करें",
-  "business_type": "व्यवसाय का प्रकार",
-  "business_address": "व्यवसाय का पता",
   "enter_business_address": "अपने व्यवसाय का पता लिखें",
   "primary_contact": "मुख्य संपर्क",
   "submit": "जमा करें",
@@ -400,7 +391,6 @@
   "order_quantity": "ऑर्डर मात्रा",
   "order_amount": "ऑर्डर राशि",
   "unknown_item": "अज्ञात आइटम",
-  "item_name": "आइटम नाम",
   "quantity": "मात्रा",
   "no_items_to_export": "निर्यात करने के लिए कोई आइटम नहीं",
   "storage_permission_needed": "Excel फ़ाइल सहेजने के लिए स्टोरेज अनुमति आवश्यक",
@@ -416,5 +406,1771 @@
     }
   },
   "total_items": "कुल आइटम",
-  "contact_permission_needed": "संपर्क लाने के लिए संपर्क अनुमति आवश्यक है"
+  "contact_permission_needed": "संपर्क लाने के लिए संपर्क अनुमति आवश्यक है",
+  "dashboard": "डैशबोर्ड",
+  "dashboardOverview": "बिज़नेस डैशबोर्ड",
+  "dashboardOverviewSubtitle": "बिक्री, भुगतान और अंतर्दृष्टि एक नज़र में देखें",
+  "quickInsights": "त्वरित अंतर्दृष्टि",
+  "please_select_outlet_first": "कृपया पहले एक आउटलेट चुनें",
+  "retry": "पुनः प्रयास करें",
+  "no_new_items_to_send_to_kitchen": "रसोई में भेजने के लिए कोई नया आइटम नहीं",
+  "close": "बंद करें",
+  "no_printer_connected": "कोई प्रिंटर कनेक्ट नहीं है",
+  "use_current_filter": "वर्तमान फ़िल्टर उपयोग करें",
+  "choose_date_range": "तारीख सीमा चुनें",
+  "remove": "हटाएं",
+  "saved_printer_removed": "सहेजा गया प्रिंटर हटा दिया गया",
+  "remove_saved_printer_title": "सहेजा गया प्रिंटर हटाएं?",
+  "disconnect": "डिस्कनेक्ट करें",
+  "connect": "कनेक्ट करें",
+  "please_enter_order_details": "कृपया ऑर्डर विवरण दर्ज करें",
+  "please_select_table_for_dine_in": "कृपया डाइन इन ऑर्डर के लिए टेबल चुनें",
+  "failed_to_share_pdf_error": "PDF साझा करने में विफल: {error}",
+  "@failed_to_share_pdf_error": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pdf_generation_failed_empty": "PDF जेनरेट करने में विफल - खाली दस्तावेज़",
+  "failed_to_pick_image": "छवि चुनने में विफल: {error}",
+  "@failed_to_pick_image": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failed_to_disconnect": "डिस्कनेक्ट करने में विफल: {error}",
+  "@failed_to_disconnect": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "form_not_initialized": "फॉर्म प्रारंभ नहीं हुआ। कृपया पुनः प्रयास करें।",
+  "please_enter_user_name": "कृपया उपयोगकर्ता नाम दर्ज करें",
+  "please_enter_email": "कृपया ईमेल दर्ज करें",
+  "please_enter_valid_email": "कृपया एक वैध ईमेल पता दर्ज करें",
+  "please_enter_phone_number": "कृपया फोन नंबर दर्ज करें",
+  "please_enter_valid_10_digit_phone": "कृपया एक वैध 10 अंकों का फोन नंबर दर्ज करें",
+  "failed_to_send_messages": "संदेश भेजने में विफल: {error}",
+  "@failed_to_send_messages": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "please_enter_valid_10_digit_phone_alt": "कृपया एक वैध 10 अंकों का फोन नंबर दर्ज करें",
+  "add_payment_method": "भुगतान विधि जोड़ें",
+  "could_not_open_kitchen_display": "किचन डिस्प्ले के लिए ब्राउज़र नहीं खोल सका",
+  "stay": "रुकें",
+  "leave": "छोड़ें",
+  "apply": "लागू करें",
+  "failed_to_capture_image": "छवि कैप्चर करने में विफल: {error}",
+  "@failed_to_capture_image": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "please_enter_table_number": "कृपया टेबल नंबर दर्ज करें",
+  "add": "जोड़ें",
+  "please_log_in_again": "कृपया फिर से लॉग इन करें",
+  "could_not_open_whatsapp": "व्हाट्सऐप नहीं खोल सका",
+  "discard_order_title": "ऑर्डर छोड़ें?",
+  "close_app": "ऐप बंद करें",
+  "continue_action": "जारी रखें",
+  "auto_bluetooth_printer": "ऑटो ब्लूटूथ प्रिंटर",
+  "print_test_receipt": "टेस्ट रसीद प्रिंट करें",
+  "disconnect_printer_title": "प्रिंटर डिस्कनेक्ट करें?",
+  "use_same_as_bill_printer": "बिल प्रिंटर के समान उपयोग करें",
+  "table_already_has_active_order": "इस टेबल पर पहले से एक सक्रिय ऑर्डर है",
+  "kot_sent_continue_adding_items": "KOT भेजा गया — आइटम जोड़ना जारी रखें",
+  "kot_sent_offline_continue_adding_items": "KOT भेजा गया (ऑफलाइन) — आइटम जोड़ना जारी रखें",
+  "settle_bill": "बिल निपटाएं",
+  "confirm": "पुष्टि करें",
+  "clear": "साफ़ करें",
+  "enter_remark_for_order": "इस ऑर्डर के लिए टिप्पणी दर्ज करें",
+  "item_remark_hint": "जैसे कम मसालेदार, प्याज नहीं",
+  "address_saved_successfully": "पता सफलतापूर्वक सहेजा गया",
+  "failed_to_load_business_details": "व्यवसाय विवरण लोड करने में विफल",
+  "update_failed": "अपडेट विफल",
+  "failed_to_delete_outlet": "आउटलेट हटाने में विफल",
+  "business_details_updated_successfully": "व्यवसाय विवरण सफलतापूर्वक अपडेट किए गए",
+  "error_fetching_orders": "ऑर्डर लाने में त्रुटि",
+  "failed_to_refresh_outlets": "आउटलेट रिफ्रेश करने में विफल",
+  "add_raw_material": "कच्चा माल जोड़ें",
+  "add_supplier": "आपूर्तिकर्ता जोड़ें",
+  "adjust_stock_title": "स्टॉक समायोजित करें — {name}",
+  "@adjust_stock_title": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "update_stock": "स्टॉक अपडेट करें",
+  "confirm_delete": "हटाने की पुष्टि करें",
+  "low_stock_only": "केवल कम स्टॉक",
+  "mark_received": "प्राप्त के रूप में चिह्नित करें",
+  "failed_to_download_pdf": "PDF डाउनलोड करने में विफल: {error}",
+  "@failed_to_download_pdf": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failed_to_print_invoice": "इनवॉइस प्रिंट करने में विफल: {error}",
+  "@failed_to_print_invoice": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failed_to_print_pdf_error": "PDF प्रिंट करने में विफल: {error}",
+  "@failed_to_print_pdf_error": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failed_to_save_pdf_file": "PDF फ़ाइल सहेजने में विफल",
+  "failed_to_save_pdf_error": "PDF सहेजने में विफल: {error}",
+  "@failed_to_save_pdf_error": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "invoice_printed_successfully": "इनवॉइस सफलतापूर्वक प्रिंट हुआ",
+  "invoice_saved_to_downloads": "इनवॉइस डाउनलोड फ़ोल्डर में सहेजा गया",
+  "preview": "पूर्वावलोकन",
+  "generate_bill": "बिल जेनरेट करें",
+  "please_enter_item_name_for_image": "छवि जेनरेट करने के लिए पहले आइटम का नाम दर्ज करें",
+  "image_upload_failed": "छवि अपलोड विफल। कृपया पुनः प्रयास करें।",
+  "please_select_image_first": "कृपया पहले एक छवि चुनें",
+  "ai_image_ready": "AI छवि तैयार है",
+  "image_removed_successfully": "छवि सफलतापूर्वक हटाई गई",
+  "failed_to_bump_ticket": "टिकट बम्प करने में विफल",
+  "failed_to_update_item": "आइटम अपडेट करने में विफल",
+  "failed_to_update_kitchen_status": "किचन स्थिति अपडेट करने में विफल",
+  "dismiss": "खारिज करें",
+  "view_queue": "कतार देखें",
+  "start_preparing": "तैयारी शुरू करें",
+  "ready": "तैयार",
+  "bump": "बम्प",
+  "please_enable_location_permission": "कृपया सेटिंग्स में लोकेशन अनुमति सक्षम करें",
+  "failed_to_get_address_details": "पता विवरण प्राप्त करने में विफल",
+  "please_select_location_on_map": "कृपया मानचित्र पर एक स्थान चुनें",
+  "notifications_cleared": "सूचनाएं साफ़ की गईं",
+  "clear_notifications_title": "सूचनाएं साफ़ करें?",
+  "clear_notifications_message": "यह आपके सूचना इतिहास से सभी आइटम हटा देगा।",
+  "no_notifications_yet": "अभी कोई सूचना नहीं",
+  "notifications_empty_hint": "किचन तैयार अलर्ट और अन्य अपडेट यहाँ दिखेंगे।",
+  "mark_all_read": "सभी को पढ़ा हुआ चिह्नित करें",
+  "primary_contact_saved_successfully": "प्राथमिक संपर्क सफलतापूर्वक सहेजा गया",
+  "failed_to_assign_printer": "प्रिंटर असाइन करने में विफल: {error}",
+  "@failed_to_assign_printer": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "bluetooth_not_supported": "इस डिवाइस पर ब्लूटूथ समर्थित नहीं है",
+  "failed_to_scan_bluetooth": "ब्लूटूथ स्कैन करने में विफल: {error}",
+  "@failed_to_scan_bluetooth": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failed_to_connect_printer": "प्रिंटर से कनेक्ट करने में विफल",
+  "error_scanning_usb": "USB स्कैन करने में त्रुटि: {error}",
+  "@error_scanning_usb": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "usb_printer_not_connected": "USB प्रिंटर कनेक्ट नहीं है",
+  "failed_to_connect_usb_printer": "USB प्रिंटर से कनेक्ट करने में विफल: {error}",
+  "@failed_to_connect_usb_printer": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "bluetooth_printer_not_connected": "ब्लूटूथ प्रिंटर कनेक्ट नहीं है",
+  "failed_to_print_via_bluetooth": "ब्लूटूथ के माध्यम से प्रिंट करने में विफल: {error}",
+  "@failed_to_print_via_bluetooth": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failed_to_print_via_usb": "USB के माध्यम से प्रिंट करने में विफल: {error}",
+  "@failed_to_print_via_usb": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "disconnected_from_printer": "प्रिंटर से डिस्कनेक्ट हो गया",
+  "bluetooth_test_receipt_printed": "ब्लूटूथ टेस्ट रसीद सफलतापूर्वक प्रिंट हुई",
+  "usb_test_receipt_printed": "USB टेस्ट रसीद सफलतापूर्वक प्रिंट हुई",
+  "please_add_business_address": "कृपया व्यवसाय का पता जोड़ें",
+  "please_add_primary_contact": "कृपया प्राथमिक संपर्क जोड़ें",
+  "please_complete_address_fields": "कृपया सभी पता फ़ील्ड पूरे करें",
+  "please_complete_contact_fields": "कृपया सभी संपर्क फ़ील्ड पूरे करें",
+  "registration_failed": "पंजीकरण विफल। कृपया पुनः प्रयास करें।",
+  "unable_to_update_staff": "स्टाफ सदस्य अपडेट करने में असमर्थ",
+  "unable_to_delete_staff": "स्टाफ हटाने में असमर्थ",
+  "staff_deleted_successfully": "स्टाफ सफलतापूर्वक हटाया गया",
+  "remove_staff": "स्टाफ हटाएं",
+  "search_staff_hint": "नाम, भूमिका, फोन या ईमेल से खोजें",
+  "plans_and_pricing": "योजनाएं और मूल्य निर्धारण",
+  "table_already_exists": "यह टेबल पहले से मौजूद है",
+  "cannot_delete_table_with_active_order": "सक्रिय ऑर्डर वाली टेबल हटाई नहीं जा सकती",
+  "table_added_successfully": "टेबल सफलतापूर्वक जोड़ी गई",
+  "table_deleted_successfully": "टेबल सफलतापूर्वक हटाई गई",
+  "delete_table": "टेबल हटाएं",
+  "please_enter_a_phone_number": "कृपया एक फोन नंबर दर्ज करें",
+  "please_add_at_least_one_phone_number": "कृपया कम से कम एक फोन नंबर जोड़ें",
+  "please_enter_a_message": "कृपया एक संदेश दर्ज करें",
+  "please_enter_restaurant_name": "कृपया रेस्टोरेंट का नाम दर्ज करें",
+  "please_enter_discount_value": "कृपया छूट मूल्य दर्ज करें",
+  "please_enter_festival_name": "कृपया त्योहार का नाम दर्ज करें",
+  "outlet_or_user_info_missing": "आउटलेट या उपयोगकर्ता जानकारी अनुपलब्ध है",
+  "confirm_bulk_message": "बल्क संदेश की पुष्टि करें",
+  "sending_messages": "संदेश भेजे जा रहे हैं",
+  "send": "भेजें",
+  "failed_to_fetch_contacts": "संपर्क लाने में विफल: {error}",
+  "@failed_to_fetch_contacts": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "please_enter_customer_name": "कृपया ग्राहक का नाम दर्ज करें",
+  "permission_required": "अनुमति आवश्यक",
+  "customer_details": "ग्राहक विवरण",
+  "search_customer_hint": "ग्राहक नाम या फोन से खोजें",
+  "search_contacts_hint": "संपर्क खोजें...",
+  "failed_to_print_kot": "KOT प्रिंट करने में विफल: {error}",
+  "@failed_to_print_kot": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failed_to_generate_kot": "KOT जेनरेट करने में विफल: {error}",
+  "@failed_to_generate_kot": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failed_to_save_kot": "KOT सहेजने में विफल: {error}",
+  "@failed_to_save_kot": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failed_to_share_kot": "KOT साझा करने में विफल: {error}",
+  "@failed_to_share_kot": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "kot_printed_successfully": "KOT सफलतापूर्वक प्रिंट हुआ",
+  "kot_saved_to": "KOT यहाँ सहेजा गया: {path}",
+  "@kot_saved_to": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "connect_printer": "प्रिंटर कनेक्ट करें",
+  "kot_options": "KOT विकल्प",
+  "scan_for_printers": "प्रिंटर खोजें",
+  "print_thermal": "प्रिंट करें (थर्मल)",
+  "save_pdf": "PDF सहेजें",
+  "share_pdf": "PDF साझा करें",
+  "kot_receipt": "KOT रसीद",
+  "generate_pdf": "PDF जेनरेट करें",
+  "generate_order": "ऑर्डर जेनरेट करें",
+  "gallery": "गैलरी",
+  "camera": "कैमरा",
+  "please_add_at_least_one_payment_method": "कृपया कम से कम एक भुगतान विधि जोड़ें",
+  "camera_permission_denied_barcode": "कैमरा अनुमति अस्वीकृत। बारकोड स्कैन नहीं कर सकते।",
+  "camera_permission_needed": "कैमरा अनुमति आवश्यक",
+  "open_settings": "सेटिंग्स खोलें",
+  "generate_image_first": "पहले एक छवि जेनरेट करें।",
+  "set_as_bill_printer": "बिल प्रिंटर के रूप में सेट करें",
+  "seating_capacity_min_one": "बैठने की क्षमता कम से कम 1 होनी चाहिए",
+  "filters": "फ़िल्टर",
+  "category": "श्रेणी",
+  "failed_to_scan_menu": "मेनू स्कैन करने में विफल: {error}",
+  "@failed_to_scan_menu": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "photo_captured_successfully": "फोटो सफलतापूर्वक कैप्चर हुई।",
+  "order_section_title": "ऑर्डर",
+  "customer_section_title": "ग्राहक",
+  "charges_section_title": "शुल्क",
+  "payment_section_title": "भुगतान",
+  "remark": "टिप्पणी",
+  "tables": "टेबल",
+  "qr_menu": "QR मेनू",
+  "add_table": "टेबल जोड़ें",
+  "reset_all_tables": "सभी टेबल रीसेट करें",
+  "change_url": "URL बदलें",
+  "print_all_table_qr": "सभी टेबल QR प्रिंट करें",
+  "reset_all": "सभी रीसेट करें",
+  "ok": "ठीक है",
+  "view_all": "सभी देखें",
+  "view": "देखें",
+  "refresh_usb_devices": "USB डिवाइस रिफ्रेश करें",
+  "check_again": "फिर से जांचें",
+  "set_bill_printer_first": "पहले बिल प्रिंटर सेट करें",
+  "bill_printer_not_configured": "बिल प्रिंटर कॉन्फ़िगर नहीं है",
+  "bill_printer_not_found": "बिल प्रिंटर नहीं मिला। इसे चालू करें और पुनः प्रयास करें।",
+  "kot_printer_same_as_bill": "KOT प्रिंटर बिल प्रिंटर के समान सेट किया गया",
+  "only_available_tables_can_be_deleted": "केवल उपलब्ध टेबल हटाई जा सकती हैं",
+  "all_tables_reset_successfully": "सभी टेबल सफलतापूर्वक रीसेट हुईं",
+  "user_or_outlet_info_missing": "उपयोगकर्ता या आउटलेट जानकारी अनुपलब्ध है।",
+  "payment_subscription_activated": "भुगतान सफल। सदस्यता सक्रिय हो गई।",
+  "stock_in": "स्टॉक इन (+)",
+  "stock_out": "स्टॉक आउट (-)",
+  "wastage": "बर्बादी",
+  "return_to_supplier": "आपूर्तिकर्ता को वापस करें",
+  "kilogram_kg": "किलोग्राम (KG)",
+  "gram_g": "ग्राम (g)",
+  "liter_l": "लीटर (L)",
+  "milliliter_ml": "मिलीलीटर (ml)",
+  "piece": "पीस",
+  "packet": "पैकेट",
+  "box": "बॉक्स",
+  "stock": "स्टॉक",
+  "min": "न्यूनतम",
+  "unit": "इकाई",
+  "value": "मूल्य",
+  "actions": "कार्रवाई",
+  "delete_confirm_message": "{name} हटाएं?",
+  "@delete_confirm_message": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sending_to_customers": "{count} ग्राहकों को भेजा जा रहा है...",
+  "@sending_to_customers": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "please_wait_sending": "कृपया प्रतीक्षा करें, इसमें एक मिनट लग सकता है।",
+  "no_results_available": "कोई परिणाम उपलब्ध नहीं",
+  "send_bulk_message": "बल्क संदेश भेजें",
+  "choose_an_action": "एक कार्रवाई चुनें:",
+  "customer_support": "ग्राहक सहायता :",
+  "failed_to_add_table": "टेबल जोड़ने में विफल",
+  "failed_to_delete_table": "टेबल हटाने में विफल",
+  "qr_menu_url_updated": "QR मेनू URL अपडेट हुआ। टेबल QR कोड फिर से प्रिंट करें।",
+  "failed_to_load_orders_error": "ऑर्डर लोड करने में विफल",
+  "create_order": "ऑर्डर बनाएं",
+  "item_list": "आइटम सूची",
+  "add_item": "आइटम जोड़ें",
+  "inventory": "इन्वेंटरी",
+  "orders": "ऑर्डर",
+  "kot_history": "KOT इतिहास",
+  "kitchen_display": "किचन डिस्प्ले",
+  "open_kitchen_display_in_browser": "ब्राउज़र में किचन डिस्प्ले खोलें",
+  "profile": "प्रोफ़ाइल",
+  "subscription_label": "सदस्यता",
+  "free_trial": "मुफ्त ट्रायल",
+  "expired": "समाप्त",
+  "remaining_label": "शेष: {time}",
+  "@remaining_label": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "valid_till_label": "वैध तक: {date}",
+  "@valid_till_label": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "subscription_days_left": "{days} दिन {label} शेष",
+  "@subscription_days_left": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      },
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "subscription_days_left_compact": "{days}दि\n{label}",
+  "@subscription_days_left_compact": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      },
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "discard_order_message": "आपके पास असहेजे ऑर्डर परिवर्तन हैं। क्या आप वाकई इस स्क्रीन को छोड़ना चाहते हैं?",
+  "no_permission_section": "आपके पास इस अनुभाग तक पहुँचने की अनुमति नहीं है।",
+  "settings_section_general": "सामान्य",
+  "billing_list_view": "बिलिंग सूची दृश्य",
+  "billing_list_view_subtitle": "ऑर्डर को छवि ग्रिड के बजाय सूची में दिखाएं",
+  "show_qr_on_bill": "बिल पर QR दिखाएं",
+  "show_qr_on_bill_subtitle": "इनवॉइस और प्रिंट पर UPI स्कैन-टू-पे QR दिखाएं",
+  "add_details_on_create_order": "ऑर्डर बनाते समय विवरण जोड़ें",
+  "add_details_on_create_order_subtitle": "ग्राहक, टेबल, छूट और भुगतान के लिए विवरण जोड़ें दिखाएं",
+  "kitchen_display_in_browser": "ब्राउज़र में किचन डिस्प्ले",
+  "kitchen_display_browser_subtitle": "दूसरे मॉनिटर या TV पर वेब किचन स्क्रीन खोलें",
+  "kitchen_display_browser_subtitle_device": "दूसरे डिवाइस पर वेब किचन स्क्रीन खोलें",
+  "show_onboarding_again": "ऑनबोर्डिंग फिर से दिखाएं",
+  "show_onboarding_again_subtitle": "ऐप परिचय और टिप्स फिर से चलाएं",
+  "download_path": "डाउनलोड पथ",
+  "default_downloads_folder": "डिफ़ॉल्ट डाउनलोड फ़ोल्डर",
+  "settings_section_notifications": "सूचनाएं",
+  "settings_notifications_subtitle": "ऑर्डर और रिमाइंडर सूचनाएं",
+  "notification_history": "सूचना इतिहास",
+  "notification_history_subtitle": "किचन तैयार और अन्य अलर्ट",
+  "settings_section_appearance": "दिखावट",
+  "theme_color": "थीम रंग",
+  "settings_section_language_region": "भाषा और क्षेत्र",
+  "custom_hex": "कस्टम हेक्स",
+  "my_colors": "मेरे रंग",
+  "presets": "प्रीसेट",
+  "hex_format_error": "#RRGGBB (जैसे #2196F3) या #AARRGGBB उपयोग करें",
+  "download_path_updated": "डाउनलोड पथ अपडेट हुआ",
+  "unable_to_update_download_path": "डाउनलोड पथ अपडेट करने में असमर्थ",
+  "select_folder": "फ़ोल्डर चुनें",
+  "settings_section_home_screen": "होम स्क्रीन",
+  "tutorial": "ट्यूटोरियल",
+  "tutorial_subtitle": "होम स्क्रीन पर वीडियो गाइड अनुभाग",
+  "top_selling_items": "सबसे ज्यादा बिकने वाले आइटम",
+  "top_selling_items_subtitle": "होम स्क्रीन पर सबसे ज्यादा बिकने वाले मेनू आइटम",
+  "recommended_items": "अनुशंसित आइटम",
+  "features_for_you_subtitle": "होम स्क्रीन पर अनुशंसित सेटअप और टूल",
+  "what_our_users_say": "हमारे उपयोगकर्ता क्या कहते हैं",
+  "what_our_users_say_subtitle": "होम स्क्रीन पर ग्राहक प्रशंसापत्र कैरोसेल",
+  "settings_section_haptic": "हैप्टिक फीडबैक",
+  "haptic_feedback": "हैप्टिक फीडबैक",
+  "haptic_feedback_subtitle": "टैप पर कंपन",
+  "home_outlet_showcase_title": "आउटलेट",
+  "home_outlet_showcase_desc": "आउटलेट बदलने के लिए यहाँ टैप करें। चयनित आउटलेट के लिए आपकी टेबल, ऑर्डर, बिक्री और रिपोर्ट अपडेट होंगी।",
+  "home_ai_voice_add_items": "AI वॉइस से आइटम जोड़ें",
+  "home_profile_business_title": "प्रोफ़ाइल / व्यवसाय",
+  "home_profile_business_desc": "यहाँ से व्यवसाय सेटिंग्स, प्रोफ़ाइल और आउटलेट विवरण खोलें।",
+  "home_profile_business_desc_short": "यहाँ से व्यवसाय सेटिंग्स और आउटलेट विवरण खोलें।",
+  "home_printer_status_title": "प्रिंटर स्थिति",
+  "home_printer_status_desc": "जब आपका प्रिंटर कनेक्ट हो, तो बिना रुकावट के इनवॉइस और KOT प्रिंट कर सकते हैं।",
+  "home_printer_connected_label": "प्रिंटर कनेक्टेड",
+  "home_online": "ऑनलाइन",
+  "home_usb_printer": "USB प्रिंटर",
+  "home_printer_fallback": "प्रिंटर",
+  "home_printer_connected_name": "प्रिंटर कनेक्टेड",
+  "home_quick_actions_showcase_desc": "आइटम जोड़ें, KOT इतिहास आदि जैसी अक्सर उपयोग होने वाली सुविधाओं के शॉर्टकट।",
+  "home_frequently_used_shortcuts": "अक्सर उपयोग होने वाले शॉर्टकट",
+  "home_kitchen_web": "किचन (वेब)",
+  "home_showcase_closed_orders": "पूर्ण/भुगतान किए गए ऑर्डर देखें और कभी भी विवरण खोलें।",
+  "home_showcase_hold_orders": "होल्ड पर सहेजे ऑर्डर। कभी भी बिलिंग फिर से शुरू करें।",
+  "home_showcase_add_items": "अपने इन्वेंटरी में मेनू आइटम जोड़ें (मैनुअल / वॉइस)।",
+  "home_showcase_kot_history": "KOT इतिहास देखें, विवरण खोलें और KOT फिर से प्रिंट करें।",
+  "home_tap_to_access_feature": "इस सुविधा तक पहुँचने के लिए टैप करें।",
+  "home_occupied_tables": "व्यस्त टेबल",
+  "home_live_dine_in_tables": "चल रहे डाइन-इन टेबल",
+  "home_table": "टेबल",
+  "home_table_number": "टेबल {number}",
+  "@home_table_number": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "home_occupied": "व्यस्त",
+  "home_bill_number": "बिल #{number}",
+  "@home_bill_number": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "home_tap_continue_order": "ऑर्डर जारी रखने के लिए टैप करें",
+  "home_occupied_duration": "व्यस्त {duration}",
+  "@home_occupied_duration": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "home_today_vs_yesterday": "आज बनाम कल",
+  "home_business_overview_showcase_desc": "आज और कल की बिक्री, ऑर्डर और प्रदर्शन मेट्रिक्स सहित विस्तृत व्यवसाय अंतर्दृष्टि देखें।",
+  "home_performance_summary": "प्रदर्शन सारांश",
+  "home_yesterday_value": "कल: {value}",
+  "@home_yesterday_value": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "home_category_wise_today": "श्रेणी अनुसार (आज)",
+  "home_top_count": "शीर्ष {count}",
+  "@home_top_count": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "home_weekly_sales_trend": "साप्ताहिक बिक्री रुझान",
+  "home_last_7_days_sales": "पिछले 7 दिनों की बिक्री प्रदर्शन",
+  "home_monthly_sales_trend": "मासिक बिक्री रुझान",
+  "home_last_12_months_sales": "पिछले 12 महीनों की बिक्री प्रदर्शन",
+  "home_quarterly_sales_trend": "त्रैमासिक बिक्री रुझान",
+  "home_last_4_quarters_sales": "पिछले 4 तिमाहियों की बिक्री प्रदर्शन",
+  "home_yearly_sales_trend": "वार्षिक बिक्री रुझान",
+  "home_last_5_years_sales": "पिछले 5 वर्षों की बिक्री प्रदर्शन",
+  "home_sales_trend": "बिक्री रुझान",
+  "home_sales_trend_showcase_desc": "सप्ताह/महीना/तिमाही/वर्ष के अनुसार बिक्री रुझान ट्रैक करें और कुल व औसत देखें।",
+  "home_no_item_sales_yet": "अभी तक कोई आइटम बिक्री नहीं",
+  "home_features_showcase_desc": "त्वरित सेटअप टूल और अनुशंसित सुविधाएँ जो आपके व्यवसाय को तेज़ चलाने में मदद करें।",
+  "home_recommended_setup_tools": "अनुशंसित सेटअप और टूल",
+  "badge_new": "नया",
+  "home_testimonials": "प्रशंसापत्र",
+  "home_testimonials_showcase_desc": "बिलकरो का उपयोग करने वाले रेस्टोरेंट की प्रतिक्रिया देखें। और पढ़ने के लिए स्वाइप करें।",
+  "home_payment_received": "भुगतान प्राप्त",
+  "home_total_payments_collected": "कुल एकत्रित भुगतान",
+  "refresh": "रिफ्रेश",
+  "home_payment_methods_today": "भुगतान विधियाँ (आज)",
+  "home_no_payments_today": "आज कोई भुगतान प्राप्त नहीं हुआ",
+  "home_switch_outlet": "आउटलेट बदलें",
+  "home_no_outlets_available": "कोई आउटलेट उपलब्ध नहीं",
+  "home_manage_outlets": "आउटलेट प्रबंधित करें",
+  "home_unnamed_outlet": "अनाम आउटलेट",
+  "home_logged_out": "लॉग आउट हो गया",
+  "home_logged_out_message": "आप सफलतापूर्वक लॉग आउट हो गए हैं",
+  "home_billing": "बिलिंग",
+  "home_customize_home": "होम कस्टमाइज़ करें",
+  "home_customize_home_subtitle": "होम स्क्रीन पर अनुभाग दिखाएँ या छिपाएँ",
+  "home_section_on_home": "होम पर अनुभाग",
+  "home_open_screen": "स्क्रीन खोलें",
+  "home_open_dashboard_tab": "डैशबोर्ड टैब खोलें",
+  "home_customize_home_title": "होम कस्टमाइज़ करें",
+  "home_search_hint": "खोजें जैसे ऑर्डर, भुगतान, स्टाफ…",
+  "home_business_details": "व्यवसाय विवरण",
+  "home_new_order": "नया ऑर्डर",
+  "home_menu": "मेनू",
+  "home_app_settings": "ऐप सेटिंग्स",
+  "home_order_reports": "ऑर्डर रिपोर्ट",
+  "home_item_reports": "आइटम रिपोर्ट",
+  "home_business_overview_full": "{overview} (पूर्ण)",
+  "@home_business_overview_full": {
+    "placeholders": {
+      "overview": {
+        "type": "String"
+      }
+    }
+  },
+  "home_video_guide_subtitle": "होम पर वीडियो गाइड",
+  "home_best_selling_subtitle": "सबसे ज्यादा बिकने वाले मेनू आइटम",
+  "home_customer_testimonials_subtitle": "ग्राहक प्रशंसापत्र",
+  "home_customize_sections_title": "होम अनुभाग कस्टमाइज़ करें",
+  "home_customize_sections_subtitle": "चुनें कि होम स्क्रीन पर कौन से अनुभाग दिखें",
+  "home_show_section": "अनुभाग दिखाएँ",
+  "testimonial_quote_1": "यह ऐप तेज़, उपयोग में आसान है, और परेशानी मुक्त रेस्टोरेंट प्रबंधन के लिए बिल्कुल सही है।",
+  "testimonial_author_1": "अंकित कुमार",
+  "testimonial_quote_2": "मैंने जो सबसे अच्छा बिलिंग समाधान इस्तेमाल किया है। मेरा रेस्टोरेंट चलाना बहुत आसान हो गया!",
+  "testimonial_author_2": "प्रिया शर्मा",
+  "testimonial_quote_3": "सरल, कुशल और विश्वसनीय। हर रेस्टोरेंट मालिक को बिल्कुल वही चाहिए।",
+  "testimonial_author_3": "राहुल वर्मा",
+  "search_outlets_hint": "आउटलेट खोजें…",
+  "qr_menu_description": "टेबल के लिए QR कोड जनरेट करें ताकि ग्राहक स्कैन करके अपने फ़ोन से ऑर्डर और भुगतान कर सकें।",
+  "qr_menu_current_url_base": "वर्तमान URL बेस:\n{url}",
+  "@qr_menu_current_url_base": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "tables_count_limit": "उपयोग की गई सीटें: {current} / {limit}",
+  "@tables_count_limit": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "seating_capacity_not_set": "इस आउटलेट के लिए बैठने की क्षमता सेट नहीं है।",
+  "table_number_hint": "जैसे 13 या टेबल 13",
+  "table_number_hint_short": "जैसे 1 या टेबल 1",
+  "delete_table_confirm_message": "क्या आप वाकई {name} हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।",
+  "@delete_table_confirm_message": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "delete_table_confirm_short": "{name} हटाएँ? यह पूर्ववत नहीं किया जा सकता।",
+  "@delete_table_confirm_short": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "reset_all_tables_message": "यह इस आउटलेट की सभी टेबल हटा देगा। क्या आप जारी रखना चाहते हैं?",
+  "search_table": "टेबल खोजें",
+  "filter_all": "सभी",
+  "table_status_available": "उपलब्ध",
+  "table_status_empty": "खाली",
+  "no_tables_match_filter": "कोई टेबल आपकी खोज/फ़िल्टर से मेल नहीं खाती",
+  "no_tables_available": "कोई टेबल उपलब्ध नहीं",
+  "delete_table_tooltip": "टेबल हटाएँ",
+  "print_qr_menu": "QR मेनू प्रिंट करें",
+  "tap_to_create_new_order": "नया ऑर्डर बनाने के लिए टैप करें",
+  "unable_to_load_tables_from_server": "सर्वर से टेबल लोड नहीं हो सकीं",
+  "no_tables_configured": "इस आउटलेट के लिए कोई टेबल कॉन्फ़िगर नहीं है",
+  "unable_to_load_local_orders": "स्थानीय ऑर्डर लोड नहीं हो सके",
+  "set_outlet_seating_capacity_first": "टेबल जोड़ने से पहले आउटलेट की बैठने की क्षमता सेट करें",
+  "set_outlet_seating_capacity_first_short": "पहले आउटलेट की बैठने की क्षमता सेट करें",
+  "cannot_add_more_tables": "आउटलेट की बैठने की क्षमता {limit} सीटें है",
+  "@cannot_add_more_tables": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "cannot_add_more_tables_short": "आउटलेट की बैठने की क्षमता {limit} सीटें है",
+  "@cannot_add_more_tables_short": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "failed_to_reset_all_tables": "सभी टेबल रीसेट करने में विफल",
+  "could_not_generate_qr_for_table": "इस टेबल के लिए QR जनरेट नहीं हो सका",
+  "print_failed_with_error": "प्रिंट विफल: {error}",
+  "@print_failed_with_error": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failed_to_generate_print_qr": "QR कोड जनरेट/प्रिंट करने में विफल: {error}",
+  "@failed_to_generate_print_qr": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "table_qr_printed_successfully": "टेबल QR प्रिंटर पर भेजा गया",
+  "all_table_qrs_printed_successfully": "सभी टेबल QR प्रिंटर पर भेजे गए",
+  "table_management": "टेबल प्रबंधन",
+  "tables_not_available_no_seating": "बिना बैठने की सुविधा वाले आउटलेट के लिए टेबल उपलब्ध नहीं हैं।",
+  "add_new_table": "नई टेबल जोड़ें",
+  "table_seats_count": "{count} सीटें",
+  "@table_seats_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "edit": "संपादित करें",
+  "no_tables_yet": "अभी कोई टेबल नहीं",
+  "add_first_table_hint": "शुरू करने के लिए अपनी पहली टेबल जोड़ें",
+  "edit_table": "टेबल संपादित करें",
+  "edit_table_subtitle": "टेबल नंबर और बैठने की क्षमता अपडेट करें",
+  "tables_count_of_limit": "{current} / {limit} सीटें",
+  "@tables_count_of_limit": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "seats_label": "सीटें",
+  "seats_hint": "जैसे 4",
+  "table_seats_exceed_outlet": "इस आउटलेट में एक टेबल पर {limit} से अधिक सीटें नहीं हो सकतीं",
+  "table_seats_exceed_remaining": "केवल {remaining} सीटें बची हैं (आउटलेट सीमा {limit} सीटें)",
+  "outlet_seating_full": "आउटलेट की सीटें भरी हैं ({limit} सीटें)",
+  "unable_to_load_tables": "टेबल लोड नहीं हो सकीं",
+  "another_table_already_uses_number": "एक अन्य टेबल पहले से यह नंबर उपयोग कर रही है",
+  "only_empty_tables_can_be_deleted": "केवल खाली टेबल हटाई जा सकती हैं",
+  "table_updated_successfully": "टेबल सफलतापूर्वक अपडेट हुई",
+  "failed_to_update_table": "टेबल अपडेट करने में विफल",
+  "table_status_duration": "{status} {duration}",
+  "@table_status_duration": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "loading_menu": "मेनू लोड हो रहा है...",
+  "note_hold_category_to_edit": "नोट: श्रेणी चिप को दबाकर रखें संपादित करने के लिए।",
+  "select_items": "आइटम चुनें",
+  "items_selected_count": "{count} चयनित",
+  "@items_selected_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "select_items_to_delete": "हटाने के लिए आइटम चुनें",
+  "clear_all": "सभी साफ़ करें",
+  "select_all": "सभी चुनें",
+  "delete_selected": "चयनित हटाएँ",
+  "delete_count": "हटाएँ ({count})",
+  "@delete_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "import_from_file": "फ़ाइल से आयात करें",
+  "search_dishes": "व्यंजन खोजें",
+  "categories_label": "श्रेणियाँ",
+  "select_category_to_edit": "संपादित करने के लिए श्रेणी चुनें",
+  "edit_selected_category": "चयनित श्रेणी संपादित करें",
+  "tip_right_click_category_edit": "टिप: संपादित करने के लिए श्रेणी पर राइट-क्लिक / लंबा दबाएँ।",
+  "no_items_found": "कोई आइटम नहीं मिला",
+  "try_different_search_term": "कोई अलग खोज शब्द आज़माएँ",
+  "add_items_to_this_category": "इस श्रेणी में आइटम जोड़ें",
+  "no_more_items": "और आइटम नहीं",
+  "scroll_for_more": "और के लिए स्क्रॉल करें",
+  "long_press_edit_category": "संपादित करने के लिए लंबा दबाएँ",
+  "more_options": "अधिक विकल्प",
+  "close_search": "खोज बंद करें",
+  "search_tooltip": "खोजें",
+  "add_new_item": "नया आइटम जोड़ें",
+  "delete_item_title": "आइटम हटाएँ",
+  "delete_item_named_confirm": "\"{name}\" हटाएँ? यह पूर्ववत नहीं किया जा सकता।",
+  "@delete_item_named_confirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "delete_items_title": "आइटम हटाएँ",
+  "delete_items_confirm": "{count} चयनित आइटम हटाएँ? यह पूर्ववत नहीं किया जा सकता।",
+  "@delete_items_confirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "select_at_least_one_item_to_delete": "हटाने के लिए कम से कम एक आइटम चुनें",
+  "items_deleted_successfully": "{count} आइटम सफलतापूर्वक हटाए गए",
+  "@items_deleted_successfully": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "failed_to_delete_selected_items": "चयनित आइटम हटाने में विफल",
+  "failed_to_delete_items_error": "आइटम हटाने में विफल: {error}",
+  "@failed_to_delete_items_error": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failed_to_read_file_error": "फ़ाइल पढ़ने में विफल: {error}",
+  "@failed_to_read_file_error": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "no_valid_import_rows": "कोई मान्य पंक्ति नहीं मिली। हेडर जैसे: Item Name, Price / Price (₹), Category, Tax % या GST उपयोग करें। नाम के रूप में केवल Item Code / Description / Unit से बचें। कीमतें 0 से अधिक संख्या होनी चाहिए।",
+  "items_imported_successfully": "{count} आइटम सफलतापूर्वक आयात हुए",
+  "@items_imported_successfully": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "failed_to_import_items": "आइटम आयात करने में विफल",
+  "failed_to_import_file_error": "फ़ाइल आयात करने में विफल: {error}",
+  "@failed_to_import_file_error": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "this_item": "यह आइटम",
+  "confirm_delete_item_message": "क्या आप वाकई इस आइटम को हटाना चाहते हैं?",
+  "category_chip_label": "श्रेणी",
+  "more_tooltip": "अधिक",
+  "item_deleted_successfully": "आइटम सफलतापूर्वक हटाया गया",
+  "failed_to_delete_item": "आइटम हटाने में विफल",
+  "inventory_management": "इन्वेंटरी प्रबंधन",
+  "inventory_subtitle": "स्टॉक · आपूर्तिकर्ता · रेसिपी",
+  "tab_overview": "अवलोकन",
+  "tab_raw_materials": "कच्चा माल",
+  "tab_stock_log": "स्टॉक लॉग",
+  "tab_suppliers": "आपूर्तिकर्ता",
+  "tab_purchase_orders": "खरीद ऑर्डर",
+  "tab_recipes": "रेसिपी",
+  "stat_raw_materials": "कच्चा माल",
+  "stat_low_stock_alerts": "कम स्टॉक अलर्ट",
+  "stat_stock_value": "स्टॉक मूल्य",
+  "stat_pending_pos": "लंबित PO",
+  "section_low_stock_alerts": "कम स्टॉक अलर्ट",
+  "all_materials_above_min": "सभी सामग्री न्यूनतम स्टॉक स्तर से ऊपर हैं।",
+  "section_quick_actions": "त्वरित कार्य",
+  "view_stock_log": "स्टॉक लॉग देखें",
+  "todays_consumption": "आज की खपत",
+  "todays_consumption_units": "{count} इकाइयाँ",
+  "@todays_consumption_units": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "active_suppliers": "सक्रिय आपूर्तिकर्ता",
+  "tracked_menu_items": "ट्रैक किए गए मेनू आइटम",
+  "search_raw_materials": "कच्चा माल खोजें...",
+  "add_material": "सामग्री जोड़ें",
+  "material_column": "सामग्री",
+  "status_low": "कम",
+  "status_ok": "ठीक",
+  "no_raw_materials_yet": "अभी कोई कच्चा माल नहीं। अपनी पहली सामग्री जोड़ें।",
+  "no_stock_movements": "अभी कोई स्टॉक गतिविधि दर्ज नहीं।",
+  "search_suppliers": "आपूर्तिकर्ता खोजें...",
+  "no_suppliers_yet": "अभी कोई आपूर्तिकर्ता नहीं जोड़ा गया।",
+  "status_active": "सक्रिय",
+  "status_inactive": "निष्क्रिय",
+  "gst_number_display": "GST: {number}",
+  "@gst_number_display": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "no_purchase_orders_yet": "अभी कोई खरीद ऑर्डर नहीं।",
+  "purchase_order_supplier_date": "आपूर्तिकर्ता: {name} · {date}",
+  "@purchase_order_supplier_date": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "purchase_order_line_item": "• {name}: {quantity} {unit} @ ₹{price}",
+  "@purchase_order_line_item": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "quantity": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "no_recipes_yet": "अभी कोई रेसिपी मैप नहीं।\nबिक्री पर स्वचालित स्टॉक कटौती के लिए मेनू आइटम को कच्चे माल से लिंक करें।",
+  "this_recipe": "यह रेसिपी",
+  "search_default_hint": "खोजें...",
+  "material_name_required": "सामग्री का नाम *",
+  "category_example_hint": "श्रेणी (जैसे सब्ज़ियाँ, डेयरी)",
+  "opening_stock": "प्रारंभिक स्टॉक",
+  "min_stock_alert": "न्यूनतम स्टॉक अलर्ट",
+  "purchase_price_per_unit": "खरीद मूल्य (प्रति इकाई)",
+  "supplier_name_required": "आपूर्तिकर्ता का नाम *",
+  "phone_label": "फ़ोन",
+  "address_label": "पता",
+  "gst_number_label": "GST नंबर",
+  "current_stock_label": "वर्तमान: {stock} {unit}",
+  "@current_stock_label": {
+    "placeholders": {
+      "stock": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "transaction_type": "लेनदेन प्रकार",
+  "quantity_with_unit_label": "मात्रा ({unit})",
+  "@quantity_with_unit_label": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "notes_label": "नोट्स",
+  "material_stock_subtitle": "{current} {unit} · न्यूनतम: {min} · ₹{price}/इकाई",
+  "@material_stock_subtitle": {
+    "placeholders": {
+      "current": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      },
+      "min": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "adjust_stock_tooltip": "स्टॉक समायोजित करें",
+  "import_products_excel": "उत्पाद आयात करें - Excel (.xlsx)",
+  "import_products_description": "BillKaro टेम्पलेट प्रारूप वाली Excel (.xlsx) फ़ाइल चुनें। आवश्यक कॉलम: Name और Price। गायब श्रेणियाँ स्वचालित रूप से बनाई जाएँगी।",
+  "select_file": "फ़ाइल चुनें",
+  "import_preview": "आयात पूर्वावलोकन",
+  "import_count_items": "{count} आइटम आयात करें",
+  "@import_count_items": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "availability_column": "उपलब्धता",
+  "stock_units_suffix": "इकाइयाँ",
+  "stock_change_range": "{before} → {after}",
+  "@stock_change_range": {
+    "placeholders": {
+      "before": {
+        "type": "String"
+      },
+      "after": {
+        "type": "String"
+      }
+    }
+  },
+  "gst_label": "GST",
+  "recipe_uses_material": "{name} का {quantity} {unit} उपयोग",
+  "@recipe_uses_material": {
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "template_saved_opened": "टेम्पलेट सहेजा और खोला गया",
+  "template_saved_to": "टेम्पलेट यहाँ सहेजा गया: {path}",
+  "@template_saved_to": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "hold_orders_title": "होल्ड ऑर्डर",
+  "all_time": "सभी समय",
+  "last_60_min": "पिछले 60 मिनट",
+  "no_more_orders": "और ऑर्डर नहीं",
+  "no_closed_orders": "कोई बंद ऑर्डर नहीं",
+  "closed_orders_empty_hint": "बंद ऑर्डर यहाँ दिखेंगे",
+  "no_hold_orders": "कोई होल्ड ऑर्डर नहीं",
+  "hold_orders_empty_hint": "होल्ड पर ऑर्डर यहाँ दिखेंगे",
+  "on_hold_badge": "होल्ड पर",
+  "order_items_count": "{count, plural, =1{1 आइटम} other{{count} आइटम}}",
+  "@order_items_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "edit_order": "ऑर्डर संपादित करें",
+  "update_order": "ऑर्डर अपडेट करें",
+  "modify_order_details_subtitle": "ऑर्डर विवरण बदलें",
+  "delete_order_permanently_subtitle": "इस ऑर्डर को स्थायी रूप से हटाएँ",
+  "delete_order_confirm_message": "क्या आप वाकई इस ऑर्डर को हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।",
+  "customers_count": "{count} ग्राहक",
+  "@customers_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "no_matching_customers": "कोई मेल खाता ग्राहक नहीं",
+  "unable_to_load_customers": "ग्राहकों को लोड करने में असमर्थ। कृपया पुनः प्रयास करें।",
+  "unable_to_load_customers_connection": "ग्राहकों को लोड करने में असमर्थ। कृपया अपना कनेक्शन जांचें।",
+  "fetch_customer_from_contacts": "अपने संपर्कों से सीधे ग्राहक विवरण प्राप्त करें।",
+  "loyalty_discount_label": "लॉयल्टी छूट",
+  "discount_applied_on_orders": "इस ग्राहक के ऑर्डर पर छूट लागू की जाएगी।",
+  "save_customer": "ग्राहक सहेजें",
+  "select_contact": "संपर्क चुनें",
+  "no_contacts_found": "कोई संपर्क नहीं मिला",
+  "no_contacts_match_search": "आपकी खोज से कोई संपर्क मेल नहीं खाता",
+  "contact_permission_permanently_denied": "संपर्क अनुमति स्थायी रूप से अस्वीकृत है। कृपया इसे सेटिंग्स से सक्षम करें।",
+  "customer_added": "ग्राहक जोड़ा गया",
+  "name_label": "नाम",
+  "clear_search": "खोज साफ़ करें",
+  "edit_regular_customer": "नियमित ग्राहक संपादित करें",
+  "staff_list_title": "स्टाफ सूची",
+  "manage_outlet_staff_access": "अपने आउटलेट के स्टाफ की पहुँच प्रबंधित करें",
+  "check_staff_activity": "स्टाफ गतिविधि देखें",
+  "staff_activity_filter_hint": "तारीख और उपयोगकर्ता के अनुसार गतिविधि फ़िल्टर करें",
+  "role_label": "भूमिका",
+  "no_matching_staff_found": "कोई मेल खाता स्टाफ नहीं मिला",
+  "no_staff_found": "कोई स्टाफ नहीं मिला",
+  "try_different_staff_search": "कोई अन्य नाम, भूमिका, फोन या ईमेल आज़माएँ।",
+  "invite_staff_empty_hint": "स्टाफ अनुमतियाँ प्रबंधित करने के लिए अपने पहले टीम सदस्य को आमंत्रित करें।",
+  "unable_to_delete_staff_entry": "इस स्टाफ प्रविष्टि को हटाने में असमर्थ",
+  "remove_staff_confirm": "क्या आप {name} को हटाना चाहते हैं?",
+  "@remove_staff_confirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "this_staff": "इस स्टाफ",
+  "status_pending": "लंबित",
+  "status_active_label": "सक्रिय",
+  "status_inactive_label": "निष्क्रिय",
+  "edit_staff": "स्टाफ संपादित करें",
+  "update_staff": "स्टाफ अपडेट करें",
+  "invite_sent_successfully": "निमंत्रण सफलतापूर्वक भेजा गया",
+  "staff_member_updated_successfully": "स्टाफ सदस्य सफलतापूर्वक अपडेट किया गया",
+  "role_overview": "भूमिका अवलोकन",
+  "allow_biller_create_menu_items": "बिलर को मेनू आइटम बनाने की अनुमति दें",
+  "allow_biller_edit_menu_items": "बिलर को मौजूदा मेनू आइटम संपादित करने की अनुमति दें",
+  "biller_overview_create_orders": "ऑर्डर और KOT बनाएँ और प्रिंट करें।",
+  "biller_overview_view_items": "सभी आइटम देखें और बिलिंग के लिए उपयोग करें।",
+  "biller_overview_cannot_delete": "कोई भी ऑर्डर (अपना या दूसरों का) हटा नहीं सकते।",
+  "biller_overview_cannot_access_others": "दूसरे सदस्यों द्वारा बनाए गए ऑर्डर एक्सेस नहीं कर सकते।",
+  "select_user_role": "उपयोगकर्ता भूमिका चुनें",
+  "invite_team_member_subtitle": "टीम सदस्य को आमंत्रित करें और भूमिका निर्धारित करें।",
+  "update_team_member_subtitle": "टीम सदस्य का विवरण और भूमिका अपडेट करें।",
+  "plans_pricing_subtitle": "एक योजना चुनें — प्रिंटर बंडल में मुफ्त होम डिलीवरी शामिल है",
+  "secure_payment": "सुरक्षित भुगतान",
+  "free_printer_delivery": "मुफ्त प्रिंटर डिलीवरी",
+  "support_24_7": "24/7 सहायता",
+  "no_plans_available": "कोई योजना उपलब्ध नहीं",
+  "please_check_back_later": "कृपया बाद में पुनः जांचें",
+  "printer_feature_free_home_delivery": "मुफ्त होम डिलीवरी",
+  "printer_feature_bluetooth_usb": "ब्लूटूथ + USB सपोर्ट",
+  "printer_feature_one_year_warranty": "1 वर्ष वारंटी",
+  "printer_not_included_in_plan": "इस योजना में प्रिंटर शामिल नहीं है।",
+  "includes_thermal_printer": "थर्मल प्रिंटर शामिल",
+  "whats_included": "क्या शामिल है",
+  "printer_features": "प्रिंटर सुविधाएँ",
+  "current_plan": "वर्तमान योजना",
+  "already_subscribed": "पहले से सदस्यता ली हुई है",
+  "outlet_already_subscribed": "इस आउटलेट की पहले से सक्रिय सदस्यता है।",
+  "buy_now": "अभी खरीदें",
+  "buy_now_with_printer": "प्रिंटर के साथ खरीदें",
+  "discount_percent_off": "{percent}% छूट",
+  "@discount_percent_off": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "invalid_duration": "अमान्य अवधि",
+  "duration_months": "{count, plural, =1{1 महीना} other{{count} महीने}}",
+  "@duration_months": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "duration_years": "{count, plural, =1{1 वर्ष} other{{count} वर्ष}}",
+  "@duration_years": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "duration_years_months": "{years, plural, =1{1 वर्ष} other{{years} वर्ष}} {months, plural, =1{1 महीना} other{{months} महीने}}",
+  "@duration_years_months": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      },
+      "months": {
+        "type": "int"
+      }
+    }
+  },
+  "payment_activation_failed": "भुगतान सफल रहा लेकिन सदस्यता सक्रिय नहीं हो सकी। कृपया सहायता से संपर्क करें।",
+  "failed_create_payment_order": "भुगतान ऑर्डर बनाने में विफल। कृपया पुनः प्रयास करें।",
+  "user_not_logged_in_retry": "उपयोगकर्ता लॉग इन नहीं है। कृपया लॉग इन करके पुनः प्रयास करें।",
+  "no_outlet_selected_retry": "कोई आउटलेट चयनित नहीं। कृपया आउटलेट चुनकर पुनः प्रयास करें।",
+  "invalid_order_response": "अमान्य ऑर्डर प्रतिक्रिया। कृपया पुनः प्रयास करें।",
+  "subscription_purchase": "सदस्यता खरीद",
+  "error_occurred_try_again": "एक त्रुटि हुई। कृपया पुनः प्रयास करें।",
+  "select_message_template": "संदेश टेम्पलेट चुनें",
+  "choose_whatsapp_template_hint": "एक WhatsApp संदेश टेम्पलेट चुनें। भेजने से पहले आप इसे संपादित कर सकते हैं।",
+  "discount_offer": "छूट ऑफर",
+  "template_discount_preview_prefix": "हमारे वफादार ग्राहकों के लिए विशेष ऑफर ",
+  "restaurant_name_placeholder": "रेस्टोरेंट का नाम",
+  "template_discount_get": "! पाएँ ",
+  "discount_value_placeholder": "छूट मूल्य",
+  "template_discount_suffix": " की छूट अपनी अगली यात्रा पर। छूट के लिए रेस्टोरेंट पर यह संदेश दिखाएँ।",
+  "new_menu": "नया मेनू",
+  "template_new_menu_suffix": " ने अपने मेनू में नए आइटम जोड़े हैं। आज ही आकर इन्हें आज़माएँ!",
+  "festival_wishes": "त्योहार की शुभकामनाएँ",
+  "template_festival_wishes_you": " आपको शुभ ",
+  "festival_name_placeholder": "त्योहार का नाम",
+  "template_festival_suffix": "। नए त्योहार मेनू और छूट के लिए रेस्टोरेंट पर आएँ!",
+  "use_template": "टेम्पलेट उपयोग करें",
+  "discount_offer_from_restaurant": "{name} से छूट ऑफर",
+  "@discount_offer_from_restaurant": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "enjoy_new_menu_at": "{name} पर नया मेनू आज़माएँ",
+  "@enjoy_new_menu_at": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "happy_festival_from": "{name} की ओर से शुभ {festival}",
+  "@happy_festival_from": {
+    "placeholders": {
+      "festival": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "no_customers_with_phone": "फ़ोन नंबर वाला कोई ग्राहक नहीं मिला। पहले नियमित ग्राहक जोड़ें।",
+  "send_whatsapp_confirm": "सर्वर के माध्यम से {count} ग्राहकों को WhatsApp संदेश भेजें?",
+  "@send_whatsapp_confirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "request_timed_out_bulk": "अनुरोध समय समाप्त या विफल। यदि आपके पास कई ग्राहक हैं, तो पुनः भेजने से पहले प्रतीक्षा करें और डेटाबेस में अभियान इतिहास जांचें।",
+  "successfully_sent_messages": "{count} संदेश सफलतापूर्वक भेजे गए",
+  "@successfully_sent_messages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sent_failed_summary": "भेजे गए: {success}, विफल: {failed}",
+  "@sent_failed_summary": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "sending_results": "भेजने के परिणाम",
+  "success_label": "सफल",
+  "failed_label": "विफल",
+  "sent_successfully": "सफलतापूर्वक भेजा गया",
+  "message_failed_error": "विफल: {error}",
+  "@message_failed_error": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "unknown": "अज्ञात",
+  "unknown_error": "अज्ञात त्रुटि",
+  "enter_custom_fields": "कस्टम फ़ील्ड दर्ज करें",
+  "customers_will_receive": "{count} ग्राहकों को यह संदेश मिलेगा",
+  "@customers_will_receive": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "restaurant_name_label": "रेस्टोरेंट का नाम",
+  "discount_value_percent_label": "छूट मूल्य (%)",
+  "festival_name_label": "त्योहार का नाम",
+  "whatsapp_msg_discount": "नमस्ते! 🎉\n\n{restaurant} पर अपने अगले ऑर्डर पर {discount}% छूट पाएँ!\n\nयह सीमित समय का ऑफर है। कोड उपयोग करें: SAVE{discount}\n\nअभी ऑर्डर करें और शानदार बचत के साथ स्वादिष्ट भोजन का आनंद लें!\n\nहमारे मूल्यवान ग्राहक होने के लिए धन्यवाद! ❤️",
+  "@whatsapp_msg_discount": {
+    "placeholders": {
+      "discount": {
+        "type": "String"
+      },
+      "restaurant": {
+        "type": "String"
+      }
+    }
+  },
+  "whatsapp_msg_menu": "नमस्ते! 🍽️\n\n{restaurant} से रोमांचक खबर!\n\nहमने अद्भुत व्यंजनों के साथ नया मेनू लॉन्च किया है। आज ही हमारी नवीनतम विशेषताएँ आज़माएँ!\n\nआज ही आएँ और बेहतरीन भोजन का आनंद लें! 😊\n\nसादर,\n{restaurant} टीम",
+  "@whatsapp_msg_menu": {
+    "placeholders": {
+      "restaurant": {
+        "type": "String"
+      }
+    }
+  },
+  "whatsapp_msg_festival": "नमस्ते! 🎊\n\n{restaurant} आपको {festival} की हार्दिक शुभकामनाएँ देता है!\n\nहमारे विशेष त्योहार मेनू और विशेष छूट के लिए हमसे मिलें।\n\nशानदार भोजन के साथ उत्सव मनाएँ! 🍽️\n\nशुभकामनाएँ,\n{restaurant} टीम",
+  "@whatsapp_msg_festival": {
+    "placeholders": {
+      "restaurant": {
+        "type": "String"
+      },
+      "festival": {
+        "type": "String"
+      }
+    }
+  },
+  "whatsapp_msg_default": "{restaurant} की ओर से नमस्ते! 👋\n\nआपके लिए एक महत्वपूर्ण अपडेट है। हमारे वफादार ग्राहक होने के लिए धन्यवाद!\n\nजल्द ही मिलें! ❤️",
+  "@whatsapp_msg_default": {
+    "placeholders": {
+      "restaurant": {
+        "type": "String"
+      }
+    }
+  },
+  "printer_settings": "प्रिंटर सेटिंग्स",
+  "ethernet": "ईथरनेट",
+  "available_printers": "उपलब्ध प्रिंटर",
+  "printer_help_assign_bill_kot": "काउंटर रसीदों के लिए बिल और रसोई टिकट के लिए KOT असाइन करें। अपने सेटअप के अनुसार USB, ब्लूटूथ या ईथरनेट (LAN) उपयोग करें।",
+  "print_routing": "प्रिंट रूटिंग",
+  "print_routing_subtitle": "बिल और KOT प्रिंटर अलग-अलग असाइन करें।",
+  "bill_printer": "बिल प्रिंटर",
+  "kot_printer": "KOT प्रिंटर",
+  "use_bill_printer_for_kot": "KOT के लिए बिल प्रिंटर उपयोग करें",
+  "multiple_printer_settings": "एकाधिक प्रिंटर सेटिंग्स",
+  "tap_bill_or_kot_below": "नीचे किसी डिवाइस पर Bill या KOT टैप करें।",
+  "not_assigned_pick_below": "असाइन नहीं — नीचे Bill या KOT चुनें",
+  "not_assigned": "असाइन नहीं",
+  "test_print": "टेस्ट प्रिंट",
+  "remove_assignment": "असाइनमेंट हटाएं",
+  "bill_label": "Bill",
+  "kot_label": "KOT",
+  "status_online": "ऑनलाइन",
+  "status_offline": "ऑफलाइन",
+  "bluetooth_ble": "ब्लूटूथ (BLE)",
+  "bluetooth_paired": "ब्लूटूथ (पेयर्ड)",
+  "ethernet_lan": "ईथरनेट / LAN",
+  "no_bluetooth_printer_connected": "कोई ब्लूटूथ प्रिंटर कनेक्ट नहीं",
+  "no_usb_printer_connected": "कोई USB प्रिंटर कनेक्ट नहीं",
+  "no_ethernet_printer_connected": "कोई ईथरनेट प्रिंटर कनेक्ट नहीं",
+  "no_paired_printer_connected": "कोई पेयर्ड प्रिंटर कनेक्ट नहीं",
+  "ble_printer": "BLE प्रिंटर",
+  "usb_printer": "USB प्रिंटर",
+  "printer_fallback_name": "प्रिंटर",
+  "search_bluetooth_devices_hint": "ब्लूटूथ डिवाइस खोजें…",
+  "search_usb_printers_hint": "USB प्रिंटर खोजें…",
+  "search_printers_hint": "प्रिंटर खोजें…",
+  "scan": "स्कैन",
+  "scanning": "स्कैन हो रहा है",
+  "scanning_nearby_printers": "पास के प्रिंटर स्कैन हो रहे हैं…",
+  "no_bluetooth_printers_found": "कोई ब्लूटूथ प्रिंटर नहीं मिला।\nप्रिंटर चालू करें और स्कैन टैप करें।",
+  "no_devices_match_search": "आपकी खोज से कोई डिवाइस मेल नहीं खाता।",
+  "paired_bluetooth_devices": "पेयर्ड ब्लूटूथ डिवाइस",
+  "no_paired_devices_found": "कोई पेयर्ड डिवाइस नहीं मिला",
+  "scan_devices": "डिवाइस स्कैन करें",
+  "looking_for_usb_printers": "USB प्रिंटर खोजे जा रहे हैं…",
+  "no_usb_printers_found": "कोई USB प्रिंटर नहीं मिला।\nकेबल कनेक्ट करें और स्कैन टैप करें।",
+  "no_usb_printers_match_search": "आपकी खोज से कोई USB प्रिंटर मेल नहीं खाता।",
+  "usb_printers": "USB प्रिंटर",
+  "scan_usb_printers": "USB प्रिंटर स्कैन करें",
+  "scanning_ellipsis": "स्कैन हो रहा है…",
+  "printer_ip_network_hint": "आपके नेटवर्क पर प्रिंटर IP (पोर्ट 9100)।",
+  "ip_address": "IP पता",
+  "port_label": "पोर्ट",
+  "enter_ip_above": "ऊपर IP दर्ज करें",
+  "connected_to_label": "कनेक्टेड: {label}",
+  "@connected_to_label": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "not_connected": "कनेक्ट नहीं",
+  "connected_status": "कनेक्टेड",
+  "paper_size": "कागज़ का आकार",
+  "paper_size_subtitle": "बिल और KOT रसीदों के लिए थर्मल रोल चौड़ाई चुनें।",
+  "paper_size_2inch": "2\" (58mm)",
+  "paper_size_3inch": "3\" (80mm)",
+  "paper_size_4inch": "4\" (104mm)",
+  "paper_size_saved": "कागज़ का आकार {size} पर सेट किया गया",
+  "printer_setup": "प्रिंटर सेटअप",
+  "same_as_bill": "Bill के समान",
+  "auto_connect_on_launch": "लॉन्च पर ऑटो-कनेक्ट",
+  "remove_saved_printer_message": "यह सहेजा प्रिंटर हटाता है और ऑटो-कनेक्ट बंद करता है।",
+  "bill_role_summary": "Bill: {name}",
+  "@bill_role_summary": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "bill_role_not_set": "Bill: सेट नहीं",
+  "kot_role_summary": "KOT: {name}",
+  "@kot_role_summary": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "kot_role_not_set": "KOT: सेट नहीं",
+  "assign_from_device_below": "नीचे से डिवाइस असाइन करें",
+  "bluetooth_on": "ब्लूटूथ चालू",
+  "bluetooth_off": "ब्लूटूथ बंद",
+  "turn_on_bluetooth_to_scan": "प्रिंटर स्कैन के लिए ब्लूटूथ चालू करें।",
+  "scan_devices_action": "डिवाइस स्कैन करें",
+  "paired": "पेयर्ड",
+  "nearby": "पास में",
+  "unknown_device": "अज्ञात डिवाइस",
+  "assign_label": "असाइन:",
+  "connect_via_usb_otg": "USB OTG से कनेक्ट करें, फिर स्कैन करें।",
+  "auto_connect_enabled": "ऑटो-कनेक्ट सक्षम",
+  "auto_connect_disabled": "ऑटो-कनेक्ट अक्षम",
+  "enter_valid_ip_example": "मान्य IP पता दर्ज करें (जैसे 192.168.1.100)",
+  "enter_valid_port_default": "मान्य पोर्ट दर्ज करें (डिफ़ॉल्ट 9100)",
+  "ethernet_printer_disconnected": "ईथरनेट प्रिंटर डिस्कनेक्ट",
+  "connected_to_endpoint": "{endpoint} से कनेक्ट",
+  "@connected_to_endpoint": {
+    "placeholders": {
+      "endpoint": {
+        "type": "String"
+      }
+    }
+  },
+  "could_not_connect_network_printer": "कनेक्ट नहीं हो सका। IP, पोर्ट जांचें और प्रिंटर उसी नेटवर्क पर हो।",
+  "enter_valid_ip_first": "पहले मान्य IP पता दर्ज करें",
+  "enter_valid_port": "मान्य पोर्ट दर्ज करें",
+  "connect_printer_first": "पहले प्रिंटर से कनेक्ट करें",
+  "role_printer_assigned": "{role} प्रिंटर: {name}",
+  "@role_printer_assigned": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "role_printer_cleared": "{role} प्रिंटर हटाया गया",
+  "@role_printer_cleared": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "role_test_print_sent": "{role} टेस्ट प्रिंट भेजा गया",
+  "@role_test_print_sent": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "operation_failed_error": "विफल: {error}",
+  "@operation_failed_error": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ethernet_printer_name": "ईथरनेट {ip}",
+  "@ethernet_printer_name": {
+    "placeholders": {
+      "ip": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbar_success": "सफल",
+  "snackbar_error": "त्रुटि",
+  "snackbar_removed": "हटाया गया",
+  "clear_tooltip": "साफ़ करें",
+  "loyalty": "लॉयल्टी",
+  "total_visits": "कुल विज़िट",
+  "customer_order_value": "ऑर्डर मूल्य",
+  "avg_order": "औसत ऑर्डर",
+  "customer_total_discount": "कुल छूट",
+  "latest_order": "नवीनतम ऑर्डर",
+  "bill_number_short": "बिल #{number}",
+  "@bill_number_short": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "bill_amount_summary": "बिल #{billNumber} • ₹{amount}",
+  "@bill_amount_summary": {
+    "placeholders": {
+      "billNumber": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "order_history": "ऑर्डर इतिहास",
+  "no_orders_yet_for_customer": "इस ग्राहक के लिए अभी कोई ऑर्डर नहीं",
+  "status_closed": "बंद",
+  "no_orders": "कोई ऑर्डर नहीं",
+  "showing_orders_range": "{total} में से {start}-{end} दिखा रहे हैं",
+  "@showing_orders_range": {
+    "placeholders": {
+      "start": {
+        "type": "int"
+      },
+      "end": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "unable_to_load_customer_details": "ग्राहक विवरण लोड नहीं हो सका।",
+  "unable_to_load_customer_details_retry": "ग्राहक विवरण लोड नहीं हो सका। कृपया पुनः प्रयास करें।",
+  "invalid_customer": "अमान्य ग्राहक",
+  "order_discount_amount": " • छूट ₹{amount}",
+  "@order_discount_amount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "billing_view": "बिलिंग व्यू",
+  "billing_image_view": "इमेज व्यू",
+  "billing_list_view_option": "लिस्ट व्यू",
+  "introducing_kot_mode": "KOT मोड का परिचय",
+  "kot_mode_choose_handling": "रसोई ऑर्डर और बिलिंग कैसे संभालें, चुनें",
+  "kot_and_hold_description": "बिलिंग के बिना KOT जनरेट करें। उसी ऑर्डर में और KOT जोड़ सकते हैं और बाद में बिल कर सकते हैं।",
+  "kot_and_bill_description": "एक ही चरण में KOT और अंतिम बिल एक साथ जनरेट करें।",
+  "kot_buttons_update_info": "ऑर्डर स्क्रीन पर बटन अपडेट होंगे:",
+  "save_hold_to_kot_hold": "Save & Hold → KOT & Hold",
+  "save_bill_to_kot_bill": "Save & Bill → KOT & Bill",
+  "got_it": "समझ गया",
+  "voice_add_menu_items_title": "वॉइस: मेनू आइटम जोड़ें",
+  "mic_stop": "रोकें",
+  "mic_start": "शुरू करें",
+  "listening_ellipsis": "सुन रहे हैं...",
+  "voice_add_menu_hint": "माइक टैप करें और बोलें, जैसे \"Tea 15 in Beverages, Coffee 40 category Beverages\"।\nहम श्रेणियों के साथ पंक्तियाँ बना देंगे, सबमिट से पहले आप संपादित कर सकते हैं।",
+  "item_name_label": "आइटम का नाम",
+  "price_label": "कीमत",
+  "microphone_permission_required": "वॉइस इनपुट के लिए माइक्रोफ़ोन अनुमति आवश्यक है।",
+  "voice_input_requires_internet": "वॉइस इनपुट के लिए इंटरनेट कनेक्शन आवश्यक है। कृपया कनेक्शन जांचें और पुनः प्रयास करें।",
+  "voice_error": "वॉइस त्रुटि: {error}",
+  "@voice_error": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "no_items_to_add": "जोड़ने के लिए कोई आइटम नहीं।",
+  "please_fill_item_name_price": "कृपया आइटम नाम + कीमत भरें।",
+  "added_items_offline": "{count} आइटम ऑफलाइन जोड़े गए।",
+  "@added_items_offline": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "failed_to_add_item_named": "\"{name}\" जोड़ने में विफल",
+  "@failed_to_add_item_named": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "added_items_success": "{count} आइटम सफलतापूर्वक जोड़े गए।",
+  "@added_items_success": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "staff_activity_title": "स्टाफ गतिविधि",
+  "activity_log": "गतिविधि लॉग",
+  "staff_activity_filters_hint": "समय, उपयोगकर्ता और गतिविधि प्रकार के अनुसार गतिविधि संकीर्ण करें।",
+  "no_activities_yet": "अभी कोई गतिविधि नहीं",
+  "select_time_period": "समय अवधि चुनें",
+  "select_user": "उपयोगकर्ता चुनें",
+  "select_activity_type": "गतिविधि प्रकार चुनें",
+  "select_date_range": "तारीख सीमा चुनें",
+  "all_users": "सभी उपयोगकर्ता",
+  "no_users_found": "कोई उपयोगकर्ता नहीं मिला",
+  "from_date": "प्रारंभ तिथि",
+  "to_date": "अंतिम तिथि",
+  "date_range_to_separator": "से",
+  "this_financial_year": "यह वित्तीय वर्ष",
+  "all_activities": "सभी गतिविधियाँ",
+  "activity_type": "गतिविधि प्रकार",
+  "order_added": "ऑर्डर जोड़ा गया",
+  "order_deleted": "ऑर्डर हटाया गया",
+  "customer_added": "ग्राहक जोड़ा गया",
+  "customer_deleted": "ग्राहक हटाया गया",
+  "customer_edited": "ग्राहक संपादित",
+  "item_added": "आइटम जोड़ा गया",
+  "item_deleted": "आइटम हटाया गया",
+  "item_edited": "आइटम संपादित",
+  "activity_fallback": "गतिविधि",
+  "users_label": "उपयोगकर्ता",
+  "activity_entity_name": "नाम : {name}",
+  "@activity_entity_name": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "activity_entity_category": "श्रेणी : {category}",
+  "@activity_entity_category": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "reset": "रीसेट",
+  "time_period": "समय अवधि",
+  "time_period_sheet_hint": "गतिविधि और फ़िल्टर के लिए उपयोग की जाने वाली सीमा चुनें।",
+  "time_period_today_subtitle": "आज आधी रात से दिन के अंत तक",
+  "time_period_this_week_subtitle": "इस सप्ताह का सोमवार से रविवार",
+  "time_period_this_month_subtitle": "इस महीने का पहला दिन से अंतिम दिन",
+  "time_period_this_quarter_subtitle": "वर्तमान कैलेंडर तिमाही",
+  "time_period_financial_year_subtitle": "अप्रैल–मार्च वित्तीय वर्ष (भारत)",
+  "time_period_custom_subtitle": "तिथियाँ चुनने के लिए तारीख सीमा चिप का उपयोग करें",
+  "activity_type_sheet_title": "गतिविधि प्रकार",
+  "activity_type_sheet_hint": "आउटलेट में क्या बदला, उसके अनुसार लॉग फ़िल्टर करें।",
+  "show_every_activity_type": "हर गतिविधि प्रकार दिखाएँ",
+  "staff_filter": "स्टाफ फ़िल्टर",
+  "staff_filter_hint": "लॉग में किसकी गतिविधि दिखे, चुनें।",
+  "no_staff_found": "कोई स्टाफ नहीं मिला",
+  "no_staff_found_hint": "इस आउटलेट में स्टाफ जोड़ें या कनेक्शन जाँचें।",
+  "all_users_title": "सभी उपयोगकर्ता",
+  "all_users_subtitle": "इस आउटलेट में सभी की गतिविधि",
+  "date_range": "तारीख सीमा",
+  "date_range_sheet_hint": "प्रारंभ और अंत तिथि चुनें। लागू करने पर समय अवधि कस्टम हो जाएगी।",
+  "from_date_short": "से",
+  "tap_to_choose": "चुनने के लिए टैप करें",
+  "table_status_reserved": "आरक्षित",
+  "filter_reserved": "आरक्षित",
+  "reserve_table": "टेबल आरक्षित करें",
+  "merge_tables": "टेबल मर्ज करें",
+  "reservations": "आरक्षण",
+  "reservation_customer_name": "ग्राहक का नाम",
+  "reservation_phone": "फ़ोन (वैकल्पिक)",
+  "reservation_party_size": "मेहमानों की संख्या",
+  "reservation_date": "तारीख",
+  "reservation_time": "समय",
+  "reservation_notes": "नोट (वैकल्पिक)",
+  "reservation_dialog_subtitle": "{table} के लिए बुकिंग",
+  "reservation_guest_section": "मेहमान विवरण",
+  "reservation_when_section": "तारीख और समय",
+  "reservation_preview_label": "आरक्षण सारांश",
+  "reservation_today": "आज",
+  "reservation_tomorrow": "कल",
+  "reservation_name_required": "कृपया ग्राहक का नाम दर्ज करें",
+  "reservation_party_size_up_to": "इस टेबल के लिए अधिकतम {capacity} मेहमान चुनें",
+  "@reservation_party_size_up_to": {
+    "placeholders": {
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "reservation_combined_seating": "संयुक्त बैठने की क्षमता: {capacity} मेहमान",
+  "@reservation_combined_seating": {
+    "placeholders": {
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "reservation_party_needs_more_tables": "{party} मेहमानों के लिए और सीटें चाहिए। संयुक्त क्षमता {capacity} है। नीचे टेबल जोड़ें या बड़ी टेबल चुनें।",
+  "@reservation_party_needs_more_tables": {
+    "placeholders": {
+      "party": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "reservation_add_tables_to_combine": "और टेबल मिलाएँ",
+  "reservation_or_switch_table": "या बड़ी टेबल चुनें",
+  "reservation_no_tables_for_party": "इस समूह के लिए कोई उपलब्ध टेबल नहीं है। छोटा समूह या दूसरा समय आज़माएँ।",
+  "reservation_party_size_exceeds_capacity": "मेहमानों की संख्या टेबल क्षमता ({capacity} सीटें) से अधिक नहीं हो सकती",
+  "@reservation_party_size_exceeds_capacity": {
+    "placeholders": {
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "reservation_tap_hint": "ऑर्डर के लिए टैप · आरक्षण के लिए सीट आइकन",
+  "reservation_created_successfully": "टेबल सफलतापूर्वक आरक्षित",
+  "reservation_cancelled_successfully": "आरक्षण रद्द",
+  "reservation_seated_successfully": "मेहमान बैठाए गए",
+  "failed_to_create_reservation": "आरक्षण बनाने में विफल",
+  "seat_guest": "मेहमान बैठाएँ",
+  "cancel_reservation": "आरक्षण रद्द करें",
+  "no_reservations_today": "इस तारीख के लिए कोई आरक्षण नहीं",
+  "merge_tables_title": "टेबल मर्ज करें",
+  "merge_tables_message": "मुख्य टेबल चुनें, फिर उसमें मिलाने के लिए अन्य व्यस्त टेबल चुनें।",
+  "merge_tables_select_primary": "पहले प्राथमिक टेबल, फिर मर्ज करने वाली टेबल चुनें",
+  "merge_select_primary_table": "1. मुख्य टेबल चुनें (ऑर्डर यहाँ मर्ज होंगे)",
+  "merge_select_other_tables": "2. मर्ज करने के लिए अन्य टेबल चुनें",
+  "merge_step_main": "मुख्य टेबल",
+  "merge_step_join": "टेबल जोड़ें",
+  "merge_join_hint": "मुख्य टेबल के साथ मिलाने के लिए एक या अधिक टेबल चुनें",
+  "merge_dialog_subtitle": "बड़े समूह के लिए टेबल मिलाएँ — ऑर्डर से पहले या बाद में",
+  "merge_preview_label": "संयुक्त परिणाम",
+  "no_tables_to_merge": "मर्ज के लिए कम से कम 2 टेबल चाहिए",
+  "no_other_tables_to_merge": "कोई अन्य टेबल उपलब्ध नहीं",
+  "merge_available_hint": "ऑर्डर से पहले उपलब्ध टेबल मर्ज कर सकते हैं",
+  "table_merged_with_others": "अन्य टेबल के साथ मर्ज",
+  "unmerge_tables": "टेबल अलग करें",
+  "unmerge_tables_success": "टेबल सफलतापूर्वक अलग",
+  "unmerge_tables_failed": "टेबल अलग करने में विफल",
+  "unmerge_tables_confirm": "{name} से मर्ज की टेबल अलग करें?",
+  "merge_tables_success": "टेबल सफलतापूर्वक मर्ज",
+  "merge_tables_failed": "टेबल मर्ज विफल",
+  "select_at_least_two_tables_to_merge": "प्राथमिक और कम से कम एक अन्य व्यस्त टेबल चुनें",
+  "whatsapp_bot_reservation_hint": "ग्राहक WhatsApp बॉट कोड से टेबल बुक कर सकते हैं",
+  "whatsapp_bot_code": "WhatsApp बॉट कोड",
+  "enable_whatsapp_reservations": "WhatsApp आरक्षण सक्षम करें",
+  "reservation_for_table": "{table} के लिए आरक्षण",
+  "reserved_by": "आरक्षित: {name}, {time}",
+  "source_whatsapp": "WhatsApp",
+  "source_pos": "POS",
+  "filter_merged": "मर्ज",
+  "merged_tables_badge": "मर्ज ({count})",
+  "merged_groups_banner": "{groups} मर्ज समूह · {tables} टेबल मिली",
+  "merged_tables_hint": "ऑर्डर के लिए टैप · अलग करने के लिए स्प्लिट आइकन",
+  "cash_drawer": "कैश ड्रॉअर (RJ11)",
+  "cash_drawer_subtitle": "ड्रॉअर केबल बिल प्रिंटर के DK पोर्ट से जोड़ें। ESC/POS सिग्नल से खुलता है।",
+  "open_cash_drawer_on_cash_payment": "नकद भुगतान पर ड्रॉअर खोलें",
+  "open_cash_drawer_on_cash_payment_subtitle": "Cash भुगतान पर बिल प्रिंट होने पर स्वचालित रूप से ड्रॉअर खोलें",
+  "cash_drawer_kick_pin": "ड्रॉअर किक पिन",
+  "cash_drawer_kick_pin_subtitle": "अधिकांश RJ11 POS ड्रॉअर Pin 2 उपयोग करते हैं। न खुले तो Pin 5 आज़माएँ।",
+  "cash_drawer_pin_2": "पिन 2",
+  "cash_drawer_pin_5": "पिन 5",
+  "test_cash_drawer": "ड्रॉअर टेस्ट करें",
+  "cash_drawer_opened": "कैश ड्रॉअर सिग्नल भेजा गया",
+  "cash_drawer_failed": "कैश ड्रॉअर नहीं खोला जा सका: {error}",
+  "cash_drawer_printer_help": "आपके असाइन किए बिल प्रिंटर का उपयोग करता है। RJ11 केबल प्रिंटर के ड्रॉअर पोर्ट में लगाएँ।",
+  "cash_drawer_assign_bill_printer_first": "ड्रॉअर टेस्ट से पहले ऊपर बिल प्रिंटर असाइन करें।",
+  "remove_image": "इमेज हटाएँ"
 }

@@ -66,6 +66,8 @@ class User {
   final String? role;
   final String? staffRole;
   final List<String>? permissions;
+  /// Business owner user id when [role] is `staff` ([id] is the staff record id).
+  final String? userId;
 
   User({
     this.createdAt,
@@ -87,6 +89,7 @@ class User {
     this.role,
     this.staffRole,
     this.permissions,
+    this.userId,
   });
 
   factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);

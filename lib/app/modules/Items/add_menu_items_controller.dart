@@ -7,10 +7,11 @@ import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/app/services/uploadFile.dart';
 import 'package:billkaro/app/services/ai/menu_ai_scanner.dart';
-import 'package:billkaro/app/services/ai/ai_image_generator.dart';
+import 'package:billkaro/app/services/ai/pollinations_ai_image_service.dart';
 import 'package:billkaro/config/config.dart';
 import '../../services/Modals/Categories/categories_response.dart';
 import 'package:flutter_modular/flutter_modular.dart';
+import 'package:billkaro/utils/offline/offline_category_loader.dart';
 
 class AddMenuItemController extends BaseController {
   final itemNameController = TextEditingController();
@@ -33,13 +34,10 @@ class AddMenuItemController extends BaseController {
 
   // AI Scanner
   final MenuAIScanner _aiScanner = MenuAIScanner();
+  final PollinationsAiImageService _pollinations = PollinationsAiImageService();
+  final isGeneratingAiImage = false.obs;
   var isScanning = false.obs;
   var aiScanResult = Rx<MenuScanResult?>(null);
-
-  // AI Image Generator
-  final AIImageGenerator _aiImageGenerator = AIImageGenerator();
-  var isGeneratingImage = false.obs;
-  var aiImageStatus = ''.obs;
 
   final taxOptions = ['None', '5', '12', '18', '28'];
   var isEdit = false.obs;
@@ -60,8 +58,7 @@ class AddMenuItemController extends BaseController {
       if (image != null) {
         selectedImage.value = File(image.path);
         imagePath.value = image.path;
-        // Auto-scan with AI when image is selected
-        await scanMenuWithAI();
+        aiScanResult.value = null;
       }
     } catch (e) {
       showError(description: 'Failed to pick image: $e');
@@ -93,184 +90,187 @@ class AddMenuItemController extends BaseController {
 
       selectedImage.value = File(path);
       imagePath.value = path;
-
-      // ML Kit OCR (menu scan) is only supported on Android/iOS.
-      if (_usesDesktopCameraPlugin()) {
-        showSuccess(
-          description:
-              'Photo captured. Enter item name and price (desktop scan uses the image only).',
-        );
-        return;
-      }
-      await scanMenuWithAI();
+      aiScanResult.value = null;
     } catch (e) {
       showError(description: 'Failed to capture image: $e');
     }
   }
 
-  // Show image source selection dialog matching the design
+  // Show image source selection (gallery / camera / file)
   void uploadImage() {
-    var loc = AppLocalizations.of(Get.context!);
-    if (loc == null) return;
-    Get.bottomSheet(
-      Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 8),
-              // Drag handle
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
+    showManualUploadOptions();
+  }
+
+  /// Pick a menu photo (camera or gallery) and extract item details with AI.
+  Future<void> scanImageWithAI() async {
+    final source = await _showScanImageSourceDialog();
+    if (source == null) return;
+
+    try {
+      String? path;
+      if (source == ImageSource.camera) {
+        if (_usesDesktopCameraPlugin()) {
+          path = await showDesktopCameraCaptureDialog();
+        } else {
+          final XFile? image = await _picker.pickImage(
+            source: ImageSource.camera,
+            maxWidth: 1800,
+            maxHeight: 1800,
+            imageQuality: 85,
+          );
+          path = image?.path;
+        }
+      } else {
+        final XFile? image = await _picker.pickImage(
+          source: ImageSource.gallery,
+          maxWidth: 1800,
+          maxHeight: 1800,
+          imageQuality: 85,
+        );
+        path = image?.path;
+      }
+
+      if (path == null || path.isEmpty) return;
+
+      selectedImage.value = File(path);
+      imagePath.value = path;
+      await scanMenuWithAI();
+    } catch (e) {
+      showError(description: 'Failed to pick image for scan: $e');
+    }
+  }
+
+  Future<ImageSource?> _showScanImageSourceDialog() async {
+    return Get.dialog<ImageSource>(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Scan image with AI',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                loc.upload_item_image,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
+                const SizedBox(height: 8),
+                Text(
+                  'Choose a photo of your menu or item label',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                 ),
-              ),
-              const SizedBox(height: 24),
-              // Generate with AI option
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: InkWell(
-                  onTap: () {
-                    Get.back();
-                    generateImageWithAI();
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey[300]!),
-                      borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _scanSourceChip(
+                      icon: Icons.camera_alt_outlined,
+                      label: 'Camera',
+                      subtitle: _usesDesktopCameraPlugin()
+                          ? 'Webcam / USB'
+                          : 'Take photo',
+                      onTap: () => Get.back(result: ImageSource.camera),
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColor.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            Icons.auto_awesome,
-                            color: AppColor.primary,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        const Expanded(
-                          child: Text(
-                            'Generate with AI',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        const Icon(Icons.chevron_right, color: Colors.grey),
-                      ],
+                    _scanSourceChip(
+                      icon: Icons.photo_library_outlined,
+                      label: _usesDesktopCameraPlugin() ? 'Browse' : 'Gallery',
+                      subtitle: 'Choose photo',
+                      onTap: () => Get.back(result: ImageSource.gallery),
                     ),
-                  ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 12),
-              // Upload manually option
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: InkWell(
-                  onTap: () {
-                    Get.back();
-                    showManualUploadOptions();
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey[300]!),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColor.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            Icons.upload_outlined,
-                            color: AppColor.primary,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        const Expanded(
-                          child: Text(
-                            'Upload manually',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        const Icon(Icons.chevron_right, color: Colors.grey),
-                      ],
-                    ),
-                  ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: () => Get.back(),
+                  child: const Text('Cancel'),
                 ),
-              ),
-              const SizedBox(height: 24),
-              // Cancel button
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => Get.back(),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: BorderSide(color: Colors.grey[300]!),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: Text(
-                      loc.cancel,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      barrierDismissible: true,
     );
+  }
+
+  Widget _scanSourceChip({
+    required IconData icon,
+    required String label,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 130,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        decoration: BoxDecoration(
+          color: AppColor.primary.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColor.primary.withOpacity(0.35)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 30, color: AppColor.primary),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> onGenerateWithAI() async {
+    if (isGeneratingAiImage.value) return;
+    final itemName = itemNameController.text.trim();
+    if (itemName.isEmpty) {
+      showError(description: 'Please enter item name first to generate image');
+      return;
+    }
+    isGeneratingAiImage.value = true;
+    // Let the picker sheet close before opening global loader.
+    await Future.delayed(const Duration(milliseconds: 180));
+    showAppLoader();
+    try {
+      final prompt =
+          'Professional appetizing food photo of $itemName on a plate, restaurant menu, warm lighting, high quality';
+      final path = await _pollinations.generateImage(prompt: prompt);
+      final file = File(path);
+      if (!await file.exists()) {
+        throw Exception('Generated file missing');
+      }
+      selectedImage.value = file;
+      imagePath.value = file.path;
+      imageUrl.value = '';
+      aiScanResult.value = null;
+      showSuccess(description: 'AI image ready');
+    } catch (e) {
+      showError(description: 'Failed to generate image. Please try again.');
+    } finally {
+      isGeneratingAiImage.value = false;
+      dismissAppLoader();
+      dismissAllAppLoader();
+    }
   }
 
   // Show manual upload options (Gallery/Camera)
   void showManualUploadOptions() {
+    if (_usesDesktopCameraPlugin()) {
+      _showManualUploadDialog();
+      return;
+    }
+
     Get.bottomSheet(
       Container(
         decoration: const BoxDecoration(
@@ -294,13 +294,78 @@ class AddMenuItemController extends BaseController {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Select Image Source',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              Row(
+                children: [
+                  Expanded(
+                    child: const Text(
+                      'Select Image Source',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Get.back(),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               const Divider(height: 1),
               const SizedBox(height: 8),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColor.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.auto_awesome,
+                    color: AppColor.primary,
+                    size: 24,
+                  ),
+                ),
+                title: const Text(
+                  'Generate with AI',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                subtitle: const Text(
+                  'Generate a menu item image using AI',
+                  style: TextStyle(fontSize: 13),
+                ),
+                onTap: () {
+                  Get.back();
+                  onGenerateWithAI();
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColor.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.document_scanner_outlined,
+                    color: AppColor.primary,
+                    size: 24,
+                  ),
+                ),
+                title: const Text(
+                  'Scan image with AI',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                subtitle: const Text(
+                  'Extract item name and price from a photo',
+                  style: TextStyle(fontSize: 13),
+                ),
+                onTap: () {
+                  Get.back();
+                  scanImageWithAI();
+                },
+              ),
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
@@ -365,49 +430,151 @@ class AddMenuItemController extends BaseController {
     );
   }
 
-  // Generate image using Billkaro AI (free cloud + offline fallback)
-  Future<void> generateImageWithAI() async {
-    final itemName = itemNameController.text.trim();
-    if (itemName.isEmpty) {
-      showError(description: 'Please enter item name first to generate image');
-      return;
-    }
-
-    isGeneratingImage.value = true;
-    aiImageStatus.value = 'Starting Billkaro AI…';
-
-    try {
-      final result = await _aiImageGenerator.generateMenuItemImage(
-        itemName: itemName,
-        onStatus: (message) => aiImageStatus.value = message,
-      );
-
-      final file = await _aiImageGenerator.fileFromResult(result.filePath);
-      if (file == null) {
-        showError(
-          description: 'Generated image could not be saved. Please try again.',
-        );
-        return;
-      }
-
-      selectedImage.value = file;
-      imagePath.value = file.path;
-      imageUrl.value = '';
-      aiScanResult.value = null;
-
-      showSuccess(description: 'AI image ready');
-    } catch (e) {
-      debugPrint('❌ [AI] Image generation error: $e');
-      final msg = e.toString().replaceFirst('Exception: ', '');
-      showError(
-        description: msg.isEmpty
-            ? 'Failed to generate image. Please try uploading manually.'
-            : msg,
-      );
-    } finally {
-      isGeneratingImage.value = false;
-      aiImageStatus.value = '';
-    }
+  void _showManualUploadDialog() {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 16, 8, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Center(
+                        child: const Text(
+                          'Select Image Source',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Close',
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Get.back(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColor.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.auto_awesome,
+                      color: AppColor.primary,
+                      size: 24,
+                    ),
+                  ),
+                  title: const Text(
+                    'Generate with AI',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+                  subtitle: const Text(
+                    'Generate a menu item image using AI',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  onTap: () {
+                    Get.back();
+                    onGenerateWithAI();
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColor.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.document_scanner_outlined,
+                      color: AppColor.primary,
+                      size: 24,
+                    ),
+                  ),
+                  title: const Text(
+                    'Scan image with AI',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+                  subtitle: const Text(
+                    'Extract item name and price from a photo',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  onTap: () {
+                    Get.back();
+                    scanImageWithAI();
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColor.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.photo_library_outlined,
+                      color: AppColor.primary,
+                      size: 24,
+                    ),
+                  ),
+                  title: const Text(
+                    'Gallery',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+                  subtitle: const Text(
+                    'Choose from your photos',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  onTap: () {
+                    Get.back();
+                    uploadImageFromGallery();
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColor.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.camera_alt_outlined,
+                      color: AppColor.primary,
+                      size: 24,
+                    ),
+                  ),
+                  title: const Text(
+                    'Camera',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+                  subtitle: Text(
+                    _usesDesktopCameraPlugin()
+                        ? 'Webcam or USB document camera'
+                        : 'Take a new photo',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  onTap: () {
+                    Get.back();
+                    uploadImageFromCamera();
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: true,
+    );
   }
 
   void removeImage() {
@@ -464,6 +631,7 @@ class AddMenuItemController extends BaseController {
     }
     final request = ItemRequest(
       showItem: isAvailable.value,
+      isRecommended: markAsFavorite.value,
       outletId: appPref.selectedOutlet!.id!,
       userId: appPref.user!.id!,
       itemName: itemNameController.text,
@@ -490,27 +658,19 @@ class AddMenuItemController extends BaseController {
     }
   }
 
-  // Load categories from API
+  // Load categories from API or offline cache
   Future<void> getCategories() async {
-    final response = await callApi(
-      apiClient.getCategories(appPref.selectedOutlet!.id!),
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null) return;
+
+    final categoryList = await OfflineCategoryLoader.load(
+      outletId: outletId,
+      fetchFromApi: () => callApi(apiClient.getCategories(outletId)),
     );
 
-    if (response!.status == 'success') {
-      List<CategoryData> categoryList = response.categories;
-
-      categories.clear();
-      categories.add('none');
-
-      List<String> categoryNames = categoryList
-          .map((e) => e.categoryName)
-          .toList();
-
-      categories.addAll(categoryNames);
-    } else {
-      debugPrint('No categories found or API error');
-    }
-
+    categories.clear();
+    categories.add('none');
+    categories.addAll(categoryList.map((e) => e.categoryName));
     dismissAllAppLoader();
   }
 
@@ -524,6 +684,8 @@ class AddMenuItemController extends BaseController {
     selectedCategory.value = 'none';
     selectedTaxPercentage.value = 'None';
     isWithTax.value = false;
+    isAvailable.value = true;
+    markAsFavorite.value = false;
     itemId.value = '';
     imageUrl.value = '';
 
@@ -547,6 +709,8 @@ class AddMenuItemController extends BaseController {
     itemId.value = item.id;
 
     imageUrl.value = item.itemImage;
+    isAvailable.value = item.showItem;
+    markAsFavorite.value = item.isRecommended;
     selectedTaxPercentage.value = double.parse(item.gst.toString()).round() == 0
         ? 'None'
         : '${double.parse(item.gst.toString()).toInt()}';
@@ -584,8 +748,10 @@ class AddMenuItemController extends BaseController {
         return;
       }
     }
+    
     final request = ItemRequest(
       showItem: isAvailable.value,
+      isRecommended: markAsFavorite.value,
       userId: appPref.user!.id!,
       outletId: appPref.selectedOutlet!.id!,
       itemName: itemNameController.text,
@@ -697,7 +863,7 @@ class AddMenuItemController extends BaseController {
         dismissAppLoader();
         showError(
           description:
-              'Could not extract menu information. Please enter manually.',
+              'Could not extract menu information. Use a clear photo with readable item name and price, and ensure internet is available for AI scan on desktop.',
         );
       }
     } catch (e) {

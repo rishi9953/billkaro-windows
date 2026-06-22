@@ -10,6 +10,7 @@ import 'package:billkaro/app/modules/HomeMain/home_main_shell.dart';
 import 'package:billkaro/app/modules/Invoice/KOT/kot_preview_screen.dart';
 import 'package:billkaro/app/modules/Invoice/invoice_screen.dart';
 import 'package:billkaro/app/modules/Items/add_menu_items_screen.dart';
+import 'package:billkaro/app/modules/Inventory/inventory_hub_screen.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_item_screen.dart';
 import 'package:billkaro/app/modules/KOTHistory/kot_history_screen.dart';
 import 'package:billkaro/app/modules/KitchenDisplay/kitchen_display_screen.dart';
@@ -34,7 +35,46 @@ import 'package:billkaro/app/modules/subscription/Form/subscription_form.dart';
 import 'package:billkaro/app/modules/subscription/review/subscription_review_screen.dart';
 import 'package:billkaro/app/modules/subscription/subscription_screen.dart';
 import 'package:billkaro/app/services/PrinterService2/printer_screen2.dart';
+import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_access.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
+
+Widget _staffGatedRoute({required bool allowed, required Widget child}) {
+  return _StaffGatedRoute(allowed: allowed, child: child);
+}
+
+class _StaffGatedRoute extends StatefulWidget {
+  const _StaffGatedRoute({required this.allowed, required this.child});
+
+  final bool allowed;
+  final Widget child;
+
+  @override
+  State<_StaffGatedRoute> createState() => _StaffGatedRouteState();
+}
+
+class _StaffGatedRouteState extends State<_StaffGatedRoute> {
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.allowed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        showError(
+          description: AppLocalizations.of(context)!.no_permission_section,
+        );
+        Modular.to.navigate(HomeMainRoutes.home);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.allowed) return const SizedBox.shrink();
+    return widget.child;
+  }
+}
 
 class HomeMainModule extends Module {
   @override
@@ -51,9 +91,22 @@ class HomeMainModule extends Module {
         ChildRoute(HomeMainRoutes.holdOrders, child: (_) => HoldOrdersScreen()),
         ChildRoute(HomeMainRoutes.items, child: (_) => MenuItemScreen()),
         ChildRoute(HomeMainRoutes.createOrder, child: (_) => AddOrderScreen()),
-        ChildRoute(HomeMainRoutes.reports, child: (_) => ReportsScreen()),
+        ChildRoute(
+          HomeMainRoutes.reports,
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canViewReports,
+            child: ReportsScreen(),
+          ),
+        ),
         ChildRoute(HomeMainRoutes.tables, child: (_) => TableScreen()),
         ChildRoute(HomeMainRoutes.addItem, child: (_) => AddMenuItemScreen()),
+        ChildRoute(
+          HomeMainRoutes.inventory,
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canViewInventory,
+            child: const InventoryHubScreen(),
+          ),
+        ),
         ChildRoute(
           HomeMainRoutes.businessOverview,
           child: (_) => BusinessOverviewScreen(),
@@ -69,11 +122,17 @@ class HomeMainModule extends Module {
         ),
         ChildRoute(
           HomeMainRoutes.orderReport,
-          child: (_) => OrderReportsScreen(),
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canViewReports,
+            child: OrderReportsScreen(),
+          ),
         ),
         ChildRoute(
           HomeMainRoutes.itemsReport,
-          child: (_) => ItemReportsScreen(),
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canViewReports,
+            child: ItemReportsScreen(),
+          ),
         ),
         ChildRoute(
           HomeMainRoutes.invoiceScreen,

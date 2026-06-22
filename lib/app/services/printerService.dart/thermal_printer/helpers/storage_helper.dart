@@ -1,5 +1,7 @@
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'thermal_paper_size.dart';
 
 class StorageHelper {
   // Role keys
@@ -226,6 +228,20 @@ class StorageHelper {
   static Future<String?> getRoleLastPrinterType(String role) async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_rolePrinterTypeKey(role));
+  }
+
+  static const String _thermalPaperSizeKey = 'thermal_paper_size';
+
+  static Future<void> saveThermalPaperSize(ThermalPaperSize size) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_thermalPaperSizeKey, size.storageKey);
+  }
+
+  static Future<ThermalPaperSize> getThermalPaperSize() async {
+    final prefs = await SharedPreferences.getInstance();
+    return ThermalPaperSize.fromStorageKey(
+      prefs.getString(_thermalPaperSizeKey),
+    );
   }
 
   // Auto-connect Methods

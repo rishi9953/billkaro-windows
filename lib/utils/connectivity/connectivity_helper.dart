@@ -14,6 +14,7 @@ class ConnectivityHelper {
 
   final Connectivity _connectivity = Connectivity();
   StreamSubscription? _stream;
+  StreamSubscription? _dataConnectionSubscription;
   final _currentState = RxBool(true);
 
   final _onConnectivityChangeController = StreamController<bool>.broadcast();
@@ -34,10 +35,31 @@ class ConnectivityHelper {
       (value) => _checkInternetStatus(value, forceUpdate: true),
     );
     _stream = _connectivity.onConnectivityChanged.listen(_checkInternetStatus);
+
+    // Detect internet loss even when the adapter still reports "connected".
+    _dataConnectionSubscription =
+        DataConnectionChecker().onStatusChange.listen((status) async {
+      final connectivityResult = await _connectivity.checkConnectivity();
+      if (connectivityResult.contains(ConnectivityResult.none)) {
+        return;
+      }
+
+      final state = status == DataConnectionStatus.connected;
+      if (_currentState.value != state) {
+        _currentState.value = state;
+        _onConnectivityChangeController.add(state);
+      }
+    });
   }
 
   void dispose() {
     _stream?.cancel();
+    _dataConnectionSubscription?.cancel();
+  }
+
+  Future<void> refreshStatus() async {
+    final result = await _connectivity.checkConnectivity();
+    await _checkInternetStatus(result, forceUpdate: true);
   }
 
   Future<void> _checkInternetStatus(

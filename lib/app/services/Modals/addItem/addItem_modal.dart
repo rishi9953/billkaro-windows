@@ -2,7 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'addItem_modal.g.dart';
 
-@JsonSerializable()
+@JsonSerializable(includeIfNull: false)
 class ItemRequest {
   final String itemName;
   final double salePrice;
@@ -14,6 +14,8 @@ class ItemRequest {
   final String category;
   final String itemImage;
   final bool showItem;
+  @JsonKey(includeIfNull: false)
+  final bool? isRecommended;
   final int prepTimeMinutes;
 
   ItemRequest({
@@ -27,6 +29,7 @@ class ItemRequest {
     required this.outletId,
     required this.showItem,
     this.itemImage = '',
+    this.isRecommended,
     this.prepTimeMinutes = 15,
   });
 

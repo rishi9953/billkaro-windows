@@ -8,19 +8,20 @@ class PaymentSummaryWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     final paymentController = Get.put(PaymentController());
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _sectionHeader(
-          'Payment Received',
-          subtitle: 'Total payments collected',
+          loc.home_payment_received,
+          subtitle: loc.home_total_payments_collected,
           trailing: IconButton(
             icon: const Icon(Icons.refresh, size: 18),
             color: AppColor.primary,
             onPressed: () => paymentController.refresh(),
-            tooltip: 'Refresh',
+            tooltip: loc.refresh,
           ),
         ),
         const SizedBox(height: 12),
@@ -54,7 +55,7 @@ class PaymentSummaryWidget extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Today',
+                              loc.today,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey[600],
@@ -119,7 +120,7 @@ class PaymentSummaryWidget extends StatelessWidget {
                     children: [
                       Expanded(
                         child: _periodTile(
-                          'This Week',
+                          loc.this_week,
                           '₹${weekTotal.toStringAsFixed(0)}',
                           Icons.calendar_view_week,
                           Colors.blue,
@@ -128,7 +129,7 @@ class PaymentSummaryWidget extends StatelessWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: _periodTile(
-                          'This Month',
+                          loc.this_month,
                           '₹${monthTotal.toStringAsFixed(0)}',
                           Icons.calendar_month,
                           Colors.purple,
@@ -143,7 +144,7 @@ class PaymentSummaryWidget extends StatelessWidget {
                     const Divider(height: 1),
                     const SizedBox(height: 12),
                     Text(
-                      'Payment Methods (Today)',
+                      loc.home_payment_methods_today,
                       style: TextStyle(
                         fontSize: 11.5,
                         color: Colors.grey[800],
@@ -251,7 +252,7 @@ class PaymentSummaryWidget extends StatelessWidget {
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              'No payments received today',
+                              loc.home_no_payments_today,
                               style: TextStyle(
                                 fontSize: 13,
                                 color: Colors.grey[600],

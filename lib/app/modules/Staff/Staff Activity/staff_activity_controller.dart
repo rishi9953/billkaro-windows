@@ -6,6 +6,23 @@ import 'package:intl/intl.dart';
 class StaffActivityController extends BaseController {
   static const int _activityPageLimit = 20;
 
+  static const timePeriodToday = 'Today';
+  static const timePeriodThisWeek = 'This week';
+  static const timePeriodThisMonth = 'This month';
+  static const timePeriodThisQuarter = 'This quarter';
+  static const timePeriodFinancialYear = 'This Financial Year';
+  static const timePeriodCustom = 'Custom';
+  static const usersFilterLabel = 'Users';
+  static const activityTypeAll = 'All Activities';
+  static const activityTypeOrderAdded = 'Order Added';
+  static const activityTypeOrderDeleted = 'Order Deleted';
+  static const activityTypeCustomerAdded = 'Customer Added';
+  static const activityTypeCustomerDeleted = 'Customer Deleted';
+  static const activityTypeCustomerEdited = 'Customer Edited';
+  static const activityTypeItemAdded = 'Item Added';
+  static const activityTypeItemDeleted = 'Item Deleted';
+  static const activityTypeItemEdited = 'Item Edited';
+
   final isLoading = false.obs;
   final isLoadingMore = false.obs;
   final activities = <ActivityModel>[].obs;
@@ -14,37 +31,135 @@ class StaffActivityController extends BaseController {
   final activitiesTotalPages = 1.obs;
 
   final staffList = <Map<String, dynamic>>[].obs;
-  final List<String> timePeriods = const <String>[
-    'Today',
-    'This week',
-    'This month',
-    'This quarter',
-    'This Financial Year',
-    'Custom',
+  static const List<String> timePeriods = <String>[
+    timePeriodToday,
+    timePeriodThisWeek,
+    timePeriodThisMonth,
+    timePeriodThisQuarter,
+    timePeriodFinancialYear,
+    timePeriodCustom,
   ];
 
-  final RxString selectedTimePeriod = 'Today'.obs;
+  final RxString selectedTimePeriod = timePeriodToday.obs;
   final Rxn<DateTime> selectedFromDate = Rxn<DateTime>(DateTime.now());
   final Rxn<DateTime> selectedToDate = Rxn<DateTime>(DateTime.now());
-  final RxString selectedUserName = 'Users'.obs;
+  final RxString selectedUserName = usersFilterLabel.obs;
   final RxString selectedUserId = ''.obs;
 
-  final List<String> activityTypes = const <String>[
-    'All Activities',
-    'Order Added',
-    'Order Deleted',
-    'Customer Added',
-    'Customer Deleted',
-    'Customer Edited',
-    'Item Added',
-    'Item Deleted',
-    'Item Edited',
+  static const List<String> activityTypes = <String>[
+    activityTypeAll,
+    activityTypeOrderAdded,
+    activityTypeOrderDeleted,
+    activityTypeCustomerAdded,
+    activityTypeCustomerDeleted,
+    activityTypeCustomerEdited,
+    activityTypeItemAdded,
+    activityTypeItemDeleted,
+    activityTypeItemEdited,
   ];
 
-  final RxString selectedActivityType = 'All Activities'.obs;
+  final RxString selectedActivityType = activityTypeAll.obs;
+
+  String timePeriodLabel(AppLocalizations loc, String key) {
+    switch (key) {
+      case timePeriodToday:
+        return loc.today;
+      case timePeriodThisWeek:
+        return loc.this_week;
+      case timePeriodThisMonth:
+        return loc.this_month;
+      case timePeriodThisQuarter:
+        return loc.this_quarter;
+      case timePeriodFinancialYear:
+        return loc.this_financial_year;
+      case timePeriodCustom:
+        return loc.custom;
+      default:
+        return key;
+    }
+  }
+
+  String? timePeriodSubtitle(AppLocalizations loc, String key) {
+    switch (key) {
+      case timePeriodToday:
+        return loc.time_period_today_subtitle;
+      case timePeriodThisWeek:
+        return loc.time_period_this_week_subtitle;
+      case timePeriodThisMonth:
+        return loc.time_period_this_month_subtitle;
+      case timePeriodThisQuarter:
+        return loc.time_period_this_quarter_subtitle;
+      case timePeriodFinancialYear:
+        return loc.time_period_financial_year_subtitle;
+      case timePeriodCustom:
+        return loc.time_period_custom_subtitle;
+      default:
+        return null;
+    }
+  }
+
+  static String activityTypeLabel(AppLocalizations loc, String key) {
+    switch (key) {
+      case activityTypeAll:
+        return loc.all_activities;
+      case activityTypeOrderAdded:
+        return loc.order_added;
+      case activityTypeOrderDeleted:
+        return loc.order_deleted;
+      case activityTypeCustomerAdded:
+        return loc.customer_added;
+      case activityTypeCustomerDeleted:
+        return loc.customer_deleted;
+      case activityTypeCustomerEdited:
+        return loc.customer_edited;
+      case activityTypeItemAdded:
+        return loc.item_added;
+      case activityTypeItemDeleted:
+        return loc.item_deleted;
+      case activityTypeItemEdited:
+        return loc.item_edited;
+      default:
+        return key;
+    }
+  }
+
+  static String displayActivityTypeLabel(AppLocalizations loc, String raw) {
+    if (raw.trim().isEmpty) return loc.activity_fallback;
+    final normalized = raw.replaceAll('_', ' ').replaceAll('-', ' ').trim();
+    for (final type in activityTypes) {
+      if (type.toLowerCase() == normalized.toLowerCase()) {
+        return activityTypeLabel(loc, type);
+      }
+    }
+    return normalized
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .map(
+          (w) =>
+              '${w.substring(0, 1).toUpperCase()}${w.length > 1 ? w.substring(1).toLowerCase() : ''}',
+        )
+        .join(' ');
+  }
+
+  String activityTypeFilterLabelLocalized(AppLocalizations loc) =>
+      selectedActivityType.value == activityTypeAll
+      ? loc.activity_type
+      : activityTypeLabel(loc, selectedActivityType.value);
+
+  String selectedUserLabelLocalized(AppLocalizations loc) =>
+      selectedUserName.value == usersFilterLabel
+      ? loc.users_label
+      : selectedUserName.value;
+
+  String selectedDateRangeLabelLocalized(AppLocalizations loc) {
+    final from = selectedFromDate.value;
+    final to = selectedToDate.value;
+    if (from == null || to == null) return loc.select_date;
+    return '${_formatDate(from)} ${loc.date_range_to_separator} ${_formatDate(to)}';
+  }
 
   String get activityTypeFilterLabel =>
-      selectedActivityType.value == 'All Activities'
+      selectedActivityType.value == activityTypeAll
       ? 'Activity Type'
       : selectedActivityType.value;
 
@@ -52,7 +167,7 @@ class StaffActivityController extends BaseController {
       staffList.map(_toStaffMember).toList(growable: false);
 
   String? _activitiesTypeQueryParam(String selected) {
-    if (selected == 'All Activities') return null;
+    if (selected == activityTypeAll) return null;
     final normalized = selected.trim();
     return normalized.isEmpty ? null : normalized;
   }
@@ -66,7 +181,7 @@ class StaffActivityController extends BaseController {
 
   ({DateTime start, DateTime end}) _activityDateBounds() {
     final now = DateTime.now();
-    if (selectedTimePeriod.value == 'Custom') {
+    if (selectedTimePeriod.value == timePeriodCustom) {
       var from = _dateOnly(selectedFromDate.value ?? now);
       var to = _dateOnly(selectedToDate.value ?? now);
       if (to.isBefore(from)) {
@@ -78,25 +193,25 @@ class StaffActivityController extends BaseController {
     }
 
     switch (selectedTimePeriod.value) {
-      case 'Today':
+      case timePeriodToday:
         final d = _dateOnly(now);
         return (start: d, end: d);
-      case 'This week':
+      case timePeriodThisWeek:
         final monday = _dateOnly(
           now.subtract(Duration(days: now.weekday - DateTime.monday)),
         );
         final sunday = _dateOnly(monday.add(const Duration(days: 6)));
         return (start: monday, end: sunday);
-      case 'This month':
+      case timePeriodThisMonth:
         final start = DateTime(now.year, now.month, 1);
         final end = DateTime(now.year, now.month + 1, 0);
         return (start: start, end: end);
-      case 'This quarter':
+      case timePeriodThisQuarter:
         final startMonth = ((now.month - 1) ~/ 3) * 3 + 1;
         final start = DateTime(now.year, startMonth, 1);
         final end = DateTime(now.year, startMonth + 3, 0);
         return (start: start, end: end);
-      case 'This Financial Year':
+      case timePeriodFinancialYear:
         if (now.month >= 4) {
           return (
             start: DateTime(now.year, 4, 1),
@@ -115,7 +230,7 @@ class StaffActivityController extends BaseController {
 
   Future<void> applyTimePeriod(String value) async {
     selectedTimePeriod.value = value;
-    if (value != 'Custom') {
+    if (value != timePeriodCustom) {
       final bounds = _activityDateBounds();
       selectedFromDate.value = bounds.start;
       selectedToDate.value = bounds.end;
@@ -124,16 +239,18 @@ class StaffActivityController extends BaseController {
   }
 
   void resetTimePeriod() {
-    selectedTimePeriod.value = 'Today';
+    selectedTimePeriod.value = timePeriodToday;
   }
 
   Future<void> applyUserSelection(StaffMember? member) async {
     if (member == null) {
       selectedUserId.value = '';
-      selectedUserName.value = 'Users';
+      selectedUserName.value = usersFilterLabel;
     } else {
       selectedUserId.value = member.id;
-      selectedUserName.value = member.name.isNotEmpty ? member.name : 'Users';
+      selectedUserName.value = member.name.isNotEmpty
+          ? member.name
+          : usersFilterLabel;
     }
     await getStaffActivities();
   }
@@ -149,7 +266,7 @@ class StaffActivityController extends BaseController {
     if (from == null || to == null) return;
     selectedFromDate.value = from;
     selectedToDate.value = to;
-    selectedTimePeriod.value = 'Custom';
+    selectedTimePeriod.value = timePeriodCustom;
   }
 
   Future<void> applyDateRangeAndRefresh(DateTime? from, DateTime? to) async {
@@ -162,7 +279,7 @@ class StaffActivityController extends BaseController {
     final d = _dateOnly(now);
     selectedFromDate.value = d;
     selectedToDate.value = d;
-    selectedTimePeriod.value = 'Today';
+    selectedTimePeriod.value = timePeriodToday;
     await getStaffActivities();
   }
 

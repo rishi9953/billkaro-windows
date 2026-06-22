@@ -212,12 +212,12 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     checkbox(
-                      'Allow biller to create menu items',
+                      loc.allow_biller_create_menu_items,
                       controller.canManageBills.value,
                       (val) => controller.canManageBills.value = val ?? false,
                     ),
                     checkbox(
-                      'Allow biller to edit existing menu items',
+                      loc.allow_biller_edit_menu_items,
                       controller.canEditMenuItems.value,
                       (val) => controller.canEditMenuItems.value = val ?? false,
                     ),
@@ -228,7 +228,7 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
         SizedBox(height: isWin ? 12 : 16),
         Obx(
           () => controller.selectedRole.value == 'Biller'
-              ? billerOverView(context, isWin)
+              ? billerOverView(context, loc, isWin)
               : secondaryAdminOverView(context, isWin),
         ),
       ],
@@ -248,7 +248,7 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
         scrolledUnderElevation: isWin ? 0 : null,
         toolbarHeight: isWin ? 48 : kToolbarHeight,
         title: Text(
-          isEditMode ? 'Edit Staff' : loc.add_staff,
+          isEditMode ? loc.edit_staff : loc.add_staff,
           style: TextStyle(
             color: AppColor.white,
             fontSize: 20,
@@ -333,7 +333,7 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                                     children: [
                                       Text(
                                         isEditMode
-                                            ? 'Edit Staff'
+                                            ? loc.edit_staff
                                             : loc.add_staff,
                                         style: Theme.of(context)
                                             .textTheme
@@ -345,8 +345,8 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                                       const SizedBox(height: 4),
                                       Text(
                                         isEditMode
-                                            ? 'Update team member details and role.'
-                                            : 'Invite a team member and assign a role.',
+                                            ? loc.update_team_member_subtitle
+                                            : loc.invite_team_member_subtitle,
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodyMedium
@@ -438,7 +438,7 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                         ),
                       ),
                       child: Text(
-                        isEditMode ? 'Update Staff' : loc.send_invite,
+                        isEditMode ? loc.update_staff : loc.send_invite,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -469,7 +469,7 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Role Overview',
+            loc.role_overview,
             style: Theme.of(context).textTheme.titleSmall!.copyWith(
               fontWeight: FontWeight.w600,
               color: const Color(0xFF374151),
@@ -489,7 +489,11 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
     );
   }
 
-  Widget billerOverView(BuildContext context, bool isWin) {
+  Widget billerOverView(
+    BuildContext context,
+    AppLocalizations loc,
+    bool isWin,
+  ) {
     return Container(
       padding: EdgeInsets.all(isWin ? 18 : 16),
       decoration: BoxDecoration(
@@ -501,17 +505,17 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Role Overview',
+            loc.role_overview,
             style: Theme.of(context).textTheme.titleSmall!.copyWith(
               fontWeight: FontWeight.w600,
               color: const Color(0xFF374151),
             ),
           ),
           Gap(10),
-          overView(1, 'Create and print orders and KOT.'),
-          overView(2, 'View all items and use them for billing.'),
-          overView(3, 'Cannot delete any orders (self or others).'),
-          overView(4, 'Cannot access orders created by other members.'),
+          overView(1, loc.biller_overview_create_orders),
+          overView(2, loc.biller_overview_view_items),
+          overView(3, loc.biller_overview_cannot_delete),
+          overView(4, loc.biller_overview_cannot_access_others),
         ],
       ),
     );

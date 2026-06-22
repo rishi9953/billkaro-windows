@@ -1,6 +1,6 @@
 import 'package:billkaro/config/config.dart';
 
-class EmailVerificationDialog extends StatelessWidget {
+class EmailVerificationDialog extends StatefulWidget {
   final String email;
 
   const EmailVerificationDialog({super.key, required this.email});
@@ -17,6 +17,75 @@ class EmailVerificationDialog extends StatelessWidget {
   }
 
   @override
+  State<EmailVerificationDialog> createState() => _EmailVerificationDialogState();
+}
+
+class _EmailVerificationDialogState extends State<EmailVerificationDialog> {
+  bool _isResending = false;
+  bool _isChecking = false;
+
+  Future<void> _checkVerification() async {
+    if (_isChecking) return;
+    setState(() => _isChecking = true);
+
+    try {
+      final apiClient = Get.find<ApiClient>();
+      final response = await callApi(
+        apiClient.verifyAuthEmail({'email': widget.email}),
+        showLoader: false,
+      );
+
+      final verified = response is Map && response['verified'] == true;
+      if (verified) {
+        Get.back();
+        showSuccess(description: 'Email verified successfully. You can log in now.');
+        Get.offAllNamed(AppRoute.login);
+        return;
+      }
+
+      showError(
+        description: response is Map && response['message'] != null
+            ? response['message'].toString()
+            : 'Email not verified yet. Please check your inbox.',
+      );
+    } catch (_) {
+      showError(description: 'Unable to check verification status. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isChecking = false);
+    }
+  }
+
+  Future<void> _resendActivation() async {
+    if (_isResending) return;
+    setState(() => _isResending = true);
+
+    try {
+      final apiClient = Get.find<ApiClient>();
+      final response = await callApi(
+        apiClient.resendAuthActivation({'email': widget.email}),
+        showLoader: false,
+      );
+
+      final message = response is Map && response['message'] != null
+          ? response['message'].toString()
+          : 'Activation email sent. Please check your inbox.';
+
+      if (response is Map && response['verified'] == true) {
+        Get.back();
+        showSuccess(description: message);
+        Get.offAllNamed(AppRoute.login);
+        return;
+      }
+
+      showSuccess(description: message);
+    } catch (_) {
+      showError(description: 'Failed to resend activation email. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isResending = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -26,42 +95,51 @@ class EmailVerificationDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Icon
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: secondaryPrimary.withOpacity(0.1), shape: BoxShape.circle),
-              child: Icon(Icons.email_outlined, size: 48, color: secondaryPrimary),
+              decoration: BoxDecoration(
+                color: EmailVerificationDialog.secondaryPrimary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.email_outlined,
+                size: 48,
+                color: EmailVerificationDialog.secondaryPrimary,
+              ),
             ),
             const SizedBox(height: 24),
-
-            // Title
-            Text(
+            const Text(
               'Verify Your Email',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: primary),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: EmailVerificationDialog.primary,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
-
-            // Description
             Text(
               'We\'ve sent an activation link to',
               style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
-
-            // Email
             Text(
-              email,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: primary),
+              widget.email,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: EmailVerificationDialog.primary,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-
-            // Instructions
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: primary.withOpacity(0.05), borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                color: EmailVerificationDialog.primary.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Text(
                 'Please check your inbox and click the activation link to verify your account.',
                 style: TextStyle(fontSize: 14, color: Colors.grey[700], height: 1.5),
@@ -69,24 +147,37 @@ class EmailVerificationDialog extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-
-            // Buttons
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Expanded(
+                  child: OutlinedButton(
+                    onPressed: _isResending ? null : _resendActivation,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: EmailVerificationDialog.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: Text(
+                      _isResending ? 'Sending...' : 'Resend Email',
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      Get.offAllNamed(AppRoute.main);
-                    },
+                    onPressed: _isChecking ? null : _checkVerification,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: secondaryPrimary,
+                      backgroundColor: EmailVerificationDialog.secondaryPrimary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    child: const Text('Got it', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    child: Text(
+                      _isChecking ? 'Checking...' : 'Go to Login',
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ),
               ],

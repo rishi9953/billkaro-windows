@@ -4,6 +4,7 @@ import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/PrinterService2/printer_screen2_controller.dart';
 import 'package:billkaro/app/services/PrinterService2/printer_service2.dart';
+import 'package:billkaro/app/services/printerService.dart/thermal_printer/helpers/thermal_paper_size.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/config/config.dart';
 import 'dart:io' show Platform;
@@ -103,6 +104,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
     required VoidCallback? onPressed,
     bool isLoading = false,
   }) {
+    final loc = AppLocalizations.of(context)!;
     final height = _isWindowsDesktop ? 36.0 : 40.0;
     final textStyle = TextStyle(
       fontSize: _isWindowsDesktop ? 12 : 14,
@@ -132,7 +134,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
           padding: const EdgeInsets.symmetric(horizontal: 10),
         ),
         onPressed: onPressed,
-        child: Text('Disconnect', style: textStyle),
+        child: Text(loc.disconnect, style: textStyle),
       );
     }
     return FilledButton.tonal(
@@ -143,7 +145,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
         foregroundColor: AppColor.primary,
       ),
       onPressed: onPressed,
-      child: Text('Connect', style: textStyle),
+      child: Text(loc.connect, style: textStyle),
     );
   }
 
@@ -177,13 +179,14 @@ class _PrinterScreen2State extends State<PrinterScreen2>
   }
 
   Widget _buildWindowsScaffold(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColor.backGroundColor,
       appBar: AppBar(
         elevation: 0,
         foregroundColor: AppColor.white,
         title: Text(
-          'Printer Settings',
+          loc.printer_settings,
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
@@ -195,7 +198,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
           TextButton.icon(
             onPressed: _onRefreshPressed,
             icon: const Icon(Icons.refresh_rounded, size: 20),
-            label: const Text('Refresh'),
+            label: Text(loc.refresh),
             style: TextButton.styleFrom(foregroundColor: AppColor.white),
           ),
           const Gap(8),
@@ -217,6 +220,10 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         _buildMultiplePrinterSettingsCard(context),
+                        const Gap(14),
+                        _buildPaperSizeCard(context),
+                        const Gap(14),
+                        _buildCashDrawerCard(context),
                         const Gap(14),
                         _buildConnectionStatusCards(context),
                         const Gap(12),
@@ -260,9 +267,10 @@ class _PrinterScreen2State extends State<PrinterScreen2>
   }
 
   Widget _buildMobileScaffold(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Printer Settings'),
+        title: Text(loc.printer_settings),
         bottom: TabBar(
           controller: _tabController,
           labelColor: Theme.of(context).colorScheme.onPrimary,
@@ -271,10 +279,10 @@ class _PrinterScreen2State extends State<PrinterScreen2>
           ).colorScheme.onSurface.withOpacity(0.7),
           indicatorColor: Theme.of(context).colorScheme.onPrimary,
           indicatorSize: TabBarIndicatorSize.tab,
-          tabs: const [
-            Tab(icon: Icon(Icons.bluetooth), text: 'Bluetooth'),
-            Tab(icon: Icon(Icons.usb), text: 'USB'),
-            Tab(icon: Icon(Icons.settings_ethernet), text: 'Ethernet'),
+          tabs: [
+            Tab(icon: const Icon(Icons.bluetooth), text: loc.bluetooth),
+            Tab(icon: const Icon(Icons.usb), text: loc.usb),
+            Tab(icon: const Icon(Icons.settings_ethernet), text: loc.ethernet),
           ],
         ),
         actions: [
@@ -293,6 +301,10 @@ class _PrinterScreen2State extends State<PrinterScreen2>
               child: Column(
                 children: [
                   _buildMultiplePrinterSettingsCard(context),
+                  const SizedBox(height: 12),
+                  _buildPaperSizeCard(context),
+                  const SizedBox(height: 12),
+                  _buildCashDrawerCard(context),
                   const SizedBox(height: 12),
                   _buildConnectionStatusCards(context),
                   const SizedBox(height: 16),
@@ -331,6 +343,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
   }
 
   Widget _buildWindowsDevicePanel(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return _winSectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -340,7 +353,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
             child: Row(
               children: [
                 Text(
-                  'Available printers',
+                  loc.available_printers,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -351,21 +364,24 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                 SizedBox(
                   width: 380,
                   child: SegmentedButton<int>(
-                    segments: const [
+                    segments: [
                       ButtonSegment(
                         value: 0,
-                        icon: Icon(Icons.bluetooth_rounded, size: 18),
-                        label: Text('Bluetooth'),
+                        icon: const Icon(Icons.bluetooth_rounded, size: 18),
+                        label: Text(loc.bluetooth),
                       ),
                       ButtonSegment(
                         value: 1,
-                        icon: Icon(Icons.usb_rounded, size: 18),
-                        label: Text('USB'),
+                        icon: const Icon(Icons.usb_rounded, size: 18),
+                        label: Text(loc.usb),
                       ),
                       ButtonSegment(
                         value: 2,
-                        icon: Icon(Icons.settings_ethernet_rounded, size: 18),
-                        label: Text('Ethernet'),
+                        icon: const Icon(
+                          Icons.settings_ethernet_rounded,
+                          size: 18,
+                        ),
+                        label: Text(loc.ethernet),
                       ),
                     ],
                     selected: {_tabController.index},
@@ -404,6 +420,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
   }
 
   Widget _buildWindowsHelpCard(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return _winSectionCard(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -413,8 +430,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
           const Gap(12),
           Expanded(
             child: Text(
-              'Assign Bill for counter receipts and KOT for kitchen tickets. '
-              'Use USB, Bluetooth, or Ethernet (LAN) depending on your setup.',
+              loc.printer_help_assign_bill_kot,
               style: TextStyle(
                 fontSize: 13,
                 height: 1.45,
@@ -524,6 +540,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
     required PrinterScreen2ConnLink link,
   }) {
     return Obx(() {
+      final loc = AppLocalizations.of(context)!;
       final bool connected;
       final String connectionType;
       final String connectionName;
@@ -533,16 +550,16 @@ class _PrinterScreen2State extends State<PrinterScreen2>
       switch (link) {
         case PrinterScreen2ConnLink.bleThermal:
           connected = thermalPrinter.connectedBleDeviceId.value != null;
-          connectionType = 'Bluetooth (BLE)';
+          connectionType = loc.bluetooth_ble;
           if (!connected) {
-            connectionName = 'No Bluetooth printer connected';
+            connectionName = loc.no_bluetooth_printer_connected;
             statusIcon = Icons.bluetooth_disabled_rounded;
           } else {
             final platformName = thermalPrinter.connectedDevice?.platformName;
             connectionName =
                 (platformName != null && platformName.trim().isNotEmpty)
                 ? platformName
-                : 'BLE Printer';
+                : loc.ble_printer;
             statusIcon = Icons.bluetooth_connected_rounded;
           }
           onDisconnect = connected
@@ -553,13 +570,13 @@ class _PrinterScreen2State extends State<PrinterScreen2>
           break;
         case PrinterScreen2ConnLink.usbThermal:
           connected = thermalPrinter.isUsbConnected.value;
-          connectionType = 'USB';
+          connectionType = loc.usb;
           if (!connected) {
-            connectionName = 'No USB printer connected';
+            connectionName = loc.no_usb_printer_connected;
             statusIcon = Icons.usb_off_rounded;
           } else {
             connectionName =
-                thermalPrinter.connectedUsbPrinter?.name ?? 'USB Printer';
+                thermalPrinter.connectedUsbPrinter?.name ?? loc.usb_printer;
             statusIcon = Icons.usb_rounded;
           }
           onDisconnect = connected
@@ -570,13 +587,14 @@ class _PrinterScreen2State extends State<PrinterScreen2>
           break;
         case PrinterScreen2ConnLink.ethernet:
           connected = thermalPrinter.isNetworkConnected.value;
-          connectionType = 'Ethernet / LAN';
+          connectionType = loc.ethernet_lan;
           if (!connected) {
-            connectionName = 'No Ethernet printer connected';
+            connectionName = loc.no_ethernet_printer_connected;
             statusIcon = Icons.portable_wifi_off_rounded;
           } else {
             connectionName =
-                thermalPrinter.connectedNetworkLabel.value ?? 'Connected';
+                thermalPrinter.connectedNetworkLabel.value ??
+                loc.connected_status;
             statusIcon = Icons.settings_ethernet_rounded;
           }
           onDisconnect = connected
@@ -587,13 +605,14 @@ class _PrinterScreen2State extends State<PrinterScreen2>
           break;
         case PrinterScreen2ConnLink.classicBluetooth:
           connected = printerService.isConnected.value;
-          connectionType = 'Bluetooth (paired)';
+          connectionType = loc.bluetooth_paired;
           if (!connected) {
-            connectionName = 'No paired printer connected';
+            connectionName = loc.no_paired_printer_connected;
             statusIcon = Icons.bluetooth_disabled_rounded;
           } else {
             connectionName =
-                printerService.selectedPrinter.value?.name ?? 'Printer';
+                printerService.selectedPrinter.value?.name ??
+                loc.printer_fallback_name;
             statusIcon = Icons.bluetooth_connected_rounded;
           }
           onDisconnect = connected
@@ -637,7 +656,9 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                connected ? 'ONLINE' : 'OFFLINE',
+                                connected
+                                    ? loc.status_online
+                                    : loc.status_offline,
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w800,
@@ -679,7 +700,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                   child: OutlinedButton.icon(
                     onPressed: onDisconnect,
                     icon: const Icon(Icons.link_off_rounded, size: 18),
-                    label: const Text('Disconnect'),
+                    label: Text(loc.disconnect),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.red.shade700,
                       side: BorderSide(color: Colors.red.shade200),
@@ -751,7 +772,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                   child: TextButton.icon(
                     onPressed: onDisconnect,
                     icon: const Icon(Icons.link_off, size: 18),
-                    label: const Text('Disconnect'),
+                    label: Text(loc.disconnect),
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.red.shade700,
                     ),
@@ -765,7 +786,175 @@ class _PrinterScreen2State extends State<PrinterScreen2>
     });
   }
 
+  Widget _buildPaperSizeCard(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+    return Obx(() {
+      final selected = roleController.selectedPaperSize.value;
+      final segments = [
+        ButtonSegment<ThermalPaperSize>(
+          value: ThermalPaperSize.mm58,
+          label: Text(loc.paper_size_2inch),
+        ),
+        ButtonSegment<ThermalPaperSize>(
+          value: ThermalPaperSize.mm80,
+          label: Text(loc.paper_size_3inch),
+        ),
+        ButtonSegment<ThermalPaperSize>(
+          value: ThermalPaperSize.mm104,
+          label: Text(loc.paper_size_4inch),
+        ),
+      ];
+
+      if (_isWindowsDesktop) {
+        return _winSectionCard(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _sectionHeader(loc.paper_size, subtitle: loc.paper_size_subtitle),
+              const Gap(12),
+              SegmentedButton<ThermalPaperSize>(
+                style: SegmentedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  backgroundColor: Colors.grey.shade200,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  selectedForegroundColor: Colors.white,
+                  foregroundColor: AppColor.primary,
+                ),
+                segments: segments,
+                selected: {selected},
+                onSelectionChanged: (set) {
+                  final size = set.first;
+                  if (size != selected) {
+                    roleController.setPaperSize(size);
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      }
+
+      return Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(
+            color: Theme.of(
+              context,
+            ).colorScheme.outlineVariant.withOpacity(0.4),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                loc.paper_size,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                loc.paper_size_subtitle,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.65),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SegmentedButton<ThermalPaperSize>(
+                segments: segments,
+                selected: {selected},
+                onSelectionChanged: (set) {
+                  final size = set.first;
+                  if (size != selected) {
+                    roleController.setPaperSize(size);
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildCashDrawerCard(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+    final appPref = Get.find<AppPref>();
+    if (!appPref.cashDrawerEnabled) {
+      return const SizedBox.shrink();
+    }
+
+    return Obx(() {
+      final loading = roleController.isRoleActionLoading.value;
+      final billConfigured =
+          roleController.savedBillPrinterName.value?.isNotEmpty == true;
+      final cardChild = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _sectionHeader(
+            loc.cash_drawer,
+            subtitle: loc.cash_drawer_printer_help,
+          ),
+          const Gap(12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: loading || !billConfigured
+                  ? null
+                  : roleController.testOpenCashDrawer,
+              icon: const Icon(Icons.point_of_sale_outlined, size: 18),
+              label: Text(loc.test_cash_drawer),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColor.primary,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+          if (!billConfigured) ...[
+            const Gap(8),
+            Text(
+              loc.cash_drawer_assign_bill_printer_first,
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withOpacity(0.65),
+              ),
+            ),
+          ],
+        ],
+      );
+
+      if (_isWindowsDesktop) {
+        return _winSectionCard(padding: const EdgeInsets.all(16), child: cardChild);
+      }
+
+      return Card(
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(
+            color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.4),
+          ),
+        ),
+        child: Padding(padding: const EdgeInsets.all(14), child: cardChild),
+      );
+    });
+  }
+
   Widget _buildMultiplePrinterSettingsCard(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
     return Obx(() {
       if (Get.isRegistered<HomeScreenController>()) {
@@ -777,7 +966,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
       final billTile = _buildRolePrinterTile(
         context,
         icon: Icons.receipt_long_outlined,
-        title: 'Bill Printer',
+        title: loc.bill_printer,
         name: roleController.savedBillPrinterName.value,
         connectionType: roleController.savedBillPrinterType.value,
         onTest: () => roleController.testPrintForRole(PrintRole.bill),
@@ -787,7 +976,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
           ? _buildRolePrinterTile(
               context,
               icon: Icons.restaurant_menu_outlined,
-              title: 'KOT Printer',
+              title: loc.kot_printer,
               name: roleController.savedKotPrinterName.value,
               connectionType: roleController.savedKotPrinterType.value,
               onTest: () => roleController.testPrintForRole(PrintRole.kot),
@@ -807,8 +996,8 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                 children: [
                   Expanded(
                     child: _sectionHeader(
-                      'Print routing',
-                      subtitle: 'Assign bill and KOT printers separately.',
+                      loc.print_routing,
+                      subtitle: loc.print_routing_subtitle,
                     ),
                   ),
                   if (loading)
@@ -836,7 +1025,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                         ? null
                         : roleController.useSamePrinterForKot,
                     icon: const Icon(Icons.copy_all_rounded, size: 18),
-                    label: const Text('Use bill printer for KOT'),
+                    label: Text(loc.use_bill_printer_for_kot),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColor.primary,
                       side: BorderSide(color: Colors.grey.shade300),
@@ -863,10 +1052,10 @@ class _PrinterScreen2State extends State<PrinterScreen2>
             children: [
               Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Multiple Printer Settings',
-                      style: TextStyle(fontWeight: FontWeight.w700),
+                      loc.multiple_printer_settings,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
                   if (loading)
@@ -879,7 +1068,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
               ),
               const SizedBox(height: 4),
               Text(
-                'Tap Bill or KOT on a device below.',
+                loc.tap_bill_or_kot_below,
                 style: TextStyle(
                   fontSize: 12,
                   color: colorScheme.onSurface.withOpacity(0.65),
@@ -898,7 +1087,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                       onPressed: loading
                           ? null
                           : roleController.useSamePrinterForKot,
-                      child: const Text('Use same as Bill printer'),
+                      child: Text(loc.use_same_as_bill_printer),
                     ),
                   ),
               ],
@@ -918,9 +1107,10 @@ class _PrinterScreen2State extends State<PrinterScreen2>
     required VoidCallback onTest,
     required VoidCallback onClear,
   }) {
+    final loc = AppLocalizations.of(context)!;
     final configured = name != null && name.isNotEmpty;
     final colorScheme = Theme.of(context).colorScheme;
-    final isKot = title.contains('KOT');
+    final isKot = title == loc.kot_printer;
     final accent = isKot ? AppColor.secondaryPrimary : AppColor.primary;
 
     if (_isWindowsDesktop) {
@@ -987,9 +1177,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                       ],
                       const Gap(6),
                       Text(
-                        configured
-                            ? name
-                            : 'Not assigned — pick Bill or KOT below',
+                        configured ? name : loc.not_assigned_pick_below,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -1013,7 +1201,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                     child: OutlinedButton.icon(
                       onPressed: onTest,
                       icon: const Icon(Icons.print_outlined, size: 17),
-                      label: const Text('Test print'),
+                      label: Text(loc.test_print),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColor.primary,
                         side: BorderSide(color: Colors.grey.shade300),
@@ -1023,7 +1211,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                   ),
                   const Gap(8),
                   Tooltip(
-                    message: 'Remove assignment',
+                    message: loc.remove_assignment,
                     child: IconButton(
                       visualDensity: VisualDensity.compact,
                       onPressed: onClear,
@@ -1069,7 +1257,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                 Text(
                   configured
                       ? '$name${connectionType != null ? ' · $connectionType' : ''}'
-                      : 'Not assigned',
+                      : loc.not_assigned,
                   style: TextStyle(
                     fontSize: 12,
                     color: colorScheme.onSurface.withOpacity(0.7),
@@ -1164,11 +1352,13 @@ class _PrinterScreen2State extends State<PrinterScreen2>
   }
 
   Widget _buildAssignRoleButtons({
+    required BuildContext context,
     required VoidCallback onBill,
     required VoidCallback onKot,
     bool billSelected = false,
     bool kotSelected = false,
   }) {
+    final loc = AppLocalizations.of(context)!;
     if (Get.isRegistered<HomeScreenController>()) {
       Get.find<HomeScreenController>().selectedOutlet.value;
     }
@@ -1179,7 +1369,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
         mainAxisSize: MainAxisSize.min,
         children: [
           _roleActionChip(
-            label: 'Bill',
+            label: loc.bill_label,
             color: AppColor.primary,
             onPressed: onBill,
             selected: billSelected,
@@ -1187,7 +1377,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
           if (showKot) ...[
             const Gap(6),
             _roleActionChip(
-              label: 'KOT',
+              label: loc.kot_label,
               color: AppColor.secondaryPrimary,
               onPressed: onKot,
               selected: kotSelected,
@@ -1201,7 +1391,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
       mainAxisSize: MainAxisSize.min,
       children: [
         _mobileRoleButton(
-          label: 'Bill',
+          label: loc.bill_label,
           color: AppColor.primary,
           onPressed: onBill,
           selected: billSelected,
@@ -1209,7 +1399,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
         if (showKot) ...[
           const Gap(4),
           _mobileRoleButton(
-            label: 'KOT',
+            label: loc.kot_label,
             color: AppColor.secondaryPrimary,
             onPressed: onKot,
             selected: kotSelected,
@@ -1219,11 +1409,15 @@ class _PrinterScreen2State extends State<PrinterScreen2>
     );
   }
 
-  Widget _buildAssignRoleButtonsForBle(BluetoothDevice device) {
+  Widget _buildAssignRoleButtonsForBle(
+    BuildContext context,
+    BluetoothDevice device,
+  ) {
     return Obx(() {
       roleController.billRoleInfo.value;
       roleController.kotRoleInfo.value;
       return _buildAssignRoleButtons(
+        context: context,
         onBill: () =>
             roleController.assignBluetoothToRole(PrintRole.bill, device),
         onKot: () =>
@@ -1234,11 +1428,12 @@ class _PrinterScreen2State extends State<PrinterScreen2>
     });
   }
 
-  Widget _buildAssignRoleButtonsForUsb(Printer printer) {
+  Widget _buildAssignRoleButtonsForUsb(BuildContext context, Printer printer) {
     return Obx(() {
       roleController.billRoleInfo.value;
       roleController.kotRoleInfo.value;
       return _buildAssignRoleButtons(
+        context: context,
         onBill: () => roleController.assignUsbToRole(PrintRole.bill, printer),
         onKot: () => roleController.assignUsbToRole(PrintRole.kot, printer),
         billSelected: roleController.isBillUsbPrinter(printer),
@@ -1248,6 +1443,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
   }
 
   Widget _buildAssignRoleButtonsForClassicBt({
+    required BuildContext context,
     required String address,
     required String name,
   }) {
@@ -1255,6 +1451,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
       roleController.billRoleInfo.value;
       roleController.kotRoleInfo.value;
       return _buildAssignRoleButtons(
+        context: context,
         onBill: () => roleController.assignClassicBluetoothToRole(
           PrintRole.bill,
           address: address,
@@ -1399,6 +1596,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
   }
 
   Widget _buildBluetoothTab() {
+    final loc = AppLocalizations.of(context)!;
     if (Platform.isWindows) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1408,7 +1606,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
               Expanded(
                 child: _buildWinSearchField(
                   controller: _bleSearchController,
-                  hint: 'Search Bluetooth devices…',
+                  hint: loc.search_bluetooth_devices_hint,
                   showClear: _bleSearchQuery.isNotEmpty,
                   onClear: () {
                     _bleSearchController.clear();
@@ -1421,7 +1619,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
               FilledButton.icon(
                 onPressed: () => thermalPrinter.startScan(),
                 icon: const Icon(Icons.radar_rounded, size: 20),
-                label: const Text('Scan'),
+                label: Text(loc.scan),
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColor.primary,
                   foregroundColor: Colors.white,
@@ -1444,7 +1642,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                       const CircularProgressIndicator(),
                       const Gap(16),
                       Text(
-                        'Scanning for nearby printers…',
+                        loc.scanning_nearby_printers,
                         style: TextStyle(
                           color: AppColor.primary.withOpacity(0.6),
                         ),
@@ -1471,8 +1669,8 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                 return _buildEmptyState(
                   icon: Icons.bluetooth_disabled_rounded,
                   message: query.isEmpty
-                      ? 'No Bluetooth printers found.\nTurn on the printer and tap Scan.'
-                      : 'No devices match your search.',
+                      ? loc.no_bluetooth_printers_found
+                      : loc.no_devices_match_search,
                 );
               }
 
@@ -1495,7 +1693,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                       actions: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          _buildAssignRoleButtonsForBle(device),
+                          _buildAssignRoleButtonsForBle(context, device),
                           const Gap(8),
                           Obx(() {
                             final deviceId = device.remoteId.toString();
@@ -1544,12 +1742,12 @@ class _PrinterScreen2State extends State<PrinterScreen2>
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
-            children: const [
-              Icon(Icons.bluetooth),
-              SizedBox(width: 8),
+            children: [
+              const Icon(Icons.bluetooth),
+              const SizedBox(width: 8),
               Text(
-                'Paired Bluetooth Devices',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                loc.paired_bluetooth_devices,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -1562,7 +1760,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
               return const Center(child: CircularProgressIndicator());
             }
             if (devices.isEmpty) {
-              return const Center(child: Text('No paired devices found'));
+              return Center(child: Text(loc.no_paired_devices_found));
             }
 
             return Scrollbar(
@@ -1600,6 +1798,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             _buildAssignRoleButtonsForClassicBt(
+                              context: context,
                               address: device.address,
                               name: device.name,
                             ),
@@ -1633,7 +1832,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
             width: double.infinity,
             child: ElevatedButton.icon(
               icon: const Icon(Icons.search),
-              label: const Text('Scan Devices'),
+              label: Text(loc.scan_devices),
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size.fromHeight(50),
               ),
@@ -1648,6 +1847,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
   }
 
   Widget _buildUsbTab() {
+    final loc = AppLocalizations.of(context)!;
     if (_isWindowsDesktop) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1657,7 +1857,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
               Expanded(
                 child: _buildWinSearchField(
                   controller: _usbSearchController,
-                  hint: 'Search USB printers…',
+                  hint: loc.search_usb_printers_hint,
                   showClear: _usbSearchQuery.isNotEmpty,
                   onClear: () {
                     _usbSearchController.clear();
@@ -1683,7 +1883,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                           ),
                         )
                       : const Icon(Icons.usb_rounded, size: 20),
-                  label: Text(isScanning ? 'Scanning' : 'Scan'),
+                  label: Text(isScanning ? loc.scanning : loc.scan),
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColor.primary,
                     foregroundColor: Colors.white,
@@ -1721,7 +1921,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                       const CircularProgressIndicator(),
                       const Gap(16),
                       Text(
-                        'Looking for USB printers…',
+                        loc.looking_for_usb_printers,
                         style: TextStyle(
                           color: AppColor.primary.withOpacity(0.6),
                         ),
@@ -1735,8 +1935,8 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                 return _buildEmptyState(
                   icon: Icons.usb_off_rounded,
                   message: query.isEmpty
-                      ? 'No USB printers found.\nConnect the cable and tap Scan.'
-                      : 'No USB printers match your search.',
+                      ? loc.no_usb_printers_found
+                      : loc.no_usb_printers_match_search,
                 );
               }
 
@@ -1761,12 +1961,12 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                     return _buildWindowsDeviceRow(
                       icon: Icons.usb_rounded,
                       iconColor: AppColor.secondaryPrimary,
-                      title: printer.name ?? 'USB Printer',
+                      title: printer.name ?? loc.usb_printer,
                       subtitle: ids.isNotEmpty ? ids : (printer.address ?? ''),
                       actions: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          _buildAssignRoleButtonsForUsb(printer),
+                          _buildAssignRoleButtonsForUsb(context, printer),
                           const Gap(8),
                           Obx(() {
                             final isConnected =
@@ -1809,7 +2009,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
-            'USB printers',
+            loc.usb_printers,
             style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
         ),
@@ -1818,9 +2018,9 @@ class _PrinterScreen2State extends State<PrinterScreen2>
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: TextField(
             controller: _usbSearchController,
-            decoration: const InputDecoration(
-              hintText: 'Search printers…',
-              prefixIcon: Icon(Icons.search),
+            decoration: InputDecoration(
+              hintText: loc.search_printers_hint,
+              prefixIcon: const Icon(Icons.search),
             ),
             onChanged: (v) => setState(() => _usbSearchQuery = v),
           ),
@@ -1838,7 +2038,9 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.usb),
-              label: Text(isScanning ? 'Scanning…' : 'Scan USB'),
+              label: Text(
+                isScanning ? loc.scanning_ellipsis : loc.scan_usb_printers,
+              ),
               onPressed: isScanning ? null : thermalPrinter.scanUsbPrinters,
             ),
           );
@@ -1855,7 +2057,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                     return name.contains(query);
                   }).toList();
             if (filtered.isEmpty) {
-              return const Center(child: Text('No USB printers found'));
+              return Center(child: Text(loc.no_usb_printers_found));
             }
             return ListView.separated(
               itemCount: filtered.length,
@@ -1865,13 +2067,13 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                 final printerKey = ThermalPrinterService.usbPrinterKey(printer);
                 return ListTile(
                   leading: const Icon(Icons.usb),
-                  title: Text(printer.name ?? 'USB Printer'),
+                  title: Text(printer.name ?? loc.usb_printer),
                   trailing: SizedBox(
                     width: 220,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        _buildAssignRoleButtonsForUsb(printer),
+                        _buildAssignRoleButtonsForUsb(context, printer),
                         Obx(() {
                           final isConnected =
                               thermalPrinter.connectedUsbPrinterKey.value ==
@@ -1906,6 +2108,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
   }
 
   Widget _buildEthernetTab(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final padding = _isWindowsDesktop ? 20.0 : 16.0;
 
@@ -1913,7 +2116,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
       padding: EdgeInsets.all(padding),
       children: [
         Text(
-          'Printer IP on your network (port 9100).',
+          loc.printer_ip_network_hint,
           style: TextStyle(
             fontSize: _isWindowsDesktop ? 13 : 12,
             color: AppColor.primary.withOpacity(0.65),
@@ -1925,14 +2128,12 @@ class _PrinterScreen2State extends State<PrinterScreen2>
           controller: roleController.ipController,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
-            labelText: 'IP address',
+            labelText: loc.ip_address,
             hintText: '192.168.1.100',
             filled: true,
             fillColor: Colors.white,
             isDense: true,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             prefixIcon: const Icon(Icons.router_outlined, size: 20),
           ),
         ),
@@ -1941,14 +2142,12 @@ class _PrinterScreen2State extends State<PrinterScreen2>
           controller: roleController.portController,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
-            labelText: 'Port',
+            labelText: loc.port_label,
             hintText: '9100',
             filled: true,
             fillColor: Colors.white,
             isDense: true,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             prefixIcon: const Icon(Icons.numbers, size: 20),
           ),
         ),
@@ -1964,12 +2163,14 @@ class _PrinterScreen2State extends State<PrinterScreen2>
               width: btnWidth,
               height: btnHeight,
               child: FilledButton(
-                onPressed: connecting || roleController.isRoleActionLoading.value
+                onPressed:
+                    connecting || roleController.isRoleActionLoading.value
                     ? null
                     : roleController.connectEthernet,
                 style: FilledButton.styleFrom(
-                  backgroundColor:
-                      connected ? Colors.red.shade400 : AppColor.primary,
+                  backgroundColor: connected
+                      ? Colors.red.shade400
+                      : AppColor.primary,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   minimumSize: Size(btnWidth, btnHeight),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1987,7 +2188,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                         ),
                       )
                     : Text(
-                        connected ? 'Disconnect' : 'Connect',
+                        connected ? loc.disconnect : loc.connect,
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
@@ -2011,7 +2212,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  ip.isEmpty ? 'Enter IP above' : '$ip:$port',
+                  ip.isEmpty ? loc.enter_ip_above : '$ip:$port',
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: _isWindowsDesktop ? 15 : 14,
@@ -2020,6 +2221,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                 ),
                 const Gap(10),
                 _buildAssignRoleButtons(
+                  context: context,
                   onBill: () =>
                       roleController.assignNetworkToRole(PrintRole.bill),
                   onKot: () =>
@@ -2037,8 +2239,10 @@ class _PrinterScreen2State extends State<PrinterScreen2>
             final connected = thermalPrinter.isNetworkConnected.value;
             return Text(
               connected
-                  ? 'Connected: ${thermalPrinter.connectedNetworkLabel.value ?? ''}'
-                  : 'Not connected',
+                  ? loc.connected_to_label(
+                      thermalPrinter.connectedNetworkLabel.value ?? '',
+                    )
+                  : loc.not_connected,
               style: TextStyle(
                 fontSize: 12,
                 color: connected ? AppColor.lightgreen : scheme.error,

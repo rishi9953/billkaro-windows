@@ -1,6 +1,7 @@
+import 'package:billkaro/app/Widgets/gstin_verify_row.dart';
 import 'package:billkaro/app/modules/BusinessDetails/business_details_controller.dart';
-import 'package:billkaro/app/services/Network/urls.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:flutter/material.dart';
 
 class BusinessDetailsScreen extends StatelessWidget {
@@ -23,6 +24,13 @@ class BusinessDetailsScreen extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
+        actions: [
+          IconButton(
+            onPressed: controller.refreshData,
+            icon: const Icon(Icons.refresh),
+            tooltip: loc.refresh,
+          ),
+        ],
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -39,6 +47,7 @@ class BusinessDetailsScreen extends StatelessWidget {
               title: loc.business_details,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
+
                 children: [
                   _ResponsiveGrid(
                     isDesktop: isDesktop,
@@ -72,8 +81,7 @@ class BusinessDetailsScreen extends StatelessWidget {
                         label: loc.upi_id,
                         controller: controller.upiIdController,
                         hint: loc.tap_to_enter,
-                        helperText:
-                            'This will be used to print QR on bills',
+                        helperText: 'This will be used to print QR on bills',
                       ),
                       _buildTextField(
                         label: loc.custom_footer_message_on_bills,
@@ -135,6 +143,12 @@ class BusinessDetailsScreen extends StatelessWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 10),
+                  GstinVerifyRow(
+                    helper: controller.gstinVerify,
+                    onVerify: controller.verifyGstin,
+                    alignEnd: true,
+                  ),
                 ],
               ),
             ),
@@ -172,30 +186,35 @@ class BusinessDetailsScreen extends StatelessWidget {
                 maxLines: 3,
               ),
             ),
-            const SizedBox(height: 16),
-            _DangerZone(
-              child: SizedBox(
-                width: double.infinity,
-                height: 44,
-                child: ElevatedButton(
-                  onPressed: controller.deleteOutlet,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Text(
-                    loc.delete_outlet,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+            if (StaffAccess.isOwnerSession) ...[
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerRight,
+                child: _DangerZone(
+                  child: SizedBox(
+                    height: 44,
+                    child: ElevatedButton(
+                      onPressed: controller.deleteOutlet,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        loc.delete_outlet,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
+            ],
             const SizedBox(height: 24),
           ];
 
@@ -219,7 +238,8 @@ class BusinessDetailsScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              _buildBottomButtons(maxWidth: contentMaxWidth),
+              if (StaffAccess.isOwnerSession)
+                _buildBottomButtons(maxWidth: contentMaxWidth),
             ],
           );
         },
@@ -398,113 +418,111 @@ class BusinessDetailsScreen extends StatelessWidget {
 
   Widget _buildLogoSection() {
     var loc = AppLocalizations.of(Get.context!)!;
-    return Obx(
-      () {
-        final file = controller.businessLogo.value;
-        final raw = controller.imageUrl.value.isNotEmpty
-            ? controller.imageUrl.value
-            : (controller.selectedOutlet.value?.logo ?? '');
-        final url = resolvedMediaUrl(raw);
+    return Obx(() {
+      final file = controller.businessLogo.value;
+      final raw = controller.imageUrl.value.isNotEmpty
+          ? controller.imageUrl.value
+          : (controller.selectedOutlet.value?.logo ?? '');
+      final url = resolvedMediaUrl(raw);
 
-        Widget buildImage() {
-          if (file != null) {
-            return Image.file(
-              file,
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.high,
-            );
-          }
-          if (url.isNotEmpty) {
-            return Image.network(
-              url,
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.high,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return Center(
-                  child: SizedBox(
-                    width: 28,
-                    height: 28,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.grey[400],
-                    ),
-                  ),
-                );
-              },
-              errorBuilder: (_, __, ___) => _buildLogoEmptyState(loc),
-            );
-          }
-          return _buildLogoEmptyState(loc);
+      Widget buildImage() {
+        if (file != null) {
+          return Image.file(
+            file,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.high,
+          );
         }
-
-        final hasLogo = file != null || url.isNotEmpty;
-
-        return InkWell(
-          onTap: controller.pickImage,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[300]!),
-            ),
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  loc.logo,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+        if (url.isNotEmpty) {
+          return Image.network(
+            url,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.high,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Center(
+                child: SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.grey[400],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  loc.upload_business_logo,
-                  style: TextStyle(color: Colors.grey[700], fontSize: 12),
-                ),
-                const SizedBox(height: 10),
-                AspectRatio(
-                  aspectRatio: 16 / 6,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.grey[200]!),
-                    ),
-                    padding: const EdgeInsets.all(8),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Center(child: buildImage()),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.upload_file, size: 16, color: AppColor.primary),
-                    const SizedBox(width: 8),
-                    Text(
-                      hasLogo ? 'Change logo' : 'Upload logo',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColor.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              );
+            },
+            errorBuilder: (_, __, ___) => _buildLogoEmptyState(loc),
+          );
+        }
+        return _buildLogoEmptyState(loc);
+      }
+
+      final hasLogo = file != null || url.isNotEmpty;
+
+      return InkWell(
+        onTap: controller.pickImage,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[300]!),
           ),
-        );
-      },
-    );
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                loc.logo,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                loc.upload_business_logo,
+                style: TextStyle(color: Colors.grey[700], fontSize: 12),
+              ),
+              const SizedBox(height: 10),
+              AspectRatio(
+                aspectRatio: 16 / 6,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  padding: const EdgeInsets.all(8),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Center(child: buildImage()),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.upload_file, size: 16, color: AppColor.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    hasLogo ? 'Change logo' : 'Upload logo',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColor.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    });
   }
 
   Widget _buildLogoEmptyState(AppLocalizations loc) {

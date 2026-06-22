@@ -2,6 +2,8 @@ import 'package:billkaro/app/modules/AddOrder/add_order_controller.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/Home/showcase_controller.dart';
 import 'package:billkaro/app/modules/OrderPrefrences/order_prefrences_controller.dart';
+import 'package:billkaro/app/services/printerService.dart/thermal_printer/helpers/cash_drawer_helper.dart';
+import 'package:billkaro/app/services/sync/sync_manager.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/download_path_util.dart';
 import 'package:file_selector/file_selector.dart';
@@ -13,6 +15,10 @@ class AppSettingsController extends BaseController {
   late final RxBool _showAddDetailsOnCreateOrder;
   RxBool get showAddDetailsOnCreateOrder => _showAddDetailsOnCreateOrder;
   late final RxBool kotModeEnabled;
+  late final RxBool autoSyncEnabled;
+  late final RxBool cashDrawerEnabled;
+  late final RxBool openCashDrawerOnCashPayment;
+  late final RxString cashDrawerPin;
   late final RxString downloadPath;
 
   @override
@@ -23,6 +29,10 @@ class AppSettingsController extends BaseController {
     showQrOnBill = appPref.showQrOnBill.obs;
     _showAddDetailsOnCreateOrder = appPref.showAddDetailsOnCreateOrder.obs;
     kotModeEnabled = appPref.isKOT.obs;
+    autoSyncEnabled = appPref.autoSyncEnabled.obs;
+    cashDrawerEnabled = appPref.cashDrawerEnabled.obs;
+    openCashDrawerOnCashPayment = appPref.openCashDrawerOnCashPayment.obs;
+    cashDrawerPin = appPref.cashDrawerPin.obs;
     downloadPath = appPref.downloadPath.obs;
     _ensureDefaultDownloadPath();
   }
@@ -74,6 +84,34 @@ class AppSettingsController extends BaseController {
     }
   }
 
+  Future<void> setAutoSyncEnabled(bool value) async {
+    appPref.autoSyncEnabled = value;
+    autoSyncEnabled.value = value;
+
+    if (value) {
+      await SyncManager().enableAutoSync();
+      await SyncManager().triggerSync(immediate: true, fromReconnect: false);
+    } else {
+      SyncManager().disableAutoSync();
+    }
+  }
+
+  void setCashDrawerEnabled(bool value) {
+    appPref.cashDrawerEnabled = value;
+    cashDrawerEnabled.value = value;
+  }
+
+  void setOpenCashDrawerOnCashPayment(bool value) {
+    appPref.openCashDrawerOnCashPayment = value;
+    openCashDrawerOnCashPayment.value = value;
+  }
+
+  void setCashDrawerPin(CashDrawerPin pin) {
+    final key = cashDrawerPinStorageKey(pin);
+    appPref.cashDrawerPin = key;
+    cashDrawerPin.value = key;
+  }
+
   void resetOnboarding() {
     if (Get.isRegistered<ShowcaseController>()) {
       Get.find<ShowcaseController>().resetShowcaseForReplay();
@@ -84,8 +122,9 @@ class AppSettingsController extends BaseController {
 
   Future<void> pickDownloadPath() async {
     try {
+      final loc = AppLocalizations.of(Get.context!)!;
       final selectedPath = await getDirectoryPath(
-        confirmButtonText: 'Select folder',
+        confirmButtonText: loc.select_folder,
         initialDirectory: downloadPath.value.isNotEmpty
             ? downloadPath.value
             : null,
@@ -94,9 +133,10 @@ class AppSettingsController extends BaseController {
 
       appPref.downloadPath = selectedPath;
       downloadPath.value = selectedPath;
-      showSuccess(description: 'Download path updated');
+      showSuccess(description: loc.download_path_updated);
     } catch (e) {
-      showError(description: 'Unable to update download path');
+      final loc = AppLocalizations.of(Get.context!)!;
+      showError(description: loc.unable_to_update_download_path);
     }
   }
 

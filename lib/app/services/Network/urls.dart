@@ -3,6 +3,8 @@ import 'package:billkaro/app/services/Network/api_config.dart';
 class ApiConstants {
   static const String local = 'https://nmsmfkdd-3000.inc1.devtunnels.ms/api/';
   static const String prod = 'https://api.billkrochillkro.com/api/';
+  static const String instance = 'https://65.2.81.212/api/';
+  static const String dev = 'https://dev.api.billkrochillkro.com/api/';
 
   /// Default REST base when `.env` does not set `API_BASE_URL`.
   static const String defaultBase = prod;
@@ -47,12 +49,18 @@ const String user = 'users';
 const String orders = 'orders';
 const String subscriptions = 'subscription-plans';
 const String outletTables = 'outlet-tables';
+const String tableReservations = 'table-reservations';
 const String createPaymentOrder = 'payments/create-order';
 const String subscribe = 'payments/subscribe';
 const String businessTypes = 'services';
 const String forgotPass = 'auth/forgot-password';
+const String verifyEmail = 'auth/verify-email';
+const String checkEmail = 'auth/check-email';
+const String resendActivation = 'auth/resend-activation';
 const String printerOrder = 'printer-orders';
 const String staff = 'staff';
 const String staffLogin = 'auth/staff/login';
+const String staffProfile = 'outlets/staff/profile';
 const String activities = 'activities';
 const String kds = 'kds';
+const String inventory = 'inventory';

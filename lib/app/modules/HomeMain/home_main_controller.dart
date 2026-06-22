@@ -9,6 +9,7 @@ import 'package:billkaro/app/services/permissionService.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/app/services/PrinterService2/printer_service2.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_outlet_sync.dart';
 
 class HomeMainController extends BaseController {
   // Add your controller logic here
@@ -16,15 +17,33 @@ class HomeMainController extends BaseController {
   final Rx<OutletData?> selectedOutlet = Rx<OutletData?>(null);
 
   Future<void> getUserDetails() async {
+    final user = appPref.user;
+    if (user == null) return;
+
+    final bool isStaff = user.role == 'staff';
+    final String? profileId = isStaff ? user.id : appPref.ownerUserId;
+    if (profileId == null || profileId.isEmpty) return;
+
     final response = await callApi(
-      apiClient.getUserDetails(appPref.user!.id!),
+      isStaff
+          ? apiClient.getStaffProfile(profileId)
+          : apiClient.getUserDetails(profileId),
       showLoader: false,
     );
 
-    if (response?.status == 'success') {
-      appPref.user = response!.data;
+    if (response?.status != 'success' || response?.data == null) return;
 
-      // 🔁 Re-sync selected outlet from updated outlet list
+    if (isStaff) {
+      await StaffOutletSync.enrichAppPrefFromOwner(
+        appPref: appPref,
+        staffUser: response!.data,
+        apiClient: apiClient,
+      );
+    } else {
+      appPref.user = response!.data;
+    }
+
+    // 🔁 Re-sync selected outlet from updated outlet list
       final currentSelectedId = appPref.selectedOutlet?.id;
 
       if (currentSelectedId != null) {
@@ -47,7 +66,6 @@ class HomeMainController extends BaseController {
       }
 
       update(); // refresh UI
-    }
   }
 
   @override

@@ -1,74 +1,81 @@
 import 'dart:async';
 import 'dart:io' show Platform;
-import 'package:billkaro/app/Database/app_database.dart';
 import 'package:billkaro/app/services/Synchronisatioin/synchronisation.dart';
-import 'package:billkaro/app/services/Network/api_client.dart';
 import 'package:billkaro/app/services/Network/network_module.dart';
 import 'package:billkaro/app/services/notification/sync_notification_service.dart';
+import 'package:billkaro/app/services/sync/refresh_online_data.dart';
 import 'package:billkaro/config/config.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:workmanager/workmanager.dart';
 
-/// Sync Manager - Coordinates all synchronization activities
-/// Handles WorkManager tasks, connectivity changes, and manual sync triggers
+/// Coordinates offline → online sync: push pending orders, pull fresh data,
+/// and refresh all registered UI controllers.
 class SyncManager {
   static final SyncManager _instance = SyncManager._internal();
   factory SyncManager() => _instance;
   SyncManager._internal();
 
   final AppDatabase _db = AppDatabase();
-  final SyncNotificationService _notificationService = SyncNotificationService();
+  final SyncNotificationService _notificationService =
+      SyncNotificationService();
   StreamSubscription<bool>? _connectivitySubscription;
   bool _isSyncing = false;
+  bool _pendingSyncQueued = false;
+  bool _wasOffline = false;
   Timer? _retryTimer;
+  Timer? _reconnectDebounceTimer;
   Timer? _foregroundPeriodicTimer;
 
-  /// Unique task names for WorkManager
   static const String periodicSyncTask = 'periodicSyncTask';
   static const String connectivitySyncTask = 'connectivitySyncTask';
   static const String immediateSyncTask = 'immediateSyncTask';
 
-  /// Initialize sync manager
-  /// Sets up connectivity listener and periodic sync
+  static const Duration _reconnectDebounce = Duration(seconds: 2);
+  static const Duration _stabilityRecheck = Duration(milliseconds: 800);
+  bool get _autoSyncEnabled {
+    if (!Get.isRegistered<AppPref>()) return true;
+    return Get.find<AppPref>().autoSyncEnabled;
+  }
+
   Future<void> initialize() async {
     debugPrint('🔄 [SYNC MANAGER] Initializing...');
-    
-    // Initialize notification service
+
     try {
       await _notificationService.initialize();
     } catch (e) {
       debugPrint('⚠️ [SYNC MANAGER] Notification service init failed: $e');
     }
-    
-    // Register periodic sync task (runs every 15 minutes)
-    await _registerPeriodicSync();
-    
-    // Listen to connectivity changes
-    _setupConnectivityListener();
-    
+
+    _wasOffline = !ConnectivityHelper.instance.isConnected;
+    if (_autoSyncEnabled) {
+      await _registerPeriodicSync();
+      _setupConnectivityListener();
+    } else {
+      debugPrint('ℹ️ [SYNC MANAGER] Auto sync disabled by settings');
+    }
+
+    // Sync any leftover pending orders on cold start when already online.
+    if (_autoSyncEnabled && !_wasOffline) {
+      unawaited(triggerSync(immediate: true, fromReconnect: false));
+    }
+
     debugPrint('✅ [SYNC MANAGER] Initialized');
   }
 
-  /// Register periodic background sync task
   Future<void> _registerPeriodicSync() async {
-    // workmanager is only implemented on Android/iOS. On Windows/macOS/Linux/Web,
-    // we run periodic sync only while the app is open.
     final supportsWorkmanager =
         !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
     if (!supportsWorkmanager) {
       _foregroundPeriodicTimer?.cancel();
-      // Small initial delay to avoid impacting startup.
       Timer(const Duration(minutes: 1), () {
-        triggerSync(immediate: true);
+        triggerSync(immediate: true, fromReconnect: false);
       });
       _foregroundPeriodicTimer = Timer.periodic(
         const Duration(minutes: 15),
-        (_) => triggerSync(immediate: true),
+        (_) => triggerSync(immediate: true, fromReconnect: false),
       );
       debugPrint(
-        'ℹ️ [SYNC MANAGER] Workmanager not supported on this platform; '
-        'using foreground periodic sync only',
+        'ℹ️ [SYNC MANAGER] Foreground periodic sync enabled (15 min)',
       );
       return;
     }
@@ -91,30 +98,30 @@ class SyncManager {
     } catch (e, stack) {
       debugPrint('❌ [SYNC MANAGER] Failed to register periodic task: $e');
       debugPrint('❌ [SYNC MANAGER] Stack: $stack');
-      // Don't throw, just log the error
     }
   }
 
-  /// Setup connectivity change listener
   void _setupConnectivityListener() {
     try {
       _connectivitySubscription?.cancel();
-      
-      _connectivitySubscription = ConnectivityHelper.instance.onConnectivityChange.listen(
-        (isConnected) async {
-          try {
-            if (isConnected) {
-              debugPrint('🌐 [SYNC MANAGER] Internet connection restored');
-              // Wait a bit for connection to stabilize
-              await Future.delayed(const Duration(seconds: 2));
-              // Trigger immediate sync
-              await triggerSync(immediate: true);
-            } else {
-              debugPrint('📴 [SYNC MANAGER] Internet connection lost');
-            }
-          } catch (e) {
-            debugPrint('❌ [SYNC MANAGER] Error in connectivity listener: $e');
+
+      _connectivitySubscription =
+          ConnectivityHelper.instance.onConnectivityChange.listen(
+        (isConnected) {
+          if (!isConnected) {
+            _wasOffline = true;
+            _reconnectDebounceTimer?.cancel();
+            debugPrint('📴 [SYNC MANAGER] Internet connection lost');
+            return;
           }
+
+          debugPrint('🌐 [SYNC MANAGER] Connectivity restored — scheduling sync');
+          _reconnectDebounceTimer?.cancel();
+          _reconnectDebounceTimer = Timer(_reconnectDebounce, () async {
+            final fromReconnect = _wasOffline;
+            _wasOffline = false;
+            await triggerSync(immediate: true, fromReconnect: fromReconnect);
+          });
         },
         onError: (error) {
           debugPrint('❌ [SYNC MANAGER] Connectivity stream error: $error');
@@ -122,112 +129,153 @@ class SyncManager {
       );
     } catch (e) {
       debugPrint('❌ [SYNC MANAGER] Failed to setup connectivity listener: $e');
-      // Don't throw, just log the error
     }
   }
 
-  /// Trigger sync manually or automatically
-  /// [immediate] - If true, syncs immediately. If false, schedules via WorkManager
-  Future<void> triggerSync({bool immediate = false}) async {
+  /// Trigger sync manually or automatically.
+  Future<void> triggerSync({
+    bool immediate = false,
+    bool fromReconnect = false,
+    bool force = false,
+  }) async {
+    if (!_autoSyncEnabled && !force) {
+      debugPrint('⏸️ [SYNC MANAGER] Auto sync is disabled');
+      return;
+    }
+
     if (_isSyncing) {
-      debugPrint('⏳ [SYNC MANAGER] Sync already in progress');
+      _pendingSyncQueued = true;
+      debugPrint('⏳ [SYNC MANAGER] Sync in progress — queued follow-up');
       return;
     }
 
     if (immediate) {
-      // Sync immediately in foreground
-      await _performSync();
-    } else {
-      final supportsWorkmanager =
-          !kIsWeb && (Platform.isAndroid || Platform.isIOS);
-      if (!supportsWorkmanager) {
-        // No background scheduler on this platform; do it now.
-        await _performSync();
-        return;
-      }
+      await _performSync(fromReconnect: fromReconnect);
+      return;
+    }
 
-      // Schedule via WorkManager (background)
-      try {
-        await Workmanager().registerOneOffTask(
-          immediateSyncTask,
-          immediateSyncTask,
-          constraints: Constraints(
-            networkType: NetworkType.connected,
-          ),
-          initialDelay: const Duration(seconds: 5),
-        );
-        debugPrint('📅 [SYNC MANAGER] Sync task scheduled');
-      } catch (e) {
-        debugPrint('❌ [SYNC MANAGER] Failed to schedule sync: $e');
-        // Fallback to immediate sync
-        await _performSync();
-      }
+    final supportsWorkmanager =
+        !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+    if (!supportsWorkmanager) {
+      await _performSync(fromReconnect: fromReconnect);
+      return;
+    }
+
+    try {
+      await Workmanager().registerOneOffTask(
+        immediateSyncTask,
+        immediateSyncTask,
+        constraints: Constraints(networkType: NetworkType.connected),
+        initialDelay: const Duration(seconds: 5),
+      );
+      debugPrint('📅 [SYNC MANAGER] Sync task scheduled');
+    } catch (e) {
+      debugPrint('❌ [SYNC MANAGER] Failed to schedule sync: $e');
+      await _performSync(fromReconnect: fromReconnect);
     }
   }
 
-  /// Perform actual synchronization
-  Future<void> _performSync() async {
+  Future<void> _performSync({required bool fromReconnect}) async {
     if (_isSyncing) return;
 
     try {
       _isSyncing = true;
-      debugPrint('🔄 [SYNC MANAGER] Starting sync...');
+      debugPrint(
+        '🔄 [SYNC MANAGER] Starting sync (reconnect=$fromReconnect)...',
+      );
 
-      // Check internet connection
-      final isOnline = await NetworkUtils.hasInternetConnection();
-      if (!isOnline) {
-        debugPrint('⚠️ [SYNC MANAGER] No internet connection, skipping sync');
+      if (!await _verifyStableConnection()) {
+        debugPrint('⚠️ [SYNC MANAGER] Connection not stable — aborting sync');
         return;
       }
 
-      // Get API client (use Get.find if available, otherwise use NetworkModule)
-      ApiClient apiClient;
-      try {
-        apiClient = Get.find<ApiClient>();
-      } catch (e) {
-        // Fallback to NetworkModule if Get.find fails
-        apiClient = NetworkModule.getApiClient();
-      }
+      final ApiClient apiClient = _resolveApiClient();
       final syncService = Synchronisation(apiClient: apiClient);
 
-      // Sync pending orders with notification
-      // Only show notification if app is in foreground or background (not killed)
-      final showNotification = true; // You can make this conditional based on app state
-      await syncService.syncPendingOrders(_db, showNotification: showNotification);
+      final result = await syncService.syncPendingOrders(
+        _db,
+        showNotification: true,
+        fromReconnect: fromReconnect,
+        refreshUi: true,
+      );
 
-      debugPrint('✅ [SYNC MANAGER] Sync completed');
+      if (result.pendingRemaining > 0 && result.failedCount == 0) {
+        _scheduleRetry();
+      } else {
+        _retryTimer?.cancel();
+      }
+
+      debugPrint(
+        '✅ [SYNC MANAGER] Sync finished — synced=${result.syncedCount}, '
+        'pending=${result.pendingRemaining}',
+      );
     } catch (e, stack) {
       debugPrint('❌ [SYNC MANAGER] Sync failed: $e');
       debugPrint(stack.toString());
-      
-      // Retry after 5 minutes if failed
       _scheduleRetry();
     } finally {
       _isSyncing = false;
+
+      if (_pendingSyncQueued) {
+        _pendingSyncQueued = false;
+        debugPrint('🔁 [SYNC MANAGER] Running queued follow-up sync');
+        await triggerSync(immediate: true, fromReconnect: fromReconnect);
+      }
     }
   }
 
-  /// Schedule retry after failure
+  Future<bool> _verifyStableConnection() async {
+    if (!await NetworkUtils.hasInternetConnection()) {
+      return false;
+    }
+    await Future.delayed(_stabilityRecheck);
+    return NetworkUtils.hasInternetConnection();
+  }
+
+  ApiClient _resolveApiClient() {
+    try {
+      return Get.find<ApiClient>();
+    } catch (_) {
+      return NetworkModule.getApiClient();
+    }
+  }
+
   void _scheduleRetry() {
     _retryTimer?.cancel();
-    _retryTimer = Timer(const Duration(minutes: 5), () {
-      debugPrint('🔄 [SYNC MANAGER] Retrying sync after failure...');
-      triggerSync(immediate: true);
+    _retryTimer = Timer(const Duration(minutes: 2), () {
+      debugPrint('🔄 [SYNC MANAGER] Retrying sync after partial failure...');
+      triggerSync(immediate: true, fromReconnect: false);
     });
   }
 
-  /// Get sync status
   bool get isSyncing => _isSyncing;
 
-  /// Get pending orders count
   Future<int> getPendingOrdersCount() async {
-    final orders = await _db.getPendingOrders();
-    return orders.length;
+    return _db.countPendingOrders();
   }
 
-  /// Cancel all sync operations
+  /// Force a full online restore: sync + refresh (callable from UI).
+  Future<void> forceOnlineRestore() async {
+    await triggerSync(immediate: true, fromReconnect: true, force: true);
+    if (!await NetworkUtils.hasInternetConnection()) return;
+    await refreshControllersAfterOnlineSync();
+  }
+
+  Future<void> enableAutoSync() async {
+    if (!_autoSyncEnabled) return;
+    await _registerPeriodicSync();
+    _setupConnectivityListener();
+    debugPrint('✅ [SYNC MANAGER] Auto sync enabled');
+  }
+
+  void disableAutoSync() {
+    cancelSync();
+    debugPrint('⏸️ [SYNC MANAGER] Auto sync disabled');
+  }
+
   void cancelSync() {
     _retryTimer?.cancel();
+    _reconnectDebounceTimer?.cancel();
     _foregroundPeriodicTimer?.cancel();
     _connectivitySubscription?.cancel();
     final supportsWorkmanager =
@@ -239,10 +287,9 @@ class SyncManager {
     debugPrint('🛑 [SYNC MANAGER] All sync operations cancelled');
   }
 
-  /// Dispose resources
   void dispose() {
     cancelSync();
     _isSyncing = false;
+    _pendingSyncQueued = false;
   }
 }
-

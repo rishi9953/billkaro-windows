@@ -40,6 +40,8 @@ class _VoiceAddMenuItemsBottomSheetState
   Timer? _waveTimer;
   final _random = math.Random();
 
+  AppLocalizations get _loc => AppLocalizations.of(context)!;
+
   @override
   void initState() {
     super.initState();
@@ -108,7 +110,7 @@ class _VoiceAddMenuItemsBottomSheetState
     final micStatus = await Permission.microphone.request();
     if (!micStatus.isGranted) {
       if (mounted) {
-        _showSnack('Microphone permission is required to use voice input.');
+        _showSnack(_loc.microphone_permission_required);
       }
       return;
     }
@@ -127,12 +129,9 @@ class _VoiceAddMenuItemsBottomSheetState
         _stopWaveAnimation();
         final msg = e.errorMsg.toLowerCase();
         if (msg.contains('network') || msg.contains('connection')) {
-          _showSnack(
-            'Voice input requires an internet connection. '
-            'Please check your connection and try again.',
-          );
+          _showSnack(_loc.voice_input_requires_internet);
         } else {
-          _showSnack('Voice error: ${e.errorMsg}');
+          _showSnack(_loc.voice_error(e.errorMsg));
         }
       },
     );
@@ -147,10 +146,7 @@ class _VoiceAddMenuItemsBottomSheetState
     }
 
     if (!ConnectivityHelper.instance.isConnected) {
-      _showSnack(
-        'Voice input requires an internet connection. '
-        'Please check your connection and try again.',
-      );
+      _showSnack(_loc.voice_input_requires_internet);
       return;
     }
 
@@ -203,7 +199,7 @@ class _VoiceAddMenuItemsBottomSheetState
 
   Future<void> _submit() async {
     if (_rows.isEmpty) {
-      _showSnack('No items to add.');
+      _showSnack(_loc.no_items_to_add);
       return;
     }
 
@@ -218,7 +214,7 @@ class _VoiceAddMenuItemsBottomSheetState
     }
 
     if (itemsToAdd.isEmpty) {
-      _showSnack('Please fill item name + price.');
+      _showSnack(_loc.please_fill_item_name_price);
       return;
     }
 
@@ -265,7 +261,7 @@ class _VoiceAddMenuItemsBottomSheetState
         }
 
         if (!mounted) return;
-        _showSnack('Added ${itemsToAdd.length} item(s) offline.');
+        _showSnack(_loc.added_items_offline(itemsToAdd.length));
         Navigator.of(context).pop(true);
         return;
       }
@@ -304,7 +300,7 @@ class _VoiceAddMenuItemsBottomSheetState
             (response is Map && response['status'] != 'success')) {
           throw Exception(
             (response is Map ? response['message'] : null) ??
-                'Failed to add "${item.name}"',
+                _loc.failed_to_add_item_named(item.name),
           );
         }
       }
@@ -320,11 +316,11 @@ class _VoiceAddMenuItemsBottomSheetState
       }
 
       if (!mounted) return;
-      _showSnack('Added ${itemsToAdd.length} item(s) successfully.');
+      _showSnack(_loc.added_items_success(itemsToAdd.length));
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
-      _showSnack('Failed: $e');
+      _showSnack(_loc.operation_failed_error(e.toString()));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -378,7 +374,7 @@ class _VoiceAddMenuItemsBottomSheetState
 
   @override
   Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(Get.context!)!;
+    final loc = AppLocalizations.of(context)!;
 
     return SafeArea(
       child: Padding(
@@ -402,10 +398,13 @@ class _VoiceAddMenuItemsBottomSheetState
             ),
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Voice: Add Menu Items',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                    loc.voice_add_menu_items_title,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 // Animated mic button with pulsing effect
@@ -460,7 +459,9 @@ class _VoiceAddMenuItemsBottomSheetState
                                 : [],
                           ),
                           child: IconButton(
-                            tooltip: _isListening ? 'Stop' : 'Start',
+                            tooltip: _isListening
+                                ? loc.mic_stop
+                                : loc.mic_start,
                             onPressed: _isSubmitting ? null : _toggleListening,
                             icon: Icon(
                               _isListening ? Icons.stop_circle : Icons.mic,
@@ -481,7 +482,7 @@ class _VoiceAddMenuItemsBottomSheetState
               _WaveformVisualizer(heights: _waveHeights),
               const SizedBox(height: 8),
               Text(
-                    'Listening...',
+                    loc.listening_ellipsis,
                     style: TextStyle(
                       fontSize: 12,
                       color: AppColor.secondaryPrimary,
@@ -545,9 +546,9 @@ class _VoiceAddMenuItemsBottomSheetState
                         border: Border.all(color: Colors.grey[300]!),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Text(
-                        'Tap mic and say e.g. "Tea 15 in Beverages, Coffee 40 category Beverages".\nWe\'ll auto-create rows with categories, you can edit before submit.',
-                        style: TextStyle(
+                      child: Text(
+                        loc.voice_add_menu_hint,
+                        style: const TextStyle(
                           fontSize: 13,
                           height: 1.4,
                           color: Colors.grey,
@@ -586,7 +587,7 @@ class _VoiceAddMenuItemsBottomSheetState
                     onPressed: _isSubmitting
                         ? null
                         : () => Navigator.pop(context),
-                    child: const Text('Close'),
+                    child: Text(loc.close),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -599,7 +600,7 @@ class _VoiceAddMenuItemsBottomSheetState
                             width: 18,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Submit'),
+                        : Text(loc.submit),
                   ),
                 ),
               ],
@@ -628,6 +629,8 @@ class _RowCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -644,9 +647,9 @@ class _RowCard extends StatelessWidget {
                 flex: 3,
                 child: TextField(
                   controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Item name',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: loc.item_name_label,
+                    border: const OutlineInputBorder(),
                     isDense: true,
                   ),
                 ),
@@ -657,10 +660,10 @@ class _RowCard extends StatelessWidget {
                 child: TextField(
                   controller: priceController,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Price',
+                  decoration: InputDecoration(
+                    labelText: loc.price_label,
                     prefixText: '₹ ',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                     isDense: true,
                   ),
                 ),

@@ -71,7 +71,8 @@ class AddCustomerController extends BaseController {
       searchQuery.value = '';
       filteredContacts.clear();
     } catch (e) {
-      showError(description: 'Failed to fetch contacts: $e');
+      final loc = AppLocalizations.of(Get.context!)!;
+      showError(description: loc.failed_to_fetch_contacts(e.toString()));
     } finally {
       isLoadingContacts.value = false;
     }
@@ -87,9 +88,8 @@ class AddCustomerController extends BaseController {
       } else if (newStatus.isPermanentlyDenied) {
         _showPermissionDialog();
       } else {
-        showError(
-          description: 'Contact permission is needed to fetch contacts',
-        );
+        final loc = AppLocalizations.of(Get.context!)!;
+        showError(description: loc.contact_permission_needed);
       }
     } else if (status.isPermanentlyDenied) {
       _showPermissionDialog();
@@ -101,20 +101,19 @@ class AddCustomerController extends BaseController {
   }
 
   void _showPermissionDialog() {
+    final loc = AppLocalizations.of(Get.context!)!;
     Get.dialog(
       AlertDialog(
-        title: Text('Permission Required'),
-        content: Text(
-          'Contact permission is permanently denied. Please enable it from settings.',
-        ),
+        title: Text(loc.permission_required),
+        content: Text(loc.contact_permission_permanently_denied),
         actions: [
-          TextButton(onPressed: () => Get.back(), child: Text('Cancel')),
+          TextButton(onPressed: () => Get.back(), child: Text(loc.cancel)),
           TextButton(
             onPressed: () {
               Get.back();
               openAppSettings();
             },
-            child: Text('Open Settings'),
+            child: Text(loc.open_settings),
           ),
         ],
       ),
@@ -175,14 +174,15 @@ class AddCustomerController extends BaseController {
   }
 
   CustomerRequest? _buildCustomerRequest(String outletId) {
+    final loc = AppLocalizations.of(Get.context!)!;
     if (nameController.text.trim().isEmpty) {
-      showError(description: 'Please enter customer name');
+      showError(description: loc.please_enter_customer_name);
       return null;
     }
 
     final phone = fullPhoneNumber;
     if (phone.length < 13) {
-      showError(description: 'Please enter a valid 10 digit phone number');
+      showError(description: loc.please_enter_valid_10_digit_phone_alt);
       return null;
     }
 
@@ -196,9 +196,10 @@ class AddCustomerController extends BaseController {
   }
 
   void addRegularCustomer() async {
+    final loc = AppLocalizations.of(Get.context!)!;
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) {
-      showError(description: 'Please select an outlet first');
+      showError(description: loc.please_select_outlet_first);
       return;
     }
 
@@ -233,21 +234,24 @@ class AddCustomerController extends BaseController {
     if (shouldGoBack) {
       Get.back();
     }
-    showSuccess(description: response['message']?.toString() ?? 'Customer added');
+    final loc = AppLocalizations.of(Get.context!)!;
+    showSuccess(
+      description: response['message']?.toString() ?? loc.customer_added,
+    );
     clearAllFields();
   }
 
   void updateRegularCustomer() async {
-    // Update regular customer logic
+    final loc = AppLocalizations.of(Get.context!)!;
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) {
-      showError(description: 'Please select an outlet first');
+      showError(description: loc.please_select_outlet_first);
       return;
     }
 
     final phone = fullPhoneNumber;
     if (phone.length < 13) {
-      showError(description: 'Please enter a valid 10 digit phone number');
+      showError(description: loc.please_enter_valid_10_digit_phone_alt);
       return;
     }
     final customerRequest = CustomerRequest(
@@ -274,10 +278,10 @@ class AddCustomerController extends BaseController {
   }
 
   void deleteRegularCustomer() async {
-    // Delete regular customer logic
+    final loc = AppLocalizations.of(Get.context!)!;
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) {
-      showError(description: 'Please select an outlet first');
+      showError(description: loc.please_select_outlet_first);
       return;
     }
 
@@ -324,9 +328,10 @@ class AddCustomerController extends BaseController {
   }
 
   Future<void> saveAndNew() async {
+    final loc = AppLocalizations.of(Get.context!)!;
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) {
-      showError(description: 'Please select an outlet first');
+      showError(description: loc.please_select_outlet_first);
       return;
     }
 

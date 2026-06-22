@@ -2,6 +2,7 @@ import 'package:billkaro/app/Database/app_database.dart';
 import 'package:billkaro/app/modules/Theme/theme_controller.dart';
 import 'package:billkaro/app/services/Network/api_config.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/trusted_http_client.dart';
 import 'package:dio/dio.dart';
 
 String get _dioBaseUrl {
@@ -29,6 +30,7 @@ class NetworkModule {
 
   static Dio prepareDio() {
     final dio = Dio();
+    configureTrustedDio(dio);
     final appPref = Get.find<AppPref>();
 
     dio.interceptors.add(

@@ -14,6 +14,7 @@ class WhatsappMarketingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
     return PopScope(
       // Ensure any back/pop attempt (hardware/gesture) goes through our Modular logic.
@@ -32,7 +33,7 @@ class WhatsappMarketingScreen extends StatelessWidget {
             onPressed: _goBack,
           ),
           title: Text(
-            'Select Message Template',
+            loc.select_message_template,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: AppColor.white,
@@ -47,7 +48,7 @@ class WhatsappMarketingScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
               children: [
                 Text(
-                  'Choose a WhatsApp message template. You can edit it before sending.',
+                  loc.choose_whatsapp_template_hint,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -55,8 +56,9 @@ class WhatsappMarketingScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 _buildTemplateCard(
                   context: context,
+                  loc: loc,
                   icon: Icons.discount_rounded,
-                  title: 'Discount Offer',
+                  title: loc.discount_offer,
                   description: RichText(
                     text: TextSpan(
                       style: TextStyle(
@@ -65,42 +67,38 @@ class WhatsappMarketingScreen extends StatelessWidget {
                         height: 1.5,
                       ),
                       children: [
-                        const TextSpan(
-                          text: 'Special offer for our loyal customers of ',
-                        ),
+                        TextSpan(text: loc.template_discount_preview_prefix),
                         TextSpan(
-                          text: 'Restaurant Name',
+                          text: loc.restaurant_name_placeholder,
                           style: TextStyle(
                             color: colorScheme.primary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const TextSpan(text: '! Get '),
+                        TextSpan(text: loc.template_discount_get),
                         TextSpan(
-                          text: 'Discount value',
+                          text: loc.discount_value_placeholder,
                           style: TextStyle(
                             color: colorScheme.primary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const TextSpan(
-                          text:
-                              ' off on your next visit. Show this message at the restaurant for discount.',
-                        ),
+                        TextSpan(text: loc.template_discount_suffix),
                       ],
                     ),
                   ),
                   onTap: () => controller.showCustomFieldsDialog(
                     'discount',
-                    'Special offer for our loyal customers of ${controller.restaurantNameController.text}',
-                    '${controller.discountValueController.text}% off on your next visit.',
+                    '',
+                    '',
                   ),
                 ),
                 const SizedBox(height: 12),
                 _buildTemplateCard(
                   context: context,
+                  loc: loc,
                   icon: Icons.menu_book_rounded,
-                  title: 'New Menu',
+                  title: loc.new_menu,
                   description: RichText(
                     text: TextSpan(
                       style: TextStyle(
@@ -110,30 +108,24 @@ class WhatsappMarketingScreen extends StatelessWidget {
                       ),
                       children: [
                         TextSpan(
-                          text: 'Restaurant Name',
+                          text: loc.restaurant_name_placeholder,
                           style: TextStyle(
                             color: colorScheme.primary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const TextSpan(
-                          text:
-                              ' has added new items to their menu. Come and try these items today!',
-                        ),
+                        TextSpan(text: loc.template_new_menu_suffix),
                       ],
                     ),
                   ),
-                  onTap: () => controller.showCustomFieldsDialog(
-                    'menu',
-                    'Enjoy New Menu at ${controller.restaurantNameController}',
-                    ' has added new items to their menu. Come and try these items today!',
-                  ),
+                  onTap: () => controller.showCustomFieldsDialog('menu', '', ''),
                 ),
                 const SizedBox(height: 12),
                 _buildTemplateCard(
                   context: context,
+                  loc: loc,
                   icon: Icons.celebration_rounded,
-                  title: 'Festival Wishes',
+                  title: loc.festival_wishes,
                   description: RichText(
                     text: TextSpan(
                       style: TextStyle(
@@ -143,31 +135,28 @@ class WhatsappMarketingScreen extends StatelessWidget {
                       ),
                       children: [
                         TextSpan(
-                          text: 'Restaurant Name',
+                          text: loc.restaurant_name_placeholder,
                           style: TextStyle(
                             color: colorScheme.primary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const TextSpan(text: ' wishes you a happy '),
+                        TextSpan(text: loc.template_festival_wishes_you),
                         TextSpan(
-                          text: 'Festival Name',
+                          text: loc.festival_name_placeholder,
                           style: TextStyle(
                             color: colorScheme.primary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const TextSpan(
-                          text:
-                              '. Visit the restaurant for new festival menu and discounts!',
-                        ),
+                        TextSpan(text: loc.template_festival_suffix),
                       ],
                     ),
                   ),
                   onTap: () => controller.showCustomFieldsDialog(
                     'festival',
-                    'Happy Festival Name from ${controller.restaurantNameController}',
-                    'Festival Name . Visit the restaurant for new festival menu and discounts!',
+                    '',
+                    '',
                   ),
                 ),
               ],
@@ -180,6 +169,7 @@ class WhatsappMarketingScreen extends StatelessWidget {
 
   Widget _buildTemplateCard({
     required BuildContext context,
+    required AppLocalizations loc,
     required IconData icon,
     required String title,
     required Widget description,
@@ -236,7 +226,7 @@ class WhatsappMarketingScreen extends StatelessWidget {
                   child: ElevatedButton.icon(
                     onPressed: onTap,
                     icon: const Icon(Icons.send_rounded, size: 18),
-                    label: const Text('Use Template'),
+                    label: Text(loc.use_template),
                     style: ElevatedButton.styleFrom(
                       elevation: 0,
                       backgroundColor: colorScheme.primary,

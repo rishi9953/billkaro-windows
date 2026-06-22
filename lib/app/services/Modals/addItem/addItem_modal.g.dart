@@ -17,6 +17,7 @@ ItemRequest _$ItemRequestFromJson(Map<String, dynamic> json) => ItemRequest(
   outletId: json['outletId'] as String,
   showItem: json['showItem'] as bool,
   itemImage: json['itemImage'] as String? ?? '',
+  isRecommended: json['isRecommended'] as bool?,
   prepTimeMinutes: (json['prepTimeMinutes'] as num?)?.toInt() ?? 15,
 );
 
@@ -32,5 +33,6 @@ Map<String, dynamic> _$ItemRequestToJson(ItemRequest instance) =>
       'category': instance.category,
       'itemImage': instance.itemImage,
       'showItem': instance.showItem,
+      'isRecommended': ?instance.isRecommended,
       'prepTimeMinutes': instance.prepTimeMinutes,
     };

@@ -26,7 +26,7 @@ import 'package:retrofit/retrofit.dart';
 
 part 'api_client.g.dart';
 
-@RestApi(baseUrl: ApiConstants.prod)
+@RestApi()
 abstract class ApiClient {
   factory ApiClient(Dio dio, {String? baseUrl}) = _ApiClient;
 
@@ -43,6 +43,15 @@ abstract class ApiClient {
 
   @POST(forgotPass)
   Future<dynamic> forgotPassword(@Body() Map<String, dynamic> body);
+
+  @POST(verifyEmail)
+  Future<dynamic> verifyAuthEmail(@Body() Map<String, dynamic> body);
+
+  @POST(checkEmail)
+  Future<dynamic> checkAuthEmail(@Body() Map<String, dynamic> body);
+
+  @POST(resendActivation)
+  Future<dynamic> resendAuthActivation(@Body() Map<String, dynamic> body);
 
   // -------------------- USER --------------------
 
@@ -71,6 +80,7 @@ abstract class ApiClient {
     @Query('category') String? category,
     @Query('search') String? search,
     @Query('showItem') bool? showItem,
+    @Query('isRecommended') bool? isRecommended,
   );
 
   @PATCH('$items/{id}')
@@ -163,6 +173,13 @@ abstract class ApiClient {
   @POST(orders)
   Future<dynamic> addOrder(@Body() Map<String, dynamic> orderRequest);
 
+  @GET('$orders/best-selling-items')
+  Future<dynamic> getBestSellingItems(
+    @Query('userId') String userId,
+    @Query('outletId') String outletId,
+    @Query('limit') int? limit,
+  );
+
   @GET(orders)
   Future<OrderResponse> getOrders(
     @Query('userId') String userId,
@@ -231,7 +248,10 @@ abstract class ApiClient {
   Future<dynamic> createTable(@Body() Map<String, dynamic> body);
 
   @PATCH('$outletTables/{id}')
-  Future<dynamic> updateTable(@Path('id') String id);
+  Future<dynamic> updateTable(
+    @Path('id') String id,
+    @Body() Map<String, dynamic> body,
+  );
 
   @DELETE('$outletTables/{id}')
   Future<dynamic> deleteTable(@Path('id') String id);
@@ -254,6 +274,38 @@ abstract class ApiClient {
 
   @POST('$outletTables/qr/generate-all/{outletId}')
   Future<dynamic> generateAllTableQr(@Path('outletId') String outletId);
+
+  @POST('$outletTables/merge')
+  Future<dynamic> mergeTables(@Body() Map<String, dynamic> body);
+
+  @POST('$outletTables/unmerge/{primaryTableId}')
+  Future<dynamic> unmergeTables(
+    @Path('primaryTableId') String primaryTableId,
+    @Query('outletId') String outletId,
+  );
+
+  // -------------------- Table Reservations --------------------
+
+  @GET(tableReservations)
+  Future<dynamic> getTableReservations(
+    @Query('outletId') String outletId, {
+    @Query('date') String? date,
+  });
+
+  @POST(tableReservations)
+  Future<dynamic> createTableReservation(@Body() Map<String, dynamic> body);
+
+  @PATCH('$tableReservations/{id}')
+  Future<dynamic> updateTableReservation(
+    @Path('id') String id,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @DELETE('$tableReservations/{id}')
+  Future<dynamic> cancelTableReservation(@Path('id') String id);
+
+  @POST('$tableReservations/{id}/seat')
+  Future<dynamic> seatTableReservation(@Path('id') String id);
 
   @POST(printerOrder)
   Future<dynamic> printerOrderRequest(
@@ -281,6 +333,9 @@ abstract class ApiClient {
     @Path('outletId') String outletId,
     @Path('staffId') String staffId,
   );
+
+  @GET('$staffProfile/{staffId}')
+  Future<UserResponse> getStaffProfile(@Path('staffId') String staffId);
 
   @GET(activities)
   Future<ActivityResponseModel> getActivities(
@@ -319,4 +374,122 @@ abstract class ApiClient {
 
   @PATCH('$kds/orders/{id}/bump')
   Future<dynamic> bumpKdsTicket(@Path('id') String id);
+
+  // -------------------- INVENTORY --------------------
+
+  @GET('$outlets/{outletId}/$inventory/dashboard')
+  Future<dynamic> getInventoryDashboard(@Path('outletId') String outletId);
+
+  @GET('$outlets/{outletId}/$inventory/low-stock')
+  Future<dynamic> getInventoryLowStock(@Path('outletId') String outletId);
+
+  @GET('$outlets/{outletId}/$inventory/raw-materials')
+  Future<dynamic> getRawMaterials(
+    @Path('outletId') String outletId,
+    @Query('search') String? search,
+    @Query('category') String? category,
+    @Query('lowStockOnly') bool? lowStockOnly,
+  );
+
+  @POST('$outlets/{outletId}/$inventory/raw-materials')
+  Future<dynamic> createRawMaterial(
+    @Path('outletId') String outletId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @PATCH('$outlets/{outletId}/$inventory/raw-materials/{id}')
+  Future<dynamic> updateRawMaterial(
+    @Path('outletId') String outletId,
+    @Path('id') String id,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @DELETE('$outlets/{outletId}/$inventory/raw-materials/{id}')
+  Future<dynamic> deleteRawMaterial(
+    @Path('outletId') String outletId,
+    @Path('id') String id,
+  );
+
+  @GET('$outlets/{outletId}/$inventory/suppliers')
+  Future<dynamic> getSuppliers(
+    @Path('outletId') String outletId,
+    @Query('search') String? search,
+  );
+
+  @POST('$outlets/{outletId}/$inventory/suppliers')
+  Future<dynamic> createSupplier(
+    @Path('outletId') String outletId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @PATCH('$outlets/{outletId}/$inventory/suppliers/{id}')
+  Future<dynamic> updateSupplier(
+    @Path('outletId') String outletId,
+    @Path('id') String id,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @DELETE('$outlets/{outletId}/$inventory/suppliers/{id}')
+  Future<dynamic> deleteSupplier(
+    @Path('outletId') String outletId,
+    @Path('id') String id,
+  );
+
+  @GET('$outlets/{outletId}/$inventory/stock-transactions')
+  Future<dynamic> getStockTransactions(
+    @Path('outletId') String outletId,
+    @Query('rawMaterialId') String? rawMaterialId,
+    @Query('type') String? type,
+    @Query('page') int? page,
+    @Query('limit') int? limit,
+  );
+
+  @POST('$outlets/{outletId}/$inventory/stock-transactions')
+  Future<dynamic> createStockTransaction(
+    @Path('outletId') String outletId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @GET('$outlets/{outletId}/$inventory/purchase-orders')
+  Future<dynamic> getPurchaseOrders(
+    @Path('outletId') String outletId,
+    @Query('status') String? status,
+  );
+
+  @POST('$outlets/{outletId}/$inventory/purchase-orders')
+  Future<dynamic> createPurchaseOrder(
+    @Path('outletId') String outletId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @PATCH('$outlets/{outletId}/$inventory/purchase-orders/{id}/receive')
+  Future<dynamic> receivePurchaseOrder(
+    @Path('outletId') String outletId,
+    @Path('id') String id,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @PATCH('$outlets/{outletId}/$inventory/purchase-orders/{id}/cancel')
+  Future<dynamic> cancelPurchaseOrder(
+    @Path('outletId') String outletId,
+    @Path('id') String id,
+  );
+
+  @GET('$outlets/{outletId}/$inventory/recipes')
+  Future<dynamic> getRecipes(
+    @Path('outletId') String outletId,
+    @Query('itemId') String? itemId,
+  );
+
+  @POST('$outlets/{outletId}/$inventory/recipes')
+  Future<dynamic> createRecipe(
+    @Path('outletId') String outletId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @DELETE('$outlets/{outletId}/$inventory/recipes/{id}')
+  Future<dynamic> deleteRecipe(
+    @Path('outletId') String outletId,
+    @Path('id') String id,
+  );
 }

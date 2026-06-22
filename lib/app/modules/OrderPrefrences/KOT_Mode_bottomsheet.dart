@@ -6,6 +6,7 @@ class KotModeBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -21,7 +22,6 @@ class KotModeBottomSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 16),
-            // Title
             Center(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -35,9 +35,9 @@ class KotModeBottomSheet extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    'INTRODUCING KOT MODE',
-                    style: TextStyle(
+                  Text(
+                    loc.introducing_kot_mode,
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: Color(0xFF2196F3),
@@ -57,10 +57,9 @@ class KotModeBottomSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 32),
-            // Description
-            const Text(
-              'Choose how you want to handle kitchen Order & Billing',
-              style: TextStyle(
+            Text(
+              loc.kot_mode_choose_handling,
+              style: const TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w600,
                 color: Colors.black87,
@@ -68,10 +67,9 @@ class KotModeBottomSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            // KOT & Hold
-            const Text(
-              'KOT & Hold',
-              style: TextStyle(
+            Text(
+              loc.kot_and_hold,
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: Colors.black87,
@@ -79,7 +77,7 @@ class KotModeBottomSheet extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Generate KOT without billing. You can add more KOT\'s to the same order and bill later.',
+              loc.kot_and_hold_description,
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[700],
@@ -87,10 +85,9 @@ class KotModeBottomSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            // KOT & Bill
-            const Text(
-              'KOT & Bill',
-              style: TextStyle(
+            Text(
+              loc.kot_and_bill,
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: Colors.black87,
@@ -98,7 +95,7 @@ class KotModeBottomSheet extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Generate KOT and final bill together in one step.',
+              loc.kot_and_bill_description,
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[700],
@@ -106,7 +103,6 @@ class KotModeBottomSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            // Info Box
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -123,7 +119,7 @@ class KotModeBottomSheet extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Buttons Will Update On The Order Screen:',
+                          loc.kot_buttons_update_info,
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.grey[800],
@@ -133,7 +129,7 @@ class KotModeBottomSheet extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Save & Hold → KOT & Hold',
+                          loc.save_hold_to_kot_hold,
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.grey[700],
@@ -141,7 +137,7 @@ class KotModeBottomSheet extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Save & Bill → KOT & Bill',
+                          loc.save_bill_to_kot_bill,
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.grey[700],
@@ -155,7 +151,6 @@ class KotModeBottomSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            // Buttons
             Row(
               children: [
                 Expanded(
@@ -168,9 +163,9 @@ class KotModeBottomSheet extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    child: const Text(
-                      'Got It',
-                      style: TextStyle(
+                    child: Text(
+                      loc.got_it,
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: Colors.black87,
@@ -178,32 +173,6 @@ class KotModeBottomSheet extends StatelessWidget {
                     ),
                   ),
                 ),
-                // const SizedBox(width: 12),
-                // Expanded(
-                //   child: ElevatedButton(
-                //     onPressed: () {
-                //       Get.back();
-                //       final controller = Get.find<OrderPreferencesController>();
-                //       controller.toggleKotMode(true);
-                //     },
-                //     style: ElevatedButton.styleFrom(
-                //       padding: const EdgeInsets.symmetric(vertical: 16),
-                //       backgroundColor: const Color(0xFF2196F3),
-                //       shape: RoundedRectangleBorder(
-                //         borderRadius: BorderRadius.circular(8),
-                //       ),
-                //       elevation: 0,
-                //     ),
-                //     child: const Text(
-                //       'Start KOT Mode',
-                //       style: TextStyle(
-                //         fontSize: 16,
-                //         fontWeight: FontWeight.w600,
-                //         color: Colors.white,
-                //       ),
-                //     ),
-                //   ),
-                // ),
               ],
             ),
             const SizedBox(height: 16),

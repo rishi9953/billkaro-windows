@@ -1,6 +1,7 @@
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/helpers/storage_helper.dart';
+import 'package:billkaro/app/services/printerService.dart/thermal_printer/helpers/thermal_paper_size.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
-import 'package:billkaro/utils/app_snackbar.dart';
+import 'package:billkaro/config/config.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -20,6 +21,7 @@ class PrinterScreen2Controller extends GetxController {
   final kotRoleInfo = Rx<Map<String, dynamic>>({});
   final isRoleActionLoading = false.obs;
   final networkFormTick = 0.obs;
+  final selectedPaperSize = ThermalPaperSize.mm58.obs;
 
   final ipController = TextEditingController();
   final portController = TextEditingController(text: '9100');
@@ -28,6 +30,7 @@ class PrinterScreen2Controller extends GetxController {
   void onInit() {
     super.onInit();
     loadRolePrinters();
+    loadPaperSize();
     _loadLastNetworkSettings();
     unawaited(thermalPrinter.restoreNetworkConnectionStatus());
     void bumpNetworkForm() => networkFormTick.value++;
@@ -54,11 +57,45 @@ class PrinterScreen2Controller extends GetxController {
     }
   }
 
+  String _roleLabel(PrintRole role) {
+    final loc = AppLocalizations.of(Get.context!)!;
+    return role == PrintRole.bill ? loc.bill_label : loc.kot_label;
+  }
+
   String? _typeLabel(String? type) {
-    if (type == 'usb') return 'USB';
-    if (type == 'bluetooth') return 'Bluetooth';
-    if (type == 'network') return 'Ethernet';
+    final loc = AppLocalizations.of(Get.context!)!;
+    if (type == 'usb') return loc.usb;
+    if (type == 'bluetooth') return loc.bluetooth;
+    if (type == 'network') return loc.ethernet;
     return null;
+  }
+
+  Future<void> loadPaperSize() async {
+    final size = await StorageHelper.getThermalPaperSize();
+    selectedPaperSize.value = size;
+    thermalPrinter.selectedPaperSize.value = size;
+  }
+
+  String paperSizeLabel(ThermalPaperSize size) {
+    final loc = AppLocalizations.of(Get.context!)!;
+    switch (size) {
+      case ThermalPaperSize.mm58:
+        return loc.paper_size_2inch;
+      case ThermalPaperSize.mm80:
+        return loc.paper_size_3inch;
+      case ThermalPaperSize.mm104:
+        return loc.paper_size_4inch;
+    }
+  }
+
+  Future<void> setPaperSize(ThermalPaperSize size) async {
+    final loc = AppLocalizations.of(Get.context!)!;
+    await thermalPrinter.setPaperSize(size);
+    selectedPaperSize.value = size;
+    showSuccess(
+      title: loc.snackbar_success,
+      description: loc.paper_size_saved(paperSizeLabel(size)),
+    );
   }
 
   Future<void> loadRolePrinters() async {
@@ -161,19 +198,20 @@ class PrinterScreen2Controller extends GetxController {
   }
 
   Future<void> connectEthernet() async {
+    final loc = AppLocalizations.of(Get.context!)!;
     final ip = ipController.text.trim();
     final port = _parsePort();
     if (!_isValidIp(ip)) {
-      AppSnackbar.show(
-        title: 'Error',
-        message: 'Enter a valid IP address (e.g. 192.168.1.100)',
+      showError(
+        title: loc.snackbar_error,
+        description: loc.enter_valid_ip_example,
       );
       return;
     }
     if (port == null) {
-      AppSnackbar.show(
-        title: 'Error',
-        message: 'Enter a valid port (default 9100)',
+      showError(
+        title: loc.snackbar_error,
+        description: loc.enter_valid_port_default,
       );
       return;
     }
@@ -181,10 +219,9 @@ class PrinterScreen2Controller extends GetxController {
     if (thermalPrinter.isNetworkConnected.value &&
         thermalPrinter.connectedNetworkLabel.value == '$ip:$port') {
       await thermalPrinter.disconnectNetworkPrinter();
-      AppSnackbar.show(
-        title: 'Success',
-        message: 'Ethernet printer disconnected',
-        duration: const Duration(seconds: 2),
+      showSuccess(
+        title: loc.snackbar_success,
+        description: loc.ethernet_printer_disconnected,
       );
       return;
     }
@@ -192,27 +229,38 @@ class PrinterScreen2Controller extends GetxController {
     try {
       isRoleActionLoading.value = true;
       final ok = await thermalPrinter.connectNetworkPrinter(ip, port: port);
-      AppSnackbar.show(
-        title: ok ? 'Success' : 'Error',
-        message: ok
-            ? 'Connected to $ip:$port'
-            : 'Could not connect. Check IP, port, and that the printer is on the same network.',
-        duration: const Duration(seconds: 2),
-      );
+      if (ok) {
+        showSuccess(
+          title: loc.snackbar_success,
+          description: loc.connected_to_endpoint('$ip:$port'),
+        );
+      } else {
+        showError(
+          title: loc.snackbar_error,
+          description: loc.could_not_connect_network_printer,
+        );
+      }
     } finally {
       isRoleActionLoading.value = false;
     }
   }
 
   Future<void> assignNetworkToRole(PrintRole role) async {
+    final loc = AppLocalizations.of(Get.context!)!;
     final ip = ipController.text.trim();
     final port = _parsePort();
     if (!_isValidIp(ip)) {
-      AppSnackbar.show(title: 'Error', message: 'Enter a valid IP address first');
+      showError(
+        title: loc.snackbar_error,
+        description: loc.enter_valid_ip_first,
+      );
       return;
     }
     if (port == null) {
-      AppSnackbar.show(title: 'Error', message: 'Enter a valid port');
+      showError(
+        title: loc.snackbar_error,
+        description: loc.enter_valid_port,
+      );
       return;
     }
 
@@ -222,9 +270,9 @@ class PrinterScreen2Controller extends GetxController {
         final connected =
             await thermalPrinter.connectNetworkPrinter(ip, port: port);
         if (!connected) {
-          AppSnackbar.show(
-            title: 'Error',
-            message: 'Connect to the printer first',
+          showError(
+            title: loc.snackbar_error,
+            description: loc.connect_printer_first,
           );
           return;
         }
@@ -233,17 +281,22 @@ class PrinterScreen2Controller extends GetxController {
         role,
         ip,
         port,
-        name: 'Ethernet $ip',
+        name: loc.ethernet_printer_name(ip),
       );
       await loadRolePrinters();
       await thermalPrinter.restoreNetworkConnectionStatus();
-      AppSnackbar.show(
-        title: 'Success',
-        message: '${role == PrintRole.bill ? 'Bill' : 'KOT'} printer: $ip:$port',
-        duration: const Duration(seconds: 2),
+      showSuccess(
+        title: loc.snackbar_success,
+        description: loc.role_printer_assigned(
+          _roleLabel(role),
+          '$ip:$port',
+        ),
       );
     } catch (e) {
-      AppSnackbar.show(title: 'Error', message: 'Failed: $e');
+      showError(
+        title: loc.snackbar_error,
+        description: loc.operation_failed_error(e.toString()),
+      );
     } finally {
       isRoleActionLoading.value = false;
     }
@@ -253,36 +306,46 @@ class PrinterScreen2Controller extends GetxController {
     PrintRole role,
     BluetoothDevice device,
   ) async {
+    final loc = AppLocalizations.of(Get.context!)!;
     try {
       isRoleActionLoading.value = true;
       await thermalPrinter.assignBluetoothToRole(role, device);
       await loadRolePrinters();
-      AppSnackbar.show(
-        title: 'Success',
-        message:
-            '${role == PrintRole.bill ? 'Bill' : 'KOT'} printer: ${device.platformName}',
-        duration: const Duration(seconds: 2),
+      showSuccess(
+        title: loc.snackbar_success,
+        description: loc.role_printer_assigned(
+          _roleLabel(role),
+          device.platformName,
+        ),
       );
     } catch (e) {
-      AppSnackbar.show(title: 'Error', message: '$e');
+      showError(
+        title: loc.snackbar_error,
+        description: loc.operation_failed_error(e.toString()),
+      );
     } finally {
       isRoleActionLoading.value = false;
     }
   }
 
   Future<void> assignUsbToRole(PrintRole role, Printer printer) async {
+    final loc = AppLocalizations.of(Get.context!)!;
     try {
       isRoleActionLoading.value = true;
       await thermalPrinter.assignUsbToRole(role, printer);
       await loadRolePrinters();
-      AppSnackbar.show(
-        title: 'Success',
-        message:
-            '${role == PrintRole.bill ? 'Bill' : 'KOT'} printer: ${printer.name ?? 'USB'}',
-        duration: const Duration(seconds: 2),
+      showSuccess(
+        title: loc.snackbar_success,
+        description: loc.role_printer_assigned(
+          _roleLabel(role),
+          printer.name ?? loc.usb,
+        ),
       );
     } catch (e) {
-      AppSnackbar.show(title: 'Error', message: '$e');
+      showError(
+        title: loc.snackbar_error,
+        description: loc.operation_failed_error(e.toString()),
+      );
     } finally {
       isRoleActionLoading.value = false;
     }
@@ -293,21 +356,20 @@ class PrinterScreen2Controller extends GetxController {
     required String address,
     required String name,
   }) async {
+    final loc = AppLocalizations.of(Get.context!)!;
     try {
       isRoleActionLoading.value = true;
       final roleKey = role == PrintRole.bill ? 'bill' : 'kot';
       await StorageHelper.saveRoleBluetoothByAddress(roleKey, address, name);
       await loadRolePrinters();
-      AppSnackbar.show(
-        title: 'Success',
-        message: '${role == PrintRole.bill ? 'Bill' : 'KOT'} printer: $name',
-        duration: const Duration(seconds: 2),
+      showSuccess(
+        title: loc.snackbar_success,
+        description: loc.role_printer_assigned(_roleLabel(role), name),
       );
     } catch (e) {
-      AppSnackbar.show(
-        title: 'Error',
-        message: '$e',
-        duration: const Duration(seconds: 2),
+      showError(
+        title: loc.snackbar_error,
+        description: loc.operation_failed_error(e.toString()),
       );
     } finally {
       isRoleActionLoading.value = false;
@@ -315,29 +377,47 @@ class PrinterScreen2Controller extends GetxController {
   }
 
   Future<void> clearRolePrinter(PrintRole role) async {
+    final loc = AppLocalizations.of(Get.context!)!;
     await thermalPrinter.clearRolePrinter(role);
     await loadRolePrinters();
-    AppSnackbar.show(
-      title: 'Removed',
-      message: '${role == PrintRole.bill ? 'Bill' : 'KOT'} printer cleared',
-      duration: const Duration(seconds: 2),
+    showSuccess(
+      title: loc.snackbar_removed,
+      description: loc.role_printer_cleared(_roleLabel(role)),
     );
   }
 
   Future<void> testPrintForRole(PrintRole role) async {
+    final loc = AppLocalizations.of(Get.context!)!;
     try {
       isRoleActionLoading.value = true;
       await thermalPrinter.testPrintForRole(role);
-      AppSnackbar.show(
-        title: 'Success',
-        message: '${role == PrintRole.bill ? 'Bill' : 'KOT'} test print sent',
-        duration: const Duration(seconds: 2),
+      showSuccess(
+        title: loc.snackbar_success,
+        description: loc.role_test_print_sent(_roleLabel(role)),
       );
     } catch (e) {
-      AppSnackbar.show(
-        title: 'Print failed',
-        message: '$e',
-        duration: const Duration(seconds: 2),
+      showError(
+        title: loc.snackbar_error,
+        description: loc.print_failed_with_error(e.toString()),
+      );
+    } finally {
+      isRoleActionLoading.value = false;
+    }
+  }
+
+  Future<void> testOpenCashDrawer() async {
+    final loc = AppLocalizations.of(Get.context!)!;
+    try {
+      isRoleActionLoading.value = true;
+      await thermalPrinter.openCashDrawer();
+      showSuccess(
+        title: loc.snackbar_success,
+        description: loc.cash_drawer_opened,
+      );
+    } catch (e) {
+      showError(
+        title: loc.snackbar_error,
+        description: loc.cash_drawer_failed(e.toString()),
       );
     } finally {
       isRoleActionLoading.value = false;
@@ -345,23 +425,22 @@ class PrinterScreen2Controller extends GetxController {
   }
 
   Future<void> useSamePrinterForKot() async {
+    final loc = AppLocalizations.of(Get.context!)!;
     final billInfo = await StorageHelper.getRoleSavedPrinterInfo('bill');
     final type = billInfo['type'] as String?;
     if (type == null) {
-      AppSnackbar.show(
-        title: 'Error',
-        message: 'Set a bill printer first',
-        duration: const Duration(seconds: 2),
+      showError(
+        title: loc.snackbar_error,
+        description: loc.set_bill_printer_first,
       );
       return;
     }
     if (type == 'bluetooth') {
       final id = billInfo['id'] as String?;
       if (id == null || id.isEmpty) {
-        AppSnackbar.show(
-          title: 'Error',
-          message: 'Bill printer not configured',
-          duration: const Duration(seconds: 2),
+        showError(
+          title: loc.snackbar_error,
+          description: loc.bill_printer_not_configured,
         );
         return;
       }
@@ -383,23 +462,20 @@ class PrinterScreen2Controller extends GetxController {
         if (device != null) {
           await thermalPrinter.assignBluetoothToRole(PrintRole.kot, device!);
           await loadRolePrinters();
-          AppSnackbar.show(
-            title: 'Success',
-            message: 'KOT printer set same as bill printer',
-            duration: const Duration(seconds: 2),
+          showSuccess(
+            title: loc.snackbar_success,
+            description: loc.kot_printer_same_as_bill,
           );
         } else {
-          AppSnackbar.show(
-            title: 'Error',
-            message: 'Bill printer not found. Turn it on and retry.',
-            duration: const Duration(seconds: 2),
+          showError(
+            title: loc.snackbar_error,
+            description: loc.bill_printer_not_found,
           );
         }
       } catch (e) {
-        AppSnackbar.show(
-          title: 'Error',
-          message: '$e',
-          duration: const Duration(seconds: 2),
+        showError(
+          title: loc.snackbar_error,
+          description: loc.operation_failed_error(e.toString()),
         );
       } finally {
         isRoleActionLoading.value = false;
@@ -413,19 +489,17 @@ class PrinterScreen2Controller extends GetxController {
         address: billInfo['address'] as String?,
       );
       await loadRolePrinters();
-      AppSnackbar.show(
-        title: 'Success',
-        message: 'KOT printer set same as bill printer',
-        duration: const Duration(seconds: 2),
+      showSuccess(
+        title: loc.snackbar_success,
+        description: loc.kot_printer_same_as_bill,
       );
     } else if (type == 'network') {
       final ip = billInfo['ip'] as String?;
       final port = billInfo['port'] as int? ?? 9100;
       if (ip == null || ip.isEmpty) {
-        AppSnackbar.show(
-          title: 'Error',
-          message: 'Bill printer not configured',
-          duration: const Duration(seconds: 2),
+        showError(
+          title: loc.snackbar_error,
+          description: loc.bill_printer_not_configured,
         );
         return;
       }
@@ -436,10 +510,9 @@ class PrinterScreen2Controller extends GetxController {
         name: billInfo['name'] as String?,
       );
       await loadRolePrinters();
-      AppSnackbar.show(
-        title: 'Success',
-        message: 'KOT printer set same as bill printer',
-        duration: const Duration(seconds: 2),
+      showSuccess(
+        title: loc.snackbar_success,
+        description: loc.kot_printer_same_as_bill,
       );
     }
   }

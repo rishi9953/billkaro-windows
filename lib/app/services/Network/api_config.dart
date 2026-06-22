@@ -35,24 +35,49 @@ class ApiConfig {
       '📱 [API] QR menu base: ${_qrMenuBaseUrl.isNotEmpty ? _qrMenuBaseUrl : '(from API URL)'}',
     );
     debugPrint('🔌 [API] KDS WebSocket: ${kdsWebSocketUri('outlet')} (sample)');
+
+    if (_useLocalKdsWebSocket &&
+        !_baseUrl.contains('127.0.0.1') &&
+        !_baseUrl.contains('localhost')) {
+      final port = dotenv.env['KDS_WS_LOCAL_PORT']?.trim() ?? '3000';
+      debugPrint(
+        '⚠️ [API] KDS_WS_USE_LOCAL=true but REST API is remote ($_baseUrl). '
+        'Ensure billkaro-backend is running on 127.0.0.1:$port, '
+        'or set KDS_WS_USE_LOCAL=false in .env',
+      );
+    }
   }
 
   /// WebSocket for KDS — on Windows dev, prefer local backend (tunnel REST + local WS).
-  static Uri kdsWebSocketUri(String outletId) {
-    if (!kIsWeb && Platform.isWindows && _useLocalKdsWebSocket) {
+  static Uri kdsWebSocketUri(String outletId, {bool forceRemote = false}) {
+    if (!forceRemote &&
+        !kIsWeb &&
+        Platform.isWindows &&
+        _useLocalKdsWebSocket) {
       final port =
           int.tryParse(dotenv.env['KDS_WS_LOCAL_PORT']?.trim() ?? '3000') ??
           3000;
-      final uri = Uri(
+      return Uri(
         scheme: 'ws',
         host: '127.0.0.1',
         port: port,
         path: '/api/kds',
         queryParameters: {'outletId': outletId},
       );
-      return uri;
     }
 
+    return _remoteKdsWebSocketUri(outletId);
+  }
+
+  /// True when REST [baseUrl] points at a remote host (production / tunnel).
+  static bool get hasRemoteKdsWebSocket {
+    final api = Uri.tryParse(_baseUrl);
+    if (api == null || api.host.isEmpty) return false;
+    final host = api.host.toLowerCase();
+    return host != '127.0.0.1' && host != 'localhost';
+  }
+
+  static Uri _remoteKdsWebSocketUri(String outletId) {
     final api = Uri.parse(_baseUrl);
     final wsScheme = api.scheme == 'https' ? 'wss' : 'ws';
     var path = api.path;

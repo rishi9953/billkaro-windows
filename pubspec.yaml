@@ -72,7 +72,6 @@ dependencies:
   json_annotation: ^4.9.0
 
   qr_flutter: ^4.1.0
-  analyzer: ^8.2.0
   syncfusion_flutter_xlsio: ^31.2.15
   share_plus: ^12.0.1
   device_info_plus: ^12.3.0
@@ -105,6 +104,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  analyzer: ^8.2.0
   flutter_lints: ^5.0.0
   mockito: ^5.4.4
   build_runner: ^2.4.16
@@ -120,7 +120,13 @@ flutter:
   generate: true
 
   assets:
-    - assets/
+    - assets/delivery.png
+    - assets/Dine In.png
+    - assets/logo.jpeg
+    - assets/pdf.png
+    - assets/plan.png
+    - assets/printer.png
+    - assets/Takeaway.png
     - assets/lottie/
     - assets/lottie/loading.json
     - assets/svg/

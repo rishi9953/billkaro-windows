@@ -1,8 +1,13 @@
+import 'package:billkaro/utils/trusted_http_client.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 class CheckGstinApi {
-  final Dio _dio = Dio();
+  final Dio _dio;
+
+  CheckGstinApi() : _dio = Dio() {
+    configureTrustedDio(_dio);
+  }
 
   /// Check the validity of a GSTIN number.
   Future<Response?> checkGstNumber({required String gstin}) async {

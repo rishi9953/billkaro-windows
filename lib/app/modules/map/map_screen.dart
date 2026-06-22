@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter_map/flutter_map.dart' as fm;
 import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
+import 'package:billkaro/utils/trusted_http_client.dart';
 import 'package:latlong2/latlong.dart' as lat;
 
 class MapScreen extends StatefulWidget {
@@ -134,7 +134,7 @@ class _MapScreenState extends State<MapScreen> {
         '&lon=${position.longitude}',
       );
 
-      final response = await http.get(
+      final response = await trustedHttpClient().get(
         uri,
         headers: const {'User-Agent': 'billkaro/1.0 (desktop-location-picker)'},
       );

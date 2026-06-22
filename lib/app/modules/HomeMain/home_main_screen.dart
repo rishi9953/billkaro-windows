@@ -1,3 +1,4 @@
+import 'package:billkaro/app/Widgets/internet_connection_widget.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_module.dart';
 import 'package:billkaro/app/modules/Language/language_controller.dart';
 import 'package:billkaro/app/modules/Theme/theme_controller.dart';
@@ -41,6 +42,7 @@ class HomeMainScreen extends StatelessWidget {
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: const [Locale('en', ''), Locale('hi', '')],
+        builder: wrapWithConnectivityBanner,
       ),
     );
   }

@@ -6,6 +6,7 @@ import 'package:billkaro/app/services/Modals/login_response.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/utils/date_util.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 
 class MenuScreen extends StatelessWidget {
@@ -214,6 +215,19 @@ class MenuScreen extends StatelessWidget {
                       ),
                       child: Column(
                         children: [
+                          if (StaffAccess.canViewInventory) ...[
+                            _buildMenuItem(
+                              icon: Icons.inventory_2_outlined,
+                              title: 'Inventory Management',
+                              subtitle:
+                                  'Raw materials, stock, suppliers & recipes',
+                              iconColor: const Color(0xFFEF8819),
+                              onTap: () => Modular.to.pushNamed(
+                                HomeMainRoutes.inventory,
+                              ),
+                            ),
+                            _buildDivider(),
+                          ],
                           _buildMenuItem(
                             icon: Icons.people_outline,
                             title: loc.regular_customers,

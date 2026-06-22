@@ -21,7 +21,8 @@ class ClosedOrdersController extends BaseController {
   Future<void> getOrderList({bool loadMore = false}) async {
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) {
-      showError(description: 'No outlet selected');
+      final loc = AppLocalizations.of(Get.context!)!;
+      showError(description: loc.no_outlet_selected);
       return;
     }
 

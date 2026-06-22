@@ -74,7 +74,8 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
     final path = Modular.to.path;
     final isItemsPath =
         path.startsWith(HomeMainRoutes.items) ||
-        path.startsWith(HomeMainRoutes.addItem);
+        path.startsWith(HomeMainRoutes.addItem) ||
+        path.startsWith(HomeMainRoutes.inventory);
     final isReportPath =
         path.startsWith(HomeMainRoutes.reports) ||
         path.startsWith(HomeMainRoutes.orderReport) ||
@@ -238,7 +239,7 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
       ),
       child: Column(
         children: [
-          _buildHeader(context),
+          _buildHeader(context, loc),
 
           const SizedBox(height: 8),
           Expanded(
@@ -249,7 +250,7 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
                   _navItem(
                     context: context,
                     index: 0,
-                    label: 'Dashboard',
+                    label: loc.dashboard,
                     svgIcon: Assets.svg.home.svg(
                       width: AppShellSidebar.navIconSize,
                       height: AppShellSidebar.navIconSize,
@@ -264,7 +265,7 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
                   _navItem(
                     context: context,
                     index: 1,
-                    label: 'Create Order',
+                    label: loc.create_order,
                     svgIcon: Icon(
                       Icons.add_circle_outline_rounded,
                       size: AppShellSidebar.navIconSize,
@@ -277,7 +278,7 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
                     _navItem(
                       context: context,
                       index: 2,
-                      label: 'Tables',
+                      label: loc.tables,
                       svgIcon: Icon(
                         Icons.table_restaurant,
                         size: AppShellSidebar.navIconSize,
@@ -332,6 +333,9 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
                                   ) &&
                                   !currentPath.startsWith(
                                     HomeMainRoutes.addItem,
+                                  ) &&
+                                  !currentPath.startsWith(
+                                    HomeMainRoutes.inventory,
                                   )) {
                                 Modular.to.navigate(HomeMainRoutes.items);
                               }
@@ -379,18 +383,29 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
                             children: [
                               _reportChildItem(
                                 context: context,
-                                label: 'Item List',
+                                label: loc.item_list,
                                 selected: isItemListSelected,
                                 onTap: () =>
                                     Modular.to.navigate(HomeMainRoutes.items),
                               ),
                               _reportChildItem(
                                 context: context,
-                                label: 'Add Item',
+                                label: loc.add_item,
                                 selected: isAddItemSelected,
                                 onTap: () =>
                                     Modular.to.navigate(HomeMainRoutes.addItem),
                               ),
+                              if (StaffAccess.canViewInventory)
+                                _reportChildItem(
+                                  context: context,
+                                  label: loc.inventory,
+                                  selected: currentPath.startsWith(
+                                    HomeMainRoutes.inventory,
+                                  ),
+                                  onTap: () => Modular.to.navigate(
+                                    HomeMainRoutes.inventory,
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -400,7 +415,7 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
                     _navItem(
                       context: context,
                       index: iOrders,
-                      label: 'Orders',
+                      label: loc.orders,
                       svgIcon: Icon(
                         Icons.receipt_long_outlined,
                         size: AppShellSidebar.navIconSize,
@@ -470,7 +485,7 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
                               ),
                             ),
                             title: Text(
-                              'Orders',
+                              loc.orders,
                               style: TextStyle(
                                 color: widget.selectedIndex == iOrders
                                     ? _SidebarColors.textActive
@@ -504,126 +519,127 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
                         ),
                       ),
                     ),
-                  if (widget.collapsed)
-                    _navItem(
-                      context: context,
-                      index: iReports,
-                      label: loc.reports,
-                      svgIcon: Assets.svg.reports.svg(
-                        width: AppShellSidebar.navIconSize,
-                        height: AppShellSidebar.navIconSize,
-                        colorFilter: ColorFilter.mode(
-                          widget.selectedIndex == iReports
-                              ? _SidebarColors.textActive
-                              : _SidebarColors.iconInactive,
-                          BlendMode.srcIn,
+                  if (StaffAccess.canViewReports)
+                    if (widget.collapsed)
+                      _navItem(
+                        context: context,
+                        index: iReports,
+                        label: loc.reports,
+                        svgIcon: Assets.svg.reports.svg(
+                          width: AppShellSidebar.navIconSize,
+                          height: AppShellSidebar.navIconSize,
+                          colorFilter: ColorFilter.mode(
+                            widget.selectedIndex == iReports
+                                ? _SidebarColors.textActive
+                                : _SidebarColors.iconInactive,
+                            BlendMode.srcIn,
+                          ),
                         ),
-                      ),
-                    )
-                  else
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 2.5,
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: widget.selectedIndex == iReports
-                              ? activeBackground
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(10),
+                      )
+                    else
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 2.5,
                         ),
-                        child: Theme(
-                          data: Theme.of(
-                            context,
-                          ).copyWith(dividerColor: Colors.transparent),
-                          child: ExpansionTile(
-                            key: const PageStorageKey<String>(
-                              'reports-sidebar-tile',
-                            ),
-                            initiallyExpanded: _reportsExpanded,
-                            onExpansionChanged: (expanded) {
-                              setState(() => _reportsExpanded = expanded);
-                              if (expanded &&
-                                  !currentPath.startsWith(
-                                    HomeMainRoutes.reports,
-                                  ) &&
-                                  !currentPath.startsWith(
-                                    HomeMainRoutes.orderReport,
-                                  ) &&
-                                  !currentPath.startsWith(
-                                    HomeMainRoutes.itemsReport,
-                                  )) {
-                                Modular.to.navigate(HomeMainRoutes.reports);
-                              }
-                            },
-                            tilePadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 1,
-                            ),
-                            childrenPadding: const EdgeInsets.only(
-                              left: 46,
-                              right: 10,
-                              bottom: 6,
-                            ),
-                            iconColor: _SidebarColors.textInactive,
-                            collapsedIconColor: _SidebarColors.textInactive,
-                            leading: SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: Center(
-                                child: Assets.svg.reports.svg(
-                                  width: AppShellSidebar.navIconSize,
-                                  height: AppShellSidebar.navIconSize,
-                                  colorFilter: ColorFilter.mode(
-                                    widget.selectedIndex == iReports
-                                        ? _SidebarColors.textActive
-                                        : _SidebarColors.iconInactive,
-                                    BlendMode.srcIn,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: widget.selectedIndex == iReports
+                                ? activeBackground
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Theme(
+                            data: Theme.of(
+                              context,
+                            ).copyWith(dividerColor: Colors.transparent),
+                            child: ExpansionTile(
+                              key: const PageStorageKey<String>(
+                                'reports-sidebar-tile',
+                              ),
+                              initiallyExpanded: _reportsExpanded,
+                              onExpansionChanged: (expanded) {
+                                setState(() => _reportsExpanded = expanded);
+                                if (expanded &&
+                                    !currentPath.startsWith(
+                                      HomeMainRoutes.reports,
+                                    ) &&
+                                    !currentPath.startsWith(
+                                      HomeMainRoutes.orderReport,
+                                    ) &&
+                                    !currentPath.startsWith(
+                                      HomeMainRoutes.itemsReport,
+                                    )) {
+                                  Modular.to.navigate(HomeMainRoutes.reports);
+                                }
+                              },
+                              tilePadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 1,
+                              ),
+                              childrenPadding: const EdgeInsets.only(
+                                left: 46,
+                                right: 10,
+                                bottom: 6,
+                              ),
+                              iconColor: _SidebarColors.textInactive,
+                              collapsedIconColor: _SidebarColors.textInactive,
+                              leading: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: Center(
+                                  child: Assets.svg.reports.svg(
+                                    width: AppShellSidebar.navIconSize,
+                                    height: AppShellSidebar.navIconSize,
+                                    colorFilter: ColorFilter.mode(
+                                      widget.selectedIndex == iReports
+                                          ? _SidebarColors.textActive
+                                          : _SidebarColors.iconInactive,
+                                      BlendMode.srcIn,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            title: Text(
-                              loc.reports,
-                              style: TextStyle(
-                                color: widget.selectedIndex == iReports
-                                    ? _SidebarColors.textActive
-                                    : _SidebarColors.textInactive,
-                                fontSize: 13.5,
-                                fontWeight: widget.selectedIndex == iReports
-                                    ? FontWeight.w600
-                                    : FontWeight.w500,
-                                letterSpacing: 0.1,
-                              ),
-                            ),
-                            children: [
-                              _reportChildItem(
-                                context: context,
-                                label: loc.order_Reports,
-                                selected: isOrderReportSelected,
-                                onTap: () => Modular.to.navigate(
-                                  HomeMainRoutes.orderReport,
+                              title: Text(
+                                loc.reports,
+                                style: TextStyle(
+                                  color: widget.selectedIndex == iReports
+                                      ? _SidebarColors.textActive
+                                      : _SidebarColors.textInactive,
+                                  fontSize: 13.5,
+                                  fontWeight: widget.selectedIndex == iReports
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
+                                  letterSpacing: 0.1,
                                 ),
                               ),
-                              _reportChildItem(
-                                context: context,
-                                label: loc.item_Reports,
-                                selected: isItemReportSelected,
-                                onTap: () => Modular.to.navigate(
-                                  HomeMainRoutes.itemsReport,
+                              children: [
+                                _reportChildItem(
+                                  context: context,
+                                  label: loc.order_Reports,
+                                  selected: isOrderReportSelected,
+                                  onTap: () => Modular.to.navigate(
+                                    HomeMainRoutes.orderReport,
+                                  ),
                                 ),
-                              ),
-                            ],
+                                _reportChildItem(
+                                  context: context,
+                                  label: loc.item_Reports,
+                                  selected: isItemReportSelected,
+                                  onTap: () => Modular.to.navigate(
+                                    HomeMainRoutes.itemsReport,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
                   if (kotEnabled)
                     _navItem(
                       context: context,
                       index: iKot,
-                      label: 'KOT History',
+                      label: loc.kot_history,
                       svgIcon: Icon(
                         Icons.history_rounded,
                         size: AppShellSidebar.navIconSize,
@@ -636,7 +652,7 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
                     _navItem(
                       context: context,
                       index: iKds,
-                      label: 'Kitchen Display',
+                      label: loc.kitchen_display,
                       svgIcon: Icon(
                         Icons.soup_kitchen_rounded,
                         size: AppShellSidebar.navIconSize,
@@ -647,7 +663,7 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
                       onTapOverride: KitchenDisplayWindowLauncher.open,
                       trailing: !widget.collapsed
                           ? IconButton(
-                              tooltip: 'Open Kitchen Display in browser',
+                              tooltip: loc.open_kitchen_display_in_browser,
                               onPressed: KitchenDisplayBrowser.open,
                               icon: Icon(
                                 Icons.open_in_browser_rounded,
@@ -697,7 +713,7 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
                     _navItem(
                       context: context,
                       index: iSubs,
-                      label: 'Plans & Pricing',
+                      label: loc.plans_and_pricing,
                       svgIcon: Assets.plan.image(
                         width: AppShellSidebar.navIconSize,
                         height: AppShellSidebar.navIconSize,
@@ -710,7 +726,7 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
                     _navItem(
                       context: context,
                       index: iWa,
-                      label: 'WhatsApp Marketing',
+                      label: loc.whatsapp_marketing,
                       svgIcon: Icon(
                         Icons.campaign_outlined,
                         size: AppShellSidebar.navIconSize,
@@ -734,7 +750,7 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
                   _navItem(
                     context: context,
                     index: iSettings,
-                    label: 'Settings',
+                    label: loc.settings,
                     svgIcon: Icon(
                       Icons.settings_outlined,
                       size: AppShellSidebar.navIconSize,
@@ -751,7 +767,7 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
           _navItem(
             context: context,
             index: iProfile,
-            label: 'Profile',
+            label: loc.profile,
             svgIcon: Icon(
               Icons.person_rounded,
               size: AppShellSidebar.navIconSize,
@@ -771,14 +787,14 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
             ),
             isSignOut: true,
           ),
-          _buildSubscriptionInfoCard(),
+          _buildSubscriptionInfoCard(loc),
           const SizedBox(height: 12),
         ],
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, AppLocalizations loc) {
     final hasController = Get.isRegistered<HomeScreenController>();
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
@@ -818,13 +834,17 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
               ),
             ],
           ),
-          if (widget.collapsed) _buildCollapsedTrialCountdown(hasController),
+          if (widget.collapsed)
+            _buildCollapsedTrialCountdown(hasController, loc),
         ],
       ),
     );
   }
 
-  Widget _buildCollapsedTrialCountdown(bool hasHomeController) {
+  Widget _buildCollapsedTrialCountdown(
+    bool hasHomeController,
+    AppLocalizations loc,
+  ) {
     Widget buildInner() {
       final outlet = hasHomeController
           ? Get.find<HomeScreenController>().selectedOutlet.value
@@ -835,7 +855,7 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
       return Padding(
         padding: const EdgeInsets.only(top: 2),
         child: Text(
-          _formatTimeRemaining(end),
+          _formatTimeRemaining(end, loc),
           textAlign: TextAlign.center,
           maxLines: 2,
           style: const TextStyle(
@@ -946,17 +966,19 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
             }
 
             final targetRoute = HomeMainRoutes.routeForIndex(index);
+            final navLoc = AppLocalizations.of(context)!;
             if (!_canNavigateToRoute(targetRoute)) {
-              showError(
-                description: 'You do not have permission to access this section.',
-              );
+              showError(description: navLoc.no_permission_section);
               return;
             }
             final isLeavingCreateOrder =
                 Modular.to.path.startsWith(HomeMainRoutes.createOrder) &&
                 targetRoute != HomeMainRoutes.createOrder;
             if (isLeavingCreateOrder) {
-              final shouldLeave = await _confirmLeaveCreateOrder(context);
+              final shouldLeave = await _confirmLeaveCreateOrder(
+                context,
+                navLoc,
+              );
               if (!shouldLeave) return;
             }
 
@@ -1081,18 +1103,18 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
     );
   }
 
-  Widget _buildSubscriptionInfoCard() {
+  Widget _buildSubscriptionInfoCard(AppLocalizations loc) {
     final hasController = Get.isRegistered<HomeScreenController>();
     final outlet = hasController
         ? Get.find<HomeScreenController>().selectedOutlet.value
         : Get.find<AppPref>().selectedOutlet;
     final user = Get.find<AppPref>().user;
-    final subscriptionData = _resolveSubscriptionData(outlet, user);
+    final subscriptionData = _resolveSubscriptionData(outlet, user, loc);
 
     if (subscriptionData == null) return const SizedBox.shrink();
 
     final compact = widget.collapsed;
-    final remaining = _formatTimeRemaining(subscriptionData.endDate);
+    final remaining = _formatTimeRemaining(subscriptionData.endDate, loc);
     final validTill = formatDateTimeForDisplay(
       subscriptionData.endDate,
       'dd MMM yyyy, hh:mm a',
@@ -1123,8 +1145,14 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
           children: [
             Text(
               compact
-                  ? '${subscriptionData.daysLeft}d\n${subscriptionData.label}'
-                  : '${subscriptionData.daysLeft} days ${subscriptionData.label} left',
+                  ? loc.subscription_days_left_compact(
+                      subscriptionData.daysLeft.toString(),
+                      subscriptionData.label,
+                    )
+                  : loc.subscription_days_left(
+                      subscriptionData.daysLeft.toString(),
+                      subscriptionData.label,
+                    ),
               textAlign: compact ? TextAlign.center : TextAlign.start,
               style: TextStyle(
                 color: Colors.white,
@@ -1145,7 +1173,7 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
             ),
             SizedBox(height: compact ? 5 : 7),
             Text(
-              compact ? remaining : 'Remaining: $remaining',
+              compact ? remaining : loc.remaining_label(remaining),
               textAlign: compact ? TextAlign.center : TextAlign.start,
               style: TextStyle(
                 color: Colors.white70,
@@ -1156,7 +1184,7 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
             if (!compact) ...[
               const SizedBox(height: 2),
               Text(
-                'Valid till: $validTill',
+                loc.valid_till_label(validTill),
                 style: const TextStyle(
                   color: Colors.white60,
                   fontSize: 10.2,
@@ -1173,6 +1201,7 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
   _SubscriptionCardData? _resolveSubscriptionData(
     OutletData? outlet,
     User? user,
+    AppLocalizations loc,
   ) {
     final now = DateTime.now();
 
@@ -1202,7 +1231,7 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
         now: now,
         startDate: start,
         endDate: activeEndDate,
-        label: 'Subscription',
+        label: loc.subscription_label,
       );
     }
 
@@ -1214,7 +1243,7 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
           now: now,
           startDate: createdAt,
           endDate: trialEnd,
-          label: 'Free Trial',
+          label: loc.free_trial,
         );
       }
     }
@@ -1246,10 +1275,10 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
     );
   }
 
-  String _formatTimeRemaining(DateTime endDate) {
+  String _formatTimeRemaining(DateTime endDate, AppLocalizations loc) {
     final now = DateTime.now();
     final diff = endDate.difference(now);
-    if (diff.isNegative) return 'Expired';
+    if (diff.isNegative) return loc.expired;
 
     final d = diff.inDays;
     final h = diff.inHours % 24;
@@ -1258,7 +1287,10 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
     return '${d}d ${h}h ${m}m ${s}s';
   }
 
-  Future<bool> _confirmLeaveCreateOrder(BuildContext context) async {
+  Future<bool> _confirmLeaveCreateOrder(
+    BuildContext context,
+    AppLocalizations loc,
+  ) async {
     if (!Get.isRegistered<AddOrderController>()) return true;
 
     final shouldLeave = await showDialog<bool>(
@@ -1270,18 +1302,16 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
           ),
           constraints: const BoxConstraints(maxWidth: 360),
           insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-          title: const Text('Discard order?'),
-          content: const Text(
-            'You have unsaved order changes. Are you sure you want to leave this screen?',
-          ),
+          title: Text(loc.discard_order_title),
+          content: Text(loc.discard_order_message),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Stay'),
+              child: Text(loc.stay),
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Leave'),
+              child: Text(loc.leave),
             ),
           ],
         );
@@ -1291,16 +1321,7 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
   }
 
   bool _canNavigateToRoute(String route) {
-    if (route.startsWith(HomeMainRoutes.staff)) {
-      return StaffAccess.canManageStaff;
-    }
-    if (route.startsWith(HomeMainRoutes.subscriptions)) {
-      return StaffAccess.canManageSubscriptions;
-    }
-    if (route.startsWith(HomeMainRoutes.whatsaapMarketing)) {
-      return StaffAccess.canUseWhatsAppMarketing;
-    }
-    return true;
+    return StaffAccess.canAccessRoute(route);
   }
 }
 

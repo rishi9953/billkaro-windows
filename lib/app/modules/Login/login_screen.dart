@@ -79,12 +79,7 @@ class LoginScreen extends StatelessWidget {
         children: [
           const WindowsDesktopTitleBar(actions: []),
           appBar,
-          Expanded(
-            child: SafeArea(
-              top: false,
-              child: scrollContent,
-            ),
-          ),
+          Expanded(child: SafeArea(top: false, child: scrollContent)),
         ],
       ),
     );
@@ -96,7 +91,7 @@ class LoginScreen extends StatelessWidget {
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
         color: _surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.06),
@@ -134,6 +129,8 @@ class LoginScreen extends StatelessWidget {
               () => Text(
                 controller.signInTabIndex.value == 1
                     ? 'Use the email and password provided by your outlet.'
+                    : controller.loginMethodTabIndex.value == 1
+                    ? 'Enter your phone number to continue.'
                     : 'Enter your email and password to continue.',
                 style: TextStyle(
                   fontSize: 14,
@@ -142,58 +139,160 @@ class LoginScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 28),
-            _buildTextField(
-              label: 'Email',
-              hint: 'you@example.com',
-              icon: Icons.mail_outline_rounded,
-              controller: controller.registrationKeyController,
-              validator: controller.validateRegistrationKey,
-              keyboardType: TextInputType.emailAddress,
-            ),
             const SizedBox(height: 20),
-            _buildPasswordField(
-              label: 'Password',
-              hint: 'Enter your password',
-              controller: controller.deviceLabelController,
-              validator: controller.validateDeviceLabel,
-              obscureRx: controller.obscurePassword,
-            ),
-            const SizedBox(height: 28),
+            _buildLoginMethodTabs(),
+            const SizedBox(height: 24),
             Obx(
-              () => _buildPrimaryButton(
-                onPressed: () => controller.onLogin(),
-                isLoading: controller.isLoading.value,
-                label: 'Sign in',
+              () => AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: controller.loginMethodTabIndex.value == 0
+                    ? _buildEmailPasswordSignIn()
+                    : _buildPhoneSignIn(),
               ),
             ),
-            const SizedBox(height: 20),
-            Obx(() {
-              if (controller.signInTabIndex.value == 1) {
-                return const SizedBox.shrink();
-              }
-              return Center(
-                child: TextButton(
-                  onPressed: controller.isLoading.value
-                      ? null
-                      : controller.onToggle,
-                  style: TextButton.styleFrom(
-                    foregroundColor: _primary,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                  ),
-                  child: const Text(
-                    'Forgot password?',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                  ),
-                ),
-              );
-            }),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildLoginMethodTabs() {
+    return Obx(
+      () => SegmentedButton<int>(
+        segments: const [
+          ButtonSegment<int>(
+            value: 0,
+            label: Text(
+              'Email &\npassword',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, height: 1.15),
+            ),
+            icon: Icon(Icons.mail_outline_rounded, size: 18),
+          ),
+          ButtonSegment<int>(
+            value: 1,
+            label: Text(
+              'Phone\nnumber',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, height: 1.15),
+            ),
+            icon: Icon(Icons.phone_outlined, size: 18),
+          ),
+        ],
+        selected: {controller.loginMethodTabIndex.value},
+        onSelectionChanged: controller.isLoading.value
+            ? null
+            : (Set<int> next) {
+                if (next.isEmpty) return;
+                controller.loginMethodTabIndex.value = next.first;
+              },
+        style: ButtonStyle(
+          shape: MaterialStateProperty.all(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return Colors.white;
+            }
+            return _textPrimary;
+          }),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return _primary;
+            }
+            return const Color(0xfff9fafb);
+          }),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmailPasswordSignIn() {
+    return Column(
+      key: const ValueKey('emailSignIn'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildTextField(
+          label: 'Email',
+          hint: 'you@example.com',
+          icon: Icons.mail_outline_rounded,
+          controller: controller.registrationKeyController,
+          validator: controller.validateRegistrationKey,
+          keyboardType: TextInputType.emailAddress,
+        ),
+        const SizedBox(height: 20),
+        _buildPasswordField(
+          label: 'Password',
+          hint: 'Enter your password',
+          controller: controller.deviceLabelController,
+          validator: controller.validateDeviceLabel,
+          obscureRx: controller.obscurePassword,
+        ),
+        const SizedBox(height: 28),
+        Obx(
+          () => _buildPrimaryButton(
+            onPressed: () => controller.onLogin(),
+            isLoading: controller.isLoading.value,
+            label: 'Sign in',
+          ),
+        ),
+        const SizedBox(height: 20),
+        Obx(() {
+          if (controller.signInTabIndex.value == 1) {
+            return const SizedBox.shrink();
+          }
+          return Center(
+            child: TextButton(
+              onPressed: controller.isLoading.value
+                  ? null
+                  : controller.onToggle,
+              style: TextButton.styleFrom(
+                foregroundColor: _primary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+              ),
+              child: const Text(
+                'Forgot password?',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildPhoneSignIn() {
+    return Column(
+      key: const ValueKey('phoneSignIn'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildTextField(
+          label: 'Phone number',
+          hint: 'Enter your phone number',
+          icon: Icons.phone_outlined,
+          controller: controller.phoneNumberController,
+          validator: null,
+          keyboardType: TextInputType.phone,
+        ),
+        const SizedBox(height: 28),
+        _buildPrimaryButton(
+          onPressed: null,
+          isLoading: false,
+          label: 'Sign in',
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Phone sign-in is coming soon.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 13,
+            color: _textSecondary.withOpacity(0.9),
+          ),
+        ),
+      ],
     );
   }
 
@@ -228,6 +327,9 @@ class LoginScreen extends StatelessWidget {
                 controller.signInTabIndex.value = next.first;
               },
         style: ButtonStyle(
+          shape: MaterialStateProperty.all(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
           foregroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
               return Colors.white;

@@ -36,6 +36,12 @@ class ItemReportsScreen extends StatelessWidget {
             tooltip: 'Export to PDF',
           ),
           const SizedBox(width: 8),
+          // Reresh
+          IconButton(
+            tooltip: loc.refresh,
+            onPressed: controller.refreshData,
+            icon: const Icon(Icons.refresh, color: Colors.white),
+          )
         ],
       ),
       body: SafeArea(

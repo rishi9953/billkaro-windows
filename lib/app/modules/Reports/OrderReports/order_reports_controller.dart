@@ -482,6 +482,20 @@ class OrderReportsController extends BaseController {
     await getOrderList(); // Refetch from API with startDate/endDate
   }
 
+  // Refresh Reports data (called from screen's refresh button)
+  Future<void> refreshData() async {
+    // Reset all filters
+    selectedTimePeriod.value = 'All';
+    selectedDateRange.value = null;
+    selectedPaymentType.value = 'All';
+    selectedOrderType.value = 'All';
+    selectedCategory.value = 'All';
+    selectedCustomers.clear();
+
+    // Refetch from API with no filters
+    await getOrderList();
+  }
+
   /// 📅 Custom date range picker
   Future<void> selectCustomDateRange() async {
     final picked = await _showAdaptiveDateRangePicker(
