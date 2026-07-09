@@ -6,13 +6,16 @@ bool isClientGeneratedId(String? id) {
   return id.startsWith('temp_') || id.startsWith('local_');
 }
 
-/// Builds a server-safe order payload (strips local-only IDs).
+/// Builds a server-safe order payload (strips local-only IDs and billNumber).
 Map<String, dynamic> buildOrderSyncPayload(OrderModel order) {
   final payload = Map<String, dynamic>.from(order.toJson());
 
   if (isClientGeneratedId(order.id)) {
     payload.remove('id');
   }
+
+  // Backend always assigns bill numbers; sending one can cause conflicts.
+  payload.remove('billNumber');
 
   final items = payload['items'];
   if (items is List) {

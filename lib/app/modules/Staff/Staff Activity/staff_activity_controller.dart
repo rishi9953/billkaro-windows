@@ -450,11 +450,7 @@ class StaffActivityController extends BaseController {
   StaffMember _toStaffMember(Map<String, dynamic> raw) {
     final user = raw['user'];
     final userMap = user is Map ? Map<String, dynamic>.from(user) : null;
-    final role = _asString(raw['role']).isNotEmpty
-        ? _asString(raw['role'])
-        : _asString(raw['userRole']).isNotEmpty
-        ? _asString(raw['userRole'])
-        : _asString(userMap?['role']);
+    final role = StaffMember.roleFromApiMap(raw, userMap);
 
     return StaffMember(
       id: _firstNonEmpty([

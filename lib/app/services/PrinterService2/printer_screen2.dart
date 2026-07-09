@@ -364,6 +364,18 @@ class _PrinterScreen2State extends State<PrinterScreen2>
                 SizedBox(
                   width: 380,
                   child: SegmentedButton<int>(
+                    style: ButtonStyle(
+                      shape: WidgetStatePropertyAll(
+                        RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            8,
+                          ), // Change radius here
+                        ),
+                      ),
+                      side: WidgetStatePropertyAll(
+                        BorderSide(color: Colors.grey, width: 1),
+                      ),
+                    ),
                     segments: [
                       ButtonSegment(
                         value: 0,
@@ -936,7 +948,10 @@ class _PrinterScreen2State extends State<PrinterScreen2>
       );
 
       if (_isWindowsDesktop) {
-        return _winSectionCard(padding: const EdgeInsets.all(16), child: cardChild);
+        return _winSectionCard(
+          padding: const EdgeInsets.all(16),
+          child: cardChild,
+        );
       }
 
       return Card(
@@ -945,7 +960,9 @@ class _PrinterScreen2State extends State<PrinterScreen2>
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
           side: BorderSide(
-            color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.4),
+            color: Theme.of(
+              context,
+            ).colorScheme.outlineVariant.withOpacity(0.4),
           ),
         ),
         child: Padding(padding: const EdgeInsets.all(14), child: cardChild),

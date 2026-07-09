@@ -1,72 +1,31 @@
-import 'dart:io';
-
+import 'package:billkaro/app/modules/Items/menuItem/menu_products_template_service.dart';
 import 'package:billkaro/config/config.dart';
-import 'package:billkaro/utils/download_path_util.dart';
-import 'package:open_file/open_file.dart';
-import 'package:syncfusion_flutter_xlsio/xlsio.dart' hide Column, Row, Border;
+
+enum MenuProductsExcelDialogMode { import, export }
 
 /// Shows instructions and template download before picking an import file.
 /// Returns `true` when the user chooses [Select File], otherwise `null`.
-Future<bool?> showMenuImportFileDialog() async {
+Future<bool?> showMenuImportFileDialog() =>
+    showMenuProductsExcelDialog(MenuProductsExcelDialogMode.import);
+
+/// Shows instructions and template download before exporting products.
+/// Returns `true` when the user chooses [Export File], otherwise `null`.
+Future<bool?> showMenuExportFileDialog() =>
+    showMenuProductsExcelDialog(MenuProductsExcelDialogMode.export);
+
+Future<bool?> showMenuProductsExcelDialog(MenuProductsExcelDialogMode mode) {
   return Get.dialog<bool>(
-    const _MenuImportFileDialog(),
+    _MenuProductsExcelDialog(mode: mode),
     barrierDismissible: false,
   );
 }
 
-class _MenuImportFileDialog extends StatelessWidget {
-  const _MenuImportFileDialog();
+class _MenuProductsExcelDialog extends StatelessWidget {
+  const _MenuProductsExcelDialog({required this.mode});
 
-  static const _templateFileName = 'products_template.xlsx';
+  final MenuProductsExcelDialogMode mode;
 
-  Future<void> _downloadTemplate() async {
-    final loc = AppLocalizations.of(Get.context!)!;
-    try {
-      showAppLoader();
-      final workbook = Workbook();
-      final sheet = workbook.worksheets[0];
-      sheet.name = 'Products';
-
-      final headers = ['Name', 'Price', 'Category', 'Tax %'];
-      for (var i = 0; i < headers.length; i++) {
-        final cell = sheet.getRangeByIndex(1, i + 1);
-        cell.setText(headers[i]);
-        cell.cellStyle.bold = true;
-        cell.cellStyle.backColor = '#E8EEF7';
-      }
-
-      sheet.getRangeByIndex(2, 1).setText('Sample Item');
-      sheet.getRangeByIndex(2, 2).setNumber(100);
-      sheet.getRangeByIndex(2, 3).setText('Beverages');
-      sheet.getRangeByIndex(2, 4).setNumber(5);
-
-      for (var i = 1; i <= headers.length; i++) {
-        sheet.autoFitColumn(i);
-      }
-
-      final bytes = workbook.saveAsStream();
-      workbook.dispose();
-
-      final saveDir = Directory(await DownloadPathUtil.resolveSaveDirectory());
-      if (!saveDir.existsSync()) {
-        saveDir.createSync(recursive: true);
-      }
-
-      final fullPath = '${saveDir.path}/$_templateFileName';
-      await File(fullPath).writeAsBytes(bytes);
-
-      final openResult = await OpenFile.open(fullPath);
-      if (openResult.type == ResultType.done) {
-        showSuccess(description: loc.template_saved_opened);
-      } else {
-        showSuccess(description: loc.template_saved_to(fullPath));
-      }
-    } catch (e) {
-      showError(description: loc.failed_to_import_file_error(e.toString()));
-    } finally {
-      dismissAllAppLoader();
-    }
-  }
+  bool get _isImport => mode == MenuProductsExcelDialogMode.import;
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +51,9 @@ class _MenuImportFileDialog extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
-                      Icons.upload_file_outlined,
+                      _isImport
+                          ? Icons.upload_file_outlined
+                          : Icons.download_outlined,
                       color: AppColor.primary,
                       size: 24,
                     ),
@@ -100,7 +61,9 @@ class _MenuImportFileDialog extends StatelessWidget {
                   const SizedBox(width: 14),
                   Expanded(
                     child: Text(
-                      loc.import_from_file,
+                      _isImport
+                          ? loc.import_products_excel
+                          : loc.export_products_excel,
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -112,7 +75,9 @@ class _MenuImportFileDialog extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                loc.import_from_file,
+                _isImport
+                    ? loc.import_products_description
+                    : loc.export_products_description,
                 style: TextStyle(
                   fontSize: 14,
                   height: 1.45,
@@ -123,7 +88,7 @@ class _MenuImportFileDialog extends StatelessWidget {
               Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  // onTap: _downloadTemplate,
+                  onTap: MenuProductsTemplateService.downloadTemplate,
                   borderRadius: BorderRadius.circular(10),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -150,7 +115,7 @@ class _MenuImportFileDialog extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          _templateFileName,
+                          MenuProductsTemplateService.templateFileName,
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -180,7 +145,7 @@ class _MenuImportFileDialog extends StatelessWidget {
                   TextButton(
                     onPressed: () => Get.back(result: true),
                     child: Text(
-                      loc.select_file,
+                      _isImport ? loc.select_file : loc.export_file,
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: AppColor.primary,

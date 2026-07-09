@@ -183,15 +183,29 @@ class _AddOrderListScreenState extends State<AddOrderListScreen> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        CachedNetworkImage(
-                                          imageUrl: category.imageURL,
-                                          width: 40,
-                                          height: 40,
-                                          fit: BoxFit.cover,
-                                          errorWidget: (context, url, error) =>
-                                              Container(
-                                                width: 30,
-                                                height: 30,
+                                        category.imageURL.isNotEmpty
+                                            ? CachedNetworkImage(
+                                                imageUrl: category.imageURL,
+                                                width: 40,
+                                                height: 40,
+                                                fit: BoxFit.cover,
+                                                errorWidget:
+                                                    (context, url, error) =>
+                                                        Container(
+                                                  width: 30,
+                                                  height: 30,
+                                                  color: Colors.grey[200],
+                                                  child: Icon(
+                                                    Icons
+                                                        .image_not_supported_outlined,
+                                                    color: Colors.grey[400],
+                                                    size: 16,
+                                                  ),
+                                                ),
+                                              )
+                                            : Container(
+                                                width: 40,
+                                                height: 40,
                                                 color: Colors.grey[200],
                                                 child: Icon(
                                                   Icons
@@ -200,7 +214,6 @@ class _AddOrderListScreenState extends State<AddOrderListScreen> {
                                                   size: 16,
                                                 ),
                                               ),
-                                        ),
                                         Text(
                                           category.categoryName.capitalize ??
                                               '',

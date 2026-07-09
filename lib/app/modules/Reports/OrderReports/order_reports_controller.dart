@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:billkaro/app/Widgets/app_date_picker.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -163,13 +164,13 @@ class OrderReportsController extends BaseController {
 
         final range = selectedDateRange.value;
         final startDateStr = range != null
-            ? DateFormat('yyyy-MM-dd').format(range.start)
+            ? formatIstDateForApi(range.start)
             : null;
         final endDateStr = range != null
-            ? DateFormat('yyyy-MM-dd').format(range.end)
+            ? formatIstDateForApi(range.end)
             : null;
 
-        final userId = appPref.user?.id;
+        final userId = appPref.ordersApiUserId;
         final outletId = appPref.selectedOutlet?.id;
         if (userId == null || outletId == null) {
           showError(description: 'User or outlet information is missing.');
@@ -431,54 +432,7 @@ class OrderReportsController extends BaseController {
       return;
     }
 
-    DateTime now = DateTime.now();
-    DateTimeRange? range;
-
-    switch (selectedTimePeriod.value) {
-      case 'All':
-        range = null;
-        break;
-      case 'Today':
-        range = DateTimeRange(
-          start: DateTime(now.year, now.month, now.day),
-          end: DateTime(now.year, now.month, now.day, 23, 59, 59),
-        );
-        break;
-
-      case 'This Week':
-        DateTime startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-        range = DateTimeRange(
-          start: DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day),
-          end: DateTime(now.year, now.month, now.day),
-        );
-        break;
-
-      case 'This Month':
-        range = DateTimeRange(
-          start: DateTime(now.year, now.month, 1),
-          end: DateTime(now.year, now.month, now.day),
-        );
-        break;
-
-      case 'This Quarter':
-        int currentQuarter = ((now.month - 1) ~/ 3) + 1;
-        int startMonth = (currentQuarter - 1) * 3 + 1;
-        DateTime startOfQuarter = DateTime(now.year, startMonth, 1);
-        range = DateTimeRange(
-          start: startOfQuarter,
-          end: DateTime(now.year, now.month, now.day),
-        );
-        break;
-
-      case 'This Year':
-        range = DateTimeRange(
-          start: DateTime(now.year, 1, 1),
-          end: DateTime(now.year, now.month, now.day),
-        );
-        break;
-    }
-
-    selectedDateRange.value = range;
+    selectedDateRange.value = istDateRangeForPeriod(selectedTimePeriod.value);
     await getOrderList(); // Refetch from API with startDate/endDate
   }
 
@@ -498,7 +452,9 @@ class OrderReportsController extends BaseController {
 
   /// 📅 Custom date range picker
   Future<void> selectCustomDateRange() async {
-    final picked = await _showAdaptiveDateRangePicker(
+    final picked = await showAppDateRangePickerFromGet(
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
       initialDateRange: selectedDateRange.value,
     );
 
@@ -516,47 +472,6 @@ class OrderReportsController extends BaseController {
         filterByTimePeriod();
       }
     }
-  }
-
-  Future<DateTimeRange?> _showAdaptiveDateRangePicker({
-    DateTimeRange? initialDateRange,
-  }) async {
-    final context = Get.context;
-    if (context == null) return null;
-
-    final isWindows = Theme.of(context).platform == TargetPlatform.windows;
-    return showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      initialDateRange: initialDateRange,
-      initialEntryMode: DatePickerEntryMode.calendarOnly,
-      builder: (dialogContext, child) {
-        if (child == null) return const SizedBox.shrink();
-        if (!isWindows) return child;
-
-        final theme = Theme.of(dialogContext);
-        return Theme(
-          data: theme.copyWith(
-            dialogTheme: DialogThemeData(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-            colorScheme: theme.colorScheme.copyWith(
-              primary: AppColor.primary,
-              surface: Colors.white,
-            ),
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 760, maxHeight: 660),
-              child: child,
-            ),
-          ),
-        );
-      },
-    );
   }
 
   /// 👥 Filter by Customers
@@ -747,7 +662,7 @@ class OrderReportsController extends BaseController {
 
     final response = await callApi(
       apiClient.getOrders(
-        appPref.user!.id!,
+        appPref.ordersApiUserId!,
         outletId,
         1,
         exportLimit,
@@ -867,7 +782,9 @@ class OrderReportsController extends BaseController {
                   FilledButton.icon(
                     onPressed: () async {
                       Get.back(result: false);
-                      final picked = await _showAdaptiveDateRangePicker(
+                      final picked = await showAppDateRangePickerFromGet(
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
                         initialDateRange: selectedDateRange.value,
                       );
                       if (picked == null) return;
@@ -906,7 +823,9 @@ class OrderReportsController extends BaseController {
             FilledButton(
               onPressed: () async {
                 Get.back(result: false);
-                final picked = await _showAdaptiveDateRangePicker(
+                final picked = await showAppDateRangePickerFromGet(
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime.now(),
                   initialDateRange: selectedDateRange.value,
                 );
                 if (picked == null) return;

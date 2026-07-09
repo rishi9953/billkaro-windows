@@ -12,7 +12,9 @@ CustomerRequest _$CustomerRequestFromJson(Map<String, dynamic> json) =>
       outletId: json['outletId'] as String,
       customerName: json['customerName'] as String,
       phoneNumber: json['phoneNumber'] as String,
-      loyalityDiscount: (json['loyalityDiscount'] as num).toInt(),
+      loyalityDiscount: (json['loyalityDiscount'] as num).toDouble(),
+      loyalityDiscountType:
+          json['loyalityDiscountType'] as String? ?? 'percentage',
     );
 
 Map<String, dynamic> _$CustomerRequestToJson(CustomerRequest instance) =>
@@ -22,4 +24,5 @@ Map<String, dynamic> _$CustomerRequestToJson(CustomerRequest instance) =>
       'customerName': instance.customerName,
       'phoneNumber': instance.phoneNumber,
       'loyalityDiscount': instance.loyalityDiscount,
+      'loyalityDiscountType': instance.loyalityDiscountType,
     };

@@ -51,60 +51,6 @@ class AddRegularCustomerScreen extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Obx(() {
-                                if (!controller.showBanner.value) {
-                                  return const SizedBox.shrink();
-                                }
-                                return Column(
-                                  children: [
-                                    InkWell(
-                                      borderRadius: BorderRadius.circular(10),
-                                      onTap: () {
-                                        controller.showContactPicker();
-                                      },
-                                      child: Container(
-                                        width: double.infinity,
-                                        padding: const EdgeInsets.all(14),
-                                        decoration: BoxDecoration(
-                                          color: AppColor.primary,
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            const Icon(
-                                              Icons.contact_phone,
-                                              color: Colors.white,
-                                              size: 24,
-                                            ),
-                                            const SizedBox(width: 10),
-                                            Expanded(
-                                              child: Text(
-                                                loc.fetch_customer_from_contacts,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            ),
-                                            IconButton(
-                                              onPressed: controller.closeBanner,
-                                              icon: const Icon(
-                                                Icons.close,
-                                                color: Colors.white,
-                                                size: 18,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 18),
-                                  ],
-                                );
-                              }),
                               _buildLabel(
                                 context,
                                 label: loc.phone_number_field,
@@ -140,15 +86,46 @@ class AddRegularCustomerScreen extends StatelessWidget {
                                 label: loc.loyalty_discount_label,
                               ),
                               const SizedBox(height: 8),
-                              TextField(
-                                controller: controller.discountController,
-                                keyboardType: TextInputType.number,
-                                decoration: _inputDecoration(
-                                  context,
-                                  hintText: loc.enter_discount,
-                                  suffixText: '%',
-                                ),
-                              ),
+                              Obx(() {
+                                final isPercent =
+                                    controller.discountType.value ==
+                                    'percentage';
+                                return TextField(
+                                  controller: controller.discountController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: _inputDecoration(
+                                    context,
+                                    hintText: loc.enter_discount,
+                                    prefixIcon: Icon(
+                                      isPercent
+                                          ? Icons.percent
+                                          : Icons.currency_rupee,
+                                      size: 20,
+                                    ),
+                                    suffixIcon: TextButton(
+                                      onPressed: () =>
+                                          controller.discountType.value =
+                                              isPercent
+                                              ? 'amount'
+                                              : 'percentage',
+                                      style: TextButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                        ),
+                                        visualDensity: VisualDensity.compact,
+                                        foregroundColor:
+                                            theme.colorScheme.primary,
+                                      ),
+                                      child: Text(
+                                        isPercent ? loc.percentage : loc.amount,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }),
                               const SizedBox(height: 8),
                               Row(
                                 children: [
@@ -290,12 +267,16 @@ class AddRegularCustomerScreen extends StatelessWidget {
     BuildContext context, {
     String? hintText,
     String? suffixText,
+    Widget? prefixIcon,
+    Widget? suffixIcon,
     String? prefixText,
     TextStyle? prefixStyle,
   }) {
     return InputDecoration(
       hintText: hintText,
       suffixText: suffixText,
+      prefixIcon: prefixIcon,
+      suffixIcon: suffixIcon,
       prefixText: prefixText,
       prefixStyle: prefixStyle,
       counterText: '',

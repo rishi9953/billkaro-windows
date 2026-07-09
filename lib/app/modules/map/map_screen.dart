@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:billkaro/app/Widgets/windows_desktop_title_bar.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_map/flutter_map.dart' as fm;
 import 'package:geolocator/geolocator.dart';
 import 'package:billkaro/utils/trusted_http_client.dart';
@@ -262,22 +265,22 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final showWindowsTitleBar = !kIsWeb && Platform.isWindows;
+    final appBar = AppBar(
+      elevation: 0,
+      centerTitle: true,
       backgroundColor: AppColor.backGroundColor,
-      appBar: AppBar(
-        elevation: 0,
-        centerTitle: true,
-        backgroundColor: AppColor.backGroundColor,
-        iconTheme: const IconThemeData(color: AppColor.black87),
-        title: Text(
-          'Select Location',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: AppColor.black87,
-            fontWeight: FontWeight.w600,
-          ),
+      iconTheme: const IconThemeData(color: AppColor.black87),
+      title: Text(
+        'Select Location',
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          color: AppColor.black87,
+          fontWeight: FontWeight.w600,
         ),
       ),
-      body: Center(
+    );
+
+    final bodyContent = Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1080),
           child: Padding(
@@ -430,6 +433,25 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ),
         ),
+    );
+
+    if (!showWindowsTitleBar) {
+      return Scaffold(
+        backgroundColor: AppColor.backGroundColor,
+        appBar: appBar,
+        body: bodyContent,
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppColor.backGroundColor,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const WindowsDesktopTitleBar(actions: []),
+          appBar,
+          Expanded(child: bodyContent),
+        ],
       ),
     );
   }

@@ -117,6 +117,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get add_images_ai_description => 'Enhance your menu with AI-powered images for a professional look.';
 
   @override
+  String get item_image_ai_chat_assistant => 'BillKaro AI';
+
+  @override
+  String get item_image_ai_chat_message => 'AI creates a professional food photo for your menu item. You can use it on your menu or replace it anytime by uploading your own photo from gallery or camera.';
+
+  @override
+  String get generate_image => 'Generate Image';
+
+  @override
+  String get describe_image_for_ai => 'Describe the image';
+
+  @override
+  String get describe_image_for_ai_hint => 'e.g. Butter chicken in a copper bowl with naan on the side';
+
+  @override
+  String get please_describe_image_for_ai => 'Please describe the image you want to generate';
+
+  @override
   String get manage_favourites_title => 'Manage favourites & Categories';
 
   @override
@@ -996,7 +1014,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get total_transactions => 'Total Transactions';
 
   @override
-  String get total_sales => 'Total Sales';
+  String get total_sales => 'Sales';
 
   @override
   String orders_report_generated(String date) {
@@ -1296,7 +1314,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get add_raw_material => 'Add Raw Material';
 
   @override
+  String get edit_raw_material => 'Edit Raw Material';
+
+  @override
   String get add_supplier => 'Add Supplier';
+
+  @override
+  String get edit_supplier => 'Edit Supplier';
 
   @override
   String adjust_stock_title(String name) {
@@ -2732,7 +2756,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String purchase_order_line_item(String name, String quantity, String unit, String price) {
-    return '• $name: $quantity $unit @ ₹$price';
+    return '$name: $quantity $unit @ ₹$price';
   }
 
   @override
@@ -2748,6 +2772,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get material_name_required => 'Material Name *';
 
   @override
+  String get please_enter_material_name => 'Please enter material name';
+
+  @override
+  String get select_category_required => 'Please select category';
+
+  @override
+  String get invalid_opening_stock => 'Opening stock must be greater than 0';
+
+  @override
+  String get min_stock_required => 'Minimum stock alert is required';
+
+  @override
+  String get invalid_min_stock => 'Enter a valid minimum stock alert (0 or greater)';
+
+  @override
+  String get invalid_purchase_price => 'Purchase price must be greater than 0';
+
+  @override
   String get category_example_hint => 'Category (e.g. Vegetables, Dairy)';
 
   @override
@@ -2761,6 +2803,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supplier_name_required => 'Supplier Name *';
+
+  @override
+  String get please_enter_supplier_name => 'Please enter supplier name';
+
+  @override
+  String get please_enter_vendor_no => 'Please enter vendor number';
+
+  @override
+  String get please_enter_contact_person => 'Please enter contact person';
+
+  @override
+  String get please_enter_address => 'Please enter address';
+
+  @override
+  String get please_enter_gst_number => 'Please enter GST number';
 
   @override
   String get phone_label => 'Phone';
@@ -2799,7 +2856,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get import_products_excel => 'Import Products - Excel (.xlsx)';
 
   @override
-  String get import_products_description => 'Select an Excel (.xlsx) file following the BillKaro template format. Required columns: Name and Price. Missing categories will be created automatically.';
+  String get import_products_description => 'Select an Excel (.xlsx) file following the BillKaro template format. Required columns: Name and Price. Optional: Category, Tax %, and Image Link. Missing categories will be created automatically.';
+
+  @override
+  String get export_products_excel => 'Export Products - Excel (.xlsx)';
+
+  @override
+  String get export_products_description => 'Export your menu items to an Excel (.xlsx) file using the BillKaro template format. Columns include Name, Price, Category, Tax %, and Image Link.';
+
+  @override
+  String get export_file => 'Export File';
 
   @override
   String get select_file => 'Select File';
@@ -2830,6 +2896,241 @@ class AppLocalizationsEn extends AppLocalizations {
   String recipe_uses_material(String quantity, String unit, String name) {
     return 'Uses $quantity $unit of $name';
   }
+
+  @override
+  String get add_recipe => 'Add Recipe';
+
+  @override
+  String get edit_recipe => 'Edit Recipe';
+
+  @override
+  String get select_menu_item => 'Menu Item *';
+
+  @override
+  String get select_raw_material => 'Raw Material *';
+
+  @override
+  String get recipe_quantity_hint => 'Quantity per serving *';
+
+  @override
+  String get recipe_quantity_helper => 'Amount deducted from stock per 1 unit sold';
+
+  @override
+  String get recipe_quantity_invalid => 'Enter a valid quantity greater than 0';
+
+  @override
+  String get select_menu_item_required => 'Please select a menu item';
+
+  @override
+  String get select_raw_material_required => 'Please select a raw material';
+
+  @override
+  String get recipe_ingredients => 'Recipe Ingredients';
+
+  @override
+  String get recipe_ingredients_subtitle => 'Link raw materials to auto-deduct stock when this item is sold';
+
+  @override
+  String get add_ingredient => 'Add Ingredient';
+
+  @override
+  String get no_ingredients_yet => 'No ingredients linked yet';
+
+  @override
+  String get search_recipes => 'Search recipes...';
+
+  @override
+  String recipe_lines_count(int count) {
+    return '$count ingredient(s)';
+  }
+
+  @override
+  String get create_purchase_order => 'Create Purchase Order';
+
+  @override
+  String get create_po => 'Create PO';
+
+  @override
+  String get edit_purchase_order => 'Edit Purchase Order';
+
+  @override
+  String get edit_po => 'Edit PO';
+
+  @override
+  String get save_po_changes => 'Save Changes';
+
+  @override
+  String get po_updated => 'Purchase order updated';
+
+  @override
+  String get po_cannot_edit => 'Only pending purchase orders can be edited';
+
+  @override
+  String get generate_po_from_low_stock => 'Generate PO from Low Stock';
+
+  @override
+  String get po_header_section => 'Order Details';
+
+  @override
+  String get po_line_items_section => 'Line Items';
+
+  @override
+  String get select_supplier => 'Supplier *';
+
+  @override
+  String get select_supplier_required => 'Please select a supplier';
+
+  @override
+  String get po_delivery_date_required => 'Please select a delivery date';
+
+  @override
+  String get po_payment_terms_required => 'Please enter payment terms';
+
+  @override
+  String get po_line_material_required => 'Please select a material';
+
+  @override
+  String get po_line_qty_required => 'Enter quantity greater than 0';
+
+  @override
+  String get po_line_rate_required => 'Enter a valid rate';
+
+  @override
+  String get po_address_name_required => 'Please enter name';
+
+  @override
+  String get po_pin_code_required => 'Please enter pin code';
+
+  @override
+  String get po_state_required => 'Please enter state';
+
+  @override
+  String get delivery_date => 'Delivery date';
+
+  @override
+  String get fill_from_low_stock => 'Fill from Low Stock';
+
+  @override
+  String get po_notes_hint => 'Delivery instructions, reference number, etc.';
+
+  @override
+  String get add_line => 'Add Line';
+
+  @override
+  String get po_order_qty => 'Order Qty';
+
+  @override
+  String get po_rate => 'Rate (₹)';
+
+  @override
+  String get po_amount => 'Amount';
+
+  @override
+  String po_grand_total(String total) {
+    return 'Grand Total: $total';
+  }
+
+  @override
+  String get po_line_invalid => 'Each line needs a material, quantity > 0, and valid rate';
+
+  @override
+  String get po_items_required => 'Add at least one line item';
+
+  @override
+  String get po_order_date => 'Order Date';
+
+  @override
+  String get po_received_date => 'Received On';
+
+  @override
+  String get supplier_label => 'Supplier';
+
+  @override
+  String get cancel_po => 'Cancel PO';
+
+  @override
+  String get view_details => 'View Details';
+
+  @override
+  String get print_po => 'Print PO';
+
+  @override
+  String get po_payment_terms => 'Payment Terms';
+
+  @override
+  String get po_reference_no => 'Reference No';
+
+  @override
+  String get po_document_type => 'Document Type';
+
+  @override
+  String get po_billing_address_section => 'Billing Details';
+
+  @override
+  String get po_terms_and_conditions => 'Terms & Conditions';
+
+  @override
+  String get po_terms_heading => 'Terms & Conditions :';
+
+  @override
+  String get po_terms_intro => 'These terms and conditions shall form an integral part of the Purchase Order (PO)';
+
+  @override
+  String get po_terms_and_conditions_hint => 'Enter terms and conditions for purchase orders. One point per line works best.';
+
+  @override
+  String get settings_po_terms => 'PO Terms & Conditions';
+
+  @override
+  String get settings_po_terms_subtitle => 'Default text for new purchase orders';
+
+  @override
+  String get settings_po_print_orientation => 'PO Print Orientation';
+
+  @override
+  String get settings_po_print_orientation_subtitle => 'Page layout when printing purchase orders';
+
+  @override
+  String get po_print_portrait => 'Portrait';
+
+  @override
+  String get po_print_landscape => 'Landscape';
+
+  @override
+  String get po_terms_saved => 'Terms & conditions saved';
+
+  @override
+  String get po_shipping_address_section => 'Shipping Address';
+
+  @override
+  String get po_same_as_billing => 'Same as billing';
+
+  @override
+  String get po_address_name => 'Name';
+
+  @override
+  String get po_address_line1 => 'Address Line 1';
+
+  @override
+  String get po_address_line2 => 'Address Line 2';
+
+  @override
+  String get po_pin_code => 'Pin Code';
+
+  @override
+  String get po_state => 'State';
+
+  @override
+  String get po_contact_no => 'Contact No';
+
+  @override
+  String get po_gst_no => 'GST No';
+
+  @override
+  String get po_sl_no => 'Sl. No';
+
+  @override
+  String get po_hsn_sac => 'HSN/SAC Code';
 
   @override
   String get template_saved_opened => 'Template saved and opened';
@@ -4064,6 +4365,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get merge_tables_failed => 'Failed to merge tables';
 
   @override
+  String get edit_merged_tables => 'Edit merged tables';
+
+  @override
+  String get edit_merged_tables_subtitle => 'Add or remove tables in this combined group';
+
+  @override
+  String get edit_merged_tables_hint => 'Uncheck all tables to split the group apart';
+
+  @override
+  String get merged_tables_updated_success => 'Merged tables updated successfully';
+
+  @override
   String get select_at_least_two_tables_to_merge => 'Select a primary table and at least one other occupied table';
 
   @override
@@ -4150,4 +4463,150 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get remove_image => 'Remove image';
+
+  @override
+  String get store_open => 'Store Open';
+
+  @override
+  String get store_closed => 'Store Closed';
+
+  @override
+  String get open_store => 'Open Store';
+
+  @override
+  String get close_store => 'Close Store';
+
+  @override
+  String get open_store_subtitle => 'Start your business day and enable billing';
+
+  @override
+  String get close_store_subtitle => 'End day, reconcile cash and reset tables';
+
+  @override
+  String get opening_cash => 'Opening cash in drawer';
+
+  @override
+  String get closing_cash => 'Closing cash counted';
+
+  @override
+  String get notes_optional => 'Notes (optional)';
+
+  @override
+  String get store_opened_success => 'Store opened successfully';
+
+  @override
+  String get store_closed_success => 'Day closed successfully';
+
+  @override
+  String get store_closed_banner_title => 'Store is closed';
+
+  @override
+  String get store_closed_banner_subtitle => 'Open the store to start taking orders';
+
+  @override
+  String get store_closed_order_blocked => 'Store is closed. Open the store before billing.';
+
+  @override
+  String get close_store_confirm_title => 'Confirm day end?';
+
+  @override
+  String get close_store_confirm_message => 'This will close the business day, save the summary and reset all tables to available.';
+
+  @override
+  String get opened_at => 'Opened at';
+
+  @override
+  String get opened_by => 'Opened by';
+
+  @override
+  String get closed_by => 'Closed by';
+
+  @override
+  String get total_orders => 'Orders';
+
+  @override
+  String get expected_cash => 'Expected cash';
+
+  @override
+  String get cash_variance => 'Cash variance';
+
+  @override
+  String get enter_valid_closing_cash => 'Enter a valid closing cash amount';
+
+  @override
+  String get store_history_title => 'Store Day History';
+
+  @override
+  String get store_history_subtitle => 'View open and close records with cash summary';
+
+  @override
+  String get store_history_empty => 'No store day records yet. Open and close the store to build history.';
+
+  @override
+  String get closed_at => 'Closed at';
+
+  @override
+  String get wallet_title => 'BillKaro Wallet';
+
+  @override
+  String get wallet_balance => 'Available Balance';
+
+  @override
+  String get wallet_balance_subtitle => 'Prepaid credits for platform fees';
+
+  @override
+  String get wallet_add_money => 'Add Money';
+
+  @override
+  String get wallet_recharge => 'Recharge';
+
+  @override
+  String get wallet_custom_amount => 'Custom Amount';
+
+  @override
+  String get wallet_enter_amount_hint => 'Enter amount';
+
+  @override
+  String get wallet_enter_valid_amount => 'Please enter a valid amount greater than zero.';
+
+  @override
+  String get wallet_history => 'Transaction History';
+
+  @override
+  String get wallet_transactions => 'transactions';
+
+  @override
+  String get wallet_no_transactions => 'No transactions yet. Recharge your wallet to get started.';
+
+  @override
+  String get wallet_demo_note => 'Demo mode: balance is stored on this device only. Razorpay test checkout is used to add money — no backend verification.';
+
+  @override
+  String get wallet_low_balance_warning => 'Wallet balance is low. Recharge soon to avoid billing interruptions.';
+
+  @override
+  String get wallet_recharge_demo => 'Wallet Recharge (Demo)';
+
+  @override
+  String get wallet_recharge_via_razorpay => 'Wallet recharge via Razorpay';
+
+  @override
+  String wallet_recharge_success(String amount) {
+    return '$amount added to your wallet successfully.';
+  }
+
+  @override
+  String get wallet_welcome_credit => 'Welcome credit';
+
+  @override
+  String get wallet_no_cards_available => 'No recharge cards configured yet. Use custom amount or ask your admin to add cards.';
+
+  @override
+  String get wallet_secure_payment_note => 'Payments are secured by Razorpay.';
+
+  @override
+  String get wallet_menu_subtitle => 'Recharge prepaid balance for platform fees';
+
+  @override
+  String get notifications => 'Notifications';
 }

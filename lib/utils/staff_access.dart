@@ -36,6 +36,7 @@ class StaffAccess {
   static bool canAccessRoute(String path) {
     if (path.startsWith('/staff')) return canManageStaff;
     if (path.startsWith('/subscriptions')) return canManageSubscriptions;
+    if (path.startsWith('/wallet')) return isOwnerSession;
     if (path.startsWith('/whatsaap-marketing')) return canUseWhatsAppMarketing;
     if (path.startsWith('/reports') ||
         path.startsWith('/order-report') ||
@@ -43,6 +44,7 @@ class StaffAccess {
       return canViewReports;
     }
     if (path.startsWith('/inventory')) return canViewInventory;
+    if (path.startsWith('/store-session-history')) return canViewStoreHistory;
     return true;
   }
 
@@ -52,4 +54,7 @@ class StaffAccess {
 
   static bool get canUseWhatsAppMarketing =>
       isOwnerSession || canViewReports;
+
+  /// Day open/close history — owner only (not visible to staff).
+  static bool get canViewStoreHistory => isOwnerSession;
 }

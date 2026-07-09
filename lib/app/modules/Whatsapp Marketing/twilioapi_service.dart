@@ -6,21 +6,25 @@ import 'package:flutter/foundation.dart';
 class TwilioWhatsAppService {
   static String get accountSid => dotenv.env['TWILIO_ACCOUNT_SID'] ?? '';
   static String get authToken => dotenv.env['TWILIO_AUTH_TOKEN'] ?? '';
-  static String get fromWhatsAppNumber =>
-      dotenv.env['TWILIO_WHATSAPP_NUMBER'] ?? 'whatsapp:+14155238886';
+  static String get fromWhatsAppNumber {
+    final configured = dotenv.env['TWILIO_WHATSAPP_NUMBER']?.trim() ?? '';
+    if (configured.isNotEmpty) return configured;
+    // Do not default to Twilio sandbox (+14155238886) — it requires customers to "join" first.
+    return '';
+  }
 
   /// Send a single WhatsApp message with detailed logging
   static Future<Map<String, dynamic>> sendMessage({
     required String toPhoneNumber,
     required String message,
   }) async {
-    if (accountSid.isEmpty || authToken.isEmpty) {
+    if (accountSid.isEmpty || authToken.isEmpty || fromWhatsAppNumber.isEmpty) {
       debugPrint(
-        '❌ Twilio credentials missing. Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN in .env',
+        '❌ Twilio WhatsApp not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_WHATSAPP_NUMBER in .env (use your production sender, not the sandbox number).',
       );
       return {
         'success': false,
-        'error': 'Twilio credentials not configured',
+        'error': 'Twilio WhatsApp sender not configured',
         'to': toPhoneNumber,
       };
     }

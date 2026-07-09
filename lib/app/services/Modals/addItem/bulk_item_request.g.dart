@@ -31,6 +31,7 @@ BulkItemEntry _$BulkItemEntryFromJson(Map<String, dynamic> json) =>
       category: json['category'] as String,
       gst: (json['gst'] as num).toDouble(),
       showItem: json['showItem'] as bool,
+      itemImage: json['itemImage'] as String? ?? '',
     );
 
 Map<String, dynamic> _$BulkItemEntryToJson(BulkItemEntry instance) =>
@@ -42,4 +43,5 @@ Map<String, dynamic> _$BulkItemEntryToJson(BulkItemEntry instance) =>
       'category': instance.category,
       'gst': instance.gst,
       'showItem': instance.showItem,
+      'itemImage': instance.itemImage,
     };

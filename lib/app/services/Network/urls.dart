@@ -38,6 +38,10 @@ String resolvedMediaUrl(String? stored) {
 
 const String register = 'auth/register';
 const String login = 'auth/login';
+const String sendPhoneOtpPath = 'auth/phone/send-otp';
+const String verifyPhoneOtpPath = 'auth/phone/verify-otp';
+const String sendStaffPhoneOtpPath = 'auth/staff/phone/send-otp';
+const String verifyStaffPhoneOtpPath = 'auth/staff/phone/verify-otp';
 const String profile = 'auth/profile';
 const String items = 'items';
 const String bulkItems = 'items/bulk';
@@ -56,6 +60,7 @@ const String businessTypes = 'services';
 const String forgotPass = 'auth/forgot-password';
 const String verifyEmail = 'auth/verify-email';
 const String checkEmail = 'auth/check-email';
+const String checkMobile = 'auth/check-mobile';
 const String resendActivation = 'auth/resend-activation';
 const String printerOrder = 'printer-orders';
 const String staff = 'staff';
@@ -64,3 +69,5 @@ const String staffProfile = 'outlets/staff/profile';
 const String activities = 'activities';
 const String kds = 'kds';
 const String inventory = 'inventory';
+const String daySessions = 'day-sessions';
+const String walletCards = 'wallet-cards';

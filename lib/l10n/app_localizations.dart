@@ -311,6 +311,42 @@ abstract class AppLocalizations {
   /// **'Enhance your menu with AI-powered images for a professional look.'**
   String get add_images_ai_description;
 
+  /// No description provided for @item_image_ai_chat_assistant.
+  ///
+  /// In en, this message translates to:
+  /// **'BillKaro AI'**
+  String get item_image_ai_chat_assistant;
+
+  /// No description provided for @item_image_ai_chat_message.
+  ///
+  /// In en, this message translates to:
+  /// **'AI creates a professional food photo for your menu item. You can use it on your menu or replace it anytime by uploading your own photo from gallery or camera.'**
+  String get item_image_ai_chat_message;
+
+  /// No description provided for @generate_image.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate Image'**
+  String get generate_image;
+
+  /// No description provided for @describe_image_for_ai.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe the image'**
+  String get describe_image_for_ai;
+
+  /// No description provided for @describe_image_for_ai_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Butter chicken in a copper bowl with naan on the side'**
+  String get describe_image_for_ai_hint;
+
+  /// No description provided for @please_describe_image_for_ai.
+  ///
+  /// In en, this message translates to:
+  /// **'Please describe the image you want to generate'**
+  String get please_describe_image_for_ai;
+
   /// No description provided for @manage_favourites_title.
   ///
   /// In en, this message translates to:
@@ -2060,7 +2096,7 @@ abstract class AppLocalizations {
   /// No description provided for @total_sales.
   ///
   /// In en, this message translates to:
-  /// **'Total Sales'**
+  /// **'Sales'**
   String get total_sales;
 
   /// No description provided for @orders_report_generated.
@@ -2621,11 +2657,23 @@ abstract class AppLocalizations {
   /// **'Add Raw Material'**
   String get add_raw_material;
 
+  /// No description provided for @edit_raw_material.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Raw Material'**
+  String get edit_raw_material;
+
   /// No description provided for @add_supplier.
   ///
   /// In en, this message translates to:
   /// **'Add Supplier'**
   String get add_supplier;
+
+  /// No description provided for @edit_supplier.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Supplier'**
+  String get edit_supplier;
 
   /// No description provided for @adjust_stock_title.
   ///
@@ -5270,7 +5318,7 @@ abstract class AppLocalizations {
   /// No description provided for @purchase_order_line_item.
   ///
   /// In en, this message translates to:
-  /// **'• {name}: {quantity} {unit} @ ₹{price}'**
+  /// **'{name}: {quantity} {unit} @ ₹{price}'**
   String purchase_order_line_item(String name, String quantity, String unit, String price);
 
   /// No description provided for @no_recipes_yet.
@@ -5296,6 +5344,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Material Name *'**
   String get material_name_required;
+
+  /// No description provided for @please_enter_material_name.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter material name'**
+  String get please_enter_material_name;
+
+  /// No description provided for @select_category_required.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select category'**
+  String get select_category_required;
+
+  /// No description provided for @invalid_opening_stock.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening stock must be greater than 0'**
+  String get invalid_opening_stock;
+
+  /// No description provided for @min_stock_required.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum stock alert is required'**
+  String get min_stock_required;
+
+  /// No description provided for @invalid_min_stock.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid minimum stock alert (0 or greater)'**
+  String get invalid_min_stock;
+
+  /// No description provided for @invalid_purchase_price.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase price must be greater than 0'**
+  String get invalid_purchase_price;
 
   /// No description provided for @category_example_hint.
   ///
@@ -5326,6 +5410,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Supplier Name *'**
   String get supplier_name_required;
+
+  /// No description provided for @please_enter_supplier_name.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter supplier name'**
+  String get please_enter_supplier_name;
+
+  /// No description provided for @please_enter_vendor_no.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter vendor number'**
+  String get please_enter_vendor_no;
+
+  /// No description provided for @please_enter_contact_person.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter contact person'**
+  String get please_enter_contact_person;
+
+  /// No description provided for @please_enter_address.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter address'**
+  String get please_enter_address;
+
+  /// No description provided for @please_enter_gst_number.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter GST number'**
+  String get please_enter_gst_number;
 
   /// No description provided for @phone_label.
   ///
@@ -5390,8 +5504,26 @@ abstract class AppLocalizations {
   /// No description provided for @import_products_description.
   ///
   /// In en, this message translates to:
-  /// **'Select an Excel (.xlsx) file following the BillKaro template format. Required columns: Name and Price. Missing categories will be created automatically.'**
+  /// **'Select an Excel (.xlsx) file following the BillKaro template format. Required columns: Name and Price. Optional: Category, Tax %, and Image Link. Missing categories will be created automatically.'**
   String get import_products_description;
+
+  /// No description provided for @export_products_excel.
+  ///
+  /// In en, this message translates to:
+  /// **'Export Products - Excel (.xlsx)'**
+  String get export_products_excel;
+
+  /// No description provided for @export_products_description.
+  ///
+  /// In en, this message translates to:
+  /// **'Export your menu items to an Excel (.xlsx) file using the BillKaro template format. Columns include Name, Price, Category, Tax %, and Image Link.'**
+  String get export_products_description;
+
+  /// No description provided for @export_file.
+  ///
+  /// In en, this message translates to:
+  /// **'Export File'**
+  String get export_file;
 
   /// No description provided for @select_file.
   ///
@@ -5440,6 +5572,468 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Uses {quantity} {unit} of {name}'**
   String recipe_uses_material(String quantity, String unit, String name);
+
+  /// No description provided for @add_recipe.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Recipe'**
+  String get add_recipe;
+
+  /// No description provided for @edit_recipe.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Recipe'**
+  String get edit_recipe;
+
+  /// No description provided for @select_menu_item.
+  ///
+  /// In en, this message translates to:
+  /// **'Menu Item *'**
+  String get select_menu_item;
+
+  /// No description provided for @select_raw_material.
+  ///
+  /// In en, this message translates to:
+  /// **'Raw Material *'**
+  String get select_raw_material;
+
+  /// No description provided for @recipe_quantity_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantity per serving *'**
+  String get recipe_quantity_hint;
+
+  /// No description provided for @recipe_quantity_helper.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount deducted from stock per 1 unit sold'**
+  String get recipe_quantity_helper;
+
+  /// No description provided for @recipe_quantity_invalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid quantity greater than 0'**
+  String get recipe_quantity_invalid;
+
+  /// No description provided for @select_menu_item_required.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a menu item'**
+  String get select_menu_item_required;
+
+  /// No description provided for @select_raw_material_required.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a raw material'**
+  String get select_raw_material_required;
+
+  /// No description provided for @recipe_ingredients.
+  ///
+  /// In en, this message translates to:
+  /// **'Recipe Ingredients'**
+  String get recipe_ingredients;
+
+  /// No description provided for @recipe_ingredients_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Link raw materials to auto-deduct stock when this item is sold'**
+  String get recipe_ingredients_subtitle;
+
+  /// No description provided for @add_ingredient.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Ingredient'**
+  String get add_ingredient;
+
+  /// No description provided for @no_ingredients_yet.
+  ///
+  /// In en, this message translates to:
+  /// **'No ingredients linked yet'**
+  String get no_ingredients_yet;
+
+  /// No description provided for @search_recipes.
+  ///
+  /// In en, this message translates to:
+  /// **'Search recipes...'**
+  String get search_recipes;
+
+  /// No description provided for @recipe_lines_count.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} ingredient(s)'**
+  String recipe_lines_count(int count);
+
+  /// No description provided for @create_purchase_order.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Purchase Order'**
+  String get create_purchase_order;
+
+  /// No description provided for @create_po.
+  ///
+  /// In en, this message translates to:
+  /// **'Create PO'**
+  String get create_po;
+
+  /// No description provided for @edit_purchase_order.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Purchase Order'**
+  String get edit_purchase_order;
+
+  /// No description provided for @edit_po.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit PO'**
+  String get edit_po;
+
+  /// No description provided for @save_po_changes.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Changes'**
+  String get save_po_changes;
+
+  /// No description provided for @po_updated.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase order updated'**
+  String get po_updated;
+
+  /// No description provided for @po_cannot_edit.
+  ///
+  /// In en, this message translates to:
+  /// **'Only pending purchase orders can be edited'**
+  String get po_cannot_edit;
+
+  /// No description provided for @generate_po_from_low_stock.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate PO from Low Stock'**
+  String get generate_po_from_low_stock;
+
+  /// No description provided for @po_header_section.
+  ///
+  /// In en, this message translates to:
+  /// **'Order Details'**
+  String get po_header_section;
+
+  /// No description provided for @po_line_items_section.
+  ///
+  /// In en, this message translates to:
+  /// **'Line Items'**
+  String get po_line_items_section;
+
+  /// No description provided for @select_supplier.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier *'**
+  String get select_supplier;
+
+  /// No description provided for @select_supplier_required.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a supplier'**
+  String get select_supplier_required;
+
+  /// No description provided for @po_delivery_date_required.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a delivery date'**
+  String get po_delivery_date_required;
+
+  /// No description provided for @po_payment_terms_required.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter payment terms'**
+  String get po_payment_terms_required;
+
+  /// No description provided for @po_line_material_required.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a material'**
+  String get po_line_material_required;
+
+  /// No description provided for @po_line_qty_required.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter quantity greater than 0'**
+  String get po_line_qty_required;
+
+  /// No description provided for @po_line_rate_required.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid rate'**
+  String get po_line_rate_required;
+
+  /// No description provided for @po_address_name_required.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter name'**
+  String get po_address_name_required;
+
+  /// No description provided for @po_pin_code_required.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter pin code'**
+  String get po_pin_code_required;
+
+  /// No description provided for @po_state_required.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter state'**
+  String get po_state_required;
+
+  /// No description provided for @delivery_date.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery date'**
+  String get delivery_date;
+
+  /// No description provided for @fill_from_low_stock.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill from Low Stock'**
+  String get fill_from_low_stock;
+
+  /// No description provided for @po_notes_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery instructions, reference number, etc.'**
+  String get po_notes_hint;
+
+  /// No description provided for @add_line.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Line'**
+  String get add_line;
+
+  /// No description provided for @po_order_qty.
+  ///
+  /// In en, this message translates to:
+  /// **'Order Qty'**
+  String get po_order_qty;
+
+  /// No description provided for @po_rate.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate (₹)'**
+  String get po_rate;
+
+  /// No description provided for @po_amount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get po_amount;
+
+  /// No description provided for @po_grand_total.
+  ///
+  /// In en, this message translates to:
+  /// **'Grand Total: {total}'**
+  String po_grand_total(String total);
+
+  /// No description provided for @po_line_invalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Each line needs a material, quantity > 0, and valid rate'**
+  String get po_line_invalid;
+
+  /// No description provided for @po_items_required.
+  ///
+  /// In en, this message translates to:
+  /// **'Add at least one line item'**
+  String get po_items_required;
+
+  /// No description provided for @po_order_date.
+  ///
+  /// In en, this message translates to:
+  /// **'Order Date'**
+  String get po_order_date;
+
+  /// No description provided for @po_received_date.
+  ///
+  /// In en, this message translates to:
+  /// **'Received On'**
+  String get po_received_date;
+
+  /// No description provided for @supplier_label.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier'**
+  String get supplier_label;
+
+  /// No description provided for @cancel_po.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel PO'**
+  String get cancel_po;
+
+  /// No description provided for @view_details.
+  ///
+  /// In en, this message translates to:
+  /// **'View Details'**
+  String get view_details;
+
+  /// No description provided for @print_po.
+  ///
+  /// In en, this message translates to:
+  /// **'Print PO'**
+  String get print_po;
+
+  /// No description provided for @po_payment_terms.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Terms'**
+  String get po_payment_terms;
+
+  /// No description provided for @po_reference_no.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference No'**
+  String get po_reference_no;
+
+  /// No description provided for @po_document_type.
+  ///
+  /// In en, this message translates to:
+  /// **'Document Type'**
+  String get po_document_type;
+
+  /// No description provided for @po_billing_address_section.
+  ///
+  /// In en, this message translates to:
+  /// **'Billing Details'**
+  String get po_billing_address_section;
+
+  /// No description provided for @po_terms_and_conditions.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms & Conditions'**
+  String get po_terms_and_conditions;
+
+  /// No description provided for @po_terms_heading.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms & Conditions :'**
+  String get po_terms_heading;
+
+  /// No description provided for @po_terms_intro.
+  ///
+  /// In en, this message translates to:
+  /// **'These terms and conditions shall form an integral part of the Purchase Order (PO)'**
+  String get po_terms_intro;
+
+  /// No description provided for @po_terms_and_conditions_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter terms and conditions for purchase orders. One point per line works best.'**
+  String get po_terms_and_conditions_hint;
+
+  /// No description provided for @settings_po_terms.
+  ///
+  /// In en, this message translates to:
+  /// **'PO Terms & Conditions'**
+  String get settings_po_terms;
+
+  /// No description provided for @settings_po_terms_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Default text for new purchase orders'**
+  String get settings_po_terms_subtitle;
+
+  /// No description provided for @settings_po_print_orientation.
+  ///
+  /// In en, this message translates to:
+  /// **'PO Print Orientation'**
+  String get settings_po_print_orientation;
+
+  /// No description provided for @settings_po_print_orientation_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Page layout when printing purchase orders'**
+  String get settings_po_print_orientation_subtitle;
+
+  /// No description provided for @po_print_portrait.
+  ///
+  /// In en, this message translates to:
+  /// **'Portrait'**
+  String get po_print_portrait;
+
+  /// No description provided for @po_print_landscape.
+  ///
+  /// In en, this message translates to:
+  /// **'Landscape'**
+  String get po_print_landscape;
+
+  /// No description provided for @po_terms_saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms & conditions saved'**
+  String get po_terms_saved;
+
+  /// No description provided for @po_shipping_address_section.
+  ///
+  /// In en, this message translates to:
+  /// **'Shipping Address'**
+  String get po_shipping_address_section;
+
+  /// No description provided for @po_same_as_billing.
+  ///
+  /// In en, this message translates to:
+  /// **'Same as billing'**
+  String get po_same_as_billing;
+
+  /// No description provided for @po_address_name.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get po_address_name;
+
+  /// No description provided for @po_address_line1.
+  ///
+  /// In en, this message translates to:
+  /// **'Address Line 1'**
+  String get po_address_line1;
+
+  /// No description provided for @po_address_line2.
+  ///
+  /// In en, this message translates to:
+  /// **'Address Line 2'**
+  String get po_address_line2;
+
+  /// No description provided for @po_pin_code.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin Code'**
+  String get po_pin_code;
+
+  /// No description provided for @po_state.
+  ///
+  /// In en, this message translates to:
+  /// **'State'**
+  String get po_state;
+
+  /// No description provided for @po_contact_no.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact No'**
+  String get po_contact_no;
+
+  /// No description provided for @po_gst_no.
+  ///
+  /// In en, this message translates to:
+  /// **'GST No'**
+  String get po_gst_no;
+
+  /// No description provided for @po_sl_no.
+  ///
+  /// In en, this message translates to:
+  /// **'Sl. No'**
+  String get po_sl_no;
+
+  /// No description provided for @po_hsn_sac.
+  ///
+  /// In en, this message translates to:
+  /// **'HSN/SAC Code'**
+  String get po_hsn_sac;
 
   /// No description provided for @template_saved_opened.
   ///
@@ -7661,6 +8255,30 @@ abstract class AppLocalizations {
   /// **'Failed to merge tables'**
   String get merge_tables_failed;
 
+  /// No description provided for @edit_merged_tables.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit merged tables'**
+  String get edit_merged_tables;
+
+  /// No description provided for @edit_merged_tables_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add or remove tables in this combined group'**
+  String get edit_merged_tables_subtitle;
+
+  /// No description provided for @edit_merged_tables_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Uncheck all tables to split the group apart'**
+  String get edit_merged_tables_hint;
+
+  /// No description provided for @merged_tables_updated_success.
+  ///
+  /// In en, this message translates to:
+  /// **'Merged tables updated successfully'**
+  String get merged_tables_updated_success;
+
   /// No description provided for @select_at_least_two_tables_to_merge.
   ///
   /// In en, this message translates to:
@@ -7816,6 +8434,294 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Remove image'**
   String get remove_image;
+
+  /// No description provided for @store_open.
+  ///
+  /// In en, this message translates to:
+  /// **'Store Open'**
+  String get store_open;
+
+  /// No description provided for @store_closed.
+  ///
+  /// In en, this message translates to:
+  /// **'Store Closed'**
+  String get store_closed;
+
+  /// No description provided for @open_store.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Store'**
+  String get open_store;
+
+  /// No description provided for @close_store.
+  ///
+  /// In en, this message translates to:
+  /// **'Close Store'**
+  String get close_store;
+
+  /// No description provided for @open_store_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start your business day and enable billing'**
+  String get open_store_subtitle;
+
+  /// No description provided for @close_store_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'End day, reconcile cash and reset tables'**
+  String get close_store_subtitle;
+
+  /// No description provided for @opening_cash.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening cash in drawer'**
+  String get opening_cash;
+
+  /// No description provided for @closing_cash.
+  ///
+  /// In en, this message translates to:
+  /// **'Closing cash counted'**
+  String get closing_cash;
+
+  /// No description provided for @notes_optional.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes (optional)'**
+  String get notes_optional;
+
+  /// No description provided for @store_opened_success.
+  ///
+  /// In en, this message translates to:
+  /// **'Store opened successfully'**
+  String get store_opened_success;
+
+  /// No description provided for @store_closed_success.
+  ///
+  /// In en, this message translates to:
+  /// **'Day closed successfully'**
+  String get store_closed_success;
+
+  /// No description provided for @store_closed_banner_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Store is closed'**
+  String get store_closed_banner_title;
+
+  /// No description provided for @store_closed_banner_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the store to start taking orders'**
+  String get store_closed_banner_subtitle;
+
+  /// No description provided for @store_closed_order_blocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Store is closed. Open the store before billing.'**
+  String get store_closed_order_blocked;
+
+  /// No description provided for @close_store_confirm_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm day end?'**
+  String get close_store_confirm_title;
+
+  /// No description provided for @close_store_confirm_message.
+  ///
+  /// In en, this message translates to:
+  /// **'This will close the business day, save the summary and reset all tables to available.'**
+  String get close_store_confirm_message;
+
+  /// No description provided for @opened_at.
+  ///
+  /// In en, this message translates to:
+  /// **'Opened at'**
+  String get opened_at;
+
+  /// No description provided for @opened_by.
+  ///
+  /// In en, this message translates to:
+  /// **'Opened by'**
+  String get opened_by;
+
+  /// No description provided for @closed_by.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed by'**
+  String get closed_by;
+
+  /// No description provided for @total_orders.
+  ///
+  /// In en, this message translates to:
+  /// **'Orders'**
+  String get total_orders;
+
+  /// No description provided for @expected_cash.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected cash'**
+  String get expected_cash;
+
+  /// No description provided for @cash_variance.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash variance'**
+  String get cash_variance;
+
+  /// No description provided for @enter_valid_closing_cash.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid closing cash amount'**
+  String get enter_valid_closing_cash;
+
+  /// No description provided for @store_history_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Store Day History'**
+  String get store_history_title;
+
+  /// No description provided for @store_history_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'View open and close records with cash summary'**
+  String get store_history_subtitle;
+
+  /// No description provided for @store_history_empty.
+  ///
+  /// In en, this message translates to:
+  /// **'No store day records yet. Open and close the store to build history.'**
+  String get store_history_empty;
+
+  /// No description provided for @closed_at.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed at'**
+  String get closed_at;
+
+  /// No description provided for @wallet_title.
+  ///
+  /// In en, this message translates to:
+  /// **'BillKaro Wallet'**
+  String get wallet_title;
+
+  /// No description provided for @wallet_balance.
+  ///
+  /// In en, this message translates to:
+  /// **'Available Balance'**
+  String get wallet_balance;
+
+  /// No description provided for @wallet_balance_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepaid credits for platform fees'**
+  String get wallet_balance_subtitle;
+
+  /// No description provided for @wallet_add_money.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Money'**
+  String get wallet_add_money;
+
+  /// No description provided for @wallet_recharge.
+  ///
+  /// In en, this message translates to:
+  /// **'Recharge'**
+  String get wallet_recharge;
+
+  /// No description provided for @wallet_custom_amount.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Amount'**
+  String get wallet_custom_amount;
+
+  /// No description provided for @wallet_enter_amount_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter amount'**
+  String get wallet_enter_amount_hint;
+
+  /// No description provided for @wallet_enter_valid_amount.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid amount greater than zero.'**
+  String get wallet_enter_valid_amount;
+
+  /// No description provided for @wallet_history.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction History'**
+  String get wallet_history;
+
+  /// No description provided for @wallet_transactions.
+  ///
+  /// In en, this message translates to:
+  /// **'transactions'**
+  String get wallet_transactions;
+
+  /// No description provided for @wallet_no_transactions.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions yet. Recharge your wallet to get started.'**
+  String get wallet_no_transactions;
+
+  /// No description provided for @wallet_demo_note.
+  ///
+  /// In en, this message translates to:
+  /// **'Demo mode: balance is stored on this device only. Razorpay test checkout is used to add money — no backend verification.'**
+  String get wallet_demo_note;
+
+  /// No description provided for @wallet_low_balance_warning.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet balance is low. Recharge soon to avoid billing interruptions.'**
+  String get wallet_low_balance_warning;
+
+  /// No description provided for @wallet_recharge_demo.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet Recharge (Demo)'**
+  String get wallet_recharge_demo;
+
+  /// No description provided for @wallet_recharge_via_razorpay.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet recharge via Razorpay'**
+  String get wallet_recharge_via_razorpay;
+
+  /// No description provided for @wallet_recharge_success.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} added to your wallet successfully.'**
+  String wallet_recharge_success(String amount);
+
+  /// No description provided for @wallet_welcome_credit.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome credit'**
+  String get wallet_welcome_credit;
+
+  /// No description provided for @wallet_no_cards_available.
+  ///
+  /// In en, this message translates to:
+  /// **'No recharge cards configured yet. Use custom amount or ask your admin to add cards.'**
+  String get wallet_no_cards_available;
+
+  /// No description provided for @wallet_secure_payment_note.
+  ///
+  /// In en, this message translates to:
+  /// **'Payments are secured by Razorpay.'**
+  String get wallet_secure_payment_note;
+
+  /// No description provided for @wallet_menu_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recharge prepaid balance for platform fees'**
+  String get wallet_menu_subtitle;
+
+  /// No description provided for @notifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notifications;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

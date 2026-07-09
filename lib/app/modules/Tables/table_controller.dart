@@ -15,7 +15,7 @@ import 'package:flutter_modular/flutter_modular.dart';
 
 enum TableStatus { available, reserved, occupied, billing }
 
-enum TableFilter { all, available, reserved, occupied, billing, merged }
+enum TableFilter { all, available, reserved, occupied, merged }
 
 class TableWithStatus {
   final TableModel table;
@@ -335,8 +335,9 @@ class TableController extends BaseController {
             TableFilter.all => true,
             TableFilter.available => tws.status == TableStatus.available,
             TableFilter.reserved => tws.status == TableStatus.reserved,
-            TableFilter.occupied => tws.status == TableStatus.occupied,
-            TableFilter.billing => tws.status == TableStatus.billing,
+            TableFilter.occupied =>
+              tws.status == TableStatus.occupied ||
+                  tws.status == TableStatus.billing,
             TableFilter.merged => tws.table.hasMergedTables,
           };
 
@@ -651,7 +652,17 @@ class TableController extends BaseController {
     if (tws.currentOrder?.billNumber != null) {
       return loc.home_bill_number(tws.currentOrder!.billNumber.toString());
     }
-    if (tws.table.hasMergedTables) {
+    if (tws.table.hasMergedTables && tws.status == TableStatus.reserved) {
+      final reservation = tws.upcomingReservation;
+      if (reservation != null) {
+        return loc.reserved_by(
+          reservation.customerName,
+          reservation.reservationTime,
+        );
+      }
+      return loc.table_status_reserved;
+    }
+    if (tws.table.hasMergedTables && tws.status != TableStatus.reserved) {
       return loc.table_merged_with_others;
     }
     switch (tws.status) {
@@ -751,8 +762,9 @@ class TableController extends BaseController {
 
   Future<bool> _executeMerge(
     String primaryId,
-    List<String> secondaryIds,
-  ) async {
+    List<String> secondaryIds, {
+    bool notify = true,
+  }) async {
     final loc = AppLocalizations.of(Get.context!)!;
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) {
@@ -770,7 +782,9 @@ class TableController extends BaseController {
 
     if (response != null && response['status'] == 'success') {
       await loadTables();
-      showSuccess(description: loc.merge_tables_success);
+      if (notify) {
+        showSuccess(description: loc.merge_tables_success);
+      }
       return true;
     }
 
@@ -778,7 +792,7 @@ class TableController extends BaseController {
     return false;
   }
 
-  Future<bool> unmergeTable(TableModel table) async {
+  Future<bool> unmergeTable(TableModel table, {bool notify = true}) async {
     final loc = AppLocalizations.of(Get.context!)!;
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) {
@@ -790,12 +804,95 @@ class TableController extends BaseController {
 
     if (response != null && response['status'] == 'success') {
       await loadTables();
-      showSuccess(description: loc.unmerge_tables_success);
+      if (notify) {
+        showSuccess(description: loc.unmerge_tables_success);
+      }
       return true;
     }
 
     showError(description: response?['message'] ?? loc.unmerge_tables_failed);
     return false;
+  }
+
+  List<TableModel> mergedChildModels(String primaryId) {
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null) return [];
+    final cached = appPref.getCachedOutletTables(outletId);
+    if (cached == null || cached.isEmpty) return [];
+    return cached
+        .map((e) => TableModel.fromTableData(e))
+        .where((t) => t.mergedIntoTableId == primaryId)
+        .toList(growable: false);
+  }
+
+  List<String> mergedChildIds(String primaryId) => mergedChildModels(primaryId)
+      .map((t) => t.id)
+      .toList(growable: false);
+
+  List<TableWithStatus> mergeEditCandidates(TableModel primary) {
+    final childModels = mergedChildModels(primary.id);
+    final childIds = childModels.map((t) => t.id).toSet();
+    final candidates = <TableWithStatus>[];
+
+    for (final child in childModels) {
+      final existing = tables.firstWhereOrNull((t) => t.table.id == child.id);
+      candidates.add(
+        existing ??
+            TableWithStatus(table: child, status: TableStatus.available),
+      );
+    }
+
+    for (final tws in tables) {
+      if (tws.table.id == primary.id) continue;
+      if (childIds.contains(tws.table.id)) continue;
+      if (isSecondaryMergeEligible(tws, primary.id)) {
+        candidates.add(tws);
+      }
+    }
+
+    return candidates;
+  }
+
+  Future<void> openEditMergedTablesDialog(TableWithStatus tws) async {
+    if (!tws.table.hasMergedTables) return;
+    await MergeTablesDialog.showEdit(
+      controller: this,
+      mergedPrimary: tws,
+    );
+  }
+
+  Future<bool> updateMergedTables(
+    String primaryId,
+    List<String> newSecondaryIds,
+  ) async {
+    final loc = AppLocalizations.of(Get.context!)!;
+    final currentIds = mergedChildIds(primaryId);
+    final newIds = newSecondaryIds.toList(growable: false);
+
+    if (currentIds.length == newIds.length &&
+        currentIds.every(newIds.contains) &&
+        newIds.every(currentIds.contains)) {
+      return true;
+    }
+
+    final primary = tables.firstWhereOrNull((t) => t.table.id == primaryId);
+    if (primary == null) return false;
+
+    if (currentIds.isNotEmpty) {
+      final unmerged = await unmergeTable(primary.table, notify: false);
+      if (!unmerged) return false;
+    }
+
+    if (newIds.isEmpty) {
+      showSuccess(description: loc.unmerge_tables_success);
+      return true;
+    }
+
+    final merged = await _executeMerge(primaryId, newIds, notify: false);
+    if (merged) {
+      showSuccess(description: loc.merged_tables_updated_success);
+    }
+    return merged;
   }
 
   Future<bool> createReservation({
@@ -1256,7 +1353,7 @@ class TableController extends BaseController {
 
   Future<bool> _trySyncOrdersForOutlet() async {
     final outletId = appPref.selectedOutlet?.id;
-    final userId = appPref.user?.id;
+    final userId = appPref.ordersApiUserId;
     if (outletId == null || userId == null) return false;
 
     try {

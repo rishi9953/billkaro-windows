@@ -87,7 +87,7 @@ class BusinessOverviewController extends BaseController {
         debugPrint('🌐 Internet available → fetching from API');
 
         final res = await callApi(
-          apiClient.getOrders(appPref.user!.id!, outletId, null, null, null, null, null, null),
+          apiClient.getOrders(appPref.ordersApiUserId!, outletId, null, null, null, null, null, null),
           showLoader: false,
         );
 

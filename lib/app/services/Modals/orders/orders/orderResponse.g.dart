@@ -45,7 +45,7 @@ OrderModel _$OrderModelFromJson(Map<String, dynamic> json) => OrderModel(
   items: (json['items'] as List<dynamic>)
       .map((e) => OrderItem.fromJson(e as Map<String, dynamic>))
       .toList(),
-  orderFrom: json['orderFrom'] as String,
+  orderFrom: json['orderFrom'] as String? ?? '',
   specialInstructions: json['specialInstructions'] as String?,
 );
 

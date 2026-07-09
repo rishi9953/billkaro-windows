@@ -1,4 +1,6 @@
+import 'package:billkaro/app/Widgets/app_dropdowns.dart';
 import 'package:billkaro/app/modules/AddOrder/OrderDetails/order_details_controller.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/Modals/orders/split_payment.dart';
@@ -140,14 +142,14 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildDiscount(c, loc, bottomGap: 16),
-                  _buildField(
-                    loc.service_charge,
-                    c.serviceCharge,
-                    TextInputType.number,
-                    loc: loc,
-                    prefixIcon: Icons.add_circle_outline,
-                    bottomGap: 0,
-                  ),
+                  // _buildField(
+                  //   loc.service_charge,
+                  //   c.serviceCharge,
+                  //   TextInputType.number,
+                  //   loc: loc,
+                  //   prefixIcon: Icons.add_circle_outline,
+                  //   bottomGap: 0,
+                  // ),
                 ],
               ),
             );
@@ -285,6 +287,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     return InputDecoration(
       hintText: hintText,
       filled: true,
+      helperMaxLines: 2,
       fillColor: Colors.grey.withOpacity(0.06),
       prefixIcon: prefixIcon == null
           ? null
@@ -390,13 +393,19 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               }
             }
 
-            return DropdownButtonFormField<String>(
+            return AppDropdownFormField2<String>(
               value: dropdownValue,
+              isExpanded: true,
               items: tables
                   .map(
-                    (table) => DropdownMenuItem<String>(
+                    (table) => DropdownItem<String>(
                       value: table.displayName,
-                      child: Text(table.displayName),
+
+                      child: Text(
+                        table.displayName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   )
                   .toList(),
@@ -406,6 +415,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 hintText: tables.isEmpty
                     ? 'No available tables'
                     : loc.enter_table_number,
+
                 prefixIcon: Icons.table_restaurant_outlined,
               ),
             );
@@ -480,7 +490,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
           _label(loc.discount),
           const SizedBox(height: 8),
           Obx(() {
-            final isPercent = c.discountType.value == loc.percentage;
+            final isPercent = c.discountType.value == 'percentage';
             return TextFormField(
               controller: c.discount,
               keyboardType: TextInputType.number,
@@ -490,15 +500,15 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 prefixIcon: isPercent ? Icons.percent : Icons.currency_rupee,
                 suffixIcon: TextButton(
                   onPressed: () => c.discountType.value = isPercent
-                      ? loc.amount
-                      : loc.percentage,
+                      ? 'amount'
+                      : 'percentage',
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     visualDensity: VisualDensity.compact,
                     foregroundColor: AppColor.primary,
                   ),
                   child: Text(
-                    c.discountType.value,
+                    isPercent ? loc.percentage : loc.amount,
                     style: const TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ),
@@ -535,12 +545,12 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
           ),
           const SizedBox(height: 8),
           if (!c.useSplitPayment.value)
-            DropdownButtonFormField<String>(
+            AppDropdownFormField2<String>(
               value: c.paymentRecieved.value,
               items: [
-                DropdownMenuItem(value: 'cash', child: Text(loc.cash)),
-                DropdownMenuItem(value: 'card', child: Text(loc.card)),
-                DropdownMenuItem(value: 'upi', child: Text(loc.upi)),
+                DropdownItem(value: 'cash', child: Text(loc.cash)),
+                DropdownItem(value: 'card', child: Text(loc.card)),
+                DropdownItem(value: 'upi', child: Text(loc.upi)),
               ],
               onChanged: (v) => c.paymentRecieved.value = v!,
               decoration: _fieldDecoration(
@@ -694,7 +704,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       child: Row(
         children: [
           Expanded(
-            child: DropdownButtonFormField<String>(
+            child: AppDropdownFormField2<String>(
               value: safeMethod,
               decoration: InputDecoration(
                 labelText: 'Payment Method',
@@ -707,9 +717,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 ),
               ),
               items: [
-                DropdownMenuItem(value: 'cash', child: Text(loc.cash)),
-                DropdownMenuItem(value: 'card', child: Text(loc.card)),
-                DropdownMenuItem(value: 'upi', child: Text(loc.upi)),
+                DropdownItem(value: 'cash', child: Text(loc.cash)),
+                DropdownItem(value: 'card', child: Text(loc.card)),
+                DropdownItem(value: 'upi', child: Text(loc.upi)),
               ],
               onChanged: (value) {
                 if (value != null) {
@@ -769,7 +779,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            DropdownButtonFormField<String>(
+            AppDropdownFormField2<String>(
               value: selectedMethod,
               decoration: InputDecoration(
                 labelText: 'Payment Method',
@@ -778,9 +788,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 ),
               ),
               items: [
-                DropdownMenuItem(value: 'cash', child: Text(loc.cash)),
-                DropdownMenuItem(value: 'card', child: Text(loc.card)),
-                DropdownMenuItem(value: 'upi', child: Text(loc.upi)),
+                DropdownItem(value: 'cash', child: Text(loc.cash)),
+                DropdownItem(value: 'card', child: Text(loc.card)),
+                DropdownItem(value: 'upi', child: Text(loc.upi)),
               ],
               onChanged: (value) {
                 if (value != null) {

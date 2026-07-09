@@ -296,6 +296,17 @@ class MenuScreen extends StatelessWidget {
                             ),
                           ),
                           _buildDivider(),
+                          if (StaffAccess.isOwnerSession) ...[
+                            _buildMenuItem(
+                              icon: Icons.account_balance_wallet_outlined,
+                              title: loc.wallet_title,
+                              subtitle: loc.wallet_menu_subtitle,
+                              iconColor: const Color(0xFFD4AF37),
+                              onTap: () =>
+                                  Modular.to.pushNamed(HomeMainRoutes.wallet),
+                            ),
+                            _buildDivider(),
+                          ],
                           _buildMenuItem(
                             icon: Icons.settings_outlined,
                             title: loc.settings,

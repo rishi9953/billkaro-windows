@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 const _istOffset = Duration(hours: 5, minutes: 30);
@@ -66,6 +67,64 @@ DateTime endOfIstDayExclusiveUtc(DateTime istYmd) {
 DateTime istMondayOfWeek(DateTime istDateOnly) {
   final d = istDateOnly.weekday;
   return istDateOnly.subtract(Duration(days: d - 1));
+}
+
+/// Last calendar day of the IST quarter containing [istDateOnly].
+DateTime istEndOfCalendarQuarter(DateTime istDateOnly) {
+  final startMonth = ((istDateOnly.month - 1) ~/ 3) * 3 + 1;
+  return DateTime(istDateOnly.year, startMonth + 3, 0);
+}
+
+/// Start of the IST calendar quarter containing [istDateOnly].
+DateTime istStartOfCalendarQuarter(DateTime istDateOnly) {
+  final startMonth = ((istDateOnly.month - 1) ~/ 3) * 3 + 1;
+  return DateTime(istDateOnly.year, startMonth, 1);
+}
+
+/// Full IST calendar quarter range (e.g. Jul 1 – Sep 30 for Q3).
+DateTimeRange istCalendarQuarterRange(DateTime istDateOnly) {
+  return DateTimeRange(
+    start: istStartOfCalendarQuarter(istDateOnly),
+    end: istEndOfCalendarQuarter(istDateOnly),
+  );
+}
+
+/// IST date range for report/order filter periods.
+DateTimeRange? istDateRangeForPeriod(String period) {
+  final today = todayIstDateOnly();
+
+  switch (period) {
+    case 'All':
+      return null;
+    case 'Today':
+      return DateTimeRange(start: today, end: today);
+    case 'This Week':
+      final monday = istMondayOfWeek(today);
+      return DateTimeRange(
+        start: monday,
+        end: monday.add(const Duration(days: 6)),
+      );
+    case 'This Month':
+      return DateTimeRange(
+        start: DateTime(today.year, today.month, 1),
+        end: DateTime(today.year, today.month + 1, 0),
+      );
+    case 'This Quarter':
+      return istCalendarQuarterRange(today);
+    case 'This Year':
+      return DateTimeRange(
+        start: DateTime(today.year, 1, 1),
+        end: DateTime(today.year, 12, 31),
+      );
+    default:
+      return null;
+  }
+}
+
+/// Format IST calendar date for API query params (`yyyy-MM-dd`).
+String formatIstDateForApi(DateTime date) {
+  final normalized = DateTime(date.year, date.month, date.day);
+  return DateFormat('yyyy-MM-dd').format(normalized);
 }
 
 /// Whether API [createdAt] (UTC) falls in the IST calendar range from the date picker.

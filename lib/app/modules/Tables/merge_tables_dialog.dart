@@ -4,11 +4,13 @@ import 'package:billkaro/config/config.dart';
 class MergeTablesDialog extends StatefulWidget {
   final TableController controller;
   final List<TableWithStatus> initialEligible;
+  final TableWithStatus? editMergedGroup;
 
   const MergeTablesDialog({
     super.key,
     required this.controller,
     required this.initialEligible,
+    this.editMergedGroup,
   });
 
   static Future<void> show({
@@ -19,6 +21,20 @@ class MergeTablesDialog extends StatefulWidget {
       MergeTablesDialog(
         controller: controller,
         initialEligible: initialEligible,
+      ),
+      barrierDismissible: true,
+    );
+  }
+
+  static Future<void> showEdit({
+    required TableController controller,
+    required TableWithStatus mergedPrimary,
+  }) {
+    return Get.dialog<void>(
+      MergeTablesDialog(
+        controller: controller,
+        initialEligible: controller.mergeEditCandidates(mergedPrimary.table),
+        editMergedGroup: mergedPrimary,
       ),
       barrierDismissible: true,
     );
@@ -38,14 +54,30 @@ class _MergeTablesDialogState extends State<MergeTablesDialog> {
   void initState() {
     super.initState();
     _eligible = List<TableWithStatus>.from(widget.initialEligible);
+    if (widget.editMergedGroup != null) {
+      _primaryId = widget.editMergedGroup!.table.id;
+      _secondaryIds.addAll(widget.controller.mergedChildIds(_primaryId!));
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) => _scheduleRefresh());
   }
+
+  bool get _isEditMode => widget.editMergedGroup != null;
 
   void _scheduleRefresh() {
     if (_refreshScheduled) return;
     _refreshScheduled = true;
     widget.controller.loadTables().then((_) {
       if (!mounted) return;
+      if (_isEditMode) {
+        final primary = widget.editMergedGroup!.table;
+        setState(() {
+          _eligible = widget.controller.mergeEditCandidates(primary);
+          _secondaryIds
+            ..clear()
+            ..addAll(widget.controller.mergedChildIds(primary.id));
+        });
+        return;
+      }
       final updated = widget.controller.tables
           .where(widget.controller.isMergeEligible)
           .toList(growable: false);
@@ -67,22 +99,45 @@ class _MergeTablesDialogState extends State<MergeTablesDialog> {
       .where((t) => widget.controller.isSecondaryMergeEligible(t, _primaryId))
       .toList(growable: false);
 
+  List<TableWithStatus> get _joinCandidates {
+    if (!_isEditMode) return _secondaries;
+    final primaryId = _primaryId;
+    if (primaryId == null) return [];
+    return _eligible.where((t) => t.table.id != primaryId).toList(growable: false);
+  }
+
   String _previewLabel(AppLocalizations loc) {
-    final primary = _primary;
-    if (primary == null || _secondaryIds.isEmpty) return '';
+    final primary = _isEditMode ? widget.editMergedGroup : _primary;
+    if (primary == null) return '';
+    if (_secondaryIds.isEmpty) {
+      return primary.table.displayName;
+    }
     final names = [
       primary.table.displayName,
       ..._secondaryIds.map((id) {
-        final t = _eligible.firstWhere((e) => e.table.id == id);
-        return t.table.displayName;
-      }),
+        final tws = _eligible.firstWhereOrNull((e) => e.table.id == id);
+        return tws?.table.displayName ??
+            widget.controller
+                .mergedChildModels(primary.table.id)
+                .firstWhereOrNull((m) => m.id == id)
+                ?.displayName ??
+            '';
+      }).where((name) => name.isNotEmpty),
     ];
     return names.join(' + ');
   }
 
   Future<void> _confirm(AppLocalizations loc) async {
-    if (_primaryId == null || _secondaryIds.isEmpty) return;
+    if (_primaryId == null) return;
     Get.back();
+    if (_isEditMode) {
+      await widget.controller.updateMergedTables(
+        _primaryId!,
+        _secondaryIds.toList(growable: false),
+      );
+      return;
+    }
+    if (_secondaryIds.isEmpty) return;
     await widget.controller.executeMerge(
       _primaryId!,
       _secondaryIds.toList(growable: false),
@@ -95,7 +150,9 @@ class _MergeTablesDialogState extends State<MergeTablesDialog> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final preview = _previewLabel(loc);
-    final canMerge = _primaryId != null && _secondaryIds.isNotEmpty;
+    final canConfirm = _isEditMode
+        ? _primaryId != null
+        : _primaryId != null && _secondaryIds.isNotEmpty;
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
@@ -106,13 +163,58 @@ class _MergeTablesDialogState extends State<MergeTablesDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _DialogHeader(loc: loc),
+            _DialogHeader(loc: loc, isEditMode: _isEditMode),
             Flexible(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    if (_isEditMode) ...[
+                      _SectionTitle(
+                        icon: Icons.star_rounded,
+                        iconColor: AppColor.primary,
+                        title: loc.merge_step_main,
+                        subtitle: widget.editMergedGroup!.table.combinedDisplayName,
+                      ),
+                      const SizedBox(height: 10),
+                      _TablePickCard(
+                        tws: widget.editMergedGroup!,
+                        loc: loc,
+                        selected: true,
+                        selectionMode: _SelectionMode.primary,
+                        onTap: () {},
+                        enabled: false,
+                      ),
+                      const SizedBox(height: 20),
+                      _SectionTitle(
+                        icon: Icons.add_link_rounded,
+                        iconColor: AppColor.secondaryPrimary,
+                        title: loc.merge_select_other_tables,
+                        subtitle: loc.edit_merged_tables_hint,
+                      ),
+                      const SizedBox(height: 10),
+                      if (_joinCandidates.isEmpty)
+                        _EmptyHint(text: loc.no_other_tables_to_merge)
+                      else
+                        ..._joinCandidates.map(
+                          (tws) => _TablePickCard(
+                            tws: tws,
+                            loc: loc,
+                            selected: _secondaryIds.contains(tws.table.id),
+                            selectionMode: _SelectionMode.secondary,
+                            onTap: () {
+                              setState(() {
+                                if (_secondaryIds.contains(tws.table.id)) {
+                                  _secondaryIds.remove(tws.table.id);
+                                } else {
+                                  _secondaryIds.add(tws.table.id);
+                                }
+                              });
+                            },
+                          ),
+                        ),
+                    ] else ...[
                     _StepIndicator(
                       step1Active: true,
                       step2Active: _primaryId != null,
@@ -171,6 +273,7 @@ class _MergeTablesDialogState extends State<MergeTablesDialog> {
                           ),
                         ),
                     ],
+                    ],
                     if (preview.isNotEmpty) ...[
                       const SizedBox(height: 16),
                       _MergePreview(label: preview),
@@ -201,9 +304,12 @@ class _MergeTablesDialogState extends State<MergeTablesDialog> {
                   Expanded(
                     flex: 2,
                     child: FilledButton.icon(
-                      onPressed: canMerge ? () => _confirm(loc) : null,
-                      icon: const Icon(Icons.merge_type, size: 18),
-                      label: Text(loc.merge_tables),
+                      onPressed: canConfirm ? () => _confirm(loc) : null,
+                      icon: Icon(
+                        _isEditMode ? Icons.save : Icons.merge_type,
+                        size: 18,
+                      ),
+                      label: Text(_isEditMode ? loc.save : loc.merge_tables),
                     ),
                   ),
                 ],
@@ -220,8 +326,9 @@ enum _SelectionMode { primary, secondary }
 
 class _DialogHeader extends StatelessWidget {
   final AppLocalizations loc;
+  final bool isEditMode;
 
-  const _DialogHeader({required this.loc});
+  const _DialogHeader({required this.loc, this.isEditMode = false});
 
   @override
   Widget build(BuildContext context) {
@@ -247,7 +354,10 @@ class _DialogHeader extends StatelessWidget {
               color: AppColor.primary.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(Icons.merge_type, color: AppColor.primary),
+            child: Icon(
+              isEditMode ? Icons.edit_outlined : Icons.merge_type,
+              color: AppColor.primary,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -255,7 +365,7 @@ class _DialogHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  loc.merge_tables_title,
+                  isEditMode ? loc.edit_merged_tables : loc.merge_tables_title,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
@@ -263,7 +373,9 @@ class _DialogHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  loc.merge_dialog_subtitle,
+                  isEditMode
+                      ? loc.edit_merged_tables_subtitle
+                      : loc.merge_dialog_subtitle,
                   style: TextStyle(
                     fontSize: 13,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -453,6 +565,7 @@ class _TablePickCard extends StatelessWidget {
   final bool selected;
   final _SelectionMode selectionMode;
   final VoidCallback onTap;
+  final bool enabled;
 
   const _TablePickCard({
     required this.tws,
@@ -460,12 +573,15 @@ class _TablePickCard extends StatelessWidget {
     required this.selected,
     required this.selectionMode,
     required this.onTap,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
     final status = _statusVisual(tws, loc);
-    final title = tws.table.hasMergedTables
+    final isMerged = tws.table.hasMergedTables;
+    final isBoth = isMerged && tws.status == TableStatus.reserved;
+    final title = isMerged
         ? tws.table.combinedDisplayName
         : tws.table.displayName;
 
@@ -474,7 +590,7 @@ class _TablePickCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onTap,
+          onTap: enabled ? onTap : null,
           borderRadius: BorderRadius.circular(14),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
@@ -547,10 +663,44 @@ class _TablePickCard extends StatelessWidget {
                               .withValues(alpha: 0.85),
                         ),
                       ),
+                      if (isMerged) ...[
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 4,
+                          runSpacing: 4,
+                          children: [
+                            _MergedChip(
+                              label: tws.table.displayName,
+                              isPrimary: true,
+                            ),
+                            ...tws.table.mergedTableNumbers.map(
+                              (n) => _MergedChip(
+                                label: n.toLowerCase().startsWith('table ')
+                                    ? n
+                                    : 'Table $n',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
-                _StatusBadge(label: status.shortLabel, color: status.color),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _StatusBadge(label: status.shortLabel, color: status.color),
+                    if (isBoth) ...[
+                      const SizedBox(height: 4),
+                      _StatusBadge(
+                        label: loc.merged_tables_badge(
+                          1 + tws.table.mergedTableNumbers.length,
+                        ),
+                        color: AppColor.primary,
+                      ),
+                    ],
+                  ],
+                ),
               ],
             ),
           ),
@@ -568,7 +718,21 @@ class _TablePickCard extends StatelessWidget {
         shortLabel: loc.home_occupied,
       );
     }
-    if (tws.table.hasMergedTables) {
+    if (tws.table.hasMergedTables && tws.status == TableStatus.reserved) {
+      final reservation = tws.upcomingReservation;
+      return _TableStatusVisual(
+        color: Colors.blue,
+        icon: Icons.event_seat,
+        label: reservation != null
+            ? loc.reserved_by(
+                reservation.customerName,
+                reservation.reservationTime,
+              )
+            : loc.table_status_reserved,
+        shortLabel: loc.filter_reserved,
+      );
+    }
+    if (tws.table.hasMergedTables && tws.status != TableStatus.reserved) {
       return _TableStatusVisual(
         color: AppColor.primary,
         icon: Icons.merge_type,
@@ -621,6 +785,37 @@ class _TableStatusVisual {
     required this.label,
     required this.shortLabel,
   });
+}
+
+class _MergedChip extends StatelessWidget {
+  final String label;
+  final bool isPrimary;
+
+  const _MergedChip({required this.label, this.isPrimary = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: (isPrimary ? AppColor.primary : Colors.grey.shade600)
+            .withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: (isPrimary ? AppColor.primary : Colors.grey.shade500)
+              .withValues(alpha: 0.35),
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: isPrimary ? AppColor.primary : Colors.grey.shade700,
+        ),
+      ),
+    );
+  }
 }
 
 class _StatusBadge extends StatelessWidget {

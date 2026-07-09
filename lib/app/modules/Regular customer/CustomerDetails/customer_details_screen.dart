@@ -69,6 +69,7 @@ class CustomerDetailsScreen extends StatelessWidget {
         final customerName = controller.customerName.value;
         final phoneNumber = controller.phoneNumber.value;
         final loyaltyDiscount = controller.loyaltyDiscount.value;
+        final loyaltyDiscountType = controller.loyaltyDiscountType.value;
         final customerInitial = customerName.trim().isEmpty
             ? '?'
             : customerName.trim()[0].toUpperCase();
@@ -97,6 +98,7 @@ class CustomerDetailsScreen extends StatelessWidget {
                   customerName: customerName,
                   phoneNumber: phoneNumber,
                   loyaltyDiscount: loyaltyDiscount,
+                  loyaltyDiscountType: loyaltyDiscountType,
                 ),
                 const SizedBox(height: 16),
                 LayoutBuilder(
@@ -153,6 +155,7 @@ class CustomerDetailsScreen extends StatelessWidget {
     required String customerName,
     required String phoneNumber,
     required double loyaltyDiscount,
+    required String loyaltyDiscountType,
   }) {
     return Container(
       width: double.infinity,
@@ -225,7 +228,9 @@ class CustomerDetailsScreen extends StatelessWidget {
             child: Column(
               children: [
                 Text(
-                  '${loyaltyDiscount.toStringAsFixed(0)}%',
+                  loyaltyDiscountType == 'amount'
+                      ? '₹${loyaltyDiscount.toStringAsFixed(0)}'
+                      : '${loyaltyDiscount.toStringAsFixed(0)}%',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,

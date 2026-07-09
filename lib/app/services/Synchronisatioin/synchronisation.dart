@@ -64,7 +64,7 @@ class Synchronisation {
       }
 
       final appPref = Get.find<AppPref>();
-      final userId = appPref.user?.id;
+      final userId = appPref.ordersApiUserId;
       if (userId == null || userId.isEmpty) {
         debugPrint('⚠️ [SYNC] No logged-in user');
         return const OrderSyncResult(

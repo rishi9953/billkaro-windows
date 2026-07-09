@@ -1,4 +1,6 @@
+import 'package:billkaro/app/Widgets/app_dropdowns.dart';
 import 'package:billkaro/app/modules/Reports/ItemReports/item_reports_controller.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:billkaro/config/config.dart';
 
 class ItemReportsScreen extends StatelessWidget {
@@ -114,42 +116,35 @@ class ItemReportsScreen extends StatelessWidget {
         children: [
           _buildFilterLabel(loc.period),
           const SizedBox(height: 6),
-          Container(
+          AppFilterDropdown2<String>(
+            value: controller.selectedTimePeriod.value,
             height: 46,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey[350] ?? Colors.grey[300]!),
+            decoration: appFilterDropdownDecoration(
+              fillColor: Colors.white,
+              borderRadius: 10,
+              borderColor: Colors.grey[350] ?? Colors.grey[300]!,
             ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: controller.selectedTimePeriod.value,
-                isExpanded: true,
-                icon: const Icon(Icons.keyboard_arrow_down, size: 20),
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+            items: controller.getLocalizedTimePeriods(loc).map((
+              String value,
+            ) {
+              return DropdownItem<String>(
+                value: value,
+                child: Text(
+                  controller.getLocalizedTimePeriodLabel(value, loc),
                 ),
-                items: controller.getLocalizedTimePeriods(loc).map((
-                  String value,
-                ) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(
-                      controller.getLocalizedTimePeriodLabel(value, loc),
-                    ),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    controller.selectedTimePeriod.value = newValue;
-                    controller.filterByTimePeriod();
-                  }
-                },
-              ),
-            ),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              if (newValue != null) {
+                controller.selectedTimePeriod.value = newValue;
+                controller.filterByTimePeriod();
+              }
+            },
           ),
         ],
       ),
@@ -211,38 +206,31 @@ class ItemReportsScreen extends StatelessWidget {
         children: [
           _buildFilterLabel('Category'),
           const SizedBox(height: 6),
-          Container(
+          AppFilterDropdown2<String>(
+            value: value,
             height: 46,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey[350] ?? Colors.grey[300]!),
+            decoration: appFilterDropdownDecoration(
+              fillColor: Colors.white,
+              borderRadius: 10,
+              borderColor: Colors.grey[350] ?? Colors.grey[300]!,
             ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: value,
-                isExpanded: true,
-                icon: const Icon(Icons.keyboard_arrow_down, size: 20),
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-                items: categories.map((String v) {
-                  return DropdownMenuItem<String>(
-                    value: v,
-                    child: Text(v == 'All' ? loc.all : (v.capitalize ?? v)),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    controller.selectedCategory.value = newValue;
-                    controller.applyAllFilters();
-                  }
-                },
-              ),
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
             ),
+            items: categories.map((String v) {
+              return DropdownItem<String>(
+                value: v,
+                child: Text(v == 'All' ? loc.all : (v.capitalize ?? v)),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              if (newValue != null) {
+                controller.selectedCategory.value = newValue;
+                controller.applyAllFilters();
+              }
+            },
           ),
         ],
       );

@@ -6,6 +6,7 @@ import 'package:billkaro/app/services/printerService.dart/thermal_printer/helper
 import 'package:billkaro/app/services/sync/sync_manager.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/download_path_util.dart';
+import 'package:billkaro/utils/po_print_orientation.dart';
 import 'package:file_selector/file_selector.dart';
 
 class AppSettingsController extends BaseController {
@@ -20,6 +21,7 @@ class AppSettingsController extends BaseController {
   late final RxBool openCashDrawerOnCashPayment;
   late final RxString cashDrawerPin;
   late final RxString downloadPath;
+  late final Rx<PoPrintOrientation> poPrintOrientation;
 
   @override
   void onInit() {
@@ -34,6 +36,7 @@ class AppSettingsController extends BaseController {
     openCashDrawerOnCashPayment = appPref.openCashDrawerOnCashPayment.obs;
     cashDrawerPin = appPref.cashDrawerPin.obs;
     downloadPath = appPref.downloadPath.obs;
+    poPrintOrientation = appPref.poPrintOrientation.obs;
     _ensureDefaultDownloadPath();
   }
 
@@ -110,6 +113,11 @@ class AppSettingsController extends BaseController {
     final key = cashDrawerPinStorageKey(pin);
     appPref.cashDrawerPin = key;
     cashDrawerPin.value = key;
+  }
+
+  void setPoPrintOrientation(PoPrintOrientation value) {
+    appPref.poPrintOrientation = value;
+    poPrintOrientation.value = value;
   }
 
   void resetOnboarding() {

@@ -1,7 +1,9 @@
 import 'package:billkaro/app/modules/OrderPrefrences/KOT_Mode_bottomsheet.dart';
 import 'package:billkaro/app/modules/AddOrder/add_order_controller.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
 class OrderPreferencesController extends BaseController {
   var kotModeEnabled = false.obs;
@@ -47,10 +49,24 @@ class OrderPreferencesController extends BaseController {
     isListView.value = isListViewValue;
     appPref.isListView = isListViewValue; // Save to SharedPreferences
 
-    // Push change into AddOrderController so UI updates immediately
-    if (Get.isRegistered<AddOrderController>()) {
-      Get.find<AddOrderController>().isListView.value = isListViewValue;
+    syncPreferencesToAddOrderOnPop();
+    _returnToCreateOrder();
+  }
+
+  void _returnToCreateOrder() {
+    if (!Get.isRegistered<AddOrderController>()) {
+      if (Modular.to.canPop()) {
+        Modular.to.pop();
+      }
+      return;
     }
+
+    if (Modular.to.canPop()) {
+      Modular.to.pop();
+      return;
+    }
+
+    Modular.to.navigate(HomeMainRoutes.createOrder);
   }
 
   /// Call when user pops (back) so Add Order screen updates without manual refresh.

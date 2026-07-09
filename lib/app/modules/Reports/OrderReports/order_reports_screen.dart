@@ -1,4 +1,6 @@
+import 'package:billkaro/app/Widgets/app_dropdowns.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:billkaro/app/modules/Reports/OrderReports/order_reports_controller.dart';
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
 import 'package:billkaro/app/services/common_function.dart';
@@ -215,42 +217,29 @@ class _OrderReportsScreenState extends State<OrderReportsScreen> {
         children: [
           _buildFilterLabel(loc.period),
           const SizedBox(height: 6),
-          Container(
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[300]!),
+          AppFilterDropdown2<String>(
+            value: controller.selectedTimePeriod.value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
             ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: controller.selectedTimePeriod.value,
-                isExpanded: true,
-                icon: const Icon(Icons.keyboard_arrow_down, size: 20),
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+            items: controller.getLocalizedTimePeriods(loc).map((
+              String value,
+            ) {
+              return DropdownItem<String>(
+                value: value,
+                child: Text(
+                  controller.getLocalizedTimePeriodLabel(value, loc),
                 ),
-                items: controller.getLocalizedTimePeriods(loc).map((
-                  String value,
-                ) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(
-                      controller.getLocalizedTimePeriodLabel(value, loc),
-                    ),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    controller.selectedTimePeriod.value = newValue;
-                    controller.filterByTimePeriod();
-                  }
-                },
-              ),
-            ),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              if (newValue != null) {
+                controller.selectedTimePeriod.value = newValue;
+                controller.filterByTimePeriod();
+              }
+            },
           ),
         ],
       ),
@@ -308,46 +297,36 @@ class _OrderReportsScreenState extends State<OrderReportsScreen> {
         children: [
           _buildFilterLabel(loc.payment_type),
           const SizedBox(height: 6),
-          Container(
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[300]!),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: controller.selectedPaymentType.value,
-                isExpanded: true,
-                icon: Assets.svg.bank.svg(
-                  color: AppColor.grey,
-                  height: 18,
-                  width: 18,
-                ),
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-                items: controller.getLocalizedPaymentList(loc).map((
-                  String value,
-                ) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(
-                      controller.getLocalizedPaymentLabel(value, loc),
-                    ),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    controller.selectedPaymentType.value = newValue;
-                    controller.applyAllFilters();
-                  }
-                },
+          AppFilterDropdown2<String>(
+            value: controller.selectedPaymentType.value,
+            iconStyleData: IconStyleData(
+              icon: Assets.svg.bank.svg(
+                color: AppColor.grey,
+                height: 18,
+                width: 18,
               ),
             ),
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+            items: controller.getLocalizedPaymentList(loc).map((
+              String value,
+            ) {
+              return DropdownItem<String>(
+                value: value,
+                child: Text(
+                  controller.getLocalizedPaymentLabel(value, loc),
+                ),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              if (newValue != null) {
+                controller.selectedPaymentType.value = newValue;
+                controller.applyAllFilters();
+              }
+            },
           ),
         ],
       ),
@@ -361,82 +340,43 @@ class _OrderReportsScreenState extends State<OrderReportsScreen> {
         children: [
           _buildFilterLabel(loc.order_type),
           const SizedBox(height: 6),
-          Container(
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[300]!),
+          AppFilterDropdown2<String>(
+            value: controller.selectedOrderType.value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
             ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: controller.selectedOrderType.value,
-                isExpanded: true,
-                icon: const Icon(Icons.keyboard_arrow_down, size: 20),
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-                items: controller.getLocalizedOrdersList(loc).map((
-                  String value,
-                ) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            controller.getLocalizedOrderLabel(value, loc),
-                          ),
-                        ),
-                        if (value != 'All') ...[
-                          const SizedBox(width: 8),
-                          SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: controller.getIconFor(value),
-                          ),
-                        ],
-                      ],
+            items: controller.getLocalizedOrdersList(loc).map((
+              String value,
+            ) {
+              return DropdownItem<String>(
+                value: value,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        controller.getLocalizedOrderLabel(value, loc),
+                      ),
                     ),
-                  );
-                }).toList(),
-                selectedItemBuilder: (context) {
-                  return controller.getLocalizedOrdersList(loc).map((value) {
-                    return Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            controller.getLocalizedOrderLabel(value, loc),
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ),
-                        if (value != 'All') ...[
-                          const SizedBox(width: 8),
-                          SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: controller.getIconFor(value),
-                          ),
-                        ],
-                      ],
-                    );
-                  }).toList();
-                },
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    controller.selectedOrderType.value = newValue;
-                    controller.applyAllFilters();
-                  }
-                },
-              ),
-            ),
+                    if (value != 'All') ...[
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: controller.getIconFor(value),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              if (newValue != null) {
+                controller.selectedOrderType.value = newValue;
+                controller.applyAllFilters();
+              }
+            },
           ),
         ],
       ),
@@ -454,37 +394,24 @@ class _OrderReportsScreenState extends State<OrderReportsScreen> {
         children: [
           _buildFilterLabel('Category'),
           const SizedBox(height: 6),
-          Container(
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[300]!),
+          AppFilterDropdown2<String>(
+            value: value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
             ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: value,
-                isExpanded: true,
-                icon: const Icon(Icons.keyboard_arrow_down, size: 20),
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-                items: categories.map((String v) {
-                  return DropdownMenuItem<String>(
-                    value: v,
-                    child: Text(v == 'All' ? loc.all : (v.capitalize ?? v)),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    controller.filterByCategory(newValue);
-                  }
-                },
-              ),
-            ),
+            items: categories.map((String v) {
+              return DropdownItem<String>(
+                value: v,
+                child: Text(v == 'All' ? loc.all : (v.capitalize ?? v)),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              if (newValue != null) {
+                controller.filterByCategory(newValue);
+              }
+            },
           ),
         ],
       );
@@ -873,9 +800,9 @@ class _OrderCard extends StatelessWidget {
                     ),
                     const Spacer(),
                     // More Menu
-                    PopupMenuButton(
-                      padding: EdgeInsets.zero,
-                      icon: Container(
+                    AppActionDropdown2<String>(
+                      width: 180,
+                      customButton: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: Colors.grey.shade50,
@@ -891,19 +818,10 @@ class _OrderCard extends StatelessWidget {
                           color: Colors.black87,
                         ),
                       ),
-                      itemBuilder: (context) => [
-                        PopupMenuItem(
-                          onTap: () async {
-                            await Future.delayed(
-                              const Duration(milliseconds: 100),
-                            );
-                            final appPref = Get.find<AppPref>();
-                            if (!hasTrialOrSubscription(appPref)) {
-                              checkSubscription();
-                              return;
-                            }
-                            _viewOrderDetails(order);
-                          },
+                      items: [
+                        DropdownItem<String>(
+                          value: 'print',
+                          height: 44,
                           child: Row(
                             children: [
                               Assets.svg.print.svg(
@@ -916,40 +834,9 @@ class _OrderCard extends StatelessWidget {
                             ],
                           ),
                         ),
-                        // PopupMenuItem(
-                        //   onTap: () {
-                        //     Future.delayed(
-                        //       const Duration(milliseconds: 100),
-                        //       () => Get.find<OrderReportsController>()
-                        //           .shareOrder(order.id),
-                        //     );
-                        //   },
-                        //   child: Row(
-                        //     children: [
-                        //       Assets.svg.export.svg(
-                        //         color: Colors.black87,
-                        //         height: 18,
-                        //         width: 18,
-                        //       ),
-                        //       const SizedBox(width: 8),
-                        //       Text(loc.share),
-                        //     ],
-                        //   ),
-                        // ),
-                        PopupMenuItem(
-                          onTap: () {
-                            final appPref = Get.find<AppPref>();
-                            if (!hasTrialOrSubscription(appPref)) {
-                              checkSubscription();
-                              return;
-                            }
-                            Future.delayed(
-                              const Duration(milliseconds: 100),
-
-                              () => Get.find<OrderReportsController>()
-                                  .deleteItem(order.id),
-                            );
-                          },
+                        DropdownItem<String>(
+                          value: 'delete',
+                          height: 44,
                           child: Row(
                             children: [
                               Assets.svg.delete.svg(
@@ -966,6 +853,25 @@ class _OrderCard extends StatelessWidget {
                           ),
                         ),
                       ],
+                      onChanged: (value) {
+                        if (value == 'print') {
+                          final appPref = Get.find<AppPref>();
+                          if (!hasTrialOrSubscription(appPref)) {
+                            checkSubscription();
+                            return;
+                          }
+                          _viewOrderDetails(order);
+                        } else if (value == 'delete') {
+                          final appPref = Get.find<AppPref>();
+                          if (!hasTrialOrSubscription(appPref)) {
+                            checkSubscription();
+                            return;
+                          }
+                          Get.find<OrderReportsController>().deleteItem(
+                            order.id,
+                          );
+                        }
+                      },
                     ),
                   ],
                 ),

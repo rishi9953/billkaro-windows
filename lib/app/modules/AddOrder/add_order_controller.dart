@@ -18,12 +18,15 @@ import 'package:billkaro/app/services/Modals/tables/tables_response.dart';
 import 'package:billkaro/app/Widgets/desktop_camera_capture_dialog.dart';
 import 'package:billkaro/app/services/ai/menu_ai_scanner.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
+import 'package:billkaro/app/services/sync/bill_number_util.dart';
 import 'package:billkaro/app/services/sync/sync_manager.dart';
 import 'package:billkaro/utils/date_util.dart';
 import 'package:billkaro/utils/kot_print_tracker.dart';
 import 'package:billkaro/utils/offline/offline_category_loader.dart';
 import 'dart:async';
 import 'dart:io';
+import 'package:billkaro/app/modules/StoreSession/store_session_controller.dart';
+import 'package:billkaro/app/modules/StoreSession/store_session_widget.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
@@ -36,6 +39,7 @@ class AddOrderController extends BaseController {
   // Controllers
   final TextEditingController itemNameController = TextEditingController();
   final TextEditingController salePriceController = TextEditingController();
+  final quickAddFormKey = GlobalKey<FormState>();
 
   // Image picker for AI menu scanning
   final ImagePicker _imagePicker = ImagePicker();
@@ -94,7 +98,7 @@ class AddOrderController extends BaseController {
   final RxBool isLoadingTables = false.obs;
 
   var selectedCategory = 'none'.obs;
-  String category = 'none';
+  final RxString quickAddCategory = 'none'.obs;
 
   List<String> ordersList = [
     'Delivery',
@@ -112,6 +116,21 @@ class AddOrderController extends BaseController {
   double _asDouble(dynamic value) {
     if (value is num) return value.toDouble();
     return double.tryParse('${value ?? 0}') ?? 0.0;
+  }
+
+  String _orderDiscountType() {
+    final type = orderDetails['discountType']?.toString().trim().toLowerCase();
+    return type == 'amount' ? 'amount' : 'percentage';
+  }
+
+  double _rawDiscountValue() => _asDouble(orderDetails['discount']);
+
+  double appliedDiscountAmount() {
+    final raw = _rawDiscountValue();
+    if (_orderDiscountType() == 'percentage') {
+      return (subtotal.value + totalTax.value) * raw / 100.0;
+    }
+    return raw;
   }
 
   void setOrderDetails(Map<String, dynamic> details) {
@@ -170,6 +189,7 @@ class AddOrderController extends BaseController {
           ..['customerName'] = orders!.customerName
           ..['phoneNumber'] = orders!.phoneNumber
           ..['discount'] = orders!.discount ?? 0.0
+          ..['discountType'] = 'amount'
           ..['serviceCharge'] = orders!.serviceCharge ?? 0.0
           ..['paymentReceivedIn'] = orders!.paymentReceivedIn ?? ''
           ..['status'] = orders!.status;
@@ -207,6 +227,13 @@ class AddOrderController extends BaseController {
       _loadOrderForEdit();
       await _syncKotPrintedFromStorage();
     } else {
+      if (Get.isRegistered<StoreSessionController>() &&
+          !Get.find<StoreSessionController>().isOpen.value) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final ctx = Get.context;
+          if (ctx != null) showStoreOpenDialog(ctx);
+        });
+      }
       // Petpooja-style: order type tabs in UI — no blocking dialog.
       if (selectedOrderSource.value.isEmpty) {
         selectedOrderSource.value = HomeMainRoutes.outletIsCafeOrRestaurant()
@@ -453,7 +480,12 @@ class AddOrderController extends BaseController {
   int getItemQuantity(String itemId) => itemQuantities[itemId] ?? 0;
 
   void incrementItemQuantity(String itemId) {
+    // Max 100 per item to prevent accidental over-ordering
+
     itemQuantities[itemId] = (itemQuantities[itemId] ?? 0) + 1;
+    if (itemQuantities[itemId]! > 100) {
+      itemQuantities[itemId] = 100;
+    }
     calculateTotals();
   }
 
@@ -596,6 +628,17 @@ class AddOrderController extends BaseController {
   Future<void> executePosAction(PosOrderAction action) async {
     if (!hasTrialOrSubscription(appPref)) {
       checkSubscription();
+      return;
+    }
+
+    if (Get.isRegistered<StoreSessionController>() &&
+        !Get.find<StoreSessionController>().isOpen.value) {
+      showError(
+        description: AppLocalizations.of(
+          Get.context!,
+        )!.store_closed_order_blocked,
+      );
+      showStoreOpenDialog(Get.context!);
       return;
     }
 
@@ -1088,19 +1131,28 @@ class AddOrderController extends BaseController {
   }
 
   void addItem(String itemCategory) {
-    category = itemCategory;
-    showQuickAddItemBottomSheet();
+    showQuickAddItemBottomSheet(initialCategory: itemCategory);
   }
 
-  void showQuickAddItemBottomSheet() {
-    showModalBottomSheet(
-      context: Get.context!,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  void showQuickAddItemBottomSheet({String? initialCategory}) {
+    if (initialCategory != null) {
+      quickAddCategory.value = initialCategory.toLowerCase() == 'none'
+          ? 'none'
+          : initialCategory.toLowerCase();
+    } else {
+      quickAddCategory.value = selectedCategory.value.toLowerCase() == 'none'
+          ? 'none'
+          : selectedCategory.value.toLowerCase();
+    }
+    Get.dialog(
+      Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: QuickAddItemBottomSheet(),
+        ),
       ),
-      builder: (_) => QuickAddItemBottomSheet(),
     );
   }
 
@@ -1131,7 +1183,7 @@ class AddOrderController extends BaseController {
       isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
       ),
       builder: (_) => ConfirmOrderBottomSheet(action: action),
     ).whenComplete(() => _isConfirmOrderBottomSheetOpen = false);
@@ -1148,23 +1200,13 @@ class AddOrderController extends BaseController {
     final name = itemNameController.text.trim();
     final priceParsed = double.tryParse(salePriceController.text.trim());
 
-    final loc = AppLocalizations.of(Get.context!)!;
-    if (name.isEmpty) {
-      showError(description: loc.please_enter_item_name);
-      return;
-    }
-    if (priceParsed == null) {
-      showError(description: loc.please_enter_valid_sale_price);
-      return;
-    }
-
     final request = ItemRequest(
       showItem: true,
       outletId: appPref.selectedOutlet!.id!,
-      userId: appPref.user!.id!,
-      category: category,
+      userId: appPref.ordersApiUserId!,
+      category: quickAddCategory.value,
       itemName: name,
-      salePrice: priceParsed,
+      salePrice: priceParsed!,
       withTax: selectedTaxOption.value == 'With Tax',
       gst: gstRate.value,
       orderFrom: selectedOrderSource.value,
@@ -1177,7 +1219,7 @@ class AddOrderController extends BaseController {
       resetPagination();
       await getItems();
       menuItemController.getItems(showLoader: false);
-      category = 'none';
+      quickAddCategory.value = 'none';
       itemNameController.clear();
       salePriceController.clear();
       selectedTaxOption.value = 'Without Tax';
@@ -1193,16 +1235,26 @@ class AddOrderController extends BaseController {
     }
   }
 
+  String? validateQuickAddItemName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return AppLocalizations.of(Get.context!)!.please_enter_item_name;
+    }
+    return null;
+  }
+
+  String? validateQuickAddSalePrice(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return AppLocalizations.of(Get.context!)!.please_enter_valid_sale_price;
+    }
+    final price = double.tryParse(value.trim());
+    if (price == null || price < 0) {
+      return AppLocalizations.of(Get.context!)!.please_enter_valid_sale_price;
+    }
+    return null;
+  }
+
   Future<void> submitItem() async {
-    final loc = AppLocalizations.of(Get.context!)!;
-    if (itemNameController.text.trim().isEmpty) {
-      showError(description: loc.please_enter_item_name);
-      return;
-    }
-    if (salePriceController.text.trim().isEmpty) {
-      showError(description: loc.please_enter_valid_sale_price);
-      return;
-    }
+    if (!(quickAddFormKey.currentState?.validate() ?? false)) return;
     final appPref = Get.find<AppPref>();
     if (!hasTrialOrSubscription(appPref)) {
       checkSubscription();
@@ -1222,7 +1274,7 @@ class AddOrderController extends BaseController {
   Future<void> loadRecommendedItems() async {
     try {
       final outletId = appPref.selectedOutlet?.id;
-      final userId = appPref.user?.id;
+      final userId = appPref.ordersApiUserId;
       if (outletId == null || userId == null) {
         recommendedItems.clear();
         return;
@@ -1794,7 +1846,7 @@ class AddOrderController extends BaseController {
 
     String kotBillNumber = orderDetails['billNumber']?.toString() ?? '';
     if (kotBillNumber.isEmpty) {
-      kotBillNumber = await _generateNextIntegerBillNumber();
+      kotBillNumber = await _previewBillNumber();
     }
 
     final kotNumber = isKotFeatureActive
@@ -1806,9 +1858,7 @@ class AddOrderController extends BaseController {
       tableNumber: orderDetails['tableNumber'] ?? '',
       customerName: orderDetails['customerName'] ?? '',
       phoneNumber: orderDetails['phoneNumber'] ?? '',
-      discount: (orderDetails['discount'] is num)
-          ? (orderDetails['discount'] as num).toDouble()
-          : (double.tryParse('${orderDetails['discount'] ?? 0}') ?? 0.0),
+      discount: appliedDiscountAmount(),
       serviceCharge: (orderDetails['serviceCharge'] is num)
           ? (orderDetails['serviceCharge'] as num).toDouble()
           : (double.tryParse('${orderDetails['serviceCharge'] ?? 0}') ?? 0.0),
@@ -1817,7 +1867,7 @@ class AddOrderController extends BaseController {
       items: kotItems,
       subtotal: subtotal.value,
       totalAmount: totalAmount.value,
-      userId: appPref.user!.id,
+      userId: appPref.ordersApiUserId,
       orderFrom: selectedOrderSource.value,
       totalTax: totalTax.value,
     );
@@ -1939,23 +1989,7 @@ class AddOrderController extends BaseController {
     if (isEdit.value) {
       finalBillNumber = orderDetails['billNumber']?.toString();
     } else {
-      if (orderDetails['billNumber'] != null &&
-          orderDetails['billNumber'].toString().isNotEmpty) {
-        finalBillNumber = orderDetails['billNumber'].toString();
-      } else {
-        finalBillNumber = await _generateNextIntegerBillNumber();
-      }
-
-      final billStr = finalBillNumber;
-      final billNumInt = int.tryParse(billStr);
-      if (billNumInt == null) {
-        finalBillNumber = await _generateNextIntegerBillNumber();
-      } else {
-        final isUnique = await _isBillNumberUnique(billStr);
-        if (!isUnique) {
-          finalBillNumber = await _generateNextIntegerBillNumber();
-        }
-      }
+      finalBillNumber = await _previewBillNumber();
     }
 
     List<SplitPayment>? splitPaymentsList;
@@ -1970,12 +2004,12 @@ class AddOrderController extends BaseController {
 
     final request = CreateorderRequest(
       billNumber: finalBillNumber,
-      userId: appPref.user!.id,
+      userId: appPref.ordersApiUserId,
       outletId: appPref.selectedOutlet!.id!,
       tableNumber: orderDetails['tableNumber'] ?? '',
       customerName: orderDetails['customerName'] ?? '',
       phoneNumber: orderDetails['phoneNumber'] ?? '',
-      discount: _asDouble(orderDetails['discount']),
+      discount: appliedDiscountAmount(),
       serviceCharge: _asDouble(orderDetails['serviceCharge']),
       paymentReceivedIn: orderDetails['paymentReceivedIn'],
       splitPayments: splitPaymentsList,
@@ -2073,35 +2107,19 @@ class AddOrderController extends BaseController {
 
     final payload = _buildCartPayload();
 
+    final hasInternet = await NetworkUtils.hasInternetConnection();
+
     String? finalBillNumber;
     if (isEdit.value) {
       finalBillNumber = orderDetails['billNumber']?.toString().trim();
       if (finalBillNumber == null || finalBillNumber.isEmpty) {
         finalBillNumber = orders?.billNumber;
       }
-    } else {
-      if (orderDetails['billNumber'] != null &&
-          orderDetails['billNumber'].toString().isNotEmpty) {
-        finalBillNumber = orderDetails['billNumber'].toString();
-      } else {
-        finalBillNumber = await _generateNextIntegerBillNumber();
-      }
-
-      if (finalBillNumber != null) {
-        final billNumInt = int.tryParse(finalBillNumber);
-        if (billNumInt == null) {
-          finalBillNumber = await _generateNextIntegerBillNumber();
-        } else {
-          final isUnique = await _isBillNumberUnique(finalBillNumber);
-          if (!isUnique) {
-            finalBillNumber = await _generateNextIntegerBillNumber();
-            debugPrint(
-              '🔄 Generated unique integer bill number: $finalBillNumber',
-            );
-          }
-        }
-      }
+    } else if (!hasInternet) {
+      // Offline only — local placeholder until sync; server reassigns on upload.
+      finalBillNumber = await _offlineBillPreview();
     }
+    // Online new orders: billNumber is null — server assigns atomically.
 
     List<SplitPayment>? splitPaymentsList;
     if (orderDetails['splitPayments'] != null) {
@@ -2115,12 +2133,12 @@ class AddOrderController extends BaseController {
 
     final request = CreateorderRequest(
       billNumber: finalBillNumber,
-      userId: appPref.user!.id,
+      userId: appPref.ordersApiUserId,
       outletId: appPref.selectedOutlet!.id!,
       tableNumber: orderDetails['tableNumber'] ?? '',
       customerName: orderDetails['customerName'] ?? '',
       phoneNumber: orderDetails['phoneNumber'] ?? '',
-      discount: _asDouble(orderDetails['discount']),
+      discount: appliedDiscountAmount(),
       serviceCharge: _asDouble(orderDetails['serviceCharge']),
       paymentReceivedIn: orderDetails['paymentReceivedIn'],
       splitPayments: splitPaymentsList,
@@ -2137,18 +2155,39 @@ class AddOrderController extends BaseController {
 
     final shouldPrintKot = shouldTryKotPrint;
 
-    final hasInternet = await NetworkUtils.hasInternetConnection();
-
     final existingOrderId = _existingOrderId();
     final shouldUpdate =
         isEdit.value && existingOrderId != null && existingOrderId.isNotEmpty;
 
     if (hasInternet) {
-      final response = shouldUpdate
-          ? await callApi(
-              apiClient.updateOrder(existingOrderId!, request.toJson()),
-            )
-          : await callApi(apiClient.addOrder(request.toJson()));
+      dynamic response;
+      if (shouldUpdate) {
+        response = await callApi(
+          apiClient.updateOrder(existingOrderId!, request.toJson()),
+        );
+      } else {
+        for (var attempt = 0; attempt < 3; attempt++) {
+          response = await callApi(
+            apiClient.addOrder(buildOrderCreatePayload(request.toJson())),
+            showLoader: attempt == 0,
+            apiErrorHandler: attempt < 2
+                ? (error) async {
+                    final body = error.response?.data;
+                    final message = body is Map
+                        ? body['message']?.toString().toLowerCase() ?? ''
+                        : body?.toString().toLowerCase() ?? '';
+                    return message.contains('bill number');
+                  }
+                : null,
+          );
+          if (response != null && response['status'] == 'success') break;
+          if (attempt < 2) {
+            await Future<void>.delayed(
+              Duration(milliseconds: 400 * (attempt + 1)),
+            );
+          }
+        }
+      }
 
       if (response != null && response['status'] == 'success') {
         final savedId =
@@ -2158,10 +2197,12 @@ class AddOrderController extends BaseController {
           return;
         }
 
+        final serverBillNumber = response['data']?['billNumber']?.toString();
         final orderModel = _mapToOrderModel(
           request,
           savedId,
           statusOverride: localStatusForUi,
+          billNumberOverride: serverBillNumber,
         );
 
         await db.insertOrders(
@@ -2169,6 +2210,10 @@ class AddOrderController extends BaseController {
           appPref.selectedOutlet!.id!,
           isSyncedFromApi: true,
         );
+
+        if (serverBillNumber != null && serverBillNumber.isNotEmpty) {
+          syncLocalOutletBillNumber(appPref, serverBillNumber);
+        }
 
         await _syncTableStatusForDineInOrder(
           orderStatus: normalizedStatus,
@@ -2229,10 +2274,15 @@ class AddOrderController extends BaseController {
         showSuccess(description: loc.order_saved);
         await _refreshTablesAfterOrderSave();
 
+        final invoiceRequest =
+            serverBillNumber != null && serverBillNumber.isNotEmpty
+            ? copyRequestWithBillNumber(request, serverBillNumber)
+            : request;
+
         await Modular.to.pushNamed(
           HomeMainRoutes.invoiceScreen,
           arguments: {
-            'invoice': request,
+            'invoice': invoiceRequest,
             'orderFrom': selectedOrderSource.value,
             'isEdit': isEdit.value,
             'isOffline': false,
@@ -2328,98 +2378,40 @@ class AddOrderController extends BaseController {
     }
   }
 
-  Future<String> _generateNextIntegerBillNumber() async {
-    try {
-      final outletId = appPref.selectedOutlet?.id;
-      if (outletId == null) return "1";
+  /// UI preview only — never sent to server on create.
+  Future<String> _previewBillNumber() async {
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null) return '';
 
-      int outletBillNumber = 0;
+    if (await NetworkUtils.hasInternetConnection()) {
       try {
-        final userResponse = await callApi(
-          apiClient.getUserDetails(appPref.user!.id!),
+        final response = await callApi(
+          apiClient.getNextBillNumber(outletId),
           showLoader: false,
         );
-
-        if (userResponse != null && userResponse.status == 'success') {
-          appPref.user = userResponse.data;
-
-          final selectedOutlet = userResponse.data.outletData?.firstWhere(
-            (outlet) => outlet.id == outletId,
-            orElse: () => userResponse.data.outletData?.first ?? OutletData(),
-          );
-
-          outletBillNumber = selectedOutlet?.billNumber ?? 0;
-          debugPrint('📌 Outlet billNumber from API: $outletBillNumber');
+        final next = response?['data']?['nextBillNumber']?.toString();
+        if (response?['status'] == 'success' &&
+            next != null &&
+            next.isNotEmpty) {
+          return next;
         }
       } catch (e) {
-        debugPrint('⚠️ Could not fetch user details: $e');
-        outletBillNumber = appPref.selectedOutlet?.billNumber ?? 0;
-        debugPrint(
-          '📌 Using outlet billNumber from appPref: $outletBillNumber',
-        );
+        debugPrint('⚠️ Bill preview API failed: $e');
       }
-
-      final localOrders = await db.getAllOrders(outletId: outletId);
-
-      List<api.OrderModel> apiOrders = [];
-      final isOnline = await NetworkUtils.hasInternetConnection();
-      if (isOnline) {
-        try {
-          final response = await callApi(
-            apiClient.getOrders(
-              appPref.user!.id!,
-              outletId,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-            ),
-            showLoader: false,
-          );
-          if (response?.status == 'success') {
-            apiOrders = response!.data;
-          }
-        } catch (e) {
-          debugPrint('⚠️ Could not fetch API orders for bill number: $e');
-        }
-      }
-
-      int maxOrderBillNumber = 0;
-
-      for (final order in localOrders) {
-        final billNum = int.tryParse(order.billNumber);
-        if (billNum != null && billNum > maxOrderBillNumber) {
-          maxOrderBillNumber = billNum;
-        }
-      }
-
-      for (final order in apiOrders) {
-        final billNum = int.tryParse(order.billNumber);
-        if (billNum != null && billNum > maxOrderBillNumber) {
-          maxOrderBillNumber = billNum;
-        }
-      }
-
-      final baseBillNumber = outletBillNumber > maxOrderBillNumber
-          ? outletBillNumber
-          : maxOrderBillNumber;
-
-      // Generate the next integer bill number.
-      final finalBillNumber = baseBillNumber == 0 ? 1 : (baseBillNumber + 1);
-
-      debugPrint('📊 Bill number calculation:');
-      debugPrint('   Outlet billNumber: $outletBillNumber');
-      debugPrint('   Max order billNumber: $maxOrderBillNumber');
-      debugPrint('   Base billNumber: $baseBillNumber');
-      debugPrint('   Final billNumber: $finalBillNumber');
-
-      return finalBillNumber.toString();
-    } catch (e) {
-      debugPrint('❌ Error generating bill number: $e');
-      return "1";
     }
+
+    return _offlineBillPreview();
+  }
+
+  Future<String> _offlineBillPreview() async {
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null) return '1';
+
+    final localOrders = await db.getAllOrders(outletId: outletId);
+    return computeNextBillNumber(
+      outletLastBillNumber: appPref.selectedOutlet?.billNumber ?? 0,
+      orderBillNumbers: localOrders.map((order) => order.billNumber),
+    ).toString();
   }
 
   Future<bool> _isBillNumberUnique(
@@ -2446,7 +2438,7 @@ class AddOrderController extends BaseController {
         try {
           final response = await callApi(
             apiClient.getOrders(
-              appPref.user!.id!,
+              appPref.ordersApiUserId!,
               outletId,
               null,
               null,
@@ -2484,12 +2476,13 @@ class AddOrderController extends BaseController {
     CreateorderRequest r,
     String id, {
     String? statusOverride,
+    String? billNumberOverride,
   }) {
     return api.OrderModel(
       outletId: r.outletId ?? appPref.selectedOutlet!.id!,
       id: id,
-      billNumber: r.billNumber ?? '',
-      userId: r.userId ?? appPref.user!.id ?? '',
+      billNumber: billNumberOverride ?? r.billNumber ?? '',
+      userId: r.userId ?? appPref.ordersApiUserId ?? '',
       tableNumber: r.tableNumber,
       customerName: r.customerName,
       phoneNumber: r.phoneNumber,
@@ -2548,9 +2541,7 @@ class AddOrderController extends BaseController {
     subtotal.value = s;
     totalTax.value = t;
 
-    final discount = (orderDetails['discount'] is num)
-        ? (orderDetails['discount'] as num).toDouble()
-        : (double.tryParse('${orderDetails['discount'] ?? 0}') ?? 0.0);
+    final discount = appliedDiscountAmount();
     final serviceCharge = (orderDetails['serviceCharge'] is num)
         ? (orderDetails['serviceCharge'] as num).toDouble()
         : (double.tryParse('${orderDetails['serviceCharge'] ?? 0}') ?? 0.0);
@@ -2608,7 +2599,7 @@ class AddOrderController extends BaseController {
 
       final response = await callApi(
         apiClient.getOrders(
-          appPref.user!.id!,
+          appPref.ordersApiUserId!,
           outletId,
           null,
           null,

@@ -128,7 +128,9 @@ class LoginScreen extends StatelessWidget {
             Obx(
               () => Text(
                 controller.signInTabIndex.value == 1
-                    ? 'Use the email and password provided by your outlet.'
+                    ? controller.loginMethodTabIndex.value == 1
+                          ? 'Enter your registered staff phone number to receive an OTP.'
+                          : 'Use the email and password provided by your outlet.'
                     : controller.loginMethodTabIndex.value == 1
                     ? 'Enter your phone number to continue.'
                     : 'Enter your email and password to continue.',
@@ -185,6 +187,7 @@ class LoginScreen extends StatelessWidget {
             : (Set<int> next) {
                 if (next.isEmpty) return;
                 controller.loginMethodTabIndex.value = next.first;
+                controller.onChangePhoneNumber();
               },
         style: ButtonStyle(
           shape: MaterialStateProperty.all(
@@ -265,34 +268,75 @@ class LoginScreen extends StatelessWidget {
   }
 
   Widget _buildPhoneSignIn() {
-    return Column(
-      key: const ValueKey('phoneSignIn'),
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _buildTextField(
-          label: 'Phone number',
-          hint: 'Enter your phone number',
-          icon: Icons.phone_outlined,
-          controller: controller.phoneNumberController,
-          validator: null,
-          keyboardType: TextInputType.phone,
-        ),
-        const SizedBox(height: 28),
-        _buildPrimaryButton(
-          onPressed: null,
-          isLoading: false,
-          label: 'Sign in',
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Phone sign-in is coming soon.',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 13,
-            color: _textSecondary.withOpacity(0.9),
+    return Obx(
+      () => Column(
+        key: const ValueKey('phoneSignIn'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildTextField(
+            label: 'Phone number',
+            hint: '10-digit mobile number',
+            icon: Icons.phone_outlined,
+            controller: controller.phoneNumberController,
+            validator: controller.validatePhoneNumber,
+            keyboardType: TextInputType.phone,
+            readOnly: controller.phoneOtpSent.value,
+            maxLength: 10,
           ),
-        ),
-      ],
+          if (controller.phoneOtpSent.value) ...[
+            const SizedBox(height: 20),
+            _buildTextField(
+              label: 'OTP',
+              hint: 'Enter 6-digit OTP',
+              icon: Icons.lock_outline_rounded,
+              controller: controller.otpController,
+              validator: controller.validateOtp,
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(
+                  onPressed: controller.isLoading.value
+                      ? null
+                      : controller.onChangePhoneNumber,
+                  child: const Text('Change number'),
+                ),
+                TextButton(
+                  onPressed:
+                      controller.isLoading.value ||
+                          controller.otpResendSeconds.value > 0
+                      ? null
+                      : () => controller.onSendPhoneOtp(isResend: true),
+                  child: Text(
+                    controller.otpResendSeconds.value > 0
+                        ? 'Resend in ${controller.otpResendSeconds.value}s'
+                        : 'Resend OTP',
+                  ),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 28),
+          _buildPrimaryButton(
+            onPressed: () {
+              if (controller.phoneOtpSent.value) {
+                controller.onVerifyPhoneOtp();
+              } else {
+                controller.onSendPhoneOtp();
+              }
+            },
+            //  controller.phoneOtpSent.value
+            //     ? controller.onVerifyPhoneOtp
+            //     : controller.onSendPhoneOtp,
+            isLoading: controller.isLoading.value,
+            label: controller.phoneOtpSent.value
+                ? 'Verify & sign in'
+                : 'Send OTP',
+          ),
+        ],
+      ),
     );
   }
 
@@ -324,7 +368,7 @@ class LoginScreen extends StatelessWidget {
             ? null
             : (Set<int> next) {
                 if (next.isEmpty) return;
-                controller.signInTabIndex.value = next.first;
+                controller.onSignInTabChanged(next.first);
               },
         style: ButtonStyle(
           shape: MaterialStateProperty.all(
@@ -450,6 +494,8 @@ class LoginScreen extends StatelessWidget {
     required TextEditingController controller,
     required String? Function(String?)? validator,
     TextInputType? keyboardType,
+    bool readOnly = false,
+    int? maxLength,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -467,6 +513,8 @@ class LoginScreen extends StatelessWidget {
           controller: controller,
           validator: validator,
           keyboardType: keyboardType,
+          readOnly: readOnly,
+          maxLength: maxLength,
           style: const TextStyle(color: _textPrimary, fontSize: 15),
           decoration: InputDecoration(
             hintText: hint,

@@ -1,3 +1,4 @@
+import 'package:billkaro/app/Widgets/app_date_picker.dart';
 import 'package:billkaro/app/modules/Tables/table_controller.dart';
 import 'package:billkaro/app/services/Modals/tables/tables_response.dart';
 import 'package:billkaro/config/config.dart';
@@ -119,7 +120,7 @@ class _ReserveTableDialogState extends State<ReserveTableDialog> {
   }
 
   Future<void> _pickDate() async {
-    final picked = await showDatePicker(
+    final picked = await showAppDatePicker(
       context: context,
       initialDate: _date,
       firstDate: DateTime.now(),
@@ -181,10 +182,16 @@ class _ReserveTableDialogState extends State<ReserveTableDialog> {
   }
 
   String _reservationTableLabel() {
-    if (_extraTableIds.isEmpty && !_reservationTable.hasMergedTables) {
-      return _reservationTable.displayName;
+    if (_extraTableIds.isEmpty) {
+      return _reservationTable.hasMergedTables
+          ? _reservationTable.combinedDisplayName
+          : _reservationTable.displayName;
     }
-    final names = [_reservationTable.displayName];
+    final names = [
+      _reservationTable.hasMergedTables
+          ? _reservationTable.combinedDisplayName
+          : _reservationTable.displayName,
+    ];
     for (final id in _extraTableIds) {
       final tws = widget.controller.tables.firstWhereOrNull(
         (entry) => entry.table.id == id,
@@ -392,6 +399,7 @@ class _ReserveTableDialogState extends State<ReserveTableDialog> {
                             const SizedBox(height: 14),
                             _LargePartyHelper(
                               loc: loc,
+                              controller: widget.controller,
                               partySize: _partySize,
                               effectiveCapacity: _effectiveCapacity,
                               mergeCandidates: _mergeCandidates,
@@ -568,6 +576,10 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tableLabel = table.hasMergedTables
+        ? table.combinedDisplayName
+        : table.displayName;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 18, 8, 18),
@@ -579,6 +591,7 @@ class _Header extends StatelessWidget {
         ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 46,
@@ -608,7 +621,7 @@ class _Header extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  loc.reservation_dialog_subtitle(table.displayName),
+                  loc.reservation_dialog_subtitle(tableLabel),
                   style: TextStyle(
                     fontSize: 13,
                     color: AppColor.white.withValues(alpha: 0.88),
@@ -623,6 +636,28 @@ class _Header extends StatelessWidget {
                     color: AppColor.white.withValues(alpha: 0.75),
                   ),
                 ),
+                if (table.hasMergedTables) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: [
+                      _MergedChip(
+                        label: table.displayName,
+                        isPrimary: true,
+                        onDark: true,
+                      ),
+                      ...table.mergedTableNumbers.map(
+                        (n) => _MergedChip(
+                          label: n.toLowerCase().startsWith('table ')
+                              ? n
+                              : 'Table $n',
+                          onDark: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -632,6 +667,63 @@ class _Header extends StatelessWidget {
             tooltip: loc.cancel,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MergedChip extends StatelessWidget {
+  final String label;
+  final bool isPrimary;
+  final bool onDark;
+
+  const _MergedChip({
+    required this.label,
+    this.isPrimary = false,
+    this.onDark = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (onDark) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: AppColor.white.withValues(alpha: isPrimary ? 0.22 : 0.14),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: AppColor.white.withValues(alpha: isPrimary ? 0.5 : 0.3),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: AppColor.white.withValues(alpha: isPrimary ? 1 : 0.9),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: (isPrimary ? AppColor.primary : Colors.grey.shade600)
+            .withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: (isPrimary ? AppColor.primary : Colors.grey.shade500)
+              .withValues(alpha: 0.35),
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: isPrimary ? AppColor.primary : Colors.grey.shade700,
+        ),
       ),
     );
   }
@@ -814,6 +906,7 @@ class _DateTimeTile extends StatelessWidget {
 
 class _LargePartyHelper extends StatelessWidget {
   final AppLocalizations loc;
+  final TableController controller;
   final int partySize;
   final int effectiveCapacity;
   final List<TableWithStatus> mergeCandidates;
@@ -824,6 +917,7 @@ class _LargePartyHelper extends StatelessWidget {
 
   const _LargePartyHelper({
     required this.loc,
+    required this.controller,
     required this.partySize,
     required this.effectiveCapacity,
     required this.mergeCandidates,
@@ -832,6 +926,14 @@ class _LargePartyHelper extends StatelessWidget {
     required this.onToggleExtra,
     required this.onSwitchTable,
   });
+
+  String _tableChipLabel(TableWithStatus tws) {
+    final name = tws.table.hasMergedTables
+        ? tws.table.combinedDisplayName
+        : tws.table.displayName;
+    final seats = controller.effectiveSeatingCapacity(tws.table);
+    return '$name · ${loc.table_seats_count(seats)}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -886,9 +988,7 @@ class _LargePartyHelper extends StatelessWidget {
               children: mergeCandidates.map((tws) {
                 final selected = selectedExtraIds.contains(tws.table.id);
                 return FilterChip(
-                  label: Text(
-                    '${tws.table.displayName} · ${loc.table_seats_count(tws.table.seatingCapacity)}',
-                  ),
+                  label: Text(_tableChipLabel(tws)),
                   selected: selected,
                   showCheckmark: true,
                   onSelected: (_) => onToggleExtra(tws.table.id),
@@ -929,9 +1029,7 @@ class _LargePartyHelper extends StatelessWidget {
                     size: 16,
                     color: AppColor.primary,
                   ),
-                  label: Text(
-                    '${tws.table.displayName} · ${loc.table_seats_count(tws.table.seatingCapacity)}',
-                  ),
+                  label: Text(_tableChipLabel(tws)),
                   onPressed: () => onSwitchTable(tws.table),
                   backgroundColor: colorScheme.surface,
                   labelStyle: TextStyle(

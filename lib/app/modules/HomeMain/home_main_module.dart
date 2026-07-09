@@ -11,6 +11,7 @@ import 'package:billkaro/app/modules/Invoice/KOT/kot_preview_screen.dart';
 import 'package:billkaro/app/modules/Invoice/invoice_screen.dart';
 import 'package:billkaro/app/modules/Items/add_menu_items_screen.dart';
 import 'package:billkaro/app/modules/Inventory/inventory_hub_screen.dart';
+import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_orders_screen.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_item_screen.dart';
 import 'package:billkaro/app/modules/KOTHistory/kot_history_screen.dart';
 import 'package:billkaro/app/modules/KitchenDisplay/kitchen_display_screen.dart';
@@ -25,12 +26,14 @@ import 'package:billkaro/app/modules/Regular%20customer/CustomerDetails/customer
 import 'package:billkaro/app/modules/Regular%20customer/CustomerList/customer_list_Screen.dart';
 import 'package:billkaro/app/modules/Reports/ItemReports/item_reports_screen.dart';
 import 'package:billkaro/app/modules/Reports/OrderReports/order_reports_screen.dart';
+import 'package:billkaro/app/modules/StoreSession/store_session_history_screen.dart';
 import 'package:billkaro/app/modules/Reports/reports_screen.dart';
 import 'package:billkaro/app/modules/Staff/Staff%20Activity/staff_activity_screen.dart';
 import 'package:billkaro/app/modules/Staff/add_staff_screen.dart';
 import 'package:billkaro/app/modules/Staff/staff_details_screen.dart';
 import 'package:billkaro/app/modules/Tables/table_screen.dart';
 import 'package:billkaro/app/modules/Whatsapp%20Marketing/whatsapp_marketing_screen.dart';
+import 'package:billkaro/app/modules/Wallet/wallet_screen.dart';
 import 'package:billkaro/app/modules/subscription/Form/subscription_form.dart';
 import 'package:billkaro/app/modules/subscription/review/subscription_review_screen.dart';
 import 'package:billkaro/app/modules/subscription/subscription_screen.dart';
@@ -108,6 +111,13 @@ class HomeMainModule extends Module {
           ),
         ),
         ChildRoute(
+          HomeMainRoutes.purchaseOrders,
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canViewInventory,
+            child: const PurchaseOrdersScreen(),
+          ),
+        ),
+        ChildRoute(
           HomeMainRoutes.businessOverview,
           child: (_) => BusinessOverviewScreen(),
         ),
@@ -132,6 +142,13 @@ class HomeMainModule extends Module {
           child: (_) => _staffGatedRoute(
             allowed: StaffAccess.canViewReports,
             child: ItemReportsScreen(),
+          ),
+        ),
+        ChildRoute(
+          HomeMainRoutes.storeSessionHistory,
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canViewStoreHistory,
+            child: const StoreSessionHistoryScreen(),
           ),
         ),
         ChildRoute(
@@ -193,6 +210,13 @@ class HomeMainModule extends Module {
         ChildRoute(
           HomeMainRoutes.subscriptions,
           child: (_) => SubscriptionScreen(),
+        ),
+        ChildRoute(
+          HomeMainRoutes.wallet,
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.isOwnerSession,
+            child: const WalletScreen(),
+          ),
         ),
 
         ChildRoute(

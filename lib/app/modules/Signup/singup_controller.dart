@@ -436,7 +436,44 @@ class SignupController extends BaseController {
       return;
     }
 
+    final mobile = contact['mobile'].toString().replaceAll(RegExp(r'[^\d]'), '');
+    final mobileAvailable = await checkMobileAvailability(mobile);
+    if (mobileAvailable == false) {
+      showError(
+        description:
+            'This mobile number is already registered. Please use a different number.',
+      );
+      return;
+    }
+
     onSubmit();
+  }
+
+  Future<bool> checkMobileAvailability(String mobile) async {
+    final digits = mobile.replaceAll(RegExp(r'[^\d]'), '');
+    if (digits.length != 10 || !RegExp(r'^[6-9]\d{9}$').hasMatch(digits)) {
+      return false;
+    }
+
+    try {
+      final response = await callApi(
+        apiClient.checkAuthMobile({'mobile': digits}),
+        showLoader: false,
+        apiErrorHandler: (_) async => true,
+      );
+
+      if (response is Map && response['available'] == false) {
+        return false;
+      }
+
+      if (response is Map && response['available'] == true) {
+        return true;
+      }
+    } catch (_) {
+      // Allow submit — register API validates.
+    }
+
+    return true;
   }
 
   String? _emailFormatError(String trimmed) {
@@ -471,6 +508,8 @@ class SignupController extends BaseController {
     return null;
   }
 
+  //clear Form
+
   void onSubmit() async {
     try {
       HttpOverrides.global = MyHttpOverrides();
@@ -496,6 +535,7 @@ class SignupController extends BaseController {
       final response = await callApi(apiClient.registration(request));
       debugPrint('Api Response is : $response');
       if (response != null) {
+        clearForm();
         showSuccess(
           description:
               'Registration successful. Please check your email to activate your account.',
@@ -506,5 +546,33 @@ class SignupController extends BaseController {
       print('Error during registration: $e');
       showError(description: 'Registration failed. Please try again.');
     }
+  }
+
+  //clearForm
+  void clearForm() {
+    // Clear text fields
+    businessNameController.clear();
+    brandNameController.clear();
+    emailController.clear();
+    passwordController.clear();
+
+    // Reset selections
+    selectedBusinessType.value = 'retail';
+
+    // Clear address & contact
+    businessAddress.value = null;
+    primaryContact.value = null;
+
+    // Reset email validation
+    isEmailChecking.value = false;
+    isEmailAvailable.value = null;
+    emailVerificationError.value = null;
+    _lastCheckedEmail = null;
+
+    // Reset password visibility
+    isPasswordVisible.value = false;
+
+    // Clear form validation errors
+    formKey.currentState?.reset();
   }
 }

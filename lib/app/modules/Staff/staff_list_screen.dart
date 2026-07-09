@@ -1,4 +1,6 @@
+import 'package:billkaro/app/Widgets/app_dropdowns.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:billkaro/app/modules/Staff/staff_details_controller.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter_modular/flutter_modular.dart';
@@ -487,6 +489,13 @@ class _StaffCard extends StatelessWidget {
                   member.email.isEmpty ? '-' : member.email,
                   style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
                 ),
+                if (_isBillerRole(member.role)) ...[
+                  const SizedBox(height: 10),
+                  _BillerPermissionsSection(
+                    permissions: member.permissions,
+                    loc: loc,
+                  ),
+                ],
               ],
             ),
           ),
@@ -507,6 +516,7 @@ class _WindowsStaffRow extends StatelessWidget {
     final loc = AppLocalizations.of(context)!;
     final roleTitle = _localizedRoleTitle(loc, member.role);
     final isSecondaryAdmin = _isSecondaryAdminRole(member.role);
+    final isBiller = _isBillerRole(member.role);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -515,77 +525,90 @@ class _WindowsStaffRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey.shade100),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            flex: 3,
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: AppColor.primary.withValues(alpha: 0.12),
-                  child: Text(
-                    member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                      color: AppColor.primary,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                flex: 3,
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: AppColor.primary.withValues(alpha: 0.12),
+                      child: Text(
+                        member.name.isNotEmpty
+                            ? member.name[0].toUpperCase()
+                            : '?',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                          color: AppColor.primary,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    member.name.isEmpty ? '-' : member.name,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        member.name.isEmpty ? '-' : member.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: _RoleChip(
-              title: roleTitle,
-              isSecondaryAdmin: isSecondaryAdmin,
-              compact: true,
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              member.phone.isEmpty ? '-' : member.phone,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Text(
-              member.email.isEmpty ? '-' : member.email,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
-            ),
-          ),
-          Expanded(
-            child: Center(child: _StatusChip(isActive: member.isActive)),
-          ),
-          SizedBox(
-            width: 96,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: _StaffActionMenu(
-                member: member,
-                controller: controller,
-                isWindows: true,
               ),
-            ),
+              Expanded(
+                flex: 2,
+                child: _RoleChip(
+                  title: roleTitle,
+                  isSecondaryAdmin: isSecondaryAdmin,
+                  compact: true,
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: Text(
+                  member.phone.isEmpty ? '-' : member.phone,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                ),
+              ),
+              Expanded(
+                flex: 3,
+                child: Text(
+                  member.email.isEmpty ? '-' : member.email,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                ),
+              ),
+              Expanded(
+                child: Center(child: _StatusChip(isActive: member.isActive)),
+              ),
+              SizedBox(
+                width: 96,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: _StaffActionMenu(
+                    member: member,
+                    controller: controller,
+                    isWindows: true,
+                  ),
+                ),
+              ),
+            ],
           ),
+          if (isBiller) ...[
+            const SizedBox(height: 10),
+            Divider(height: 1, color: Colors.grey.shade200),
+            const SizedBox(height: 10),
+            _BillerPermissionsSection(permissions: member.permissions, loc: loc),
+          ],
         ],
       ),
     );
@@ -654,18 +677,21 @@ class _StaffActionMenu extends StatelessWidget {
         );
       }
 
-      return PopupMenuButton<String>(
-        onSelected: (value) async {
+      return AppActionDropdown2<String>(
+        customButton: const Icon(Icons.more_vert, size: 20),
+        items: [
+          DropdownItem(value: 'edit', height: 44, child: Text(loc.edit)),
+          DropdownItem(value: 'remove', height: 44, child: Text(loc.remove)),
+        ],
+        onChanged: (value) async {
           if (value == 'edit') {
             await controller.onEditStaff(member);
             return;
           }
-          await _confirmDelete(context, member, loc);
+          if (value == 'remove') {
+            await _confirmDelete(context, member, loc);
+          }
         },
-        itemBuilder: (_) => [
-          PopupMenuItem(value: 'edit', child: Text(loc.edit)),
-          PopupMenuItem(value: 'remove', child: Text(loc.remove)),
-        ],
       );
     });
   }
@@ -734,7 +760,7 @@ class _RoleChip extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         title,
@@ -766,7 +792,7 @@ class _StatusChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         isActive ? loc.status_active_label : loc.status_pending,
@@ -829,6 +855,82 @@ bool _isSecondaryAdminRole(String role) {
   return normalized == 'secondary admin';
 }
 
+bool _isBillerRole(String role) => !_isSecondaryAdminRole(role);
+
 String _localizedRoleTitle(AppLocalizations loc, String role) {
   return _isSecondaryAdminRole(role) ? loc.secondary_admin : loc.biller;
+}
+
+class _BillerPermissionsSection extends StatelessWidget {
+  const _BillerPermissionsSection({
+    required this.permissions,
+    required this.loc,
+  });
+
+  final List<String> permissions;
+  final AppLocalizations loc;
+
+  @override
+  Widget build(BuildContext context) {
+    final granted = permissions.map((item) => item.trim()).toSet();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _PermissionReadOnlyRow(
+            label: loc.allow_biller_create_menu_items,
+            enabled: granted.contains('create_bill'),
+          ),
+          const SizedBox(height: 6),
+          _PermissionReadOnlyRow(
+            label: loc.allow_biller_edit_menu_items,
+            enabled: granted.contains('edit_menu'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PermissionReadOnlyRow extends StatelessWidget {
+  const _PermissionReadOnlyRow({
+    required this.label,
+    required this.enabled,
+  });
+
+  final String label;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          enabled ? Icons.check_circle : Icons.cancel_outlined,
+          size: 16,
+          color: enabled ? Colors.green.shade600 : Colors.grey.shade400,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.35,
+              color: enabled ? const Color(0xFF374151) : Colors.grey.shade500,
+              fontWeight: enabled ? FontWeight.w500 : FontWeight.w400,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }

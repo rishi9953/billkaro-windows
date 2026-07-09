@@ -29,12 +29,73 @@ class RazorpayService {
   factory RazorpayService() => _instance;
   RazorpayService._internal();
 
+  /// UPI, card, wallet, and netbanking only — hides EMI and Pay Later.
+  static const Map<String, dynamic> instantPaymentMethods = {
+    'netbanking': true,
+    'card': true,
+    'upi': true,
+    'wallet': true,
+    'emi': false,
+    'paylater': false,
+  };
+
+  static String get merchantUpiId =>
+      dotenv.env['RAZORPAY_MERCHANT_UPI_ID']?.trim() ?? '';
+
+  static Map<String, dynamic> _instantPaymentCheckoutConfig(String upiId) {
+    final config = <String, dynamic>{
+      'display': {
+        'hide': [
+          {'method': 'emi'},
+          {'method': 'paylater'},
+        ],
+        'preferences': {
+          'show_default_blocks': true,
+        },
+      },
+    };
+    if (upiId.isNotEmpty) {
+      config['display']['blocks'] = {
+        'upi': {
+          'name': 'Pay via UPI',
+          'instruments': [
+            {'method': 'upi'},
+          ],
+        },
+      };
+      config['display']['sequence'] = ['block.upi', 'card', 'netbanking', 'wallet'];
+    }
+    return config;
+  }
+
+  static Map<String, dynamic>? _instantPaymentUpiOptions(String upiId) {
+    if (upiId.isEmpty) return null;
+    return {
+      'vpa': upiId,
+      'flow': 'qr',
+    };
+  }
+
+  /// Desktop WebView cannot launch UPI apps; hide EMI/pay later and keep defaults.
+  static Map<String, dynamic> _desktopWebCheckoutConfig() {
+    return {
+      'display': {
+        'hide': [
+          {'method': 'emi'},
+          {'method': 'paylater'},
+        ],
+        'preferences': {
+          'show_default_blocks': true,
+        },
+      },
+    };
+  }
+
   Razorpay? _razorpay;
   Function(PaymentSuccessResponse)? onSuccess;
   Function(PaymentFailureResponse)? onFailure;
   Function(ExternalWalletResponse)? onExternalWallet;
 
-  // Razorpay Keys loaded from .env file
   static String get keyId {
     final environment = dotenv.env['RAZORPAY_ENVIRONMENT'] ?? 'test';
     if (environment == 'production') {
@@ -111,26 +172,43 @@ class RazorpayService {
     String? orderId,
     Map<String, dynamic>? prefill,
     Map<String, dynamic>? notes,
+    bool instantPaymentsOnly = false,
   }) {
     try {
       if (amountInPaise <= 0) {
         throw Exception('Invalid amountInPaise: $amountInPaise');
       }
 
+      final merchantUpi = merchantUpiId;
+      final checkoutNotes = <String, dynamic>{
+        ...?notes,
+        if (merchantUpi.isNotEmpty) 'merchant_upi_id': merchantUpi,
+      };
+      final hasOrderId = orderId != null && orderId.isNotEmpty;
+
       final options = <String, dynamic>{
         'key': keyId,
         'amount': amountInPaise.toString(),
-        'name': 'BillKaro ChillKaro',
         'currency': 'INR',
+        'name': 'BillKaro ChillKaro',
         'description': description,
         'prefill': {
           'contact': contact ?? '',
           'email': email ?? '',
           ...?prefill,
         },
-        'notes': notes ?? {},
+        'notes': checkoutNotes,
         'theme': {'color': '#D4AF37'},
-        if (orderId != null && orderId.isNotEmpty) 'order_id': orderId,
+        if (hasOrderId) 'order_id': orderId,
+        if (instantPaymentsOnly) ...{
+          'method': instantPaymentMethods,
+          'config': _instantPaymentCheckoutConfig(merchantUpi),
+          if (_instantPaymentUpiOptions(merchantUpi) != null)
+            'upi': _instantPaymentUpiOptions(merchantUpi),
+        } else if (isRazorpayWebCheckoutSupported) ...{
+          'method': instantPaymentMethods,
+          'config': _desktopWebCheckoutConfig(),
+        },
       };
 
       debugPrint(

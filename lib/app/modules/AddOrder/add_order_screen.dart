@@ -1,4 +1,6 @@
+import 'package:billkaro/app/Widgets/app_dropdowns.dart';
 import 'package:billkaro/app/modules/AddOrder/add_order_controller.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:billkaro/app/modules/AddOrder/add_order_list_screen.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
@@ -17,6 +19,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
   late final AddOrderController controller;
   final ScrollController scrollController = ScrollController();
   static const double _desktopRadius = 10;
+  static const double _appBarActionButtonHeight = 36;
 
   bool get _isDesktopPlatform =>
       GetPlatform.isWindows || GetPlatform.isMacOS || GetPlatform.isLinux;
@@ -315,7 +318,8 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                     children: [
                                       if (controller.showRecommendedSection &&
                                           controller
-                                              .recommendedItems.isNotEmpty)
+                                              .recommendedItems
+                                              .isNotEmpty)
                                         Builder(
                                           builder: (context) {
                                             return Column(
@@ -349,43 +353,45 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                                 Wrap(
                                                   spacing: 12,
                                                   runSpacing: 12,
-                                                  children: controller
-                                                      .recommendedItems
-                                                      .map((item) {
+                                                  children: controller.recommendedItems.map((
+                                                    item,
+                                                  ) {
                                                     return Obx(
                                                       () => OrderItemCard(
                                                         imageUrl:
                                                             item.itemImage,
                                                         itemName:
-                                                            item.itemName
-                                                                    .capitalize ??
-                                                                '',
-                                                        price: double.tryParse(
+                                                            item
+                                                                .itemName
+                                                                .capitalize ??
+                                                            '',
+                                                        price:
+                                                            double.tryParse(
                                                               item.salePrice
                                                                   .toString(),
                                                             ) ??
                                                             0.0,
                                                         quantity: controller
                                                             .getItemQuantity(
-                                                          item.id,
-                                                        ),
+                                                              item.id,
+                                                            ),
                                                         onDelete: () {
                                                           controller
                                                               .removeItemCompletely(
-                                                            item.id,
-                                                          );
+                                                                item.id,
+                                                              );
                                                         },
                                                         onIncrement: () {
                                                           controller
                                                               .incrementItemQuantity(
-                                                            item.id,
-                                                          );
+                                                                item.id,
+                                                              );
                                                         },
                                                         onDecrement: () {
                                                           controller
                                                               .decrementItemQuantity(
-                                                            item.id,
-                                                          );
+                                                                item.id,
+                                                              );
                                                         },
                                                       ),
                                                     );
@@ -403,7 +409,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                               .where(
                                                 (item) =>
                                                     item.category
-                                                        .toLowerCase() ==
+                                                            .toLowerCase() ==
                                                         'none' &&
                                                     !controller
                                                         .bestSellingItemIds
@@ -727,287 +733,429 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
     return WillPopScope(
       onWillPop: () => _showLeaveConfirmationDialog(context),
       child: Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () async {
-            final shouldLeave = await _showLeaveConfirmationDialog(context);
-            if (!shouldLeave || !context.mounted) return;
-            Navigator.of(context).maybePop();
-          },
-        ),
-        elevation: 0,
-        centerTitle: false,
-        toolbarHeight: _isDesktopPlatform ? 64 : kToolbarHeight,
-        title: Obx(() {
-          if (controller.selectedOrderSource.value.isEmpty) {
-            return Text(
-              loc.add_Order,
-              style: TextStyle(
-                color: AppColor.white,
-                fontSize: _isDesktopPlatform ? 18 : 20,
-                fontWeight: FontWeight.w600,
-              ),
-            );
-          }
-          return Row(
-            children: [
-              Text(
-                controller.selectedOrderSource.value,
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          leading: _canShowBackButton(context)
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.of(context).maybePop(),
+                )
+              : null,
+          elevation: 0,
+          centerTitle: false,
+          toolbarHeight: _isDesktopPlatform ? 64 : kToolbarHeight,
+          title: Obx(() {
+            if (controller.selectedOrderSource.value.isEmpty) {
+              return Text(
+                loc.add_Order,
                 style: TextStyle(
                   color: AppColor.white,
                   fontSize: _isDesktopPlatform ? 18 : 20,
                   fontWeight: FontWeight.w600,
                 ),
-              ),
-              Gap(20),
-              controller.showIcon(),
-            ],
-          );
-        }),
-        actions: [
-          Obx(() {
-            if (controller.isFromTableScreen.value) {
-              return const SizedBox.shrink();
+              );
             }
-            controller.homeController.selectedOutlet.value;
-            if (!HomeMainRoutes.outletIsCafeOrRestaurant()) {
-              return const SizedBox.shrink();
-            }
-            final selected = controller.selectedOrderSource.value;
-            return PopupMenuButton<String>(
-              tooltip: 'Change order source',
-              onSelected: (value) {
-                controller.selectedOrderSource.value = value;
-              },
-              itemBuilder: (context) {
-                return controller.ordersList.map((source) {
-                  final isSelected = source == selected;
-                  return PopupMenuItem<String>(
-                    value: source,
+            return Row(
+              children: [
+                Text(
+                  controller.selectedOrderSource.value,
+                  style: TextStyle(
+                    color: AppColor.white,
+                    fontSize: _isDesktopPlatform ? 18 : 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Gap(20),
+                controller.showIcon(),
+              ],
+            );
+          }),
+          actions: [
+            Obx(() {
+              if (controller.isFromTableScreen.value) {
+                return const SizedBox.shrink();
+              }
+              controller.homeController.selectedOutlet.value;
+              if (!HomeMainRoutes.outletIsCafeOrRestaurant()) {
+                return const SizedBox.shrink();
+              }
+              final selected = controller.selectedOrderSource.value;
+              return Tooltip(
+                message: 'Change order source',
+                child: AppActionDropdown2<String>(
+                  width: 220,
+                  customButton: Container(
+                    margin: const EdgeInsets.only(
+                      right: 4,
+                      top: 10,
+                      bottom: 10,
+                    ),
+                    height: _appBarActionButtonHeight,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(
+                        _isDesktopPlatform ? _desktopRadius : 8,
+                      ),
+                      border: Border.all(color: Colors.white.withOpacity(0.22)),
+                    ),
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (isSelected) ...[
-                          const Icon(Icons.check, size: 18),
-                          const SizedBox(width: 8),
-                        ] else ...[
-                          const SizedBox(width: 26),
-                        ],
-                        _orderSourceIcon(source),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(source, overflow: TextOverflow.ellipsis),
+                        Icon(
+                          Icons.swap_horiz,
+                          size: 18,
+                          color: Colors.white.withOpacity(0.95),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          selected.isEmpty ? 'Order source' : selected,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(
+                          Icons.keyboard_arrow_down,
+                          size: 18,
+                          color: Colors.white,
                         ),
                       ],
+                    ),
+                  ),
+                  items: controller.ordersList.map((source) {
+                    final isSelected = source == selected;
+                    return DropdownItem<String>(
+                      value: source,
+                      height: 44,
+                      child: Row(
+                        children: [
+                          if (isSelected) ...[
+                            const Icon(Icons.check, size: 18),
+                            const SizedBox(width: 8),
+                          ] else ...[
+                            const SizedBox(width: 26),
+                          ],
+                          _orderSourceIcon(source),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              source,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      controller.selectedOrderSource.value = value;
+                    }
+                  },
+                ),
+              );
+            }),
+            Gap(8),
+            Obx(() {
+              if (controller.items.isEmpty) {
+                return Container();
+              }
+              if (!controller.showAddDetailsOnCreateOrder.value) {
+                return Container();
+              }
+              return InkWell(
+                onTap: () async {
+                  final result = await Modular.to.pushNamed(
+                    HomeMainRoutes.orderDetails,
+                    arguments: {
+                      ...controller.orderDetails,
+                      'orderFrom': controller.selectedOrderSource.value,
+                      'totalAmount': controller.totalAmount.value,
+                    },
+                  );
+                  // final result = await Get.toNamed(
+                  //   AppRoute.orderDetails,
+                  //   arguments: {
+                  //     ...controller.orderDetails,
+                  //     'orderFrom': controller.selectedOrderSource.value,
+                  //     'totalAmount': controller.totalAmount.value,
+                  //   },
+                  // );
+                  if (result != null && result is CreateorderRequest) {
+                    controller.setOrderDetails(result.toJson());
+                    debugPrint(controller.orderDetails.toString());
+                  }
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(top: 10, bottom: 10, right: 8),
+                  height: _appBarActionButtonHeight,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(
+                      _isDesktopPlatform ? _desktopRadius : 6,
+                    ),
+                    border: Border.all(color: AppColor.white, width: 1),
+                    color: AppColor.white,
+                  ),
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        loc.add_details,
+                        style: TextStyle(
+                          color: AppColor.primary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+
+            IconButton(
+              icon: const Icon(Icons.settings_outlined, color: AppColor.white),
+              onPressed: controller.openSettings,
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            Obx(() {
+              controller.homeController.selectedOutlet.value;
+              if (!HomeMainRoutes.outletIsCafeOrRestaurant()) {
+                return const SizedBox.shrink();
+              }
+              return _OrderTypeBar(
+                controller: controller,
+                orderSourceIcon: _orderSourceIcon,
+              );
+            }),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWide = constraints.maxWidth >= 1000;
+
+                  if (!isWide) {
+                    return buildMainContent();
+                  }
+
+                  return Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1500),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(flex: 3, child: buildMainContent()),
+                          SizedBox(
+                            width: 400,
+                            child: _CartPanel(controller: controller),
+                          ),
+                        ],
+                      ),
                     ),
                   );
-                }).toList();
-              },
-              child: Container(
-                margin: const EdgeInsets.only(right: 4, top: 10, bottom: 10),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(
-                    _isDesktopPlatform ? _desktopRadius : 8,
-                  ),
-                  border: Border.all(color: Colors.white.withOpacity(0.22)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.swap_horiz,
-                      size: 18,
-                      color: Colors.white.withOpacity(0.95),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      selected.isEmpty ? 'Order source' : selected,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Icon(
-                      Icons.keyboard_arrow_down,
-                      size: 18,
-                      color: Colors.white,
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-          IconButton(
-            icon: const Icon(Icons.settings_outlined, color: AppColor.white),
-            onPressed: controller.openSettings,
-          ),
-          Obx(() {
-            if (controller.items.isEmpty) {
-              return Container();
-            }
-            if (!controller.isEdit.value &&
-                !controller.showAddDetailsOnCreateOrder.value) {
-              return Container();
-            }
-            return InkWell(
-              onTap: () async {
-                final result = await Modular.to.pushNamed(
-                  HomeMainRoutes.orderDetails,
-                  arguments: {
-                    ...controller.orderDetails,
-                    'orderFrom': controller.selectedOrderSource.value,
-                    'totalAmount': controller.totalAmount.value,
-                  },
-                );
-                // final result = await Get.toNamed(
-                //   AppRoute.orderDetails,
-                //   arguments: {
-                //     ...controller.orderDetails,
-                //     'orderFrom': controller.selectedOrderSource.value,
-                //     'totalAmount': controller.totalAmount.value,
-                //   },
-                // );
-                if (result != null && result is CreateorderRequest) {
-                  controller.setOrderDetails(result.toJson());
-                  debugPrint(controller.orderDetails.toString());
-                }
-              },
-              child: Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 12, right: 8),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(
-                    _isDesktopPlatform ? _desktopRadius : 6,
-                  ),
-                  border: Border.all(color: AppColor.white, width: 1),
-                  color: AppColor.white,
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(4.0),
-                  child: Center(
-                    child: Text(
-                      loc.add_details,
-                      style: TextStyle(
-                        color: AppColor.primary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }),
-        ],
-      ),
-      body: Column(
-        children: [
-          Obx(() {
-            controller.homeController.selectedOutlet.value;
-            if (!HomeMainRoutes.outletIsCafeOrRestaurant()) {
-              return const SizedBox.shrink();
-            }
-            return _OrderTypeBar(
-              controller: controller,
-              orderSourceIcon: _orderSourceIcon,
-            );
-          }),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final isWide = constraints.maxWidth >= 1000;
-
-                if (!isWide) {
-                  return buildMainContent();
-                }
-
-                return Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1500),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(flex: 3, child: buildMainContent()),
-                        SizedBox(
-                          width: 400,
-                          child: _CartPanel(controller: controller),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: Obx(() {
-        controller.itemQuantities.length;
-        controller.isKOT.value;
-        controller.pendingKotItemCount;
-        controller.homeController.selectedOutlet.value;
-        final kotEnabled = controller.isKotFeatureActive;
-
-        if (_isWindows) {
-          return Container(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              border: Border(
-                top: BorderSide(
-                  color: theme.colorScheme.outlineVariant.withOpacity(0.6),
-                  width: 1,
-                ),
+                },
               ),
             ),
-            padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                OutlinedButton(
-                  onPressed: controller.hasSelectedItems
-                      ? () => controller.viewInvoicePreview()
-                      : null,
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(0, _windowsFooterButtonHeight),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    foregroundColor: theme.colorScheme.onSurface,
-                    side: BorderSide(color: theme.colorScheme.outline),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        _windowsFooterButtonRadius,
-                      ),
-                    ),
-                  ),
-                  child: const Text(
-                    'Preview',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
+          ],
+        ),
+        bottomNavigationBar: Obx(() {
+          controller.itemQuantities.length;
+          controller.isKOT.value;
+          controller.pendingKotItemCount;
+          controller.homeController.selectedOutlet.value;
+          final kotEnabled = controller.isKotFeatureActive;
+
+          if (_isWindows) {
+            return Container(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                border: Border(
+                  top: BorderSide(
+                    color: theme.colorScheme.outlineVariant.withOpacity(0.6),
+                    width: 1,
                   ),
                 ),
-                const SizedBox(width: 12),
-                if (kotEnabled) ...[
+              ),
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
                   OutlinedButton(
                     onPressed: controller.hasSelectedItems
-                        ? () => controller.executePosAction(PosOrderAction.kot)
+                        ? () => controller.viewInvoicePreview()
+                        : null,
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, _windowsFooterButtonHeight),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      foregroundColor: theme.colorScheme.onSurface,
+                      side: BorderSide(color: theme.colorScheme.outline),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          _windowsFooterButtonRadius,
+                        ),
+                      ),
+                    ),
+                    child: const Text(
+                      'Preview',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  if (kotEnabled) ...[
+                    OutlinedButton(
+                      onPressed: controller.hasSelectedItems
+                          ? () =>
+                                controller.executePosAction(PosOrderAction.kot)
+                          : null,
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, _windowsFooterButtonHeight),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        foregroundColor: const Color(0xFFE65100),
+                        side: const BorderSide(color: Color(0xFFE65100)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            _windowsFooterButtonRadius,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        controller.pendingKotItemCount > 0
+                            ? 'KOT (${controller.pendingKotItemCount})'
+                            : 'KOT',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  OutlinedButton(
+                    onPressed: controller.hasSelectedItems
+                        ? () => controller.showConfirmOrderBottomSheet(
+                            PosOrderAction.hold,
+                          )
                         : null,
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(0, _windowsFooterButtonHeight),
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      foregroundColor: const Color(0xFFE65100),
-                      side: const BorderSide(color: Color(0xFFE65100)),
+                      foregroundColor: theme.colorScheme.onSurface,
+                      side: BorderSide(color: theme.colorScheme.outline),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(
                           _windowsFooterButtonRadius,
+                        ),
+                      ),
+                    ),
+                    child: Text(
+                      kotEnabled ? 'Save' : loc.save_and_hold,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  FilledButton(
+                    onPressed: controller.hasSelectedItems
+                        ? () => controller.showConfirmOrderBottomSheet(
+                            PosOrderAction.bill,
+                          )
+                        : null,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, _windowsFooterButtonHeight),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      backgroundColor: AppColor.primary,
+                      foregroundColor: AppColor.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          _windowsFooterButtonRadius,
+                        ),
+                      ),
+                    ),
+                    child: Text(
+                      kotEnabled ? 'Bill' : loc.save_and_bill,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final secondaryLabel = kotEnabled ? 'Save' : loc.save_and_hold;
+          final primaryLabel = kotEnabled ? 'Bill' : loc.save_and_bill;
+
+          return Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: _isDesktopPlatform ? 24 : 16,
+              vertical: _isDesktopPlatform ? 14 : 16,
+            ),
+            color: theme.colorScheme.surface,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              mainAxisSize: MainAxisSize.max,
+              children: [
+                ElevatedButton(
+                  onPressed: controller.hasSelectedItems
+                      ? () => controller.viewInvoicePreview()
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.surface,
+                    foregroundColor: theme.colorScheme.onSurface,
+                    elevation: 0,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: _isDesktopPlatform ? 14 : 12,
+                      vertical: _isDesktopPlatform ? 14 : 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      side: BorderSide(color: theme.dividerColor),
+                      borderRadius: BorderRadius.circular(
+                        _isDesktopPlatform ? _desktopRadius : 12,
+                      ),
+                    ),
+                  ),
+                  child: const Text(
+                    'Preview',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                if (kotEnabled) ...[
+                  ElevatedButton(
+                    onPressed: controller.hasSelectedItems
+                        ? () => controller.executePosAction(PosOrderAction.kot)
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.surface,
+                      foregroundColor: const Color(0xFFE65100),
+                      elevation: 0,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: _isDesktopPlatform ? 14 : 12,
+                        vertical: _isDesktopPlatform ? 14 : 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        side: const BorderSide(color: Color(0xFFE65100)),
+                        borderRadius: BorderRadius.circular(
+                          _isDesktopPlatform ? _desktopRadius : 12,
                         ),
                       ),
                     ),
@@ -1016,119 +1164,22 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                           ? 'KOT (${controller.pendingKotItemCount})'
                           : 'KOT',
                       style: const TextStyle(
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
                   const SizedBox(width: 12),
                 ],
-                OutlinedButton(
-                  onPressed: controller.hasSelectedItems
-                      ? () => controller.showConfirmOrderBottomSheet(
-                            PosOrderAction.hold,
-                          )
-                      : null,
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(0, _windowsFooterButtonHeight),
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    foregroundColor: theme.colorScheme.onSurface,
-                    side: BorderSide(color: theme.colorScheme.outline),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        _windowsFooterButtonRadius,
-                      ),
-                    ),
-                  ),
-                  child: Text(
-                    kotEnabled ? 'Save' : loc.save_and_hold,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                FilledButton(
-                  onPressed: controller.hasSelectedItems
-                      ? () => controller.showConfirmOrderBottomSheet(
-                            PosOrderAction.bill,
-                          )
-                      : null,
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(0, _windowsFooterButtonHeight),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    backgroundColor: AppColor.primary,
-                    foregroundColor: AppColor.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        _windowsFooterButtonRadius,
-                      ),
-                    ),
-                  ),
-                  child: Text(
-                    kotEnabled ? 'Bill' : loc.save_and_bill,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        final secondaryLabel = kotEnabled ? 'Save' : loc.save_and_hold;
-        final primaryLabel = kotEnabled ? 'Bill' : loc.save_and_bill;
-
-        return Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: _isDesktopPlatform ? 24 : 16,
-            vertical: _isDesktopPlatform ? 14 : 16,
-          ),
-          color: theme.colorScheme.surface,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            mainAxisSize: MainAxisSize.max,
-            children: [
-              ElevatedButton(
-                onPressed: controller.hasSelectedItems
-                    ? () => controller.viewInvoicePreview()
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.colorScheme.surface,
-                  foregroundColor: theme.colorScheme.onSurface,
-                  elevation: 0,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: _isDesktopPlatform ? 14 : 12,
-                    vertical: _isDesktopPlatform ? 14 : 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: theme.dividerColor),
-                    borderRadius: BorderRadius.circular(
-                      _isDesktopPlatform ? _desktopRadius : 12,
-                    ),
-                  ),
-                ),
-                child: const Text(
-                  'Preview',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-              ),
-              const SizedBox(width: 12),
-              if (kotEnabled) ...[
                 ElevatedButton(
                   onPressed: controller.hasSelectedItems
-                      ? () => controller.executePosAction(PosOrderAction.kot)
+                      ? () => controller.showConfirmOrderBottomSheet(
+                          PosOrderAction.hold,
+                        )
                       : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.colorScheme.surface,
-                    foregroundColor: const Color(0xFFE65100),
+                    foregroundColor: theme.colorScheme.onSurface,
                     elevation: 0,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     padding: EdgeInsets.symmetric(
@@ -1136,93 +1187,67 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                       vertical: _isDesktopPlatform ? 14 : 16,
                     ),
                     shape: RoundedRectangleBorder(
-                      side: const BorderSide(color: Color(0xFFE65100)),
+                      side: BorderSide(color: theme.dividerColor),
                       borderRadius: BorderRadius.circular(
                         _isDesktopPlatform ? _desktopRadius : 12,
                       ),
                     ),
                   ),
                   child: Text(
-                    controller.pendingKotItemCount > 0
-                        ? 'KOT (${controller.pendingKotItemCount})'
-                        : 'KOT',
+                    secondaryLabel,
                     style: const TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
-              ],
-              ElevatedButton(
-                onPressed: controller.hasSelectedItems
-                    ? () => controller.showConfirmOrderBottomSheet(
-                          PosOrderAction.hold,
-                        )
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.colorScheme.surface,
-                  foregroundColor: theme.colorScheme.onSurface,
-                  elevation: 0,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: _isDesktopPlatform ? 14 : 12,
-                    vertical: _isDesktopPlatform ? 14 : 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: theme.dividerColor),
-                    borderRadius: BorderRadius.circular(
-                      _isDesktopPlatform ? _desktopRadius : 12,
-                    ),
-                  ),
-                ),
-                child: Text(
-                  secondaryLabel,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              ElevatedButton(
-                onPressed: controller.hasSelectedItems
-                    ? () => controller.showConfirmOrderBottomSheet(
+                ElevatedButton(
+                  onPressed: controller.hasSelectedItems
+                      ? () => controller.showConfirmOrderBottomSheet(
                           PosOrderAction.bill,
                         )
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColor.primary,
-                  foregroundColor: AppColor.white,
-                  elevation: 0,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: _isDesktopPlatform ? 14 : 12,
-                    vertical: _isDesktopPlatform ? 14 : 16,
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColor.primary,
+                    foregroundColor: AppColor.white,
+                    elevation: 0,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: _isDesktopPlatform ? 14 : 12,
+                      vertical: _isDesktopPlatform ? 14 : 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        _isDesktopPlatform ? _desktopRadius : 12,
+                      ),
+                    ),
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(
-                      _isDesktopPlatform ? _desktopRadius : 12,
+                  child: Text(
+                    primaryLabel,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
-                child: Text(
-                  primaryLabel,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      }),
+              ],
+            ),
+          );
+        }),
       ),
     );
   }
 
+  bool _canShowBackButton(BuildContext context) {
+    return Modular.to.canPop() || Navigator.of(context).canPop();
+  }
+
   Future<bool> _showLeaveConfirmationDialog(BuildContext context) async {
+    if (!controller.hasSelectedItems) {
+      return true;
+    }
+
     final shouldLeave = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -1292,8 +1317,8 @@ class _OrderTypeBar extends StatelessWidget {
                     ],
                   ),
                   selected: isSelected,
-                  onSelected: controller.isFromTableScreen.value &&
-                          source != 'Dine In'
+                  onSelected:
+                      controller.isFromTableScreen.value && source != 'Dine In'
                       ? null
                       : (_) => controller.setOrderSource(source),
                   selectedColor: AppColor.primary.withOpacity(0.15),
@@ -1365,6 +1390,7 @@ class _CartPanel extends StatelessWidget {
     return Obx(() {
       controller.orderDetailsVersion.value;
       controller.selectedOrderSource.value;
+      controller.showAddDetailsOnCreateOrder.value;
       final entries = controller.itemQuantities.entries
           .where((e) => e.value > 0)
           .toList();
@@ -1391,8 +1417,8 @@ class _CartPanel extends StatelessWidget {
       final selectedTable = (controller.orderDetails['tableNumber'] ?? '')
           .toString()
           .trim();
-      final isDineIn = controller.selectedOrderSource.value.toLowerCase() ==
-          'dine in';
+      final isDineIn =
+          controller.selectedOrderSource.value.toLowerCase() == 'dine in';
 
       return Container(
         margin: const EdgeInsets.fromLTRB(0, 8, 12, 8),
@@ -1455,7 +1481,7 @@ class _CartPanel extends StatelessWidget {
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
                           )
-                        : DropdownButtonFormField<String>(
+                        : AppDropdownFormField2<String>(
                             value: selectedTable.isEmpty
                                 ? null
                                 : controller.availableTables.any(
@@ -1477,7 +1503,7 @@ class _CartPanel extends StatelessWidget {
                             ),
                             items: controller.availableTables
                                 .map(
-                                  (t) => DropdownMenuItem(
+                                  (t) => DropdownItem(
                                     value: t.displayName,
                                     child: Text(t.displayName),
                                   ),
@@ -1488,25 +1514,29 @@ class _CartPanel extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      TextButton.icon(
-                        onPressed: () async {
-                          final result = await Modular.to.pushNamed(
-                            HomeMainRoutes.orderDetails,
-                            arguments: {
-                              ...controller.orderDetails,
-                              'orderFrom':
-                                  controller.selectedOrderSource.value,
-                              'totalAmount': controller.totalAmount.value,
-                            },
-                          );
-                          if (result != null &&
-                              result is CreateorderRequest) {
-                            controller.setOrderDetails(result.toJson());
-                          }
-                        },
-                        icon: const Icon(Icons.receipt_long_outlined, size: 18),
-                        label: Text(loc.add_details),
-                      ),
+                      if (controller.showAddDetailsOnCreateOrder.value)
+                        TextButton.icon(
+                          onPressed: () async {
+                            final result = await Modular.to.pushNamed(
+                              HomeMainRoutes.orderDetails,
+                              arguments: {
+                                ...controller.orderDetails,
+                                'orderFrom':
+                                    controller.selectedOrderSource.value,
+                                'totalAmount': controller.totalAmount.value,
+                              },
+                            );
+                            if (result != null &&
+                                result is CreateorderRequest) {
+                              controller.setOrderDetails(result.toJson());
+                            }
+                          },
+                          icon: const Icon(
+                            Icons.receipt_long_outlined,
+                            size: 18,
+                          ),
+                          label: Text(loc.add_details),
+                        ),
                       TextButton.icon(
                         onPressed: controller.showRemarkDialog,
                         icon: const Icon(Icons.note_alt_outlined, size: 18),
@@ -1618,8 +1648,8 @@ class _CartPanel extends StatelessWidget {
                                     splashRadius: 16,
                                     onPressed: () =>
                                         controller.decrementItemQuantity(
-                                      item['id'] as String,
-                                    ),
+                                          item['id'] as String,
+                                        ),
                                   ),
                                   Text(
                                     '${item['qty']}',
@@ -1632,8 +1662,8 @@ class _CartPanel extends StatelessWidget {
                                     splashRadius: 16,
                                     onPressed: () =>
                                         controller.incrementItemQuantity(
-                                      item['id'] as String,
-                                    ),
+                                          item['id'] as String,
+                                        ),
                                   ),
                                 ],
                               ),
@@ -1656,16 +1686,22 @@ class _CartPanel extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  _row('Subtotal', '₹${controller.subtotal.value.toStringAsFixed(2)}'),
-                  _row('Tax', '₹${controller.totalTax.value.toStringAsFixed(2)}'),
+                  _row(
+                    'Subtotal',
+                    '₹${controller.subtotal.value.toStringAsFixed(2)}',
+                  ),
+                  _row(
+                    'Tax',
+                    '₹${controller.totalTax.value.toStringAsFixed(2)}',
+                  ),
                   _row(
                     'Discount',
-                    '-₹${_num(controller.orderDetails['discount']).toStringAsFixed(2)}',
+                    '-₹${controller.appliedDiscountAmount().toStringAsFixed(2)}',
                   ),
-                  _row(
-                    'Service',
-                    '₹${_num(controller.orderDetails['serviceCharge']).toStringAsFixed(2)}',
-                  ),
+                  // _row(
+                  //   'Service',
+                  //   '₹${_num(controller.orderDetails['serviceCharge']).toStringAsFixed(2)}',
+                  // ),
                   const SizedBox(height: 6),
                   _row(
                     loc.total_amount,
@@ -2008,135 +2044,135 @@ class OrderItemCard extends StatelessWidget {
       onTap: onQuickAdd ?? onIncrement,
       borderRadius: BorderRadius.circular(isDesktop ? 10 : 16),
       child: Container(
-      width: 150,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(isDesktop ? 10 : 16),
-        border: Border.all(
-          color: quantity > 0
-              ? AppColor.primary.withOpacity(0.55)
-              : (isDesktop ? Colors.grey[300]! : Colors.grey[200]!),
-          width: quantity > 0 ? 1.5 : 1,
+        width: 150,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(isDesktop ? 10 : 16),
+          border: Border.all(
+            color: quantity > 0
+                ? AppColor.primary.withOpacity(0.55)
+                : (isDesktop ? Colors.grey[300]! : Colors.grey[200]!),
+            width: quantity > 0 ? 1.5 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDesktop ? 0.015 : 0.02),
+              blurRadius: isDesktop ? 3 : 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDesktop ? 0.015 : 0.02),
-            blurRadius: isDesktop ? 3 : 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Image area
+            ClipRRect(
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(isDesktop ? 10 : 16),
+              ),
+              child: SizedBox(
+                height: 110,
+                child: imageUrl == null || imageUrl!.isEmpty
+                    ? Assets.svg.placeholder.svg(fit: BoxFit.cover)
+                    : Image.network(
+                        imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            Assets.svg.placeholder.svg(fit: BoxFit.cover),
+                      ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10.0,
+                vertical: 8.0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    itemName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '₹${price.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFFF6A3D), // light orange like reference
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          InkWell(
+                            onTap: quantity > 0 ? onDecrement : null,
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white,
+                              ),
+                              padding: const EdgeInsets.all(4),
+                              child: Icon(
+                                Icons.remove,
+                                size: 18,
+                                color: quantity > 0
+                                    ? Colors.grey[800]
+                                    : Colors.grey[400],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            quantity.toString(),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          InkWell(
+                            onTap: onIncrement,
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color(0xFFFF6A3D),
+                              ),
+                              padding: const EdgeInsets.all(4),
+                              child: const Icon(
+                                Icons.add,
+                                size: 18,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Image area
-          ClipRRect(
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(isDesktop ? 10 : 16),
-            ),
-            child: SizedBox(
-              height: 110,
-              child: imageUrl == null || imageUrl!.isEmpty
-                  ? Assets.svg.placeholder.svg(fit: BoxFit.cover)
-                  : Image.network(
-                      imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          Assets.svg.placeholder.svg(fit: BoxFit.cover),
-                    ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 10.0,
-              vertical: 8.0,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  itemName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '₹${price.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFFFF6A3D), // light orange like reference
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Center(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5F5),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        InkWell(
-                          onTap: quantity > 0 ? onDecrement : null,
-                          child: Container(
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white,
-                            ),
-                            padding: const EdgeInsets.all(4),
-                            child: Icon(
-                              Icons.remove,
-                              size: 18,
-                              color: quantity > 0
-                                  ? Colors.grey[800]
-                                  : Colors.grey[400],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          quantity.toString(),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        InkWell(
-                          onTap: onIncrement,
-                          child: Container(
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Color(0xFFFF6A3D),
-                            ),
-                            padding: const EdgeInsets.all(4),
-                            child: const Icon(
-                              Icons.add,
-                              size: 18,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
     );
   }
 }

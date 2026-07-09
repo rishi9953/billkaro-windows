@@ -1,6 +1,8 @@
 import 'dart:io' show Platform;
 
+import 'package:billkaro/app/Widgets/app_dropdowns.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:billkaro/app/modules/KOTHistory/kot_history_controller.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/config/config.dart';
@@ -140,20 +142,16 @@ class _KotHistoryScreenState extends State<KotHistoryScreen> {
   }
 
   Widget _buildKotMenu(KotHistoryController c, OrderModel o, bool isWin) {
-    return PopupMenuButton<String>(
-      tooltip: 'More actions',
-      icon: Icon(
+    return AppActionDropdown2<String>(
+      customButton: Icon(
         Icons.more_vert,
         color: Colors.grey.shade600,
         size: isWin ? 22 : 24,
       ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(isWin ? 8 : 12),
-      ),
-      onSelected: (v) => _onKotMenu(c, o, v),
-      itemBuilder: (context) => [
-        PopupMenuItem(
+      items: [
+        DropdownItem(
           value: 'view',
+          height: 44,
           child: Row(
             children: [
               Icon(
@@ -166,8 +164,9 @@ class _KotHistoryScreenState extends State<KotHistoryScreen> {
             ],
           ),
         ),
-        PopupMenuItem(
+        DropdownItem(
           value: 'print',
+          height: 44,
           child: Row(
             children: [
               Icon(
@@ -181,6 +180,11 @@ class _KotHistoryScreenState extends State<KotHistoryScreen> {
           ),
         ),
       ],
+      onChanged: (value) {
+        if (value != null) {
+          _onKotMenu(c, o, value);
+        }
+      },
     );
   }
 

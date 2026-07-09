@@ -16,6 +16,7 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
   final controller = Get.put(InventoryController());
   late TabController _tabController;
   final _searchCtrl = TextEditingController();
+  final _supplierSearchCtrl = TextEditingController();
 
   static const _accent = Color(0xFFEF8819);
   static const _cardBg = Colors.white;
@@ -23,10 +24,11 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         controller.selectedTab.value = _tabController.index;
+        if (mounted) setState(() {});
       }
     });
   }
@@ -35,6 +37,7 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
   void dispose() {
     _tabController.dispose();
     _searchCtrl.dispose();
+    _supplierSearchCtrl.dispose();
     super.dispose();
   }
 
@@ -101,7 +104,6 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
                 Tab(text: loc.tab_raw_materials),
                 Tab(text: loc.tab_stock_log),
                 Tab(text: loc.tab_suppliers),
-                Tab(text: loc.tab_purchase_orders),
                 Tab(text: loc.tab_recipes),
               ],
             ),
@@ -114,16 +116,15 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
         }
         return Column(
           children: [
-            _statsRow(isWide, loc),
             Expanded(
               child: TabBarView(
+                physics: const NeverScrollableScrollPhysics(),
                 controller: _tabController,
                 children: [
-                  _overviewTab(loc),
+                  _overviewTab(isWide, loc),
                   _rawMaterialsTab(isWide, loc),
                   _stockLogTab(isWide, loc),
                   _suppliersTab(isWide, loc),
-                  _purchaseOrdersTab(isWide, loc),
                   _recipesTab(isWide, loc),
                 ],
               ),
@@ -131,6 +132,23 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
           ],
         );
       }),
+      floatingActionButton: _tabController.index == 1
+          ? FloatingActionButton.extended(
+              onPressed: () => showAddRawMaterialDialog(controller),
+              backgroundColor: _accent,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.add_box_outlined),
+              label: Text(loc.add_material),
+            )
+          : _tabController.index == 3
+          ? FloatingActionButton.extended(
+              onPressed: () => showAddSupplierDialog(controller),
+              backgroundColor: _accent,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.person_add_alt_1),
+              label: Text(loc.add_supplier),
+            )
+          : null,
     );
   }
 
@@ -138,7 +156,8 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
     final d = controller.dashboard.value;
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: isWide ? 24 : 12, vertical: 16),
+      alignment: Alignment.centerLeft,
+      padding: EdgeInsets.symmetric(vertical: 16),
       child: Wrap(
         spacing: 12,
         runSpacing: 12,
@@ -162,13 +181,6 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
             '₹${_fmt(d?.totalStockValue ?? 0)}',
             Icons.account_balance_wallet_outlined,
             const Color(0xFF10B981),
-            isWide: isWide,
-          ),
-          _statCard(
-            loc.stat_pending_pos,
-            '${d?.pendingPurchaseOrders ?? 0}',
-            Icons.local_shipping_outlined,
-            _accent,
             isWide: isWide,
           ),
         ],
@@ -238,7 +250,7 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
     );
   }
 
-  Widget _overviewTab(AppLocalizations loc) {
+  Widget _overviewTab(bool isWide, AppLocalizations loc) {
     final d = controller.dashboard.value;
     final alerts = d?.lowStockMaterials ?? [];
 
@@ -251,6 +263,8 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _statsRow(isWide, loc),
+
               _sectionTitle(
                 loc.section_low_stock_alerts,
                 Icons.notifications_active,
@@ -274,6 +288,9 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
                   }),
                   _actionChip(loc.add_supplier, Icons.person_add, () {
                     showAddSupplierDialog(controller);
+                  }),
+                  _actionChip(loc.add_recipe, Icons.restaurant_menu, () {
+                    showAddRecipeDialog(controller);
                   }),
                   _actionChip(loc.view_stock_log, Icons.history, () {
                     _tabController.animateTo(2);
@@ -321,59 +338,73 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
   }
 
   Widget _rawMaterialsTab(bool isWide, AppLocalizations loc) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          _toolbar(
-            loc: loc,
-            hint: loc.search_raw_materials,
-            onSearch: (v) {
-              controller.searchQuery.value = v;
-              controller.loadRawMaterials();
-            },
-            onAdd: () => showAddRawMaterialDialog(controller),
-            addLabel: loc.add_material,
-            filter: Obx(
-              () => FilterChip(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                label: Text(
-                  loc.low_stock_only,
-                  style: TextStyle(
-                    color: controller.showLowStockOnly.value
-                        ? Colors.white
-                        : Colors.black,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _toolbar(
+              loc: loc,
+              hint: loc.search_raw_materials,
+              searchWidth: MediaQuery.of(context).size.width * 0.467,
+              onSearch: (v) {
+                controller.searchQuery.value = v;
+                controller.loadRawMaterials();
+              },
+              // Increase Height of Filter Chip to match TextField
+              filter: Obx(() {
+                final selected = controller.showLowStockOnly.value;
+
+                return SizedBox(
+                  height: 44,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      controller.showLowStockOnly.toggle();
+                      controller.loadRawMaterials();
+                    },
+                    icon: Icon(
+                      Icons.filter_alt,
+                      size: 18,
+                      color: selected ? Colors.white : Colors.black,
+                    ),
+                    label: Text(
+                      loc.low_stock_only,
+                      style: TextStyle(
+                        color: selected ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: selected ? Colors.red : Colors.white,
+                      side: BorderSide(
+                        color: selected ? Colors.red : Colors.grey.shade300,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
                   ),
-                ),
-                selected: controller.showLowStockOnly.value,
-                selectedColor: Colors.red,
-                backgroundColor: Colors.white,
-                checkmarkColor: Colors.white,
-                onSelected: (v) {
-                  controller.showLowStockOnly.value = v;
-                  controller.loadRawMaterials();
-                },
-              ),
+                );
+              }),
             ),
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: Obx(() {
-              final list = controller.rawMaterials;
-              if (list.isEmpty) {
-                return _emptyCard(loc.no_raw_materials_yet);
-              }
-              return isWide
-                  ? _materialsTable(list, loc)
-                  : ListView.builder(
-                      itemCount: list.length,
-                      itemBuilder: (_, i) => _materialCard(list[i], loc),
-                    );
-            }),
-          ),
-        ],
+            const SizedBox(height: 12),
+            Expanded(
+              child: Obx(() {
+                final list = controller.rawMaterials;
+                if (list.isEmpty) {
+                  return _emptyCard(loc.no_raw_materials_yet);
+                }
+                return isWide
+                    ? _materialsTable(list, loc)
+                    : ListView.builder(
+                        itemCount: list.length,
+                        itemBuilder: (_, i) => _materialCard(list[i], loc),
+                      );
+              }),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -408,14 +439,16 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
               cells: [
                 DataCell(
                   Text(
-                    m.name,
+                    _capitalizeWords(m.name),
                     style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
                 ),
-                DataCell(Text(m.category.isEmpty ? '—' : m.category)),
+                DataCell(
+                  Text(m.category.isEmpty ? '—' : _capitalizeWords(m.category)),
+                ),
                 DataCell(Text('${m.currentStock}')),
                 DataCell(Text('${m.minStock}')),
-                DataCell(Text(m.unit)),
+                DataCell(Text(_capitalizeWords(m.unit))),
                 DataCell(Text('₹${_fmt(m.stockValue)}')),
                 DataCell(
                   _statusBadge(
@@ -427,6 +460,12 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, size: 20),
+                        tooltip: loc.edit_raw_material,
+                        onPressed: () =>
+                            showEditRawMaterialDialog(controller, m),
+                      ),
                       IconButton(
                         icon: const Icon(Icons.edit_note, size: 20),
                         tooltip: loc.adjust_stock_tooltip,
@@ -472,13 +511,13 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
           ),
         ),
         title: Text(
-          m.name,
+          _capitalizeWords(m.name),
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         subtitle: Text(
           loc.material_stock_subtitle(
             '${m.currentStock}',
-            m.unit,
+            _capitalizeWords(m.unit),
             '${m.minStock}',
             _fmt(m.purchasePrice),
           ),
@@ -491,7 +530,13 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
               m.isLowStock,
             ),
             IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: loc.edit_raw_material,
+              onPressed: () => showEditRawMaterialDialog(controller, m),
+            ),
+            IconButton(
               icon: const Icon(Icons.edit_note),
+              tooltip: loc.adjust_stock_tooltip,
               onPressed: () => showStockAdjustDialog(controller, m),
             ),
           ],
@@ -606,8 +651,11 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
           _toolbar(
             loc: loc,
             hint: loc.search_suppliers,
-            onAdd: () => showAddSupplierDialog(controller),
-            addLabel: loc.add_supplier,
+            searchController: _supplierSearchCtrl,
+            onSearch: (v) {
+              controller.supplierSearchQuery.value = v;
+              controller.loadSuppliers();
+            },
           ),
           const SizedBox(height: 12),
           Expanded(
@@ -621,7 +669,7 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
                   crossAxisCount: isWide ? 3 : 1,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: isWide ? 2.2 : 2.8,
+                  mainAxisExtent: isWide ? 200 : 180,
                 ),
                 itemCount: list.length,
                 itemBuilder: (_, i) => _supplierCard(list[i], loc),
@@ -635,16 +683,20 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
 
   Widget _supplierCard(SupplierData s, AppLocalizations loc) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: _cardBg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(
+          color: s.isActive ? Colors.grey.shade200 : Colors.red.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CircleAvatar(
                 radius: 18,
@@ -659,21 +711,86 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  s.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      s.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      s.isActive ? loc.status_active : loc.status_inactive,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: s.isActive
+                            ? Colors.green.shade700
+                            : Colors.red.shade700,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              _statusBadge(
-                s.isActive ? loc.status_active : loc.status_inactive,
-                !s.isActive,
+              Switch(
+                value: s.isActive,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                onChanged: (active) =>
+                    controller.setSupplierActive(s.id, active),
+              ),
+              PopupMenuButton<String>(
+                padding: EdgeInsets.zero,
+                tooltip: loc.actions,
+                icon: Icon(Icons.more_vert, color: Colors.grey.shade700),
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    showEditSupplierDialog(controller, s);
+                  } else if (value == 'delete') {
+                    _confirmDelete(
+                      s.name,
+                      () => controller.deleteSupplier(s.id),
+                      loc,
+                    );
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.edit_outlined, size: 18),
+                        const SizedBox(width: 8),
+                        Text(loc.edit),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.delete_outline,
+                          size: 18,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          loc.delete,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           if (s.phone?.isNotEmpty == true) _supplierRow(Icons.phone, s.phone!),
           if (s.email?.isNotEmpty == true)
             _supplierRow(Icons.email_outlined, s.email!),
@@ -705,162 +822,113 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
     );
   }
 
-  Widget _purchaseOrdersTab(bool isWide, AppLocalizations loc) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Obx(() {
-        final list = controller.purchaseOrders;
-        if (list.isEmpty) {
-          return _emptyCard(loc.no_purchase_orders_yet);
-        }
-        return ListView.separated(
-          itemCount: list.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
-          itemBuilder: (_, i) {
-            final po = list[i];
-            final canReceive = po.status == 'PENDING' || po.status == 'DRAFT';
-            return Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: _cardBg,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        po.orderNumber,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      _statusBadge(po.status, po.status == 'PENDING'),
-                      const Spacer(),
-                      Text(
-                        '₹${_fmt(po.totalAmount)}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: _accent,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    loc.purchase_order_supplier_date(
-                      po.supplierName,
-                      _formatDate(po.createdAt),
-                    ),
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  ),
-                  if (po.items.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    ...po.items.map(
-                      (line) => Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: Text(
-                          '• ${loc.purchase_order_line_item(line.rawMaterialName, '${line.quantity}', line.unit, '${line.unitPrice}')}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                  if (canReceive) ...[
-                    const SizedBox(height: 10),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: ElevatedButton.icon(
-                        onPressed: () => controller.receivePurchaseOrder(po.id),
-                        icon: const Icon(Icons.check_circle_outline, size: 18),
-                        label: Text(loc.mark_received),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            );
-          },
-        );
-      }),
-    );
-  }
-
   Widget _recipesTab(bool isWide, AppLocalizations loc) {
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Obx(() {
-        final list = controller.recipes;
-        if (list.isEmpty) {
-          return _emptyCard(loc.no_recipes_yet);
-        }
-        return ListView.separated(
-          itemCount: list.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 8),
-          itemBuilder: (_, i) {
-            final r = list[i];
-            return Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: _cardBg,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.restaurant_menu, color: _accent, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          r.itemName,
+      child: Column(
+        children: [
+          _toolbar(
+            loc: loc,
+            hint: loc.search_recipes,
+            onSearch: (v) => controller.recipeSearchQuery.value = v,
+            onAdd: () => showAddRecipeDialog(controller),
+            addLabel: loc.add_recipe,
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: Obx(() {
+              final grouped = controller.recipesGroupedByItem;
+              if (grouped.isEmpty) {
+                return _emptyCard(loc.no_recipes_yet);
+              }
+              final itemIds = grouped.keys.toList()
+                ..sort(
+                  (a, b) => controller
+                      .menuItemName(a)
+                      .compareTo(controller.menuItemName(b)),
+                );
+              return ListView.separated(
+                itemCount: itemIds.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (_, i) {
+                  final itemId = itemIds[i];
+                  final lines = grouped[itemId]!;
+                  final itemName = lines.first.itemName.isNotEmpty
+                      ? lines.first.itemName
+                      : controller.menuItemName(itemId);
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: _cardBg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Theme(
+                      data: Theme.of(
+                        context,
+                      ).copyWith(dividerColor: Colors.transparent),
+                      child: ExpansionTile(
+                        leading: const Icon(
+                          Icons.restaurant_menu,
+                          color: _accent,
+                          size: 22,
+                        ),
+                        title: Text(
+                          itemName,
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
-                        Text(
-                          loc.recipe_uses_material(
-                            r.quantity.toString(),
-                            r.rawMaterialUnit,
-                            r.rawMaterialName,
-                          ),
+                        subtitle: Text(
+                          loc.recipe_lines_count(lines.length),
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,
                           ),
                         ),
-                      ],
+                        children: lines
+                            .map(
+                              (r) => ListTile(
+                                dense: true,
+                                title: Text(r.rawMaterialName),
+                                subtitle: Text(
+                                  '${r.quantity} ${r.rawMaterialUnit}',
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.edit_outlined,
+                                        size: 20,
+                                      ),
+                                      tooltip: loc.edit_recipe,
+                                      onPressed: () =>
+                                          showEditRecipeDialog(controller, r),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.delete_outline,
+                                        color: Colors.red,
+                                        size: 20,
+                                      ),
+                                      onPressed: () => _confirmDelete(
+                                        loc.this_recipe,
+                                        () => controller.deleteRecipe(r.id),
+                                        loc,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.delete_outline,
-                      color: Colors.red,
-                      size: 20,
-                    ),
-                    onPressed: () => _confirmDelete(
-                      loc.this_recipe,
-                      () => controller.deleteRecipe(r.id),
-                      loc,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      }),
+                  );
+                },
+              );
+            }),
+          ),
+        ],
+      ),
     );
   }
 
@@ -869,43 +937,61 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
   Widget _toolbar({
     required AppLocalizations loc,
     String? hint,
+    double? searchWidth,
+    TextEditingController? searchController,
     void Function(String)? onSearch,
-    required VoidCallback onAdd,
-    required String addLabel,
+    VoidCallback? onAdd,
+    String? addLabel,
     Widget? filter,
   }) {
+    final searchField = SizedBox(
+      height: 44,
+      child: TextField(
+        controller: searchController ?? _searchCtrl,
+        onChanged: onSearch,
+        decoration: InputDecoration(
+          hintText: hint ?? loc.search_default_hint,
+          prefixIcon: const Icon(Icons.search, size: 20),
+          filled: true,
+          fillColor: _cardBg,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+        ),
+      ),
+    );
+
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         if (onSearch != null)
-          Expanded(
-            child: TextField(
-              controller: _searchCtrl,
-              onChanged: onSearch,
-              decoration: InputDecoration(
-                hintText: hint ?? loc.search_default_hint,
-                prefixIcon: const Icon(Icons.search, size: 20),
-                filled: true,
-                fillColor: _cardBg,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+          searchWidth != null
+              ? SizedBox(width: searchWidth, child: searchField)
+              : Expanded(child: searchField),
+        if (filter != null) ...[const SizedBox(width: 10), filter],
+        if (onAdd != null && addLabel != null) ...[
+          const SizedBox(width: 10),
+          SizedBox(
+            height: 44,
+            child: ElevatedButton.icon(
+              onPressed: onAdd,
+              icon: const Icon(Icons.add, size: 18),
+              label: Text(addLabel),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _accent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
               ),
             ),
           ),
-        if (filter != null) ...[const SizedBox(width: 10), filter],
-        const SizedBox(width: 10),
-        ElevatedButton.icon(
-          onPressed: onAdd,
-          icon: const Icon(Icons.add, size: 18),
-          label: Text(addLabel),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _accent,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-        ),
+        ],
       ],
     );
   }
@@ -1008,7 +1094,7 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: (isWarning ? Colors.red : Colors.green).withOpacity(0.1),
+        color: (isWarning ? _accent : Colors.green).withOpacity(0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -1016,7 +1102,7 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w700,
-          color: isWarning ? Colors.red.shade700 : Colors.green.shade700,
+          color: isWarning ? _accent.withOpacity(0.8) : Colors.green.shade700,
         ),
       ),
     );
@@ -1059,6 +1145,7 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
   ) {
     Get.dialog(
       AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         title: Text(loc.confirm_delete),
         content: Text(loc.delete_confirm_message(name)),
         actions: [
@@ -1077,6 +1164,18 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
   }
 
   String _fmt(num v) => v.toStringAsFixed(v == v.roundToDouble() ? 0 : 2);
+
+  String _capitalizeWords(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return text;
+    return trimmed
+        .split(RegExp(r'\s+'))
+        .map((word) {
+          if (word.isEmpty) return word;
+          return word[0].toUpperCase() + word.substring(1).toLowerCase();
+        })
+        .join(' ');
+  }
 
   String _formatDate(String iso) {
     try {

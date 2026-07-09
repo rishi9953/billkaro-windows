@@ -92,7 +92,7 @@ class _TableScreenState extends State<TableScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.event_seat),
-            onPressed: () => _showReservationsSheet(context),
+            onPressed: () => _showReservationsDialog(context),
             tooltip: loc.reservations,
           ),
           IconButton(
@@ -220,13 +220,23 @@ class _TableScreenState extends State<TableScreen> {
                                               )
                                             : null,
                                         onEdit:
-                                            tws.isAvailable &&
-                                                !tws.table.hasMergedTables &&
-                                                tws.currentOrder == null
-                                            ? () => TableFormDialog.show(
-                                                controller: controller,
-                                                editTable: tws.table,
-                                              )
+                                            tws.currentOrder == null &&
+                                                (tws.isAvailable ||
+                                                    tws.isReserved ||
+                                                    tws.table.hasMergedTables)
+                                            ? () {
+                                                if (tws.table.hasMergedTables) {
+                                                  controller
+                                                      .openEditMergedTablesDialog(
+                                                    tws,
+                                                  );
+                                                } else {
+                                                  TableFormDialog.show(
+                                                    controller: controller,
+                                                    editTable: tws.table,
+                                                  );
+                                                }
+                                              }
                                             : null,
                                         onQr: () => controller.showTableQr(tws.table),
                                         onDelete:
@@ -404,41 +414,26 @@ class _TableScreenState extends State<TableScreen> {
     );
   }
 
-  void _showReservationsSheet(BuildContext context) {
+  void _showReservationsDialog(BuildContext context) {
     final controller = Get.find<TableController>();
     final loc = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    Get.bottomSheet(
-      SafeArea(
-        child: Container(
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
           constraints: BoxConstraints(
+            maxWidth: 560,
             maxHeight: MediaQuery.of(context).size.height * 0.75,
-          ),
-          decoration: BoxDecoration(
-            color: colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Drag handle
               Padding(
-                padding: const EdgeInsets.only(top: 12, bottom: 4),
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: colorScheme.onSurface.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-
-              // Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                padding: const EdgeInsets.fromLTRB(20, 20, 12, 0),
                 child: Row(
                   children: [
                     Container(
@@ -498,7 +493,6 @@ class _TableScreenState extends State<TableScreen> {
 
               const SizedBox(height: 16),
 
-              // List
               Flexible(
                 child: Obx(() {
                   final items = controller.reservations;
@@ -760,8 +754,7 @@ class _TableScreenState extends State<TableScreen> {
           ),
         ),
       ),
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
+      barrierDismissible: true,
     );
   }
 
@@ -850,12 +843,6 @@ class _TableHeader extends StatelessWidget {
                 selected:
                     controller.selectedFilter.value == TableFilter.occupied,
                 onTap: () => controller.setFilter(TableFilter.occupied),
-              ),
-              _FilterChip(
-                label: loc.home_billing,
-                selected:
-                    controller.selectedFilter.value == TableFilter.billing,
-                onTap: () => controller.setFilter(TableFilter.billing),
               ),
               _FilterChip(
                 label: loc.filter_merged,
@@ -1235,13 +1222,18 @@ class _TableCardState extends State<_TableCard> {
     final table = widget.tableWithStatus.table;
     final colorScheme = Theme.of(context).colorScheme;
     final isMerged = table.hasMergedTables;
+    final isReserved = widget.tableWithStatus.isReserved;
     final totalMergedCount = 1 + table.mergedTableNumbers.length;
 
     late Color statusColor;
     late IconData icon;
     late String statusText;
 
-    if (isMerged) {
+    if (isMerged && isReserved) {
+      statusColor = Colors.blue;
+      icon = Icons.event_seat;
+      statusText = loc.table_status_reserved;
+    } else if (isMerged) {
       statusColor = AppColor.primary;
       icon = Icons.merge_type;
       statusText = loc.merged_tables_badge(totalMergedCount);
@@ -1275,7 +1267,9 @@ class _TableCardState extends State<_TableCard> {
         : hovered
         ? 0.55
         : 0.35;
-    final borderColor = isMerged ? AppColor.primary : statusColor;
+    final borderColor = isMerged && !isReserved
+        ? AppColor.primary
+        : statusColor;
     final borderWidth = isMerged
         ? 2.0
         : hovered
@@ -1493,7 +1487,20 @@ class _TableCardState extends State<_TableCard> {
                 ] else ...[
                   const SizedBox(height: 4),
                   Text(
-                    isMerged
+                    isMerged && isReserved
+                        ? loc.reserved_by(
+                            widget
+                                    .tableWithStatus
+                                    .upcomingReservation
+                                    ?.customerName ??
+                                '',
+                            widget
+                                    .tableWithStatus
+                                    .upcomingReservation
+                                    ?.reservationTime ??
+                                '',
+                          )
+                        : isMerged
                         ? loc.merged_tables_hint
                         : widget.tableWithStatus.isAvailable
                         ? loc.reservation_tap_hint

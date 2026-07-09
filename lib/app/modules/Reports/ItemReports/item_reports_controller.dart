@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:billkaro/app/Widgets/app_date_picker.dart';
 import 'package:billkaro/app/services/Modals/Categories/categories_response.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/common_function.dart';
@@ -129,7 +130,9 @@ class ItemReportsController extends BaseController {
   }
 
   Future<void> selectCustomDateRange() async {
-    final picked = await _showAdaptiveDateRangePicker(
+    final picked = await showAppDateRangePickerFromGet(
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
       initialDateRange: selectedDateRange.value,
     );
 
@@ -154,47 +157,6 @@ class ItemReportsController extends BaseController {
         forceApiRefresh: true,
       ); // Refetch with startDate/endDate
     }
-  }
-
-  Future<DateTimeRange?> _showAdaptiveDateRangePicker({
-    DateTimeRange? initialDateRange,
-  }) async {
-    final context = Get.context;
-    if (context == null) return null;
-
-    final isWindows = Theme.of(context).platform == TargetPlatform.windows;
-    return showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      initialDateRange: initialDateRange,
-      initialEntryMode: DatePickerEntryMode.calendarOnly,
-      builder: (dialogContext, child) {
-        if (child == null) return const SizedBox.shrink();
-        if (!isWindows) return child;
-
-        final theme = Theme.of(dialogContext);
-        return Theme(
-          data: theme.copyWith(
-            dialogTheme: DialogThemeData(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-            colorScheme: theme.colorScheme.copyWith(
-              primary: AppColor.primary,
-              surface: Colors.white,
-            ),
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 760, maxHeight: 660),
-              child: child,
-            ),
-          ),
-        );
-      },
-    );
   }
 
   String get formattedDateRange {
@@ -385,6 +347,11 @@ class ItemReportsController extends BaseController {
 
       final db = AppDatabase();
       final outletId = appPref.selectedOutlet!.id!;
+      final userId = appPref.ordersApiUserId;
+      if (userId == null || userId.isEmpty) {
+        showError(description: 'User or outlet information is missing.');
+        return;
+      }
       final isOnline = await NetworkUtils.hasInternetConnection();
       debugPrint('🔄 isOnline: $isOnline');
 
@@ -403,7 +370,7 @@ class ItemReportsController extends BaseController {
 
         final response = await callApi(
           apiClient.getOrders(
-            appPref.user!.id!,
+            userId,
             outletId,
             null,
             null,
@@ -459,7 +426,8 @@ class ItemReportsController extends BaseController {
   /// Fetch orders for export — uses API when online, local SQLite when offline.
   Future<List<OrderItem>> fetchItemsForExport(DateTimeRange range) async {
     final outletId = appPref.selectedOutlet?.id;
-    if (outletId == null) return [];
+    final userId = appPref.ordersApiUserId;
+    if (outletId == null || userId == null || userId.isEmpty) return [];
 
     final isOnline = await NetworkUtils.hasInternetConnection();
     List<OrderModel> orders;
@@ -474,7 +442,7 @@ class ItemReportsController extends BaseController {
 
       final response = await callApi(
         apiClient.getOrders(
-          appPref.user!.id!,
+          userId,
           outletId,
           1,
           exportLimit,
@@ -614,7 +582,9 @@ class ItemReportsController extends BaseController {
                   FilledButton.icon(
                     onPressed: () async {
                       Get.back(result: false);
-                      final picked = await _showAdaptiveDateRangePicker(
+                      final picked = await showAppDateRangePickerFromGet(
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
                         initialDateRange: selectedDateRange.value,
                       );
                       if (picked == null) return;
@@ -652,7 +622,9 @@ class ItemReportsController extends BaseController {
             FilledButton(
               onPressed: () async {
                 Get.back(result: false);
-                final picked = await _showAdaptiveDateRangePicker(
+                final picked = await showAppDateRangePickerFromGet(
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime.now(),
                   initialDateRange: selectedDateRange.value,
                 );
                 if (picked == null) return;

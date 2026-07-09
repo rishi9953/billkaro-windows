@@ -1,7 +1,9 @@
 import 'dart:io';
 
 import 'package:billkaro/app/Widgets/windows_desktop_title_bar.dart';
+import 'package:billkaro/app/Widgets/app_dropdowns.dart';
 import 'package:billkaro/app/modules/Primary_contact/primary_contact_controller.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -150,19 +152,7 @@ class PrimaryContactScreen extends GetView<PrimaryContactController> {
                       ),
                       const SizedBox(height: 16),
 
-                      _buildTextField(
-                        context: context,
-                        label: 'Mobile Number',
-                        hint: 'Enter mobile number',
-                        controller: controller.mobileController,
-                        validator: controller.validateMobile,
-                        keyboardType: TextInputType.phone,
-                        prefixIcon: Icons.phone_outlined,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(10),
-                        ],
-                      ),
+                      _buildMobileField(context),
                       const SizedBox(height: 22),
                       SizedBox(
                         height: 48,
@@ -216,6 +206,78 @@ class PrimaryContactScreen extends GetView<PrimaryContactController> {
     );
   }
 
+  Widget _buildMobileField(BuildContext context) {
+    return Obx(() {
+      final Widget? suffixIcon;
+      final String? helperText;
+
+      if (controller.isMobileChecking.value) {
+        suffixIcon = Padding(
+          padding: const EdgeInsets.all(12),
+          child: SizedBox(
+            width: 15,
+            height: 15,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: AppColor.primary,
+            ),
+          ),
+        );
+        helperText = 'Checking mobile number availability...';
+      } else if (controller.isMobileAvailable.value == true) {
+        suffixIcon = const Icon(
+          Icons.check_circle_rounded,
+          color: AppColor.lightgreen,
+        );
+        helperText = 'Mobile number is available';
+      } else if (controller.mobileVerificationError.value != null) {
+        suffixIcon = Icon(
+          Icons.info_outline_rounded,
+          color: Colors.orange.shade700,
+        );
+        helperText = controller.mobileVerificationError.value;
+      } else if (controller.isMobileAvailable.value == false) {
+        suffixIcon = Icon(
+          Icons.error_outline_rounded,
+          color: Theme.of(context).colorScheme.error,
+        );
+        helperText =
+            'This mobile number is already registered. Please use a different number.';
+      } else {
+        suffixIcon = null;
+        helperText = null;
+      }
+
+      return TextFormField(
+        controller: controller.mobileController,
+        validator: controller.validateMobile,
+        keyboardType: TextInputType.phone,
+        onChanged: controller.onMobileChanged,
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(10),
+        ],
+        decoration: InputDecoration(
+          hintText: 'Enter mobile number',
+          label: _requiredLabel(context, 'Mobile Number'),
+          suffixIcon: suffixIcon,
+          helperText: helperText,
+          helperMaxLines: 2,
+          filled: true,
+          prefixIcon: Icon(
+            Icons.phone_outlined,
+            color: Colors.grey.shade600,
+            size: 20,
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 12,
+          ),
+        ),
+      );
+    });
+  }
+
   Widget _buildTextField({
     required BuildContext context,
     required String label,
@@ -254,36 +316,60 @@ class PrimaryContactScreen extends GetView<PrimaryContactController> {
     required String hint,
     required IconData prefixIcon,
   }) {
-    return Obx(
-      () => DropdownButtonFormField<String>(
-        value: controller.selectedTitle.value.isEmpty
-            ? null
-            : controller.selectedTitle.value,
-        decoration: InputDecoration(
-          hintText: hint,
-          label: _requiredLabel(context, label),
-          filled: true,
-          prefixIcon: Icon(prefixIcon, color: Colors.grey.shade600, size: 20),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 12,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _requiredLabel(context, label),
+        const SizedBox(height: 8),
+        Obx(
+          () => AppDropdownFormField2<String>(
+            value: controller.selectedTitle.value.isEmpty
+                ? null
+                : controller.selectedTitle.value,
+            hint: Text(
+              hint,
+              style: TextStyle(color: Colors.grey.shade500),
+            ),
+            decoration: InputDecoration(
+              filled: true,
+              prefixIcon: Icon(
+                prefixIcon,
+                color: Colors.grey.shade600,
+                size: 20,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
+            ),
+            iconStyleData: appDropdownIconStyle(color: Colors.grey.shade600),
+            dropdownStyleData: appDropdownMenuStyle(context: context),
+            menuItemStyleData: const MenuItemStyleData(
+              padding: EdgeInsets.symmetric(horizontal: 14),
+            ),
+            items: controller.titleList.map((String title) {
+              return DropdownItem<String>(
+                value: title,
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              if (newValue != null) {
+                controller.selectedTitle.value = newValue;
+              }
+            },
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Title is required';
+              }
+              return null;
+            },
           ),
         ),
-        items: controller.titleList.map((String title) {
-          return DropdownMenuItem<String>(value: title, child: Text(title));
-        }).toList(),
-        onChanged: (String? newValue) {
-          if (newValue != null) {
-            controller.selectedTitle.value = newValue;
-          }
-        },
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Title is required';
-          }
-          return null;
-        },
-      ),
+      ],
     );
   }
 }

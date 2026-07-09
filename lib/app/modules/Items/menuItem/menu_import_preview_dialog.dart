@@ -1,5 +1,28 @@
 import 'package:billkaro/config/config.dart';
 
+String? _resolveImportImageUrl(String raw) {
+  final trimmed = raw.trim();
+  if (trimmed.isEmpty || trimmed.toLowerCase() == 'null') return null;
+
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    try {
+      return Uri.encodeFull(trimmed);
+    } catch (_) {
+      return trimmed;
+    }
+  }
+
+  final origin = Uri.parse(baseURL).replace(path: '').toString();
+  final joined = trimmed.startsWith('/')
+      ? '$origin$trimmed'
+      : '$origin/$trimmed';
+  try {
+    return Uri.encodeFull(joined);
+  } catch (_) {
+    return joined;
+  }
+}
+
 class MenuImportPreviewRow {
   const MenuImportPreviewRow({
     required this.name,
@@ -7,6 +30,7 @@ class MenuImportPreviewRow {
     required this.category,
     required this.gst,
     required this.withTax,
+    this.imageUrl = '',
     this.isAvailable = true,
   });
 
@@ -15,6 +39,7 @@ class MenuImportPreviewRow {
   final String category;
   final double gst;
   final bool withTax;
+  final String imageUrl;
   final bool isAvailable;
 }
 
@@ -57,6 +82,9 @@ class _MenuImportPreviewDialogState extends State<_MenuImportPreviewDialog> {
     });
   }
 
+  bool get _hasAnyImages =>
+      _items.any((item) => item.imageUrl.trim().isNotEmpty);
+
   List<MenuImportPreviewRow> _buildResultRows() {
     return List.generate(_items.length, (index) {
       final item = _items[index];
@@ -66,6 +94,7 @@ class _MenuImportPreviewDialogState extends State<_MenuImportPreviewDialog> {
         category: item.category,
         gst: item.gst,
         withTax: item.withTax,
+        imageUrl: item.imageUrl,
         isAvailable: _availability[index],
       );
     });
@@ -78,7 +107,10 @@ class _MenuImportPreviewDialogState extends State<_MenuImportPreviewDialog> {
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 760, maxHeight: 560),
+        constraints: BoxConstraints(
+          maxWidth: _hasAnyImages ? 820 : 760,
+          maxHeight: 560,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -193,6 +225,16 @@ class _MenuImportPreviewDialogState extends State<_MenuImportPreviewDialog> {
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
             ),
           ),
+          if (_hasAnyImages) ...[
+            SizedBox(
+              width: 48,
+              child: Text(
+                loc.item_image,
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
           Expanded(
             child: Text(
               loc.item_name,
@@ -256,6 +298,13 @@ class _MenuImportPreviewDialogState extends State<_MenuImportPreviewDialog> {
               style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
             ),
           ),
+          if (_hasAnyImages) ...[
+            SizedBox(
+              width: 48,
+              child: _buildImageThumbnail(item.imageUrl),
+            ),
+            const SizedBox(width: 12),
+          ],
           Expanded(
             child: Text(
               item.name,
@@ -318,5 +367,41 @@ class _MenuImportPreviewDialogState extends State<_MenuImportPreviewDialog> {
       return '₹${price.toInt()}';
     }
     return '₹${price.toStringAsFixed(2)}';
+  }
+
+  Widget _buildImageThumbnail(String raw) {
+    final imageUrl = _resolveImportImageUrl(raw);
+    if (imageUrl == null) {
+      return const SizedBox(width: 36, height: 36);
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: CachedNetworkImage(
+        imageUrl: imageUrl,
+        width: 36,
+        height: 36,
+        fit: BoxFit.cover,
+        memCacheWidth: 72,
+        memCacheHeight: 72,
+        fadeInDuration: const Duration(milliseconds: 150),
+        placeholder: (_, __) => Container(
+          width: 36,
+          height: 36,
+          color: Colors.grey.shade200,
+        ),
+        errorWidget: (_, __, ___) => Container(
+          width: 36,
+          height: 36,
+          color: Colors.grey.shade200,
+          alignment: Alignment.center,
+          child: Icon(
+            Icons.broken_image_outlined,
+            size: 18,
+            color: Colors.grey.shade500,
+          ),
+        ),
+      ),
+    );
   }
 }

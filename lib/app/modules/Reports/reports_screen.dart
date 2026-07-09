@@ -1,5 +1,6 @@
 import 'package:billkaro/app/modules/Reports/reports_controller.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_access.dart';
 
 class ReportsScreen extends StatelessWidget {
   ReportsScreen({super.key});
@@ -77,6 +78,18 @@ class ReportsScreen extends StatelessWidget {
                                 enableHover: isWindows,
                               ),
                             ),
+                            if (StaffAccess.canViewStoreHistory)
+                              SizedBox(
+                                width: tileWidth,
+                                child: _ReportCard(
+                                  icon: Icons.storefront_outlined,
+                                  iconColor: const Color(0xFFE8912E),
+                                  title: loc.store_history_title,
+                                  subtitle: loc.store_history_subtitle,
+                                  onTap: controller.navigateToStoreHistory,
+                                  enableHover: isWindows,
+                                ),
+                              ),
                           ],
                         );
                       },

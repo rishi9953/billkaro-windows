@@ -14,6 +14,8 @@ class CreateorderRequest {
   final double? subtotal;
   final double? totalTax;
   final double? discount;
+  @JsonKey(defaultValue: 'percentage')
+  final String? discountType;
   final double? serviceCharge;
   final double? totalAmount;
   final String? paymentReceivedIn;
@@ -33,6 +35,7 @@ class CreateorderRequest {
     this.subtotal,
     this.totalTax,
     this.discount,
+    this.discountType,
     this.serviceCharge,
     this.totalAmount,
     this.paymentReceivedIn,

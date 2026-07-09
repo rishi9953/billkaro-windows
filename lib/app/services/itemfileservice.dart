@@ -11,6 +11,7 @@ class ItemImportRow {
     required this.category,
     required this.gst,
     required this.withTax,
+    this.imageUrl = '',
   });
 
   final String name;
@@ -18,6 +19,7 @@ class ItemImportRow {
   final String category;
   final double gst;
   final bool withTax;
+  final String imageUrl;
 }
 
 /// Parses spreadsheet paths (`.xlsx`, `.csv`) into [ItemImportRow]s.
@@ -154,6 +156,10 @@ class ItemFileService {
         }
       }
 
+      final imageUrl = columns.imageCol != null
+          ? (_cellAt(cells, columns.imageCol!)?.trim() ?? '')
+          : '';
+
       rows.add(
         ItemImportRow(
           name: name,
@@ -161,6 +167,7 @@ class ItemFileService {
           category: category,
           gst: gst,
           withTax: withTax,
+          imageUrl: imageUrl,
         ),
       );
     }
@@ -173,6 +180,7 @@ class ItemFileService {
         priceCol: 1,
         categoryCol: 2,
         gstCol: 3,
+        imageCol: 4,
         inclusivePriceCol: null,
         withTaxToggleCol: null,
       );
@@ -212,6 +220,7 @@ class ItemFileService {
       }
       if (_headerIsGstPercent(n)) score += 2;
       if (_headerIsInclusiveTaxPrice(n)) score += 1;
+      if (_headerIsImageLink(n)) score += 2;
       if (n.contains('item name') || n.contains('product name')) score += 3;
       if (n.contains('item code') || n == 'sku' || n == 'code') score += 1;
       if (n.contains('descr')) score += 1;
@@ -273,6 +282,7 @@ class ItemFileService {
         priceCol: cols.priceCol,
         categoryCol: cols.categoryCol,
         gstCol: cols.gstCol,
+        imageCol: cols.imageCol,
         inclusivePriceCol: cols.inclusivePriceCol,
         withTaxToggleCol: cols.withTaxToggleCol,
       );
@@ -288,6 +298,7 @@ class ItemFileService {
       cols.priceCol,
       cols.gstCol,
       cols.categoryCol,
+      if (cols.imageCol != null) cols.imageCol!,
       if (cols.inclusivePriceCol != null) cols.inclusivePriceCol!,
       if (cols.withTaxToggleCol != null) cols.withTaxToggleCol!,
     };
@@ -308,7 +319,8 @@ class ItemFileService {
 
       if (_headerIsBasePrice(n) ||
           _headerIsGstPercent(n) ||
-          _headerIsInclusiveTaxPrice(n)) {
+          _headerIsInclusiveTaxPrice(n) ||
+          _headerIsImageLink(n)) {
         skip.add(i);
       }
     }
@@ -344,6 +356,7 @@ class ItemFileService {
     var gstCol = defaults.gstCol;
     var inclusivePriceCol = defaults.inclusivePriceCol;
     var withTaxToggleCol = defaults.withTaxToggleCol;
+    int? imageCol = defaults.imageCol;
     var found = false;
 
     for (var i = 0; i < header.length; i++) {
@@ -361,6 +374,9 @@ class ItemFileService {
         found = true;
       } else if (label.contains('categor')) {
         categoryCol = i;
+        found = true;
+      } else if (_headerIsImageLink(label)) {
+        imageCol = i;
         found = true;
       } else if (_headerExplicitWithTaxToggle(label)) {
         withTaxToggleCol = i;
@@ -399,6 +415,7 @@ class ItemFileService {
             priceCol: priceCol,
             categoryCol: categoryCol,
             gstCol: gstCol,
+            imageCol: imageCol,
             inclusivePriceCol: inclusivePriceCol,
             withTaxToggleCol: withTaxToggleCol,
           )
@@ -479,6 +496,8 @@ class ItemFileService {
     final skip = <int>{columns.nameCol, columns.categoryCol, columns.gstCol};
     final inc = columns.inclusivePriceCol;
     if (inc != null) skip.add(inc);
+    final img = columns.imageCol;
+    if (img != null) skip.add(img);
     final wtt = columns.withTaxToggleCol;
     if (wtt != null) skip.add(wtt);
     for (var i = 0; i < cells.length; i++) {
@@ -498,6 +517,7 @@ class ItemFileService {
       columns.categoryCol,
       columns.gstCol,
       columns.priceCol,
+      if (columns.imageCol != null) columns.imageCol!,
       if (columns.inclusivePriceCol != null) columns.inclusivePriceCol!,
       if (columns.withTaxToggleCol != null) columns.withTaxToggleCol!,
       ...extraSkip,
@@ -629,6 +649,19 @@ class ItemFileService {
         (lower.contains('tax') && lower.contains('%'));
   }
 
+  static bool _headerIsImageLink(String lower) {
+    if (lower.contains('categor')) return false;
+    return lower == 'image link' ||
+        lower == 'image url' ||
+        lower == 'image' ||
+        lower == 'item image' ||
+        lower == 'product image' ||
+        lower.contains('image link') ||
+        lower.contains('image url') ||
+        (lower.contains('image') && lower.contains('link')) ||
+        (lower.contains('image') && lower.contains('url'));
+  }
+
   static bool _isNumericOnly(String value) {
     final cleaned = value.replaceAll(RegExp(r'[^0-9.]'), '');
     if (cleaned.isEmpty) return false;
@@ -648,6 +681,7 @@ class _ItemImportColumns {
     required this.priceCol,
     required this.categoryCol,
     required this.gstCol,
+    this.imageCol,
     required this.inclusivePriceCol,
     required this.withTaxToggleCol,
   });
@@ -656,6 +690,7 @@ class _ItemImportColumns {
   final int priceCol;
   final int categoryCol;
   final int gstCol;
+  final int? imageCol;
   final int? inclusivePriceCol;
   final int? withTaxToggleCol;
 }

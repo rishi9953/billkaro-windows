@@ -4,6 +4,7 @@ import 'package:billkaro/app/Widgets/notification_bell_button.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/Home/showcase_controller.dart';
 import 'package:billkaro/app/modules/Home/Widgets/outlet_switcher.dart';
+import 'package:billkaro/app/modules/StoreSession/store_session_widget.dart';
 import 'package:billkaro/app/modules/Home/Widgets/payment_summary_widget.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Items/voice_add_menu_items_bottomsheet.dart';
@@ -101,8 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
         leading: Showcase(
           key: showcaseController.outletSwitcherKey,
           title: loc.home_outlet_showcase_title,
-          description:
-              loc.home_outlet_showcase_desc,
+          description: loc.home_outlet_showcase_desc,
           titleTextStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -117,10 +117,13 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         leadingWidth: 160,
         actions: [
-          const NotificationBellButton(
-            iconColor: Colors.white,
-            iconSize: 24,
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: Center(
+              child: StoreSessionChip(style: StoreSessionChipStyle.expanded),
+            ),
           ),
+          const NotificationBellButton(iconColor: Colors.white, iconSize: 24),
           Padding(
             padding: const EdgeInsets.only(right: 12, bottom: 8, top: 8),
             child: _headerAvatarAction(loc),
@@ -178,6 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: _sectionGap),
                       ],
+                      const StoreClosedBanner(),
                       _printerStatusBanner(loc),
                       const SizedBox(height: _sectionGap),
                       if (HomeMainRoutes.outletShowsTables()) ...[
@@ -329,8 +333,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return Showcase(
           key: showcaseController.profileKey,
           title: loc.home_profile_business_title,
-          description:
-              loc.home_profile_business_desc,
+          description: loc.home_profile_business_desc,
           titleTextStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -479,9 +482,10 @@ class _HomeScreenState extends State<HomeScreen> {
         name = thermalPrinter.connectedUsbPrinter?.name ?? loc.home_usb_printer;
         statusIcon = Icons.usb;
       } else if (bleConnected) {
-        final platformName =
-            thermalPrinter.connectedDevice?.platformName ?? '';
-        name = platformName.trim().isNotEmpty ? platformName : loc.home_printer_fallback;
+        final platformName = thermalPrinter.connectedDevice?.platformName ?? '';
+        name = platformName.trim().isNotEmpty
+            ? platformName
+            : loc.home_printer_fallback;
         statusIcon = Icons.bluetooth_connected;
       } else {
         name =
@@ -495,8 +499,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Showcase(
           key: showcaseController.printerBannerKey,
           title: loc.home_printer_status_title,
-          description:
-              loc.home_printer_status_desc,
+          description: loc.home_printer_status_desc,
           titleTextStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -518,11 +521,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: AppColor.primary.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
-                    statusIcon,
-                    color: AppColor.primary,
-                    size: 18,
-                  ),
+                  child: Icon(statusIcon, color: AppColor.primary, size: 18),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -582,8 +581,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Showcase(
           key: showcaseController.quickActionsHeaderKey,
           title: loc.quickActions,
-          description:
-              loc.home_quick_actions_showcase_desc,
+          description: loc.home_quick_actions_showcase_desc,
           titleTextStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -636,8 +634,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 {
                   'icon': Icons.inventory_2_outlined,
                   'label': loc.inventory,
-                  'onTap': () =>
-                      Modular.to.pushNamed(HomeMainRoutes.inventory),
+                  'onTap': () => Modular.to.pushNamed(HomeMainRoutes.inventory),
                 },
               if (kotVisible)
                 {
@@ -677,20 +674,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Assign showcase keys based on label
                 if (label == loc.closedOrders) {
                   showcaseKey = showcaseController.closedOrdersKey;
-                  showcaseDescription =
-                      loc.home_showcase_closed_orders;
+                  showcaseDescription = loc.home_showcase_closed_orders;
                 } else if (label == loc.onHoldOrders) {
                   showcaseKey = showcaseController.holdOrdersKey;
-                  showcaseDescription =
-                      loc.home_showcase_hold_orders;
+                  showcaseDescription = loc.home_showcase_hold_orders;
                 } else if (label == loc.addItems) {
                   showcaseKey = showcaseController.addItemsKey;
-                  showcaseDescription =
-                      loc.home_showcase_add_items;
+                  showcaseDescription = loc.home_showcase_add_items;
                 } else if (label == loc.kot_history) {
                   showcaseKey = showcaseController.kotHistoryKey;
-                  showcaseDescription =
-                      loc.home_showcase_kot_history;
+                  showcaseDescription = loc.home_showcase_kot_history;
                 }
 
                 return _buildQuickActionCard(
@@ -728,13 +721,19 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () => Modular.to.navigate(HomeMainRoutes.tables),
               style: TextButton.styleFrom(
                 foregroundColor: AppColor.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 visualDensity: VisualDensity.compact,
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(loc.view_all, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  Text(
+                    loc.view_all,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
                   const SizedBox(width: 6),
                   const Icon(Icons.arrow_forward_ios, size: 12),
                 ],
@@ -785,125 +784,132 @@ class _HomeScreenState extends State<HomeScreen> {
     return Tooltip(
       message: tableLabel,
       child: Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
-        hoverColor: statusColor.withOpacity(0.10),
-        onTap: () {
-          Modular.to.pushNamed(
-            HomeMainRoutes.createOrder,
-            arguments: {'order': order, 'isEdit': true},
-          );
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: statusColor.withOpacity(0.35),
-              width: 1.4,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          hoverColor: statusColor.withOpacity(0.10),
+          onTap: () {
+            Modular.to.pushNamed(
+              HomeMainRoutes.createOrder,
+              arguments: {'order': order, 'isEdit': true},
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: statusColor.withOpacity(0.35),
+                width: 1.4,
+              ),
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.14),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(Icons.table_restaurant_rounded,
-                        size: 16, color: statusColor),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 7,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Text(
-                      loc.home_occupied,
-                      style: TextStyle(
-                        fontSize: 10,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.14),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.table_restaurant_rounded,
+                        size: 16,
                         color: statusColor,
-                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ),
-                ],
-              ),
-              SizedBox(
-                width: double.infinity,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    tableLabel,
-                    maxLines: 1,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Text(
+                        loc.home_occupied,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: statusColor,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ),
-              Text(
-                loc.home_bill_number(billLabel),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
-              Row(
-                children: [
-                  Expanded(
+                SizedBox(
+                  width: double.infinity,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
                     child: Text(
-                      occupiedDuration == null
-                          ? loc.home_tap_continue_order
-                          : loc.home_occupied_duration(
-                              _formatDuration(occupiedDuration),
-                            ),
+                      tableLabel,
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: occupiedDuration == null
-                            ? Colors.grey[700]
-                            : statusColor,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
                       ),
                     ),
                   ),
-                  Icon(Icons.chevron_right_rounded, size: 16, color: statusColor),
-                ],
-              ),
-            ],
+                ),
+                Text(
+                  loc.home_bill_number(billLabel),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        occupiedDuration == null
+                            ? loc.home_tap_continue_order
+                            : loc.home_occupied_duration(
+                                _formatDuration(occupiedDuration),
+                              ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: occupiedDuration == null
+                              ? Colors.grey[700]
+                              : statusColor,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 16,
+                      color: statusColor,
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
     );
   }
 
@@ -1036,7 +1042,10 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(loc.view, style: const TextStyle(fontWeight: FontWeight.w700)),
+                Text(
+                  loc.view,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
                 const SizedBox(width: 6),
                 const Icon(Icons.arrow_forward_ios, size: 12),
               ],
@@ -1048,8 +1057,7 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.symmetric(horizontal: _pageHMargin),
           child: Showcase(
             key: showcaseController.businessOverviewKey,
-            description:
-                loc.home_business_overview_showcase_desc,
+            description: loc.home_business_overview_showcase_desc,
             title: loc.businessOverview,
             titleTextStyle: const TextStyle(
               fontSize: 16,
@@ -1133,10 +1141,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               title: loc.todaysSales,
                               value:
                                   '₹${controller.todaySales.value.toStringAsFixed(0)}',
-                              sub:
-                                  loc.home_yesterday_value(
-                                    '₹${controller.yesterdaySales.value.toStringAsFixed(0)}',
-                                  ),
+                              sub: loc.home_yesterday_value(
+                                '₹${controller.yesterdaySales.value.toStringAsFixed(0)}',
+                              ),
                               icon: Icons.currency_rupee,
                               color: AppColor.primary,
                             ),
@@ -1146,10 +1153,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: _overviewKpiTile(
                               title: loc.todaysOrders,
                               value: '${controller.todayOrders.value}',
-                              sub:
-                                  loc.home_yesterday_value(
-                                    '${controller.yesterdayOrders.value}',
-                                  ),
+                              sub: loc.home_yesterday_value(
+                                '${controller.yesterdayOrders.value}',
+                              ),
                               icon: Icons.receipt_long,
                               color: AppColor.secondaryPrimary,
                             ),
@@ -1338,8 +1344,7 @@ class _HomeScreenState extends State<HomeScreen> {
           return Showcase(
             key: showcaseController.salesChartKey,
             title: loc.home_sales_trend,
-            description:
-                loc.home_sales_trend_showcase_desc,
+            description: loc.home_sales_trend_showcase_desc,
             titleTextStyle: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -1456,6 +1461,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
               final labels = controller.chartLabels;
               final maxX = data.length > 0 ? (data.length - 1).toDouble() : 6.0;
+              // Avoid crowded / duplicate x-axis labels on dense periods (e.g. 12 months).
+              final bottomLabelInterval =
+                  labels.length > 7 ? 2.0 : 1.0;
 
               return AnimatedSwitcher(
                 duration: const Duration(milliseconds: 450),
@@ -1542,12 +1550,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                       bottomTitles: AxisTitles(
                                         sideTitles: SideTitles(
                                           showTitles: true,
+                                          interval: bottomLabelInterval,
                                           reservedSize:
                                               period == ChartPeriod.yearly
                                               ? 50
                                               : 40,
                                           getTitlesWidget: (value, meta) {
                                             final index = value.toInt();
+                                            if (value != index.toDouble()) {
+                                              return const SizedBox.shrink();
+                                            }
                                             if (index >= 0 &&
                                                 index < labels.length) {
                                               final label = labels[index];
@@ -2240,11 +2252,7 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.black.withOpacity(0.06)),
       ),
-      child: Icon(
-        Icons.fastfood_rounded,
-        size: 18,
-        color: Colors.grey[500],
-      ),
+      child: Icon(Icons.fastfood_rounded, size: 18, color: Colors.grey[500]),
     );
   }
 
@@ -2255,8 +2263,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Showcase(
           key: showcaseController.featuresKey,
           title: loc.featuresForYou,
-          description:
-              loc.home_features_showcase_desc,
+          description: loc.home_features_showcase_desc,
           titleTextStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -2455,8 +2462,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Showcase(
           key: showcaseController.testimonialsKey,
           title: loc.home_testimonials,
-          description:
-              loc.home_testimonials_showcase_desc,
+          description: loc.home_testimonials_showcase_desc,
           titleTextStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,

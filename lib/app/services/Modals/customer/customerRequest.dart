@@ -8,7 +8,9 @@ class CustomerRequest {
   final String outletId;
   final String customerName;
   final String phoneNumber;
-  final int loyalityDiscount;
+  final double loyalityDiscount;
+  @JsonKey(defaultValue: 'percentage')
+  final String loyalityDiscountType;
 
   CustomerRequest({
     required this.userId,
@@ -16,6 +18,7 @@ class CustomerRequest {
     required this.customerName,
     required this.phoneNumber,
     required this.loyalityDiscount,
+    this.loyalityDiscountType = 'percentage',
   });
 
   factory CustomerRequest.fromJson(Map<String, dynamic> json) =>

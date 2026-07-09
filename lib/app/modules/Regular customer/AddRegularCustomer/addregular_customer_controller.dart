@@ -13,6 +13,7 @@ class AddCustomerController extends BaseController {
   final phoneController = TextEditingController();
   final nameController = TextEditingController();
   final discountController = TextEditingController();
+  final discountType = 'percentage'.obs;
 
   final showBanner = true.obs;
   final contacts = <Contact>[].obs;
@@ -191,7 +192,8 @@ class AddCustomerController extends BaseController {
       outletId: outletId,
       phoneNumber: phone,
       customerName: nameController.text.trim(),
-      loyalityDiscount: int.tryParse(discountController.text.trim()) ?? 0,
+      loyalityDiscount: double.tryParse(discountController.text.trim()) ?? 0,
+      loyalityDiscountType: discountType.value,
     );
   }
 
@@ -227,6 +229,7 @@ class AddCustomerController extends BaseController {
       phoneNumber: customerRequest.phoneNumber,
       customerName: customerRequest.customerName,
       loyaltyDiscount: customerRequest.loyalityDiscount,
+      loyaltyDiscountType: customerRequest.loyalityDiscountType,
       outletName: appPref.selectedOutlet?.businessName ?? 'Our Restaurant',
       serverSent: serverSent,
     );
@@ -254,13 +257,8 @@ class AddCustomerController extends BaseController {
       showError(description: loc.please_enter_valid_10_digit_phone_alt);
       return;
     }
-    final customerRequest = CustomerRequest(
-      userId: appPref.user!.id!,
-      outletId: outletId,
-      phoneNumber: phone,
-      customerName: nameController.text.trim(),
-      loyalityDiscount: int.tryParse(discountController.text.trim()) ?? 0,
-    );
+    final customerRequest = _buildCustomerRequest(outletId);
+    if (customerRequest == null) return;
     final response = await callApi(
       apiClient.updateRegularCustomer(
         outletId,
@@ -301,6 +299,7 @@ class AddCustomerController extends BaseController {
     phoneController.clear();
     nameController.clear();
     discountController.clear();
+    discountType.value = 'percentage';
   }
 
   void toggleEdit() {
@@ -316,6 +315,7 @@ class AddCustomerController extends BaseController {
           : digits;
       nameController.text = customer.customerName;
       discountController.text = customer.loyalityDiscount.toString();
+      discountType.value = customer.loyalityDiscountType;
       customerId.value = customer.id;
     } else {
       phoneController.text = '';

@@ -29,6 +29,7 @@ class BulkItemEntry {
   final String category;
   final double gst;
   final bool showItem;
+  final String itemImage;
 
   BulkItemEntry({
     required this.itemName,
@@ -38,6 +39,7 @@ class BulkItemEntry {
     required this.category,
     required this.gst,
     required this.showItem,
+    this.itemImage = '',
   });
 
   factory BulkItemEntry.fromJson(Map<String, dynamic> json) =>

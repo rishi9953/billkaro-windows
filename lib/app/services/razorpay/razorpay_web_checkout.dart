@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:io';
 
+import 'package:billkaro/app/Widgets/windows_desktop_title_bar.dart';
 import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform;
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -51,25 +53,43 @@ class _RazorpayCheckoutPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text(
-          'Secure payment',
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+    final showWindowsTitleBar = !kIsWeb && Platform.isWindows;
+    final appBar = AppBar(
+      title: const Text(
+        'Secure payment',
+        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+      ),
+    );
+    final body = Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 980),
+        child: _RazorpayWebView(
+          checkoutOptions: checkoutOptions,
+          onSuccess: onSuccess,
+          onFailure: onFailure,
+          onClose: () => Navigator.of(context).pop(),
+          showHeader: false,
         ),
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 980),
-          child: _RazorpayWebView(
-            checkoutOptions: checkoutOptions,
-            onSuccess: onSuccess,
-            onFailure: onFailure,
-            onClose: () => Navigator.of(context).pop(),
-            showHeader: false,
-          ),
-        ),
+    );
+
+    if (!showWindowsTitleBar) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: appBar,
+        body: body,
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const WindowsDesktopTitleBar(actions: []),
+          appBar,
+          Expanded(child: body),
+        ],
       ),
     );
   }
@@ -99,9 +119,26 @@ class _RazorpayWebViewState extends State<_RazorpayWebView> {
   WebviewController? _windowsController;
   StreamSubscription<dynamic>? _windowsMessageSub;
   StreamSubscription<LoadingState>? _windowsLoadingSub;
+  StreamSubscription<WebErrorStatus>? _windowsLoadErrorSub;
   var _loading = true;
+  var _initialPageReady = false;
   String? _webError;
+  bool _checkoutSettled = false;
   bool get _isWindowsDesktop => defaultTargetPlatform == TargetPlatform.windows;
+
+  void _settleSuccess(PaymentSuccessResponse response) {
+    if (_checkoutSettled) return;
+    _checkoutSettled = true;
+    widget.onSuccess(response);
+    widget.onClose();
+  }
+
+  void _settleFailure(PaymentFailureResponse response) {
+    if (_checkoutSettled) return;
+    _checkoutSettled = true;
+    widget.onFailure(response);
+    widget.onClose();
+  }
 
   @override
   void initState() {
@@ -173,21 +210,37 @@ class _RazorpayWebViewState extends State<_RazorpayWebView> {
       final controller = WebviewController();
       await controller.initialize();
       await controller.setBackgroundColor(Colors.white);
-      await controller.setPopupWindowPolicy(WebviewPopupWindowPolicy.deny);
+      await controller.setPopupWindowPolicy(WebviewPopupWindowPolicy.allow);
 
       _windowsMessageSub = controller.webMessage.listen((dynamic message) {
         _handleJsMessage(message?.toString() ?? '');
       });
+      _windowsLoadErrorSub = controller.onLoadError.listen((status) {
+        debugPrint('RazorpayWebCheckout load error: $status');
+        if (!mounted || _initialPageReady) return;
+        setState(() {
+          _loading = false;
+          _webError = 'Secure payment page failed to load.';
+        });
+      });
       _windowsLoadingSub = controller.loadingState.listen((state) {
         if (!mounted) return;
         setState(() {
-          _loading = state == LoadingState.loading;
-          if (state != LoadingState.loading) {
+          if (state == LoadingState.navigationCompleted) {
+            _initialPageReady = true;
+            _loading = false;
             _webError = null;
+            return;
+          }
+          // Razorpay keeps the WebView in a loading state while its iframe
+          // checkout is open — only block the UI during the first HTML load.
+          if (!_initialPageReady) {
+            _loading = state == LoadingState.loading;
           }
         });
       });
       _windowsController = controller;
+      if (mounted) setState(() {});
       await _loadCheckoutHtml();
     } on PlatformException catch (e) {
       if (!mounted) return;
@@ -209,7 +262,7 @@ class _RazorpayWebViewState extends State<_RazorpayWebView> {
   Future<void> _retryCheckout() async {
     if (!mounted) return;
     setState(() {
-      _loading = true;
+      _loading = !_initialPageReady;
       _webError = null;
     });
     await _loadCheckoutHtml();
@@ -252,7 +305,19 @@ class _RazorpayWebViewState extends State<_RazorpayWebView> {
       if (type == 'checkout_render_timeout') {
         // Razorpay overlay opened but checkout UI did not render in WebView.
         // Keep user on the same screen and allow retry from the HTML button.
-        debugPrint('RazorpayWebCheckout: checkout render timeout, showing retry');
+        debugPrint(
+          'RazorpayWebCheckout: checkout render timeout, showing retry',
+        );
+        if (mounted) {
+          setState(() => _loading = false);
+        }
+        return;
+      }
+
+      if (type == 'checkout_ready' || type == 'checkout_opening') {
+        if (mounted) {
+          setState(() => _loading = false);
+        }
         return;
       }
 
@@ -260,8 +325,7 @@ class _RazorpayWebViewState extends State<_RazorpayWebView> {
         final response = PaymentSuccessResponse.fromMap(
           Map<dynamic, dynamic>.from(map),
         );
-        widget.onClose();
-        widget.onSuccess(response);
+        _settleSuccess(response);
         return;
       }
       if (type == 'failed') {
@@ -280,19 +344,21 @@ class _RazorpayWebViewState extends State<_RazorpayWebView> {
           err is Map ? err['description']?.toString() : err?.toString(),
           err is Map ? Map<dynamic, dynamic>.from(err) : null,
         );
-        widget.onClose();
-        widget.onFailure(fail);
+        _settleFailure(fail);
         return;
       }
       if (type == 'dismissed') {
-        widget.onClose();
-        widget.onFailure(PaymentFailureResponse(2, 'Payment cancelled', null));
+        // Razorpay may fire ondismiss before the success handler on desktop
+        // WebViews; defer so a successful payment is not reported as cancelled.
+        Future<void>.delayed(const Duration(milliseconds: 500), () {
+          if (_checkoutSettled || !mounted) return;
+          _settleFailure(PaymentFailureResponse(2, 'Payment cancelled', null));
+        });
         return;
       }
     } catch (e, st) {
       debugPrint('RazorpayWebCheckout parse error: $e\n$st');
-      widget.onClose();
-      widget.onFailure(
+      _settleFailure(
         PaymentFailureResponse(0, 'Payment could not be completed.', null),
       );
     }
@@ -307,6 +373,7 @@ class _RazorpayWebViewState extends State<_RazorpayWebView> {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light only">
+  <base href="https://checkout.razorpay.com/">
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <style>
     html, body { margin: 0; background: #ffffff; }
@@ -432,10 +499,12 @@ class _RazorpayWebViewState extends State<_RazorpayWebView> {
         var prev = options.modal.ondismiss;
         options.modal.ondismiss = function () {
           if (typeof prev === 'function') prev();
-          if (finished) return;
-          finish();
-          stopWatchdog();
-          postToFlutter({ type: 'dismissed' });
+          setTimeout(function () {
+            if (finished) return;
+            finish();
+            stopWatchdog();
+            postToFlutter({ type: 'dismissed' });
+          }, 500);
         };
         function createCheckout() {
           var checkout = new Razorpay(options);
@@ -460,6 +529,7 @@ class _RazorpayWebViewState extends State<_RazorpayWebView> {
             rzp = createCheckout();
             setStatus('Waiting for Razorpay checkout…');
             setButtonBusy('Opening...');
+            postToFlutter({ type: 'checkout_opening' });
             rzp.open();
             startRenderWatchdog();
           } catch (e) {
@@ -474,8 +544,22 @@ class _RazorpayWebViewState extends State<_RazorpayWebView> {
             openCheckout();
           });
         }
-        setStatus('Click below to continue payment');
-        showButton('Continue payment');
+        function bootCheckout(attempt) {
+          if (typeof Razorpay === 'undefined') {
+            if (attempt <= 0) {
+              setStatus('Unable to load Razorpay. Check your connection and retry.');
+              showButton('Retry payment');
+              return;
+            }
+            setStatus('Loading secure payment…');
+            setTimeout(function () { bootCheckout(attempt - 1); }, 250);
+            return;
+          }
+          postToFlutter({ type: 'checkout_ready' });
+          setStatus('Click below to continue payment');
+          showButton('Continue payment');
+        }
+        bootCheckout(40);
       } catch (e) {
         postToFlutter({
           type: 'failed',
@@ -528,8 +612,7 @@ class _RazorpayWebViewState extends State<_RazorpayWebView> {
                 IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: () {
-                    widget.onClose();
-                    widget.onFailure(
+                    _settleFailure(
                       PaymentFailureResponse(2, 'Payment cancelled', null),
                     );
                   },
@@ -543,10 +626,7 @@ class _RazorpayWebViewState extends State<_RazorpayWebView> {
           child: Stack(
             children: [
               Positioned.fill(
-                child: Container(
-                  color: Colors.white,
-                  child: webViewChild,
-                ),
+                child: Container(color: Colors.white, child: webViewChild),
               ),
               if (_webError != null)
                 Positioned.fill(
@@ -599,6 +679,7 @@ class _RazorpayWebViewState extends State<_RazorpayWebView> {
   void dispose() {
     _windowsMessageSub?.cancel();
     _windowsLoadingSub?.cancel();
+    _windowsLoadErrorSub?.cancel();
     _windowsController?.dispose();
     super.dispose();
   }

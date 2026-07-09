@@ -40,6 +40,7 @@ class OrderModel {
   final String? paymentReceivedIn;
   final List<SplitPayment>? splitPayments;
   final String status;
+  @JsonKey(defaultValue: '')
   final String orderFrom;
   final List<OrderItem> items;
   final String? specialInstructions;
@@ -73,6 +74,10 @@ class OrderModel {
     if (normalized['paymentReceivedIn'] == null &&
         normalized['payment_received_in'] != null) {
       normalized['paymentReceivedIn'] = normalized['payment_received_in'];
+    }
+    if (normalized['orderFrom'] == null &&
+        normalized['order_from'] != null) {
+      normalized['orderFrom'] = normalized['order_from'];
     }
     return _$OrderModelFromJson(normalized);
   }

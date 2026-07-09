@@ -1,6 +1,7 @@
 // Controller
 import 'dart:io';
 import 'package:billkaro/app/Widgets/desktop_camera_capture_dialog.dart';
+import 'package:billkaro/app/Widgets/item_image_ai_chat_dialog.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_item_controller.dart';
 import 'package:billkaro/app/services/Modals/addItem/addItem_modal.dart';
 import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
@@ -14,6 +15,7 @@ import 'package:flutter_modular/flutter_modular.dart';
 import 'package:billkaro/utils/offline/offline_category_loader.dart';
 
 class AddMenuItemController extends BaseController {
+  final formKey = GlobalKey<FormState>();
   final itemNameController = TextEditingController();
   final salePriceController = TextEditingController();
   final prepTimeController = TextEditingController(text: '15');
@@ -233,18 +235,17 @@ class AddMenuItemController extends BaseController {
 
   Future<void> onGenerateWithAI() async {
     if (isGeneratingAiImage.value) return;
-    final itemName = itemNameController.text.trim();
-    if (itemName.isEmpty) {
-      showError(description: 'Please enter item name first to generate image');
-      return;
-    }
+
+    final imageDescription = await ItemImageAiChatDialog.show(
+      initialDescription: itemNameController.text.trim(),
+    );
+    if (imageDescription == null || imageDescription.isEmpty) return;
+
     isGeneratingAiImage.value = true;
-    // Let the picker sheet close before opening global loader.
-    await Future.delayed(const Duration(milliseconds: 180));
     showAppLoader();
     try {
       final prompt =
-          'Professional appetizing food photo of $itemName on a plate, restaurant menu, warm lighting, high quality';
+          'Professional appetizing food photo of $imageDescription on a plate, restaurant menu, warm lighting, high quality';
       final path = await _pollinations.generateImage(prompt: prompt);
       final file = File(path);
       if (!await file.exists()) {
@@ -580,21 +581,73 @@ class AddMenuItemController extends BaseController {
   void removeImage() {
     selectedImage.value = null;
     imagePath.value = '';
+    imageUrl.value = '';
+    aiScanResult.value = null;
     showSuccess(description: 'Image removed successfully');
   }
 
+  String? validateItemName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return AppLocalizations.of(Get.context!)!.please_enter_item_name;
+    }
+    return null;
+  }
+
+  String? validateSalePrice(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return AppLocalizations.of(Get.context!)!.please_enter_valid_sale_price;
+    }
+    final price = double.tryParse(value.trim());
+    if (price == null || price < 0) {
+      return AppLocalizations.of(Get.context!)!.please_enter_valid_sale_price;
+    }
+    return null;
+  }
+
+  String? validatePrepTime(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    final minutes = int.tryParse(value.trim());
+    if (minutes == null || minutes < 1) {
+      return 'Enter a valid prep time (1 or more minutes)';
+    }
+    return null;
+  }
+
+  bool _validateForm() => formKey.currentState?.validate() ?? false;
+
   void saveAndNew() {
     // Save and keep screen open; reset only after SUCCESS.
-    if (itemNameController.text.isEmpty) {
-      showError(description: 'Please enter item name');
-      return;
-    }
+    if (!_validateForm()) return;
     final appPref = Get.find<AppPref>();
     if (!hasTrialOrSubscription(appPref)) {
       checkSubscription();
       return;
     }
     onAddItem(closeOnSuccess: false);
+  }
+
+  void showDeleteConfirmationDialog() {
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        title: const Text('Delete Item'),
+        content: const Text(
+          'Are you sure you want to delete this item? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              Get.back(); // Close the dialog
+              onDeleteItem();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
   }
 
   void onDeleteItem() async {
@@ -607,16 +660,15 @@ class AddMenuItemController extends BaseController {
       if (Modular.to.canPop()) {
         Modular.to.pop();
       }
+      isEdit.value = false;
+      resetForm();
       showSuccess(description: response['message']);
     }
   }
 
   void saveItem() {
     debugPrint('Save item called. isEdit: ${isEdit.value}');
-    if (itemNameController.text.isEmpty) {
-      showError(description: 'Please enter item name');
-      return;
-    }
+    if (!_validateForm()) return;
     final appPref = Get.find<AppPref>();
     if (!hasTrialOrSubscription(appPref)) {
       checkSubscription();
@@ -626,6 +678,7 @@ class AddMenuItemController extends BaseController {
   }
 
   void onUpdateItem() async {
+    if (!_validateForm()) return;
     if (selectedImage.value != null) {
       await uploadItemImage();
     }
@@ -651,6 +704,9 @@ class AddMenuItemController extends BaseController {
       apiClient.updateItem(request, itemId.value.trim()),
     );
     if (response['status'] == 'success') {
+      selectedImage.value = null;
+      imagePath.value = '';
+      aiScanResult.value = null;
       Get.back();
       menuItemController.getItems(showLoader: false, forceApiRefresh: true);
       dismissAllAppLoader();
@@ -688,12 +744,21 @@ class AddMenuItemController extends BaseController {
     markAsFavorite.value = false;
     itemId.value = '';
     imageUrl.value = '';
+    selectedImage.value = null;
+    imagePath.value = '';
+    aiScanResult.value = null;
 
     if (args == null) return;
 
     final bool edit = args['isEdit'] == true;
     isEdit.value = edit;
-    if (!edit || args['item'] == null) return;
+
+    if (!edit) {
+      _applyCategoryFromArgs(args['category']);
+      return;
+    }
+
+    if (args['item'] == null) return;
 
     final item = args['item'] as ItemData;
 
@@ -701,9 +766,7 @@ class AddMenuItemController extends BaseController {
     salePriceController.text = item.salePrice.toString();
     prepTimeController.text = item.prepTimeMinutes.toString();
 
-    selectedCategory.value = categories.contains(item.category)
-        ? item.category
-        : 'none';
+    _applyCategoryFromArgs(item.category);
 
     isWithTax.value = item.withTax;
     itemId.value = item.id;
@@ -714,6 +777,54 @@ class AddMenuItemController extends BaseController {
     selectedTaxPercentage.value = double.parse(item.gst.toString()).round() == 0
         ? 'None'
         : '${double.parse(item.gst.toString()).toInt()}';
+  }
+
+  void _applyCategoryFromArgs(dynamic categoryArg) {
+    if (categoryArg == null) return;
+    final categoryName = categoryArg is String
+        ? categoryArg
+        : (categoryArg is CategoryData ? categoryArg.categoryName : null);
+    if (categoryName == null ||
+        categoryName.isEmpty ||
+        categoryName.toLowerCase() == 'none') {
+      return;
+    }
+
+    final normalized = categoryName.toLowerCase();
+    final match = categories.firstWhereOrNull(
+      (c) => c.toLowerCase() == normalized,
+    );
+    if (match != null) {
+      selectedCategory.value = match;
+      return;
+    }
+
+    // Category may have just been created and not yet in this screen's list.
+    if (!categories.any((c) => c.toLowerCase() == normalized)) {
+      categories.add(categoryName);
+    }
+    selectedCategory.value = categoryName;
+  }
+
+  void _seedCategoriesFromMenuController() {
+    try {
+      if (!Get.isRegistered<MenuItemController>()) return;
+      final menuCategories = Get.find<MenuItemController>().categories;
+      if (menuCategories.isEmpty) return;
+
+      categories.clear();
+      categories.add('none');
+      categories.addAll(menuCategories.map((e) => e.categoryName));
+    } catch (e) {
+      debugPrint('Failed to seed categories from menu screen: $e');
+    }
+  }
+
+  /// Called each time the add-item screen opens so category args stay in sync.
+  Future<void> prepareScreen(Map<String, dynamic>? args) async {
+    _seedCategoriesFromMenuController();
+    await getCategories();
+    configureFromArgs(args);
   }
 
   int _parsedPrepTimeMinutes() {
@@ -748,7 +859,7 @@ class AddMenuItemController extends BaseController {
         return;
       }
     }
-    
+
     final request = ItemRequest(
       showItem: isAvailable.value,
       isRecommended: markAsFavorite.value,
@@ -814,14 +925,6 @@ class AddMenuItemController extends BaseController {
   void onInit() {
     initializecontroller();
     super.onInit();
-  }
-
-  @override
-  void onReady() async {
-    // Categories are loaded here; screen will call configureFromArgs()
-    // with the latest arguments on each build.
-    await getCategories();
-    super.onReady();
   }
 
   /// Scan menu item using AI

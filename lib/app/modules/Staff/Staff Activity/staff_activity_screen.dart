@@ -1,3 +1,4 @@
+import 'package:billkaro/app/Widgets/app_date_picker.dart';
 import 'package:billkaro/app/modules/Staff/Staff%20Activity/staff_activity_controller.dart';
 import 'package:billkaro/app/modules/Staff/staff_details_controller.dart';
 import 'package:billkaro/app/services/Modals/activites/activities_response.dart';
@@ -698,7 +699,7 @@ class StaffActivityScreen extends StatelessWidget {
           final initialDate = isFrom
               ? (tempFrom ?? DateTime.now())
               : (tempTo ?? tempFrom ?? DateTime.now());
-          final picked = await showDatePicker(
+          final picked = await showAppDatePicker(
             context: context,
             initialDate: initialDate,
             firstDate: DateTime(2020),

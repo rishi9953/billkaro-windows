@@ -117,6 +117,24 @@ class AppLocalizationsHi extends AppLocalizations {
   String get add_images_ai_description => 'अपने मेनू को पेशेवर लुक देने के लिए AI-संचालित चित्रों से बेहतर बनाएं।';
 
   @override
+  String get item_image_ai_chat_assistant => 'BillKaro AI';
+
+  @override
+  String get item_image_ai_chat_message => 'AI आपके मेनू आइटम के लिए एक पेशेवर फूड फोटो बनाता है। आप इसे मेनू पर उपयोग कर सकते हैं या कभी भी गैलरी या कैमरे से अपनी फोटो अपलोड करके बदल सकते हैं।';
+
+  @override
+  String get generate_image => 'छवि जेनरेट करें';
+
+  @override
+  String get describe_image_for_ai => 'छवि का वर्णन करें';
+
+  @override
+  String get describe_image_for_ai_hint => 'उदा. प्याज़ और मक्खन के साथ मटर पनीर की थाली';
+
+  @override
+  String get please_describe_image_for_ai => 'कृपया उस छवि का वर्णन करें जिसे आप जेनरेट करना चाहते हैं';
+
+  @override
   String get manage_favourites_title => 'पसंदीदा और श्रेणियों का प्रबंधन करें';
 
   @override
@@ -1296,7 +1314,13 @@ class AppLocalizationsHi extends AppLocalizations {
   String get add_raw_material => 'कच्चा माल जोड़ें';
 
   @override
+  String get edit_raw_material => 'कच्चा माल संपादित करें';
+
+  @override
   String get add_supplier => 'आपूर्तिकर्ता जोड़ें';
+
+  @override
+  String get edit_supplier => 'आपूर्तिकर्ता संपादित करें';
 
   @override
   String adjust_stock_title(String name) {
@@ -2732,7 +2756,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String purchase_order_line_item(String name, String quantity, String unit, String price) {
-    return '• $name: $quantity $unit @ ₹$price';
+    return '$name: $quantity $unit @ ₹$price';
   }
 
   @override
@@ -2748,6 +2772,24 @@ class AppLocalizationsHi extends AppLocalizations {
   String get material_name_required => 'सामग्री का नाम *';
 
   @override
+  String get please_enter_material_name => 'कृपया सामग्री का नाम दर्ज करें';
+
+  @override
+  String get select_category_required => 'कृपया श्रेणी चुनें';
+
+  @override
+  String get invalid_opening_stock => 'प्रारंभिक स्टॉक 0 से अधिक होना चाहिए';
+
+  @override
+  String get min_stock_required => 'न्यूनतम स्टॉक अलर्ट आवश्यक है';
+
+  @override
+  String get invalid_min_stock => 'मान्य न्यूनतम स्टॉक अलर्ट दर्ज करें (0 या अधिक)';
+
+  @override
+  String get invalid_purchase_price => 'खरीद मूल्य 0 से अधिक होना चाहिए';
+
+  @override
   String get category_example_hint => 'श्रेणी (जैसे सब्ज़ियाँ, डेयरी)';
 
   @override
@@ -2761,6 +2803,21 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get supplier_name_required => 'आपूर्तिकर्ता का नाम *';
+
+  @override
+  String get please_enter_supplier_name => 'कृपया आपूर्तिकर्ता का नाम दर्ज करें';
+
+  @override
+  String get please_enter_vendor_no => 'कृपया विक्रेता संख्या दर्ज करें';
+
+  @override
+  String get please_enter_contact_person => 'कृपया संपर्क व्यक्ति का नाम दर्ज करें';
+
+  @override
+  String get please_enter_address => 'कृपया पता दर्ज करें';
+
+  @override
+  String get please_enter_gst_number => 'कृपया GST नंबर दर्ज करें';
 
   @override
   String get phone_label => 'फ़ोन';
@@ -2799,7 +2856,16 @@ class AppLocalizationsHi extends AppLocalizations {
   String get import_products_excel => 'उत्पाद आयात करें - Excel (.xlsx)';
 
   @override
-  String get import_products_description => 'BillKaro टेम्पलेट प्रारूप वाली Excel (.xlsx) फ़ाइल चुनें। आवश्यक कॉलम: Name और Price। गायब श्रेणियाँ स्वचालित रूप से बनाई जाएँगी।';
+  String get import_products_description => 'BillKaro टेम्पलेट प्रारूप वाली Excel (.xlsx) फ़ाइल चुनें। आवश्यक कॉलम: Name और Price। वैकल्पिक: Category, Tax % और Image Link। गायब श्रेणियाँ स्वचालित रूप से बनाई जाएँगी।';
+
+  @override
+  String get export_products_excel => 'उत्पाद निर्यात करें - Excel (.xlsx)';
+
+  @override
+  String get export_products_description => 'BillKaro टेम्पलेट प्रारूप में Excel (.xlsx) फ़ाइल में अपने मेनू आइटम निर्यात करें। कॉलम: Name, Price, Category, Tax % और Image Link शामिल हैं।';
+
+  @override
+  String get export_file => 'फ़ाइल निर्यात करें';
 
   @override
   String get select_file => 'फ़ाइल चुनें';
@@ -2830,6 +2896,241 @@ class AppLocalizationsHi extends AppLocalizations {
   String recipe_uses_material(String quantity, String unit, String name) {
     return '$name का $quantity $unit उपयोग';
   }
+
+  @override
+  String get add_recipe => 'रेसिपी जोड़ें';
+
+  @override
+  String get edit_recipe => 'रेसिपी संपादित करें';
+
+  @override
+  String get select_menu_item => 'मेनू आइटम *';
+
+  @override
+  String get select_raw_material => 'कच्चा माल *';
+
+  @override
+  String get recipe_quantity_hint => 'प्रति सर्विंग मात्रा *';
+
+  @override
+  String get recipe_quantity_helper => '1 यूनिट बिक्री पर स्टॉक से कटने वाली मात्रा';
+
+  @override
+  String get recipe_quantity_invalid => '0 से अधिक मान्य मात्रा दर्ज करें';
+
+  @override
+  String get select_menu_item_required => 'कृपया मेनू आइटम चुनें';
+
+  @override
+  String get select_raw_material_required => 'कृपया कच्चा माल चुनें';
+
+  @override
+  String get recipe_ingredients => 'रेसिपी सामग्री';
+
+  @override
+  String get recipe_ingredients_subtitle => 'बिक्री पर स्वचालित स्टॉक कटौती के लिए कच्चे माल को लिंक करें';
+
+  @override
+  String get add_ingredient => 'सामग्री जोड़ें';
+
+  @override
+  String get no_ingredients_yet => 'अभी कोई सामग्री लिंक नहीं';
+
+  @override
+  String get search_recipes => 'रेसिपी खोजें...';
+
+  @override
+  String recipe_lines_count(int count) {
+    return '$count सामग्री';
+  }
+
+  @override
+  String get create_purchase_order => 'खरीद ऑर्डर बनाएं';
+
+  @override
+  String get create_po => 'PO बनाएं';
+
+  @override
+  String get edit_purchase_order => 'खरीद ऑर्डर संपादित करें';
+
+  @override
+  String get edit_po => 'PO संपादित करें';
+
+  @override
+  String get save_po_changes => 'परिवर्तन सहेजें';
+
+  @override
+  String get po_updated => 'खरीद ऑर्डर अपडेट हो गया';
+
+  @override
+  String get po_cannot_edit => 'केवल लंबित खरीद ऑर्डर संपादित किए जा सकते हैं';
+
+  @override
+  String get generate_po_from_low_stock => 'कम स्टॉक से PO बनाएं';
+
+  @override
+  String get po_header_section => 'ऑर्डर विवरण';
+
+  @override
+  String get po_line_items_section => 'लाइन आइटम';
+
+  @override
+  String get select_supplier => 'आपूर्तिकर्ता *';
+
+  @override
+  String get select_supplier_required => 'कृपया आपूर्तिकर्ता चुनें';
+
+  @override
+  String get po_delivery_date_required => 'कृपया डिलीवरी की तारीख चुनें';
+
+  @override
+  String get po_payment_terms_required => 'कृपया भुगतान की शर्तें दर्ज करें';
+
+  @override
+  String get po_line_material_required => 'कृपया सामग्री चुनें';
+
+  @override
+  String get po_line_qty_required => '0 से अधिक मात्रा दर्ज करें';
+
+  @override
+  String get po_line_rate_required => 'मान्य दर दर्ज करें';
+
+  @override
+  String get po_address_name_required => 'कृपया नाम दर्ज करें';
+
+  @override
+  String get po_pin_code_required => 'कृपया पिन कोड दर्ज करें';
+
+  @override
+  String get po_state_required => 'कृपया राज्य दर्ज करें';
+
+  @override
+  String get delivery_date => 'डिलीवरी की तारीख';
+
+  @override
+  String get fill_from_low_stock => 'कम स्टॉक से भरें';
+
+  @override
+  String get po_notes_hint => 'डिलीवरी निर्देश, संदर्भ संख्या, आदि';
+
+  @override
+  String get add_line => 'लाइन जोड़ें';
+
+  @override
+  String get po_order_qty => 'ऑर्डर मात्रा';
+
+  @override
+  String get po_rate => 'दर (₹)';
+
+  @override
+  String get po_amount => 'राशि';
+
+  @override
+  String po_grand_total(String total) {
+    return 'कुल योग: $total';
+  }
+
+  @override
+  String get po_line_invalid => 'प्रत्येक लाइन में सामग्री, मात्रा > 0 और मान्य दर होनी चाहिए';
+
+  @override
+  String get po_items_required => 'कम से कम एक लाइन आइटम जोड़ें';
+
+  @override
+  String get po_order_date => 'ऑर्डर तिथि';
+
+  @override
+  String get po_received_date => 'प्राप्ति तिथि';
+
+  @override
+  String get supplier_label => 'आपूर्तिकर्ता';
+
+  @override
+  String get cancel_po => 'PO रद्द करें';
+
+  @override
+  String get view_details => 'विवरण देखें';
+
+  @override
+  String get print_po => 'PO प्रिंट करें';
+
+  @override
+  String get po_payment_terms => 'भुगतान शर्तें';
+
+  @override
+  String get po_reference_no => 'संदर्भ संख्या';
+
+  @override
+  String get po_document_type => 'दस्तावेज़ प्रकार';
+
+  @override
+  String get po_billing_address_section => 'बिलिंग विवरण';
+
+  @override
+  String get po_terms_and_conditions => 'नियम और शर्तें';
+
+  @override
+  String get po_terms_heading => 'नियम और शर्तें :';
+
+  @override
+  String get po_terms_intro => 'ये नियम और शर्तें खरीद आदेश (PO) का अभिन्न अंग होंगी।';
+
+  @override
+  String get po_terms_and_conditions_hint => 'खरीद आदेश के लिए नियम और शर्तें दर्ज करें। प्रत्येक बिंदु अलग पंक्ति में लिखें।';
+
+  @override
+  String get settings_po_terms => 'PO नियम और शर्तें';
+
+  @override
+  String get settings_po_terms_subtitle => 'नए खरीद आदेशों के लिए डिफ़ॉल्ट पाठ';
+
+  @override
+  String get settings_po_print_orientation => 'PO प्रिंट अभिविन्यास';
+
+  @override
+  String get settings_po_print_orientation_subtitle => 'खरीद आदेश प्रिंट करते समय पेज लेआउट';
+
+  @override
+  String get po_print_portrait => 'पोर्ट्रेट';
+
+  @override
+  String get po_print_landscape => 'लैंडस्केप';
+
+  @override
+  String get po_terms_saved => 'नियम और शर्तें सहेजी गईं';
+
+  @override
+  String get po_shipping_address_section => 'शिपिंग पता';
+
+  @override
+  String get po_same_as_billing => 'बिलिंग जैसा ही';
+
+  @override
+  String get po_address_name => 'नाम';
+
+  @override
+  String get po_address_line1 => 'पता पंक्ति 1';
+
+  @override
+  String get po_address_line2 => 'पता पंक्ति 2';
+
+  @override
+  String get po_pin_code => 'पिन कोड';
+
+  @override
+  String get po_state => 'राज्य';
+
+  @override
+  String get po_contact_no => 'संपर्क नंबर';
+
+  @override
+  String get po_gst_no => 'GST नंबर';
+
+  @override
+  String get po_sl_no => 'क्र. सं.';
+
+  @override
+  String get po_hsn_sac => 'HSN/SAC कोड';
 
   @override
   String get template_saved_opened => 'टेम्पलेट सहेजा और खोला गया';
@@ -4064,6 +4365,18 @@ class AppLocalizationsHi extends AppLocalizations {
   String get merge_tables_failed => 'टेबल मर्ज विफल';
 
   @override
+  String get edit_merged_tables => 'मर्ज की टेबल संपादित करें';
+
+  @override
+  String get edit_merged_tables_subtitle => 'इस समूह में टेबल जोड़ें या हटाएँ';
+
+  @override
+  String get edit_merged_tables_hint => 'सभी टेबल अनचेक करें तो समूह अलग हो जाएगा';
+
+  @override
+  String get merged_tables_updated_success => 'मर्ज की टेबल अपडेट हो गईं';
+
+  @override
   String get select_at_least_two_tables_to_merge => 'प्राथमिक और कम से कम एक अन्य व्यस्त टेबल चुनें';
 
   @override
@@ -4150,4 +4463,150 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get remove_image => 'इमेज हटाएँ';
+
+  @override
+  String get store_open => 'Store Open';
+
+  @override
+  String get store_closed => 'Store Closed';
+
+  @override
+  String get open_store => 'Open Store';
+
+  @override
+  String get close_store => 'Close Store';
+
+  @override
+  String get open_store_subtitle => 'Start your business day and enable billing';
+
+  @override
+  String get close_store_subtitle => 'End day, reconcile cash and reset tables';
+
+  @override
+  String get opening_cash => 'Opening cash in drawer';
+
+  @override
+  String get closing_cash => 'Closing cash counted';
+
+  @override
+  String get notes_optional => 'Notes (optional)';
+
+  @override
+  String get store_opened_success => 'Store opened successfully';
+
+  @override
+  String get store_closed_success => 'Day closed successfully';
+
+  @override
+  String get store_closed_banner_title => 'Store is closed';
+
+  @override
+  String get store_closed_banner_subtitle => 'Open the store to start taking orders';
+
+  @override
+  String get store_closed_order_blocked => 'Store is closed. Open the store before billing.';
+
+  @override
+  String get close_store_confirm_title => 'Confirm day end?';
+
+  @override
+  String get close_store_confirm_message => 'This will close the business day, save the summary and reset all tables to available.';
+
+  @override
+  String get opened_at => 'Opened at';
+
+  @override
+  String get opened_by => 'Opened by';
+
+  @override
+  String get closed_by => 'Closed by';
+
+  @override
+  String get total_orders => 'Orders';
+
+  @override
+  String get expected_cash => 'Expected cash';
+
+  @override
+  String get cash_variance => 'Cash variance';
+
+  @override
+  String get enter_valid_closing_cash => 'Enter a valid closing cash amount';
+
+  @override
+  String get store_history_title => 'Store Day History';
+
+  @override
+  String get store_history_subtitle => 'View open and close records with cash summary';
+
+  @override
+  String get store_history_empty => 'No store day records yet. Open and close the store to build history.';
+
+  @override
+  String get closed_at => 'Closed at';
+
+  @override
+  String get wallet_title => 'बिलकारो वॉलेट';
+
+  @override
+  String get wallet_balance => 'उपलब्ध बैलेंस';
+
+  @override
+  String get wallet_balance_subtitle => 'प्लेटफ़ॉर्म शुल्क के लिए प्रीपेड क्रेडिट';
+
+  @override
+  String get wallet_add_money => 'पैसे जोड़ें';
+
+  @override
+  String get wallet_recharge => 'रिचार्ज';
+
+  @override
+  String get wallet_custom_amount => 'कस्टम राशि';
+
+  @override
+  String get wallet_enter_amount_hint => 'राशि दर्ज करें';
+
+  @override
+  String get wallet_enter_valid_amount => 'कृपया शून्य से अधिक वैध राशि दर्ज करें।';
+
+  @override
+  String get wallet_history => 'लेनदेन इतिहास';
+
+  @override
+  String get wallet_transactions => 'लेनदेन';
+
+  @override
+  String get wallet_no_transactions => 'अभी कोई लेनदेन नहीं। शुरू करने के लिए वॉलेट रिचार्ज करें।';
+
+  @override
+  String get wallet_demo_note => 'डेमो मोड: बैलेंस केवल इस डिवाइस पर संग्रहीत है। पैसे जोड़ने के लिए Razorpay टेस्ट चेकआउट का उपयोग होता है — कोई बैकएंड सत्यापन नहीं।';
+
+  @override
+  String get wallet_low_balance_warning => 'वॉलेट बैलेंस कम है। बिलिंग रुकने से बचने के लिए जल्द रिचार्ज करें।';
+
+  @override
+  String get wallet_recharge_demo => 'वॉलेट रिचार्ज (डेमो)';
+
+  @override
+  String get wallet_recharge_via_razorpay => 'Razorpay से वॉलेट रिचार्ज';
+
+  @override
+  String wallet_recharge_success(String amount) {
+    return 'आपके वॉलेट में $amount सफलतापूर्वक जोड़ा गया।';
+  }
+
+  @override
+  String get wallet_welcome_credit => 'स्वागत क्रेडिट';
+
+  @override
+  String get wallet_no_cards_available => 'अभी कोई रिचार्ज कार्ड कॉन्फ़िगर नहीं है। कस्टम राशि का उपयोग करें या एडमिन से कार्ड जोड़ने को कहें।';
+
+  @override
+  String get wallet_secure_payment_note => 'भुगतान Razorpay द्वारा सुरक्षित हैं।';
+
+  @override
+  String get wallet_menu_subtitle => 'प्लेटफ़ॉर्म शुल्क के लिए प्रीपेड बैलेंस रिचार्ज करें';
+
+  @override
+  String get notifications => 'नोटिफ़िकेशन';
 }

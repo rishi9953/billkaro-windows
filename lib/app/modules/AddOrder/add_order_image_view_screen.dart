@@ -761,18 +761,22 @@ class OrderItemCard extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: CachedNetworkImage(
-                  imageUrl: imageUrl ?? '',
-                  width: 130,
-                  height: 160,
-                  fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) => Center(
-                    child: Assets.svg.placeholder.svg(fit: BoxFit.cover),
-                  ),
-                  placeholder: (_, __) => Center(
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
+                child: imageUrl != null && imageUrl!.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: imageUrl!,
+                        width: 130,
+                        height: 160,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => Center(
+                          child: Assets.svg.placeholder.svg(fit: BoxFit.cover),
+                        ),
+                        placeholder: (_, __) => Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                    : Center(
+                        child: Assets.svg.placeholder.svg(fit: BoxFit.cover),
+                      ),
               ),
               Padding(
                 padding: const EdgeInsets.all(8.0),

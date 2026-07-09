@@ -127,6 +127,9 @@ class ConfirmOrderBottomSheet extends StatelessWidget {
                     item: item,
                     quantity: qty,
                     lineTotal: lineTotal,
+                    remark: controller.itemRemarks[item.id] ?? '',
+                    onRemark: () =>
+                        controller.showItemRemarkDialog(item.id, item.itemName),
                     onIncrement: () =>
                         controller.incrementItemQuantity(item.id),
                     onDecrement: () =>
@@ -137,7 +140,7 @@ class ConfirmOrderBottomSheet extends StatelessWidget {
             }),
           ),
           const Divider(height: 1),
-          // Bottom bar: Total + Confirm
+          // Bottom bar: Subtotal, GST, Total + Confirm
           Container(
             padding: EdgeInsets.only(
               left: 16,
@@ -147,68 +150,108 @@ class ConfirmOrderBottomSheet extends StatelessWidget {
             ),
             decoration: BoxDecoration(color: Colors.grey[100]),
             child: Obx(() {
+              final subtotal = controller.subtotal.value;
+              final gst = controller.totalTax.value;
+              final discount = controller.appliedDiscountAmount();
               final total = controller.totalAmount.value;
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
-                      vertical: 8,
+                      vertical: 10,
                     ),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                    child: Column(
                       children: [
-                        Text(
-                          loc.total_amount,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
+                        _TotalSummaryRow(
+                          label: 'Subtotal',
+                          value: '₹${subtotal.toStringAsFixed(2)}',
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '₹${total.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black87,
-                          ),
+                        _TotalSummaryRow(
+                          label: 'Tax',
+                          value: '₹${gst.toStringAsFixed(2)}',
+                        ),
+                        _TotalSummaryRow(
+                          label: loc.discount,
+                          value: discount > 0
+                              ? '-₹${discount.toStringAsFixed(2)}'
+                              : '₹0.00',
+                        ),
+                        const SizedBox(height: 4),
+                        _TotalSummaryRow(
+                          label: loc.total_amount,
+                          value: '₹${total.toStringAsFixed(2)}',
+                          strong: true,
                         ),
                       ],
                     ),
                   ),
-                  SizedBox(
-                    width: 120,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Get.back();
-                        controller.executePosAction(action);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColor.primary,
-                        foregroundColor: AppColor.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 12,
-                          horizontal: 16,
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Row(
+                      spacing: 10,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        SizedBox(
+                          width: 120,
+                          child: OutlinedButton(
+                            onPressed: () {
+                              Get.back();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 12,
+                                horizontal: 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                        SizedBox(
+                          width: 120,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Get.back();
+                              controller.executePosAction(action);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColor.primary,
+                              foregroundColor: AppColor.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 12,
+                                horizontal: 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text(
+                              'Confirm',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                      child: const Text(
-                        'Confirm',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      ],
                     ),
                   ),
                 ],
@@ -226,6 +269,8 @@ class _ConfirmOrderRow extends StatelessWidget {
   final ItemData item;
   final int quantity;
   final double lineTotal;
+  final String remark;
+  final VoidCallback onRemark;
   final VoidCallback onIncrement;
   final VoidCallback onDecrement;
 
@@ -234,6 +279,8 @@ class _ConfirmOrderRow extends StatelessWidget {
     required this.item,
     required this.quantity,
     required this.lineTotal,
+    required this.remark,
+    required this.onRemark,
     required this.onIncrement,
     required this.onDecrement,
   });
@@ -291,18 +338,54 @@ class _ConfirmOrderRow extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  item.itemName,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey[800],
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.itemName,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[800],
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (remark.trim().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          '📝 ${remark.trim()}',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontStyle: FontStyle.italic,
+                            color: AppColor.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ],
+          ),
+        ),
+        IconButton(
+          tooltip: 'Item remark',
+          icon: Icon(
+            remark.trim().isNotEmpty
+                ? Icons.chat_bubble
+                : Icons.chat_bubble_outline,
+            size: 20,
+            color: remark.trim().isNotEmpty ? AppColor.primary : Colors.grey,
+          ),
+          onPressed: onRemark,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          style: IconButton.styleFrom(
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
         ),
         SizedBox(
@@ -375,6 +458,47 @@ class _ConfirmOrderRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _TotalSummaryRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool strong;
+
+  const _TotalSummaryRow({
+    required this.label,
+    required this.value,
+    this.strong = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: strong ? 14 : 13,
+                color: strong ? Colors.black87 : Colors.grey[700],
+                fontWeight: strong ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: strong ? 16 : 13,
+              color: strong ? Colors.black87 : Colors.grey[800],
+              fontWeight: strong ? FontWeight.w700 : FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

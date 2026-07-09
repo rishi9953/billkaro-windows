@@ -1,17 +1,37 @@
+import 'package:billkaro/app/Widgets/app_dropdowns.dart';
 import 'package:billkaro/app/modules/Items/add_menu_items_controller.dart';
+import 'package:billkaro/app/modules/Inventory/menu_item_recipe_section.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 
-class AddMenuItemScreen extends StatelessWidget {
+class AddMenuItemScreen extends StatefulWidget {
   const AddMenuItemScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final controller = Get.put(AddMenuItemController());
+  State<AddMenuItemScreen> createState() => _AddMenuItemScreenState();
+}
+
+class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
+  late final AddMenuItemController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.put(AddMenuItemController());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _prepareScreen());
+  }
+
+  Future<void> _prepareScreen() async {
+    if (!mounted) return;
     final rawArgs = Get.arguments ?? Modular.args.data;
     final args = rawArgs is Map<String, dynamic> ? rawArgs : null;
-    controller.configureFromArgs(args);
+    await controller.prepareScreen(args);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     var loc = AppLocalizations.of(Get.context!)!;
     final scrollController = ScrollController();
     final theme = Theme.of(context);
@@ -97,6 +117,25 @@ class AddMenuItemScreen extends StatelessWidget {
                 fontSize: 13,
                 color: Colors.grey,
                 fontWeight: FontWeight.w600,
+              ),
+            );
+          }
+
+          Widget requiredFieldLabel(String label) {
+            return RichText(
+              text: TextSpan(
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w600,
+                ),
+                children: [
+                  TextSpan(text: label),
+                  TextSpan(
+                    text: ' *',
+                    style: TextStyle(color: theme.colorScheme.error),
+                  ),
+                ],
               ),
             );
           }
@@ -359,6 +398,25 @@ class AddMenuItemScreen extends StatelessWidget {
                                   shape: BoxShape.circle,
                                 ),
                                 child: IconButton(
+                                  tooltip: loc.remove_image,
+                                  icon: Icon(
+                                    Icons.delete,
+                                    color: AppColor.error,
+                                    size: 20,
+                                  ),
+                                  onPressed: controller.removeImage,
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 10,
+                              right: 60,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.55),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: IconButton(
                                   tooltip: loc.upload_item_image,
                                   icon: const Icon(
                                     Icons.edit,
@@ -456,7 +514,7 @@ class AddMenuItemScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: controller.onDeleteItem,
+                        onPressed: controller.showDeleteConfirmationDialog,
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColor.black,
                           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -546,122 +604,181 @@ class AddMenuItemScreen extends StatelessWidget {
             });
           }
 
-          final formContent = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              sectionTitle(
-                controller.isEdit.value ? loc.edit_menu_item : loc.addMenuItem,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                loc.tap_to_enter,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[600],
+          final formContent = Form(
+            key: controller.formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                sectionTitle(
+                  controller.isEdit.value
+                      ? loc.edit_menu_item
+                      : loc.addMenuItem,
                 ),
-              ),
-              const SizedBox(height: 18),
-              if (!isWide) ...[
-                buildAvailabilityTile(),
-                const SizedBox(height: 12),
-                buildRecommendedTile(),
-                const SizedBox(height: 16),
-                imageFieldLabel(loc.item_image),
-                const SizedBox(height: 8),
-                buildImagePicker(),
+                const SizedBox(height: 6),
+                Text(
+                  loc.tap_to_enter,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+                ),
                 const SizedBox(height: 18),
-              ],
+                if (!isWide) ...[
+                  buildAvailabilityTile(),
+                  const SizedBox(height: 12),
+                  buildRecommendedTile(),
+                  const SizedBox(height: 16),
+                  imageFieldLabel(loc.item_image),
+                  const SizedBox(height: 8),
+                  buildImagePicker(),
+                  const SizedBox(height: 18),
+                ],
 
-              fieldLabel('${loc.item_name} *'),
-              const SizedBox(height: 8),
-              TextField(
-                controller: controller.itemNameController,
-                decoration: inputDecoration(hintText: loc.tap_to_enter),
-              ),
-              const SizedBox(height: 18),
-
-              fieldLabel(loc.item_category),
-              const SizedBox(height: 8),
-              Obx(
-                () => DropdownButtonFormField<String>(
-                  value: controller.selectedCategory.value.toLowerCase(),
-                  decoration: inputDecoration(),
-                  items: controller.categories
-                      .map(
-                        (category) => DropdownMenuItem(
-                          value: category,
-                          child: Text(category.capitalize ?? ''),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    controller.selectedCategory.value = value!;
-                  },
+                requiredFieldLabel(loc.item_name),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: controller.itemNameController,
+                  validator: controller.validateItemName,
+                  decoration: inputDecoration(hintText: loc.tap_to_enter),
                 ),
-              ),
-              const SizedBox(height: 18),
+                const SizedBox(height: 18),
 
-              fieldLabel(loc.sale_price),
-              const SizedBox(height: 8),
-              Obx(
-                () => TextField(
-                  controller: controller.salePriceController,
-                  keyboardType: TextInputType.number,
-                  decoration: inputDecoration(
-                    hintText: loc.tap_to_enter,
-                    suffixText: controller.isWithTax.value
-                        ? loc.with_tax
-                        : loc.without_tax,
-                    suffixIcon: IconButton(
-                      tooltip: controller.isWithTax.value
-                          ? loc.with_tax
-                          : loc.without_tax,
+                fieldLabel(loc.item_category),
+                const SizedBox(height: 8),
+                Obx(
+                  () => AppDropdownFormField2<String>(
+                    isExpanded: true,
+                    decoration: inputDecoration(),
+                    value: controller.selectedCategory.value.toLowerCase(),
+                    items: controller.categories
+                        .map(
+                          (category) => DropdownItem<String>(
+                            value: category,
+                            child: Text(category.capitalize ?? ''),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        controller.selectedCategory.value = value;
+                      }
+                    },
+                    iconStyleData: IconStyleData(
                       icon: Icon(
                         Icons.keyboard_arrow_down,
                         color: AppColor.primary,
                       ),
-                      onPressed: () {
-                        controller.isWithTax.value =
-                            !controller.isWithTax.value;
-                      },
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 18),
+                const SizedBox(height: 18),
 
-              fieldLabel('Kitchen prep time (minutes)'),
-              const SizedBox(height: 8),
-              TextField(
-                controller: controller.prepTimeController,
-                keyboardType: TextInputType.number,
-                decoration: inputDecoration(hintText: 'e.g. 15'),
-              ),
-              const SizedBox(height: 18),
-
-              fieldLabel(loc.tax_percentage),
-              const SizedBox(height: 8),
-              Obx(
-                () => DropdownButtonFormField<String>(
-                  value: controller.selectedTaxPercentage.value,
-                  decoration: inputDecoration(),
-                  items: controller.taxOptions
-                      .map(
-                        (tax) => DropdownMenuItem(
-                          value: tax,
-                          child: Text(tax == 'None' ? tax : '$tax%'),
+                requiredFieldLabel(loc.sale_price),
+                const SizedBox(height: 8),
+                Obx(
+                  () => TextFormField(
+                    controller: controller.salePriceController,
+                    validator: controller.validateSalePrice,
+                    keyboardType: TextInputType.number,
+                    decoration: inputDecoration(
+                      hintText: loc.tap_to_enter,
+                      suffixText: controller.isWithTax.value
+                          ? loc.with_tax
+                          : loc.without_tax,
+                      suffixIcon: IconButton(
+                        tooltip: controller.isWithTax.value
+                            ? loc.with_tax
+                            : loc.without_tax,
+                        icon: Icon(
+                          Icons.keyboard_arrow_down,
+                          color: AppColor.primary,
                         ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    controller.selectedTaxPercentage.value = value!;
-                  },
+                        onPressed: () {
+                          final withTax = !controller.isWithTax.value;
+                          controller.isWithTax.value = withTax;
+                          if (!withTax) {
+                            controller.selectedTaxPercentage.value = 'None';
+                          } else if (controller.selectedTaxPercentage.value ==
+                              'None') {
+                            controller.selectedTaxPercentage.value = '5';
+                          }
+                        },
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 28),
+                Obx(() {
+                  if (!controller.isWithTax.value) {
+                    return const SizedBox.shrink();
+                  }
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 18),
+                      fieldLabel(loc.tax_percentage),
+                      const SizedBox(height: 8),
+                      AppDropdownFormField2<String>(
+                        isExpanded: true,
+                        decoration: inputDecoration(),
+                        value: controller.selectedTaxPercentage.value,
+                        items: controller.taxOptions
+                            .map(
+                              (tax) => DropdownItem<String>(
+                                value: tax,
+                                child: Text(tax == 'None' ? tax : '$tax%'),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            controller.selectedTaxPercentage.value = value;
+                          }
+                        },
+                        iconStyleData: IconStyleData(
+                          icon: Icon(
+                            Icons.keyboard_arrow_down,
+                            color: AppColor.primary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                    ],
+                  );
+                }),
 
-              buildButtons(),
-              const SizedBox(height: 18),
-            ],
+                fieldLabel('Kitchen prep time (minutes)'),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: controller.prepTimeController,
+                  validator: controller.validatePrepTime,
+                  keyboardType: TextInputType.number,
+                  decoration: inputDecoration(hintText: 'e.g. 15'),
+                ),
+
+                const SizedBox(height: 28),
+
+                Obx(() {
+                  if (!controller.isEdit.value ||
+                      controller.itemId.value.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Divider(),
+                      const SizedBox(height: 18),
+                      MenuItemRecipeSection(
+                        itemId: controller.itemId.value,
+                        itemName: controller.itemNameController.text,
+                      ),
+                      const SizedBox(height: 18),
+                    ],
+                  );
+                }),
+
+                buildButtons(),
+                const SizedBox(height: 18),
+              ],
+            ),
           );
 
           final rightRail = Column(

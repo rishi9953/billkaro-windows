@@ -6,6 +6,7 @@ import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/Modals/orders/split_payment.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/Modals/tables/tables_response.dart';
+import 'package:billkaro/app/services/sync/bill_number_util.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:flutter/material.dart';
@@ -23,7 +24,7 @@ class OrderDetailsController extends BaseController {
   final orderFrom = ''.obs;
   bool get isDineIn => orderFrom.value.trim().toLowerCase() == 'dine in';
 
-  final discountType = 'Percentage'.obs;
+  final discountType = 'percentage'.obs;
   final paymentRecieved = 'cash'.obs;
   final status = 'pending'.obs;
 
@@ -56,28 +57,9 @@ class OrderDetailsController extends BaseController {
 
   OrderModel? orderDetails;
 
-  /// Save Order Details
+  /// Save Order Details (bill number is preview-only; server assigns on create).
   Future<CreateorderRequest?> buildOrderDetails() async {
     final loc = AppLocalizations.of(Get.context!)!;
-
-    // Validate bill number is not empty
-    if (billNumber.text.trim().isEmpty) {
-      showError(description: loc.bill_number_required);
-      return null;
-    }
-
-    // Validate bill number is an integer
-    if (!_isValidIntegerBillNumber(billNumber.text.trim())) {
-      showError(description: loc.bill_number_invalid);
-      return null;
-    }
-
-    // Check if bill number already exists
-    final isDuplicate = await _checkBillNumberExists(billNumber.text.trim());
-    if (isDuplicate) {
-      showError(description: loc.bill_number_duplicate(billNumber.text.trim()));
-      return null;
-    }
 
     // Validate split payments if enabled
     if (useSplitPayment.value) {
@@ -101,7 +83,7 @@ class OrderDetailsController extends BaseController {
     }
 
     return CreateorderRequest(
-      billNumber: billNumber.text.trim(),
+      billNumber: null,
       tableNumber:
           (isDineIn && HomeMainRoutes.outletShowsTables())
               ? tableNumber.text
@@ -109,6 +91,7 @@ class OrderDetailsController extends BaseController {
       customerName: customerName.text,
       phoneNumber: phoneNumber.text,
       discount: double.tryParse(discount.text) ?? 0.0,
+      discountType: discountType.value,
       serviceCharge: double.tryParse(serviceCharge.text) ?? 0.0,
       paymentReceivedIn: useSplitPayment.value ? null : paymentRecieved.value,
       splitPayments: useSplitPayment.value && splitPayments.isNotEmpty
@@ -193,6 +176,9 @@ class OrderDetailsController extends BaseController {
       customerName.text = args['customerName'] ?? '';
       phoneNumber.text = args['phoneNumber'] ?? '';
       discount.text = '${args['discount'] ?? 0.0}';
+      final rawDiscountType = args['discountType']?.toString().trim().toLowerCase();
+      discountType.value =
+          rawDiscountType == 'amount' ? 'amount' : 'percentage';
       serviceCharge.text = '${args['serviceCharge'] ?? 0.0}';
       status.value = args['status'] ?? '';
       paymentRecieved.value = _normalizePaymentMethod(args['paymentReceivedIn']);
@@ -251,12 +237,9 @@ class OrderDetailsController extends BaseController {
           customerName.text = customer.customerName;
         }
         if (customer.loyalityDiscount > 0) {
-          final context = Get.context;
-          if (context != null) {
-            discountType.value = AppLocalizations.of(context)!.percentage;
-          } else {
-            discountType.value = 'Percentage';
-          }
+          discountType.value = customer.loyalityDiscountType == 'amount'
+              ? 'amount'
+              : 'percentage';
           discount.text = customer.loyalityDiscount.toString();
         }
       }
@@ -359,26 +342,34 @@ class OrderDetailsController extends BaseController {
         return;
       }
 
-      // Get outlet's billNumber from getUserDetails API
+      // Get outlet's billNumber from profile API (owner) or assigned outlet (staff)
       int outletBillNumber = 0;
       try {
-        final userResponse = await callApi(
-          apiClient.getUserDetails(appPref.user!.id!),
-          showLoader: false,
-        );
+        if (appPref.isStaffSession) {
+          outletBillNumber = appPref.selectedOutlet?.billNumber ?? 0;
+          debugPrint('📌 Staff outlet billNumber: $outletBillNumber');
+        } else {
+          final ownerId = appPref.ownerUserId;
+          if (ownerId == null || ownerId.isEmpty) {
+            outletBillNumber = appPref.selectedOutlet?.billNumber ?? 0;
+          } else {
+            final userResponse = await callApi(
+              apiClient.getUserDetails(ownerId),
+              showLoader: false,
+            );
 
-        if (userResponse != null && userResponse.status == 'success') {
-          // Update user data
-          appPref.user = userResponse.data;
+            if (userResponse != null && userResponse.status == 'success') {
+              appPref.user = userResponse.data;
 
-          // Find the selected outlet and get its billNumber
-          final selectedOutlet = userResponse.data.outletData?.firstWhere(
-            (outlet) => outlet.id == outletId,
-            orElse: () => userResponse.data.outletData?.first ?? OutletData(),
-          );
+              final selectedOutlet = userResponse.data.outletData?.firstWhere(
+                (outlet) => outlet.id == outletId,
+                orElse: () => userResponse.data.outletData?.first ?? OutletData(),
+              );
 
-          outletBillNumber = selectedOutlet?.billNumber ?? 0;
-          debugPrint('📌 Outlet billNumber from API: $outletBillNumber');
+              outletBillNumber = selectedOutlet?.billNumber ?? 0;
+              debugPrint('📌 Outlet billNumber from API: $outletBillNumber');
+            }
+          }
         }
       } catch (e) {
         debugPrint('⚠️ Could not fetch user details: $e');
@@ -402,7 +393,7 @@ class OrderDetailsController extends BaseController {
       try {
         final response = await callApi(
           apiClient.getOrders(
-            appPref.user!.id!,
+            appPref.ordersApiUserId!,
             outletId,
             null,
             null,
@@ -425,69 +416,47 @@ class OrderDetailsController extends BaseController {
         // Continue with local database only
       }
 
-      // Find the highest bill number from orders
-      int maxOrderBillNumber = 0;
-
-      // Check bill numbers from API orders
-      for (final order in allOrders) {
-        if (order.billNumber.isNotEmpty) {
-          final billNum = int.tryParse(order.billNumber);
-          if (billNum != null && billNum > maxOrderBillNumber) {
-            maxOrderBillNumber = billNum;
+      String nextBillNumberStr = '1';
+      var resolvedFromApi = false;
+      final isOnline = await NetworkUtils.hasInternetConnection();
+      if (isOnline) {
+        try {
+          final nextResponse = await callApi(
+            apiClient.getNextBillNumber(outletId),
+            showLoader: false,
+          );
+          final nextBill =
+              nextResponse?['data']?['nextBillNumber']?.toString();
+          if (nextResponse?['status'] == 'success' &&
+              nextBill != null &&
+              nextBill.isNotEmpty) {
+            nextBillNumberStr = nextBill;
+            resolvedFromApi = true;
           }
+        } catch (e) {
+          debugPrint('⚠️ Could not fetch next bill number from API: $e');
         }
       }
 
-      // Check bill numbers from local orders
-      for (final order in localOrders) {
-        if (order.billNumber.isNotEmpty) {
-          final billNum = int.tryParse(order.billNumber);
-          if (billNum != null && billNum > maxOrderBillNumber) {
-            maxOrderBillNumber = billNum;
-          }
-        }
+      if (!resolvedFromApi) {
+        final billNumbers = <String>[
+          ...allOrders.map((order) => order.billNumber),
+          ...localOrders.map((order) => order.billNumber),
+        ];
+        nextBillNumberStr = computeNextBillNumber(
+          outletLastBillNumber: outletBillNumber,
+          orderBillNumbers: billNumbers,
+        ).toString();
       }
-
-      final nextFromOrders = maxOrderBillNumber > 0
-          ? maxOrderBillNumber + 1
-          : 1;
-      final nextBillNumber = outletBillNumber > nextFromOrders
-          ? outletBillNumber
-          : nextFromOrders;
-      final nextBillNumberStr = nextBillNumber.toString();
 
       debugPrint('📊 Bill number calculation:');
       debugPrint('   Outlet billNumber: $outletBillNumber');
-      debugPrint('   Max order billNumber: $maxOrderBillNumber');
-      debugPrint('   Next-from-orders: $nextFromOrders');
       debugPrint('   Next billNumber: $nextBillNumberStr');
 
-      // Generate next unique integer bill number
+      // Preview only — shown in UI, not sent to server on create.
       if (billNumber.text.isEmpty) {
         billNumber.text = nextBillNumberStr;
-        debugPrint('📌 Generated next integer bill number: ${billNumber.text}');
-      } else {
-        // Validate existing bill number is integer and unique
-        final currentBillNum = int.tryParse(billNumber.text.trim());
-        if (currentBillNum == null) {
-          // Not an integer, generate new one
-          billNumber.text = nextBillNumberStr;
-          debugPrint(
-            '⚠️ Bill number was not integer, generated new: ${billNumber.text}',
-          );
-        } else {
-          // Check if duplicate or lower than the next suggested number
-          final isDuplicate = await _checkBillNumberExists(
-            billNumber.text.trim(),
-          );
-          if (isDuplicate || currentBillNum < nextBillNumber) {
-            // If duplicate or less than base, generate next one
-            billNumber.text = nextBillNumberStr;
-            debugPrint(
-              '⚠️ Bill number was duplicate or invalid, generated new: ${billNumber.text}',
-            );
-          }
-        }
+        debugPrint('📌 Bill preview: ${billNumber.text}');
       }
 
       if (allOrders.isNotEmpty) {
@@ -505,21 +474,12 @@ class OrderDetailsController extends BaseController {
           final outletBillNumber = appPref.selectedOutlet?.billNumber ?? 0;
 
           final localOrders = await _db.getAllOrders(outletId: outletId);
-          int maxBill = outletBillNumber;
-
-          if (localOrders.isNotEmpty) {
-            // Find max integer bill number from local orders
-            for (final order in localOrders) {
-              final billNum = int.tryParse(order.billNumber);
-              if (billNum != null && billNum > maxBill) {
-                maxBill = billNum;
-              }
-            }
-          }
 
           if (billNumber.text.isEmpty) {
-            // Next bill should be one greater than current max
-            final finalBill = maxBill == 0 ? 1 : maxBill + 1;
+            final finalBill = computeNextBillNumber(
+              outletLastBillNumber: outletBillNumber,
+              orderBillNumbers: localOrders.map((order) => order.billNumber),
+            );
             billNumber.text = finalBill.toString();
           }
         } else {

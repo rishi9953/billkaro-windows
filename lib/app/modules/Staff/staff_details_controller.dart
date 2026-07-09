@@ -20,6 +20,28 @@ class StaffMember {
   final String email;
   final bool isActive;
   final List<String> permissions;
+
+  /// API uses `role: staff` for account type; actual role is in `staffRole`.
+  static String roleFromApiMap(
+    Map<String, dynamic> raw, [
+    Map<String, dynamic>? userMap,
+  ]) {
+    String asString(dynamic value) => value?.toString().trim() ?? '';
+
+    final staffRole = asString(raw['staffRole']);
+    if (staffRole.isNotEmpty) return staffRole;
+
+    final userRole = asString(raw['userRole']);
+    if (userRole.isNotEmpty) return userRole;
+
+    final role = asString(raw['role']);
+    if (role.isNotEmpty && role.toLowerCase() != 'staff') return role;
+
+    final nestedStaffRole = asString(userMap?['staffRole']);
+    if (nestedStaffRole.isNotEmpty) return nestedStaffRole;
+
+    return asString(userMap?['role']);
+  }
 }
 
 class StaffDetailsController extends BaseController {
@@ -68,7 +90,10 @@ class StaffDetailsController extends BaseController {
       return;
     }
 
-    isLoading.value = true;
+    final showBlockingLoader = staffList.isEmpty;
+    if (showBlockingLoader) {
+      isLoading.value = true;
+    }
     try {
       final response = await callApi(
         apiClient.getStaffList(outletId),
@@ -76,7 +101,9 @@ class StaffDetailsController extends BaseController {
       );
       staffList.value = _extractStaffList(response);
     } finally {
-      isLoading.value = false;
+      if (showBlockingLoader) {
+        isLoading.value = false;
+      }
     }
   }
 
@@ -84,10 +111,8 @@ class StaffDetailsController extends BaseController {
     final result = await Modular.to.pushNamed(HomeMainRoutes.addStaffScreen);
     final created =
         result == true || (result is Map && result['created'] == true);
-    if (!created) {
-      await loadStaffList();
-      return;
-    }
+    if (!created) return;
+
     await loadStaffList();
     final message = result is Map
         ? (result['message']?.toString() ?? '').trim()
@@ -106,6 +131,7 @@ class StaffDetailsController extends BaseController {
     final isUpdated =
         result == true || (result is Map && result['updated'] == true);
     if (!isUpdated) return;
+    if (result is Map && result['handled'] == true) return;
     await loadStaffList();
     final message = result is Map
         ? (result['message']?.toString() ?? '').trim()
@@ -200,11 +226,7 @@ class StaffDetailsController extends BaseController {
   StaffMember _toStaffMember(Map<String, dynamic> raw) {
     final user = raw['user'];
     final userMap = user is Map ? Map<String, dynamic>.from(user) : null;
-    final role = _asString(raw['role']).isNotEmpty
-        ? _asString(raw['role'])
-        : _asString(raw['userRole']).isNotEmpty
-        ? _asString(raw['userRole'])
-        : _asString(userMap?['role']);
+    final role = StaffMember.roleFromApiMap(raw, userMap);
 
     return StaffMember(
       id: _firstNonEmpty([

@@ -1,10 +1,13 @@
 import 'package:billkaro/app/modules/AppSettings/app_settings_controller.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
+import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_dialogs.dart';
 import 'package:billkaro/app/modules/Theme/theme_controller.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/helpers/cash_drawer_helper.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/kitchen_display_browser.dart';
+import 'package:billkaro/utils/po_print_orientation.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 
 class AppSettingsScreen extends StatelessWidget {
@@ -46,6 +49,14 @@ class AppSettingsScreen extends StatelessWidget {
                     value: controller.isListView,
                     onChanged: controller.setListView,
                   ),
+                  _buildActionOrNavTile(
+                    icon: Icons.description_outlined,
+                    title: loc.settings_po_terms,
+                    subtitle: loc.settings_po_terms_subtitle,
+                    onTap: showPoDefaultTermsSettingsDialog,
+                    showChevron: true,
+                  ),
+                  _buildPoPrintOrientationTile(loc),
                   _buildSwitchTile(
                     icon: Icons.qr_code_2_outlined,
                     title: loc.show_qr_on_bill,
@@ -67,6 +78,7 @@ class AppSettingsScreen extends StatelessWidget {
                     value: controller.autoSyncEnabled,
                     onChanged: controller.setAutoSyncEnabled,
                   ),
+
                   Obx(() {
                     final drawerOn = controller.cashDrawerEnabled.value;
                     return Column(
@@ -85,7 +97,8 @@ class AppSettingsScreen extends StatelessWidget {
                             subtitle:
                                 loc.open_cash_drawer_on_cash_payment_subtitle,
                             value: controller.openCashDrawerOnCashPayment,
-                            onChanged: controller.setOpenCashDrawerOnCashPayment,
+                            onChanged:
+                                controller.setOpenCashDrawerOnCashPayment,
                           ),
                           _buildCashDrawerPinTile(context, loc),
                         ],
@@ -140,18 +153,7 @@ class AppSettingsScreen extends StatelessWidget {
                         ],
                       );
                     }),
-                  _buildActionOrNavTile(
-                    icon: Icons.tour_outlined,
-                    title: loc.show_onboarding_again,
-                    subtitle: loc.show_onboarding_again_subtitle,
-                    onTap: () {
-                      controller.resetOnboarding();
-                      Get.back();
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        Modular.to.navigate(HomeMainRoutes.home);
-                      });
-                    },
-                  ),
+
                   Obx(
                     () => _buildActionOrNavTile(
                       icon: Icons.folder_open_outlined,
@@ -414,6 +416,37 @@ class AppSettingsScreen extends StatelessWidget {
     });
   }
 
+  Widget _buildPoPrintOrientationTile(AppLocalizations loc) {
+    return Obx(() {
+      final selected = controller.poPrintOrientation.value;
+      return _buildTile(
+        icon: Icons.print_outlined,
+        title: loc.settings_po_print_orientation,
+        subtitle: loc.settings_po_print_orientation_subtitle,
+        trailing: SegmentedButton<PoPrintOrientation>(
+          segments: [
+            ButtonSegment(
+              value: PoPrintOrientation.portrait,
+              label: Text(loc.po_print_portrait),
+            ),
+            ButtonSegment(
+              value: PoPrintOrientation.landscape,
+              label: Text(loc.po_print_landscape),
+            ),
+          ],
+          selected: {selected},
+          onSelectionChanged: (set) {
+            controller.setPoPrintOrientation(set.first);
+          },
+          style: const ButtonStyle(
+            visualDensity: VisualDensity.compact,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+      );
+    });
+  }
+
   Widget _buildActionOrNavTile({
     required IconData icon,
     required String title,
@@ -629,10 +662,7 @@ class AppSettingsScreen extends StatelessWidget {
 }
 
 class _ThemeHexInputRow extends StatefulWidget {
-  const _ThemeHexInputRow({
-    required this.themeController,
-    required this.loc,
-  });
+  const _ThemeHexInputRow({required this.themeController, required this.loc});
 
   final ThemeController themeController;
   final AppLocalizations loc;

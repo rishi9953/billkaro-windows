@@ -183,14 +183,18 @@ String buildRegularCustomerWelcomeMessage({
   required String outletName,
   required String customerName,
   required String phoneNumber,
-  required int loyaltyDiscount,
+  required double loyaltyDiscount,
+  String loyaltyDiscountType = 'percentage',
 }) {
   final digits = phoneNumber.replaceAll(RegExp(r'\D'), '');
   final displayPhone = digits.length >= 10
       ? '+91${digits.substring(digits.length - 10)}'
       : phoneNumber;
+  final isAmount = loyaltyDiscountType == 'amount';
   final discountLine = loyaltyDiscount > 0
-      ? 'Loyalty Discount: $loyaltyDiscount% on your orders'
+      ? isAmount
+          ? 'Loyalty Discount: ₹$loyaltyDiscount off on your orders'
+          : 'Loyalty Discount: $loyaltyDiscount% on your orders'
       : 'You are now registered as our regular customer';
 
   return '''Hello $customerName! 👋
@@ -228,7 +232,8 @@ Future<void> openWhatsApp(
 Future<void> sendRegularCustomerWelcomeWhatsApp({
   required String phoneNumber,
   required String customerName,
-  required int loyaltyDiscount,
+  required double loyaltyDiscount,
+  String loyaltyDiscountType = 'percentage',
   required String outletName,
   bool serverSent = false,
 }) async {
@@ -239,6 +244,7 @@ Future<void> sendRegularCustomerWelcomeWhatsApp({
     customerName: customerName,
     phoneNumber: phoneNumber,
     loyaltyDiscount: loyaltyDiscount,
+    loyaltyDiscountType: loyaltyDiscountType,
   );
   await openWhatsApp(phoneNumber, message: message);
 }

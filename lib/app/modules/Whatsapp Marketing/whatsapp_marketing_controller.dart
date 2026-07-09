@@ -1,7 +1,6 @@
-import 'package:billkaro/app/services/Modals/whatsapp/whatsapp_marketing_request.dart';
-import 'package:billkaro/app/services/Modals/whatsapp/whatsapp_marketing_response.dart';
+import 'package:billkaro/app/modules/Whatsapp%20Marketing/twilioapi_service.dart';
+import 'package:billkaro/app/services/Modals/customer/customerResponse.dart';
 import 'package:billkaro/config/config.dart';
-import 'package:dio/dio.dart';
 
 class WhatsappMarketingController extends BaseController
     with WidgetsBindingObserver {
@@ -37,24 +36,32 @@ class WhatsappMarketingController extends BaseController
   @override
   void didChangeMetrics() {}
 
-  Future<void> _loadRecipientCount() async {
+  Future<List<String>> _loadRecipientPhones() async {
     final outletId = appPref.selectedOutlet?.id;
-    if (outletId == null) return;
+    if (outletId == null) return [];
 
     try {
-      final response = await callApi(
+      final response = await callApi<CustomerResponse>(
         apiClient.getRegularCustomer(outletId),
         showLoader: false,
       );
 
-      if (response?.status == 'success') {
-        recipientCount.value = response!.data
-            .map((c) => c.phoneNumber.trim())
-            .where((phone) => phone.isNotEmpty)
-            .toSet()
-            .length;
-      }
-    } catch (_) {}
+      if (response?.status != 'success') return [];
+
+      return response!.data
+          .map((c) => c.phoneNumber.trim())
+          .where((phone) => phone.isNotEmpty)
+          .map(TwilioWhatsAppService.formatPhoneNumber)
+          .toSet()
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> _loadRecipientCount() async {
+    final phones = await _loadRecipientPhones();
+    recipientCount.value = phones.length;
   }
 
   Future<void> sendBulkWhatsAppMessages(String templateType) async {
@@ -78,13 +85,23 @@ class WhatsappMarketingController extends BaseController
     }
 
     final outletId = appPref.selectedOutlet?.id;
-    final userId = appPref.user?.id;
-    if (outletId == null || userId == null) {
+    if (outletId == null) {
       showError(description: loc.outlet_or_user_info_missing);
       return;
     }
 
-    final count = recipientCount.value;
+    if (TwilioWhatsAppService.accountSid.isEmpty ||
+        TwilioWhatsAppService.authToken.isEmpty ||
+        TwilioWhatsAppService.fromWhatsAppNumber.isEmpty) {
+      showError(
+        description:
+            'Twilio WhatsApp is not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_WHATSAPP_NUMBER to your production sender in .env',
+      );
+      return;
+    }
+
+    final phones = await _loadRecipientPhones();
+    final count = phones.length;
     if (count == 0) {
       showError(description: loc.no_customers_with_phone);
       return;
@@ -112,6 +129,7 @@ class WhatsappMarketingController extends BaseController
     isSending.value = true;
     sendingProgress.value = 0;
     totalMessages.value = count;
+    recipientCount.value = count;
 
     try {
       final message = generateMessage(templateType);
@@ -127,7 +145,9 @@ class WhatsappMarketingController extends BaseController
                 children: [
                   const CircularProgressIndicator(),
                   const SizedBox(height: 16),
-                  Text(loc.sending_to_customers(totalMessages.value.toString())),
+                  Text(
+                    loc.sending_to_customers(sendingProgress.value.toString()),
+                  ),
                   const SizedBox(height: 8),
                   Text(loc.please_wait_sending),
                 ],
@@ -138,74 +158,41 @@ class WhatsappMarketingController extends BaseController
         barrierDismissible: false,
       );
 
-      final dio = Get.find<Dio>();
-      final previousReceiveTimeout = dio.options.receiveTimeout;
-      final previousSendTimeout = dio.options.sendTimeout;
-      final bulkTimeout = Duration(seconds: (count * 3).clamp(60, 600));
-
-      dio.options.receiveTimeout = bulkTimeout;
-      dio.options.sendTimeout = bulkTimeout;
-
-      WhatsappMarketingResponse? response;
-      try {
-        response = await callApi(
-          apiClient.sendBulkWhatsappMarketing(
-            outletId,
-            WhatsappMarketingRequest(
-              userId: userId,
-              templateType: templateType,
-              message: message,
-              restaurantName: restaurantNameController.text.trim(),
-              discountValue: templateType == 'discount'
-                  ? discountValueController.text.trim()
-                  : null,
-              festivalName: templateType == 'festival'
-                  ? festivalNameController.text.trim()
-                  : null,
-            ),
-          ),
-          showLoader: false,
-        );
-      } finally {
-        dio.options.receiveTimeout = previousReceiveTimeout;
-        dio.options.sendTimeout = previousSendTimeout;
-      }
+      final result = await TwilioWhatsAppService.sendBulkMessages(
+        phoneNumbers: phones,
+        message: message,
+        onProgress: (current, total) {
+          sendingProgress.value = current;
+          totalMessages.value = total;
+        },
+      );
 
       if (Get.isDialogOpen == true) Get.back();
 
-      final result = response?.data;
-      if (result == null) {
-        showError(description: loc.request_timed_out_bulk);
-        return;
-      }
+      final successCount = result['successCount'] as int? ?? 0;
+      final failureCount = result['failureCount'] as int? ?? 0;
+      final total = result['total'] as int? ?? count;
 
-      if (result.success) {
+      if (result['success'] == true) {
         showSuccess(
-          description: loc.successfully_sent_messages(result.successCount),
+          description: loc.successfully_sent_messages(successCount),
+        );
+      } else if (successCount > 0) {
+        showError(
+          description: loc.sent_failed_summary(successCount, failureCount),
         );
       } else {
-        showError(
-          description: loc.sent_failed_summary(
-            result.successCount,
-            result.failureCount,
-          ),
-        );
+        showError(description: loc.failed_to_send_messages(
+          result['errors']?.toString() ?? loc.unknown_error,
+        ));
       }
 
       showResultsDialog({
-        'success': result.success,
-        'total': result.total,
-        'successCount': result.successCount,
-        'failureCount': result.failureCount,
-        'results': result.results
-            .map(
-              (item) => {
-                'success': item.success,
-                'to': item.to,
-                'error': item.error,
-              },
-            )
-            .toList(),
+        'success': result['success'] == true,
+        'total': total,
+        'successCount': successCount,
+        'failureCount': failureCount,
+        'results': result['results'] ?? [],
       });
     } catch (e) {
       if (Get.isDialogOpen == true) Get.back();

@@ -1,6 +1,8 @@
 import 'package:billkaro/app/services/Modals/login_modal.dart';
+import 'package:billkaro/app/services/Modals/login_response.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/staff_outlet_sync.dart';
+import 'dart:async';
 
 class LoginController extends BaseController {
   /// 0 = business user (auth/login), 1 = staff (auth/staff/login).
@@ -8,6 +10,13 @@ class LoginController extends BaseController {
 
   /// 0 = email & password, 1 = phone number (UI only).
   var loginMethodTabIndex = 0.obs;
+
+  /// Phone OTP step: false = enter phone, true = enter OTP.
+  var phoneOtpSent = false.obs;
+  var otpResendSeconds = 0.obs;
+
+  /// Locked when OTP is sent — mirrors staff vs user tab at send time.
+  var otpIsStaffSession = false.obs;
 
   // Observable variables
   var toggle = true.obs;
@@ -18,6 +27,9 @@ class LoginController extends BaseController {
   final registrationKeyController = TextEditingController();
   final deviceLabelController = TextEditingController();
   final phoneNumberController = TextEditingController();
+  final otpController = TextEditingController();
+
+  Timer? _otpResendTimer;
 
   // Text editing controllers for Request Key form
   final accountNumberController = TextEditingController();
@@ -29,10 +41,12 @@ class LoginController extends BaseController {
 
   @override
   void onClose() {
+    _otpResendTimer?.cancel();
     // Dispose controllers to prevent memory leaks
     registrationKeyController.dispose();
     deviceLabelController.dispose();
     phoneNumberController.dispose();
+    otpController.dispose();
     accountNumberController.dispose();
     emailOrPhoneController.dispose();
     super.onClose();
@@ -48,8 +62,153 @@ class LoginController extends BaseController {
     registrationKeyController.clear();
     deviceLabelController.clear();
     phoneNumberController.clear();
+    otpController.clear();
     accountNumberController.clear();
     emailOrPhoneController.clear();
+    phoneOtpSent.value = false;
+    otpResendSeconds.value = 0;
+    otpIsStaffSession.value = false;
+    _otpResendTimer?.cancel();
+  }
+
+  String get fullPhoneNumber {
+    final digits = phoneNumberController.text.trim().replaceAll(
+      RegExp(r'\D'),
+      '',
+    );
+    if (digits.length >= 10) {
+      final last10 = digits.length > 10
+          ? digits.substring(digits.length - 10)
+          : digits;
+      return '+91$last10';
+    }
+    return digits;
+  }
+
+  String? validatePhoneNumber(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your phone number';
+    }
+    final digits = value.replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 10) {
+      return 'Please enter a valid 10-digit phone number';
+    }
+    return null;
+  }
+
+  String? validateOtp(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter the OTP';
+    }
+    if (!RegExp(r'^\d{6}$').hasMatch(value.trim())) {
+      return 'OTP must be 6 digits';
+    }
+    return null;
+  }
+
+  void _startOtpResendTimer() {
+    _otpResendTimer?.cancel();
+    otpResendSeconds.value = 60;
+    _otpResendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (otpResendSeconds.value <= 1) {
+        otpResendSeconds.value = 0;
+        timer.cancel();
+      } else {
+        otpResendSeconds.value -= 1;
+      }
+    });
+  }
+
+  Future<void> onSendPhoneOtp({bool isResend = false}) async {
+    if (isResend) {
+      if (validatePhoneNumber(phoneNumberController.text) != null) {
+        return;
+      }
+    } else if (!addDeviceFormKey.currentState!.validate()) {
+      return;
+    }
+
+    final isStaff = signInTabIndex.value == 1;
+    otpIsStaffSession.value = isStaff;
+
+    try {
+      isLoading.value = true;
+      final phone = fullPhoneNumber;
+      final response = await callApi(
+        isStaff
+            ? apiClient.sendStaffPhoneOtp({'phone': phone})
+            : apiClient.sendPhoneOtp({'phone': phone}),
+        showLoader: false,
+      );
+
+      if (response == null) {
+        showError(description: 'Failed to send OTP. Please try again.');
+        return;
+      }
+
+      phoneOtpSent.value = true;
+      otpController.clear();
+      _startOtpResendTimer();
+      showSuccess(description: 'OTP sent to $phone');
+    } catch (e) {
+      debugPrint('Send OTP error: $e');
+      showError(
+        description:
+            'Failed to send OTP. Please check your phone number and try again.',
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> onVerifyPhoneOtp() async {
+    if (!addDeviceFormKey.currentState!.validate()) {
+      return;
+    }
+
+    try {
+      isLoading.value = true;
+      final isStaff = otpIsStaffSession.value;
+      final response = await callApi(
+        isStaff
+            ? apiClient.verifyStaffPhoneOtp({
+                'phone': fullPhoneNumber,
+                'otp': otpController.text.trim(),
+              })
+            : apiClient.verifyPhoneOtp({
+                'phone': fullPhoneNumber,
+                'otp': otpController.text.trim(),
+              }),
+        showLoader: false,
+      );
+
+      debugPrint('Phone OTP login response: $response');
+      if (response == null) {
+        showError(description: 'Invalid OTP. Please try again.');
+        return;
+      }
+
+      await _completeLogin(response, isStaff: isStaff);
+    } catch (e) {
+      debugPrint('Verify OTP error: $e');
+      showError(description: 'Invalid OTP. Please try again.');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  void onChangePhoneNumber() {
+    phoneOtpSent.value = false;
+    otpController.clear();
+    otpResendSeconds.value = 0;
+    _otpResendTimer?.cancel();
+  }
+
+  void onSignInTabChanged(int index) {
+    signInTabIndex.value = index;
+    phoneNumberController.clear();
+    onChangePhoneNumber();
+    otpIsStaffSession.value = index == 1;
   }
 
   // Validation methods
@@ -180,29 +339,7 @@ class LoginController extends BaseController {
         return;
       }
 
-      appPref.token = response.accessToken;
-      appPref.isStaffSession = isStaff;
-      appPref.user = response.user;
-      appPref.staffPermissions = response.user.permissions ?? [];
-
-      final outlets = response.user.outletData;
-      if (outlets == null || outlets.isEmpty) {
-        showError(
-          description:
-              'No outlet is linked to this account. Please contact support or complete outlet setup.',
-        );
-        return;
-      }
-
-      appPref.selectedOutlet = outlets.first;
-      if (isStaff) {
-        await StaffOutletSync.enrichAppPrefFromOwner(
-          appPref: appPref,
-          staffUser: response.user,
-          apiClient: apiClient,
-        );
-      }
-      Get.offAllNamed(AppRoute.homeMain);
+      await _completeLogin(response, isStaff: isStaff);
     } catch (e) {
       debugPrint('Error during login: $e');
       showError(
@@ -212,6 +349,43 @@ class LoginController extends BaseController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  Future<void> _completeLogin(
+    LoginResponse response, {
+    required bool isStaff,
+  }) async {
+    final roleIsStaff = response.user.role == 'staff';
+    if (isStaff && !roleIsStaff) {
+      showError(
+        description: 'No activated staff account found for this phone number.',
+      );
+      return;
+    }
+
+    appPref.token = response.accessToken;
+    appPref.isStaffSession = roleIsStaff;
+    appPref.user = response.user;
+    appPref.staffPermissions = response.user.permissions ?? [];
+
+    final outlets = response.user.outletData;
+    if (outlets == null || outlets.isEmpty) {
+      showError(
+        description:
+            'No outlet is linked to this account. Please contact support or complete outlet setup.',
+      );
+      return;
+    }
+
+    appPref.selectedOutlet = outlets.first;
+    if (roleIsStaff) {
+      await StaffOutletSync.enrichAppPrefFromOwner(
+        appPref: appPref,
+        staffUser: response.user,
+        apiClient: apiClient,
+      );
+    }
+    Get.offAllNamed(AppRoute.homeMain);
   }
 
   // Show success dialog for forgot password

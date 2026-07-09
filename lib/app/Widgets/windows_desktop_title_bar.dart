@@ -1,7 +1,20 @@
+import 'dart:io';
+
 import 'package:billkaro/utils/exit_confirm_helper.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+/// Height of [WindowsDesktopTitleBar]; keep loaders/overlays below this so
+/// min/max/close stay clickable while a global loader is visible.
+const double kWindowsDesktopTitleBarHeight = 34;
+
+/// Top inset for full-screen overlays/drawers on Windows desktop.
+double desktopOverlayTopInset() {
+  if (!kIsWeb && Platform.isWindows) return kWindowsDesktopTitleBarHeight;
+  return 0;
+}
 
 /// Custom title bar for Windows when using [bitsdojo_window] with a frameless
 /// window — native min/max/close are hidden, so these controls must be drawn.
@@ -46,7 +59,7 @@ class WindowsDesktopTitleBar extends StatelessWidget {
 
     return WindowTitleBarBox(
       child: Container(
-        height: 34,
+        height: kWindowsDesktopTitleBarHeight,
         color: const Color(0xFF15191D),
         child: Row(
           children: [

@@ -37,6 +37,14 @@ class HoldOrdersController extends BaseController {
         return;
       }
 
+      final userId = appPref.ordersApiUserId;
+      if (userId == null || userId.isEmpty) {
+        if (!loadMore) {
+          showError(description: 'User or outlet information is missing.');
+        }
+        return;
+      }
+
       List<OrderModel> apiOrders = [];
       List<OrderModel> localOrders = [];
 
@@ -53,7 +61,7 @@ class HoldOrdersController extends BaseController {
 
         final response = await callApi(
           apiClient.getOrders(
-            appPref.user!.id!,
+            userId,
             outletId,
             loadMore ? currentPage.value : 1, // page
             ordersPerPage, // limit

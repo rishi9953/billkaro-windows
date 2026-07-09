@@ -1,12 +1,33 @@
 import 'package:billkaro/app/modules/Invoice/invoice_controller.dart';
 import 'package:billkaro/config/config.dart';
-import 'package:flutter_modular/flutter_modular.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
-class InvoicePreviewScreen extends StatelessWidget {
-  final controller = Get.put(InvoicePreviewController());
+class InvoicePreviewScreen extends StatefulWidget {
+  const InvoicePreviewScreen({super.key});
 
-  InvoicePreviewScreen({super.key});
+  @override
+  State<InvoicePreviewScreen> createState() => _InvoicePreviewScreenState();
+}
+
+class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
+  late final InvoicePreviewController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    if (Get.isRegistered<InvoicePreviewController>()) {
+      Get.delete<InvoicePreviewController>(force: true);
+    }
+    controller = Get.put(InvoicePreviewController());
+  }
+
+  @override
+  void dispose() {
+    if (Get.isRegistered<InvoicePreviewController>()) {
+      Get.delete<InvoicePreviewController>(force: true);
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +78,7 @@ class InvoicePreviewScreen extends StatelessWidget {
                             Text('${controller.appPref.user!.brandName},'),
                             Text(controller.businessName.value),
                             Text(
-                              '${controller.appPref.user!.address!} ${controller.appPref.user!.city!} ${controller.appPref.user!.zipcode!}\n${controller.appPref.user!.state!}',
+                              controller.appPref.user!.address!,
                               textAlign: TextAlign.center,
                             ),
 

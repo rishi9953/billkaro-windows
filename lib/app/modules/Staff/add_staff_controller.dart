@@ -33,6 +33,7 @@ class AddStaffController extends BaseController {
   }
 
   void _hydrateFromArgs() {
+    clearForm();
     final dynamic rawArgs = Get.arguments ?? Modular.args.data;
     if (rawArgs is StaffMember) {
       editingStaff = rawArgs;
@@ -40,8 +41,9 @@ class AddStaffController extends BaseController {
       emailController.text = rawArgs.email;
       phoneNumberController.text = _normalizePhone(rawArgs.phone);
       selectedRole.value = _normalizeRole(rawArgs.role);
-      final permissions =
-          rawArgs.permissions.map((item) => item.trim()).toSet();
+      final permissions = rawArgs.permissions
+          .map((item) => item.trim())
+          .toSet();
       canManageBills.value = permissions.contains('create_bill');
       canEditMenuItems.value = permissions.contains('edit_menu');
     }
@@ -131,13 +133,21 @@ class AddStaffController extends BaseController {
         'userRole': role,
         'permissions': permissions,
       }),
+      showLoader: false,
     );
 
     if (response == null) return;
-    _popWithResult({
-      'created': true,
-      'message': loc.invite_sent_successfully,
-    });
+    _popWithResult({'created': true, 'message': loc.invite_sent_successfully});
+  }
+
+  void clearForm() {
+    editingStaff = null;
+    userNameController.clear();
+    emailController.clear();
+    phoneNumberController.clear();
+    selectedRole.value = 'Secondary Admin';
+    canManageBills.value = false;
+    canEditMenuItems.value = false;
   }
 
   Future<void> onUpdateStaff() async {
@@ -204,18 +214,34 @@ class AddStaffController extends BaseController {
       }),
     );
     if (response == null) return;
+
+    final message = loc.staff_member_updated_successfully;
+    if (Get.isRegistered<StaffDetailsController>()) {
+      await Get.find<StaffDetailsController>().loadStaffList();
+    }
+
     _popWithResult({
       'updated': true,
-      'message': loc.staff_member_updated_successfully,
+      'message': message,
+      'handled': true,
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showSuccess(description: message);
     });
   }
 
   void _popWithResult(Map<String, dynamic> result) {
+    final context = Get.context;
+    if (context != null && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop(result);
+      return;
+    }
     if (Modular.to.canPop()) {
       Modular.to.pop(result);
-    } else {
-      Get.back(result: result);
+      return;
     }
+    Get.back(result: result);
   }
 
   String _normalizeRole(String role) {

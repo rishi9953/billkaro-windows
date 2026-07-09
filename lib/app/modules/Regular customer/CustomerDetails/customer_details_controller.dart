@@ -8,6 +8,7 @@ class CustomerDetailsController extends BaseController {
   final customerName = ''.obs;
   final phoneNumber = ''.obs;
   final loyaltyDiscount = 0.0.obs;
+  final loyaltyDiscountType = 'percentage'.obs;
   final avgOrder = 0.0.obs;
   final totalDiscount = 0.0.obs;
   final totalVisits = 0.obs;
@@ -31,6 +32,7 @@ class CustomerDetailsController extends BaseController {
       phoneNumber.value = rawArgs.phoneNumber;
       loyaltyDiscount.value =
           double.tryParse(rawArgs.loyalityDiscount.toString()) ?? 0.0;
+      loyaltyDiscountType.value = rawArgs.loyalityDiscountType;
     } else if (rawArgs != null) {
       debugPrint(
         '[CustomerDetailsController] Unexpected args type: ${rawArgs.runtimeType}',
@@ -77,6 +79,7 @@ class CustomerDetailsController extends BaseController {
         phoneNumber.value = data.customer.phoneNumber;
         loyaltyDiscount.value =
             double.tryParse(data.customer.loyalityDiscount.toString()) ?? 0.0;
+        loyaltyDiscountType.value = data.customer.loyalityDiscountType;
         avgOrder.value = data.stats.avgOrder;
         totalDiscount.value = data.stats.totalDiscount;
         totalVisits.value = data.stats.totalVisits;

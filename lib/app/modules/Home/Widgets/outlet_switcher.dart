@@ -1,6 +1,7 @@
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/services/Modals/login_response.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -67,6 +68,7 @@ class _OutletSwitcherButtonState extends State<OutletSwitcherButton> {
     if (!mounted || result == null) return;
 
     if (result == _manageOutletsValue) {
+      if (StaffAccess.isStaffSession) return;
       widget.controller.showOutletBottomSheet(context);
       return;
     }
@@ -192,98 +194,100 @@ class _OutletSwitcherButtonState extends State<OutletSwitcherButton> {
     }
 
     items.add(const PopupMenuDivider(height: 1));
-    items.add(
-      PopupMenuItem<String>(
-        value: _manageOutletsValue,
-        padding: const EdgeInsets.fromLTRB(10, 4, 10, 10),
-        height: 52,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-          decoration: BoxDecoration(
-            color: AppColor.primary.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColor.primary.withOpacity(0.12)),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.tune_rounded, size: 17, color: AppColor.primary),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  _loc.home_manage_outlets,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColor.primary,
+    if (!StaffAccess.isStaffSession) {
+      items.add(
+        PopupMenuItem<String>(
+          value: _manageOutletsValue,
+          padding: const EdgeInsets.fromLTRB(10, 4, 10, 10),
+          height: 52,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+            decoration: BoxDecoration(
+              color: AppColor.primary.withOpacity(0.06),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColor.primary.withOpacity(0.12)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.tune_rounded, size: 17, color: AppColor.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _loc.home_manage_outlets,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColor.primary,
+                    ),
                   ),
                 ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 12,
-                color: AppColor.primary.withOpacity(0.8),
-              ),
-            ],
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 12,
+                  color: AppColor.primary.withOpacity(0.8),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    }
 
     return items;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() {
-      final selected = widget.controller.selectedOutlet.value;
-      final name = widget.controller.selectedOutletName.capitalizeFirst!;
-
-      return MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          key: _anchorKey,
-          onTap: _openMenu,
-          behavior: HitTestBehavior.opaque,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            width: double.infinity,
-            margin: const EdgeInsets.only(left: 12, top: 8, bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.14),
-              border: Border.all(color: Colors.white.withOpacity(0.28)),
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.10),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                _OutletLogoAvatar(
-                  logoUrl: selected?.logo,
-                  name: name,
-                  size: 26,
-                  borderRadius: 6,
-                  onDarkBackground: true,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.1,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
+  Widget _buildOutletChip({
+    required String name,
+    required OutletData? selected,
+    required bool interactive,
+  }) {
+    return MouseRegion(
+      cursor: interactive ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      child: GestureDetector(
+        key: interactive ? _anchorKey : null,
+        onTap: interactive ? _openMenu : null,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: double.infinity,
+          margin: const EdgeInsets.only(left: 12, top: 8, bottom: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.14),
+            border: Border.all(color: Colors.white.withOpacity(0.28)),
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.10),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              _OutletLogoAvatar(
+                logoUrl: selected?.logo,
+                name: name,
+                size: 26,
+                borderRadius: 6,
+                onDarkBackground: true,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.1,
                   ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
+              ),
+              if (interactive) ...[
                 const SizedBox(width: 4),
                 Icon(
                   Icons.keyboard_arrow_down_rounded,
@@ -291,9 +295,26 @@ class _OutletSwitcherButtonState extends State<OutletSwitcherButton> {
                   size: 20,
                 ),
               ],
-            ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final selected = widget.controller.selectedOutlet.value;
+      final name = widget.controller.selectedOutletName.capitalizeFirst!;
+      final isStaff = StaffAccess.isStaffSession;
+      final outletCount = widget.controller.appPref.allOutlets.length;
+      final canSwitchOutlets = !isStaff && outletCount > 1;
+
+      return _buildOutletChip(
+        name: name,
+        selected: selected,
+        interactive: canSwitchOutlets,
       );
     });
   }

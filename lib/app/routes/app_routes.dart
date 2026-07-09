@@ -18,6 +18,7 @@ import 'package:billkaro/app/modules/Order/ClosedOrders/closed_orders_screen.dar
 import 'package:billkaro/app/modules/Order/HoldOrders/hold_orders_screen.dart';
 import 'package:billkaro/app/modules/Tables/table_screen.dart';
 import 'package:billkaro/app/modules/OrderPrefrences/order_prefrences_screen.dart';
+import 'package:billkaro/app/modules/Outlets/outlet_controller.dart';
 import 'package:billkaro/app/modules/Outlets/outlet_screen.dart';
 import 'package:billkaro/app/modules/Primary_contact/primary_contact_screen.dart';
 import 'package:billkaro/app/modules/Printer/printer_screen.dart';
@@ -241,6 +242,7 @@ abstract class AppRoute {
       name: createOutlet,
       page: CreateOutletScreen.new,
       transition: transition,
+      binding: BindingsBuilder(() => Get.lazyPut(() => CreateOutletController())),
     ),
     GetPage(
       name: subscriptionReview,

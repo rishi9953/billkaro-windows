@@ -2,6 +2,7 @@
 
 import 'package:billkaro/app/services/Modals/Subscriptions/subscription_response.dart';
 import 'package:billkaro/app/services/common_function.dart';
+import 'package:billkaro/app/services/outlet_scope_refresh.dart';
 import 'package:billkaro/app/services/razorpay/razorpay_service.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
@@ -88,15 +89,7 @@ class SubscriptionController extends BaseController {
           description: loc.payment_successful_description,
         );
 
-        // Refresh subscription plans
-        await getSubscriptions();
-
-        // Navigate back to previous screen after dialog is dismissed
-        try {
-          Get.back();
-        } catch (e) {
-          debugPrint('Error navigating back: $e');
-        }
+        await completeSubscriptionPurchase();
       } else {
         // Safely extract message from paymentResponse
         String errorMsg = loc.payment_activation_failed;

@@ -1,9 +1,11 @@
+import 'package:billkaro/app/Widgets/app_dropdowns.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_item_controller.dart';
 import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/responsive.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -58,12 +60,11 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
   }
 
   void _onScroll() {
-    // Only trigger load more when viewing all items (not filtered by category)
+    // Load more when not searching (category filter is handled by the API)
     if (scrollController.hasClients &&
         scrollController.position.pixels >=
             scrollController.position.maxScrollExtent - 300) {
-      if (controller.selectedCategoryId.value == 'none' &&
-          controller.searchQuery.value.isEmpty) {
+      if (controller.searchQuery.value.isEmpty) {
         controller.loadMoreItems();
       }
     }
@@ -377,28 +378,28 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                 : const SizedBox.shrink(),
           ),
           const SizedBox(width: 12),
-          SizedBox(
-            height: 44,
-            child: OutlinedButton.icon(
-              onPressed: controller.importFromFile,
-              icon: const Icon(Icons.upload_file_outlined),
-              label: Text(loc.import_from_file),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColor.primary,
-                side: BorderSide(color: AppColor.primary),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
+
+          // SizedBox(
+          //   height: 44,
+          //   child: OutlinedButton.icon(
+          //     onPressed: controller.importFromFile,
+          //     icon: const Icon(Icons.upload_file_outlined),
+          //     label: Text(loc.import_from_file),
+          //     style: OutlinedButton.styleFrom(
+          //       foregroundColor: AppColor.primary,
+          //       side: BorderSide(color: AppColor.primary),
+          //       shape: RoundedRectangleBorder(
+          //         borderRadius: BorderRadius.circular(12),
+          //       ),
+          //     ),
+          //   ),
+          // ),
           SizedBox(
             height: 44,
             child: ElevatedButton.icon(
               onPressed: () => Modular.to.pushNamed(
                 HomeMainRoutes.addItem,
-                arguments: {'isEdit': false},
+                arguments: controller.buildAddItemArgs(),
               ),
               icon: const Icon(Icons.add),
               label: Text(loc.add_item),
@@ -410,6 +411,37 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                 ),
               ),
             ),
+          ),
+          const SizedBox(width: 8),
+          PopupMenuButton(
+            itemBuilder: (context) {
+              return [
+                PopupMenuItem(
+                  onTap: controller.importFromFile,
+                  child: Row(
+                    spacing: 10,
+                    children: [Assets.svg.download.svg(), Text('Import Items')],
+                  ),
+                ),
+                PopupMenuItem(
+                  onTap: controller.exportToFile,
+                  child: Row(
+                    spacing: 10,
+                    children: [Assets.svg.export.svg(), Text('Export Items')],
+                  ),
+                ),
+                PopupMenuItem(
+                  onTap: controller.downloadProductsTemplate,
+                  child: Row(
+                    spacing: 10,
+                    children: [
+                      Assets.svg.file.svg(),
+                      Text('Download Template'),
+                    ],
+                  ),
+                ),
+              ];
+            },
           ),
         ],
       ),
@@ -464,35 +496,36 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                   ),
                 ),
                 const Spacer(),
-                Tooltip(
-                  message: selectedCategory == null
-                      ? loc.select_category_to_edit
-                      : loc.edit_selected_category,
-                  child: IconButton(
-                    onPressed: selectedCategory == null
-                        ? null
-                        : () {
-                            final appPref = Get.find<AppPref>();
-                            if (!hasTrialOrSubscription(appPref)) {
-                              checkSubscription();
-                              return;
-                            }
-                            Modular.to.pushNamed(
-                              HomeMainRoutes.category,
-                              arguments: {
-                                'screen': 'item',
-                                'isEdit': true,
-                                'category': selectedCategory,
-                              },
-                            );
-                          },
-                    icon: const Icon(Icons.edit_outlined),
-                    iconSize: 18,
-                    visualDensity: VisualDensity.compact,
-                    splashRadius: 18,
-                    color: AppColor.primary,
+                if (selectedCategory != null)
+                  Tooltip(
+                    message: selectedCategory == null
+                        ? loc.select_category_to_edit
+                        : loc.edit_selected_category,
+                    child: IconButton(
+                      onPressed: selectedCategory == null
+                          ? null
+                          : () {
+                              final appPref = Get.find<AppPref>();
+                              if (!hasTrialOrSubscription(appPref)) {
+                                checkSubscription();
+                                return;
+                              }
+                              Modular.to.pushNamed(
+                                HomeMainRoutes.category,
+                                arguments: {
+                                  'screen': 'item',
+                                  'isEdit': true,
+                                  'category': selectedCategory,
+                                },
+                              );
+                            },
+                      icon: const Icon(Icons.edit_outlined),
+                      iconSize: 18,
+                      visualDensity: VisualDensity.compact,
+                      splashRadius: 18,
+                      color: AppColor.primary,
+                    ),
                   ),
-                ),
               ],
             ),
             const SizedBox(height: 10),
@@ -588,6 +621,15 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
         return Obx(() {
           final displayItems = controller.items;
           final searchQuery = controller.searchQuery.value;
+          final isCategoryLoading = controller.isCategoryLoading.value;
+
+          if (isCategoryLoading && displayItems.isEmpty) {
+            return Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppColor.primary),
+              ),
+            );
+          }
 
           if (displayItems.isEmpty) {
             return Center(
@@ -933,7 +975,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                   child: InkWell(
                     onTap: () => Modular.to.pushNamed(
                       HomeMainRoutes.addItem,
-                      arguments: {'isEdit': false},
+                      arguments: controller.buildAddItemArgs(),
                     ),
                     borderRadius: radius,
                     child: Container(
@@ -983,6 +1025,15 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
     return Obx(() {
       final displayItems = controller.items;
       final searchQuery = controller.searchQuery.value;
+      final isCategoryLoading = controller.isCategoryLoading.value;
+
+      if (isCategoryLoading && displayItems.isEmpty) {
+        return Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(AppColor.primary),
+          ),
+        );
+      }
 
       if (displayItems.isEmpty) {
         return Center(
@@ -1043,15 +1094,13 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
   Widget _buildBottomLoader(bool isTablet) {
     final loc = AppLocalizations.of(context)!;
     return Obx(() {
-      // Only show loader/messages when viewing all items without filters
-      final isViewingAll =
-          controller.selectedCategoryId.value == 'none' &&
-          controller.searchQuery.value.isEmpty;
+      // Show loader/messages when not searching
+      final isSearching = controller.searchQuery.value.isNotEmpty;
       final isLoading = controller.isLoadingMore.value;
       final hasMore = controller.hasMoreItems.value;
       final itemsCount = controller.items.length;
 
-      if (!isViewingAll) {
+      if (isSearching) {
         return SizedBox.shrink();
       }
 
@@ -1153,7 +1202,8 @@ class _DesktopCategoryTile extends StatelessWidget {
               Expanded(
                 child: Row(
                   children: [
-                    if (title != AppLocalizations.of(context)!.all)
+                    if (title != AppLocalizations.of(context)!.all &&
+                        image.isNotEmpty)
                       CachedNetworkImage(
                         imageUrl: image,
 
@@ -1480,27 +1530,22 @@ class _ItemCard extends StatelessWidget {
                           SizedBox(
                             height: isTablet ? 34 : 30,
                             width: isTablet ? 40 : 36,
-                            child: PopupMenuButton<String>(
-                              tooltip: loc.more_tooltip,
-                              padding: EdgeInsets.zero,
-                              iconSize: isTablet ? 22 : 20,
-                              icon: Icon(
+                            child: AppActionDropdown2<String>(
+                              customButton: Icon(
                                 Icons.more_vert,
+                                size: isTablet ? 22 : 20,
                                 color: Colors.grey.shade700,
                               ),
-                              onSelected: (value) {
-                                if (value == 'edit') {
-                                  Modular.to.pushNamed(
-                                    HomeMainRoutes.addItem,
-                                    arguments: {'item': item, 'isEdit': true},
-                                  );
-                                } else if (value == 'delete') {
-                                  controller.deleteItem(item);
-                                }
-                              },
-                              itemBuilder: (context) => [
-                                PopupMenuItem(
+                              width: 150,
+                              buttonStyleData: ButtonStyleData(
+                                height: isTablet ? 34 : 30,
+                                width: isTablet ? 40 : 36,
+                                padding: EdgeInsets.zero,
+                              ),
+                              items: [
+                                DropdownItem<String>(
                                   value: 'edit',
+                                  height: 44,
                                   child: Row(
                                     children: [
                                       const Icon(Icons.edit_outlined, size: 18),
@@ -1509,8 +1554,9 @@ class _ItemCard extends StatelessWidget {
                                     ],
                                   ),
                                 ),
-                                PopupMenuItem(
+                                DropdownItem<String>(
                                   value: 'delete',
+                                  height: 44,
                                   child: Row(
                                     children: [
                                       const Icon(
@@ -1523,27 +1569,41 @@ class _ItemCard extends StatelessWidget {
                                   ),
                                 ),
                               ],
+                              onChanged: (value) {
+                                if (value == 'edit') {
+                                  Modular.to.pushNamed(
+                                    HomeMainRoutes.addItem,
+                                    arguments: {'item': item, 'isEdit': true},
+                                  );
+                                } else if (value == 'delete') {
+                                  controller.deleteItem(item);
+                                }
+                              },
                             ),
                           ),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Obx(() {
-                              final isAvailable = controller.isItemAvailable(
-                                item.id,
-                              );
-                              return Switch(
-                                materialTapTargetSize:
-                                    MaterialTapTargetSize.shrinkWrap,
-                                value: isAvailable,
-                                onChanged: (value) {
-                                  controller.toggleItemAvailability(item.id);
-                                },
-                                activeColor: AppColor.primary.withOpacity(0.9),
-                                activeTrackColor: AppColor.primary.withOpacity(
-                                  0.2,
-                                ),
-                              );
-                            }),
+                          Tooltip(
+                            message: 'Availability',
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Obx(() {
+                                final isAvailable = controller.isItemAvailable(
+                                  item.id,
+                                );
+                                return Switch(
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  value: isAvailable,
+                                  onChanged: (value) {
+                                    controller.toggleItemAvailability(item.id);
+                                  },
+                                  activeColor: AppColor.primary.withOpacity(
+                                    0.9,
+                                  ),
+                                  activeTrackColor: AppColor.primary
+                                      .withOpacity(0.2),
+                                );
+                              }),
+                            ),
                           ),
                         ],
                       ),

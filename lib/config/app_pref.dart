@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:billkaro/app/services/Modals/login_response.dart';
 import 'package:billkaro/app/services/Modals/tables/tables_response.dart';
+import 'package:billkaro/utils/po_print_orientation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppPref {
@@ -33,11 +34,16 @@ class AppPref {
   static const String keyOpenCashDrawerOnCashPayment =
       'open_cash_drawer_on_cash_payment';
   static const String keyCashDrawerPin = 'cash_drawer_pin';
+  static const String keyPoDefaultTermsPrefix = 'po_default_terms_';
+  static const String keyPoPrintOrientation = 'po_print_orientation';
 
   /// True when the user signed in via the staff tab (`auth/staff/login`).
   static const String keyStaffSession = 'staff_session';
   static const String keyStaffPermissions = 'staff_permissions';
   static const String keyCachedTablesPrefix = 'cached_tables_';
+  static const String keyWalletBalancePrefix = 'wallet_balance_';
+  static const String keyWalletHistoryPrefix = 'wallet_history_';
+  static const String keyWalletInitializedPrefix = 'wallet_initialized_';
 
   AppPref(this._preferences);
 
@@ -89,9 +95,16 @@ class AppPref {
   String? get ownerUserId {
     final u = user;
     if (u == null) return null;
+    if (u.role == 'staff') {
+      final ownerId = u.userId?.trim();
+      return (ownerId == null || ownerId.isEmpty) ? null : ownerId;
+    }
     final id = (u.userId ?? u.id)?.trim();
     return (id == null || id.isEmpty) ? null : id;
   }
+
+  /// Business owner user id for order/report APIs (never the staff record id).
+  String? get ordersApiUserId => ownerUserId;
 
   /// Check if outlet is selected
   bool get hasSelectedOutlet => selectedOutlet != null;
@@ -217,6 +230,32 @@ class AppPref {
   set cashDrawerPin(String value) =>
       _preferences.setString(keyCashDrawerPin, value);
 
+  /// Default landscape — PO line-item tables fit wide layouts better.
+  PoPrintOrientation get poPrintOrientation => PoPrintOrientation.fromStorage(
+        _preferences.getString(keyPoPrintOrientation),
+      );
+
+  set poPrintOrientation(PoPrintOrientation value) =>
+      _preferences.setString(keyPoPrintOrientation, value.storageValue);
+
+  String poDefaultTermsForOutlet(String outletId) {
+    final id = outletId.trim();
+    if (id.isEmpty) return '';
+    return _preferences.getString('$keyPoDefaultTermsPrefix$id') ?? '';
+  }
+
+  void setPoDefaultTermsForOutlet(String outletId, String value) {
+    final id = outletId.trim();
+    if (id.isEmpty) return;
+    final trimmed = value.trim();
+    final key = '$keyPoDefaultTermsPrefix$id';
+    if (trimmed.isEmpty) {
+      _preferences.remove(key);
+    } else {
+      _preferences.setString(key, trimmed);
+    }
+  }
+
   /// 👉 Staff sign-in path (role from API may be missing or inconsistent).
   bool get isStaffSession => _preferences.getBool(keyStaffSession) ?? false;
   set isStaffSession(bool value) =>
@@ -270,6 +309,49 @@ class AppPref {
     for (final key in keys) {
       await _preferences.remove(key);
     }
+  }
+
+  String _walletOutletKey(String? outletId) {
+    final id = outletId?.trim();
+    return (id == null || id.isEmpty) ? 'default' : id;
+  }
+
+  double walletBalanceForOutlet(String? outletId) =>
+      _preferences.getDouble(
+        '${keyWalletBalancePrefix}${_walletOutletKey(outletId)}',
+      ) ??
+      0;
+
+  void setWalletBalanceForOutlet(String? outletId, double balance) {
+    _preferences.setDouble(
+      '${keyWalletBalancePrefix}${_walletOutletKey(outletId)}',
+      balance,
+    );
+  }
+
+  String? walletHistoryJsonForOutlet(String? outletId) =>
+      _preferences.getString(
+        '${keyWalletHistoryPrefix}${_walletOutletKey(outletId)}',
+      );
+
+  void setWalletHistoryJsonForOutlet(String? outletId, String json) {
+    _preferences.setString(
+      '${keyWalletHistoryPrefix}${_walletOutletKey(outletId)}',
+      json,
+    );
+  }
+
+  bool isWalletInitializedForOutlet(String? outletId) =>
+      _preferences.getBool(
+        '${keyWalletInitializedPrefix}${_walletOutletKey(outletId)}',
+      ) ??
+      false;
+
+  void setWalletInitializedForOutlet(String? outletId, bool value) {
+    _preferences.setBool(
+      '${keyWalletInitializedPrefix}${_walletOutletKey(outletId)}',
+      value,
+    );
   }
 
   /// Clear all

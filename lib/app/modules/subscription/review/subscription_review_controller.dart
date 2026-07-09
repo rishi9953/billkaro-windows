@@ -1,6 +1,6 @@
 import 'package:billkaro/app/services/Modals/Subscriptions/subscription_response.dart';
 import 'package:billkaro/app/services/Modals/PrinterOrderRequest/printer_order_request.dart';
-import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
+import 'package:billkaro/app/services/outlet_scope_refresh.dart';
 import 'package:billkaro/app/services/check_gstIn.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/app/services/razorpay/razorpay_service.dart';
@@ -31,6 +31,7 @@ class SubscriptionReviewController extends BaseController {
   double expectedAmount = 0.0;
   int expectedAmountInPaise = 0;
   bool isProcessingPayment = false;
+  bool _checkoutSettled = false;
 
   /// -------------------------------
   /// Observables
@@ -269,26 +270,24 @@ class SubscriptionReviewController extends BaseController {
   /// Payment Callbacks
   /// -------------------------------
   Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    if (_checkoutSettled || isProcessingPayment) {
+      debugPrint('Subscription payment success ignored (already settled)');
+      return;
+    }
+    _checkoutSettled = true;
+
+    final fallbackOrderId = orderId;
     debugPrint('Payment Success: ${response.paymentId}');
     debugPrint('Order ID: ${response.orderId}');
     debugPrint('Payment ID: ${response.paymentId}');
     debugPrint('Signature: ${response.signature}');
 
-    final context = Get.context;
-    if (context == null) return;
-    final loc = AppLocalizations.of(context)!;
-
-    if (isProcessingPayment) {
-      debugPrint('Payment already being processed');
-      return;
-    }
-
     try {
       isProcessingPayment = true;
 
-      if (response.orderId != null && response.orderId!.isNotEmpty) {
-        orderId = response.orderId!;
-      }
+      orderId = (response.orderId?.isNotEmpty ?? false)
+          ? response.orderId!
+          : fallbackOrderId;
       if (response.paymentId != null && response.paymentId!.isNotEmpty) {
         transactionId = response.paymentId!;
       }
@@ -296,7 +295,14 @@ class SubscriptionReviewController extends BaseController {
         signature = response.signature!;
       }
 
+      if (orderId.isEmpty || transactionId.isEmpty || signature.isEmpty) {
+        throw Exception('Incomplete payment details from Razorpay');
+      }
+
       final paymentResponse = await makePayment();
+
+      final context = Get.context;
+      final loc = context != null ? AppLocalizations.of(context)! : null;
 
       if (paymentResponse != null && paymentResponse['status'] == 'success') {
         // Create printer order on successful subscription payment (for plans with printer)
@@ -339,10 +345,12 @@ class SubscriptionReviewController extends BaseController {
         }
 
         await _showPaymentSuccessDialog(
-          title: loc.payment_successful,
-          description: loc.payment_successful_description,
+          title: loc?.payment_successful ?? 'Payment Successful',
+          description:
+              loc?.payment_successful_description ??
+              'Your subscription has been activated successfully!',
         );
-        _finishSubscriptionFlow();
+        await completeSubscriptionPurchase();
       } else {
         String errorMsg =
             'Payment successful but subscription activation failed. Please contact support.';
@@ -353,14 +361,21 @@ class SubscriptionReviewController extends BaseController {
             errorMsg = paymentResponse;
           }
         }
-        showError(title: loc.payment_failed, description: errorMsg);
+        showError(
+          title: loc?.payment_failed ?? 'Payment Failed',
+          description: errorMsg,
+        );
       }
     } catch (e) {
       debugPrint('Error completing subscription: $e');
+      final context = Get.context;
+      final loc = context != null ? AppLocalizations.of(context) : null;
       showError(
-        title: loc.payment_failed,
-        description:
-            'Payment successful but subscription activation failed. Please contact support.',
+        title: loc?.payment_failed ?? 'Payment Failed',
+        description: e.toString().contains('Exception:')
+            ? e.toString().replaceFirst('Exception: ', '')
+            : loc?.payment_activation_failed ??
+                'Payment successful but subscription activation failed. Please contact support.',
       );
     } finally {
       isProcessingPayment = false;
@@ -368,6 +383,17 @@ class SubscriptionReviewController extends BaseController {
   }
 
   Future<void> _handlePaymentFailure(PaymentFailureResponse response) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    if (_checkoutSettled || isProcessingPayment) {
+      debugPrint(
+        'Subscription payment failure ignored (checkout already settled): '
+        'code=${response.code}, message=${response.message}',
+      );
+      return;
+    }
+    _checkoutSettled = true;
+
     final errorMessage = _extractErrorMessage(response.message);
 
     debugPrint(
@@ -411,16 +437,35 @@ class SubscriptionReviewController extends BaseController {
     if (message == null) {
       return 'Payment could not be completed. Please try again.';
     }
-    if (message is String) return message;
-    if (message is Map) {
+    String resolved;
+    if (message is String) {
+      resolved = message;
+    } else if (message is Map) {
       if (message.containsKey('description')) {
-        return message['description'].toString();
+        resolved = message['description'].toString();
+      } else if (message.containsKey('error')) {
+        resolved = message['error'].toString();
+      } else if (message.containsKey('message')) {
+        resolved = message['message'].toString();
+      } else {
+        resolved = message.toString();
       }
-      if (message.containsKey('error')) return message['error'].toString();
-      if (message.containsKey('message')) return message['message'].toString();
-      return message.toString();
+    } else {
+      resolved = message.toString();
     }
-    return message.toString();
+
+    return _desktopPaymentFailureHint(resolved);
+  }
+
+  String _desktopPaymentFailureHint(String message) {
+    if (!isRazorpayWebCheckoutSupported) return message;
+    final lower = message.toLowerCase();
+    if (lower.contains('another method') ||
+        lower.contains('retry with a different')) {
+      return 'This payment method is not supported inside the desktop app. '
+          'Please use Card, Netbanking, or scan the UPI QR code on your phone.';
+    }
+    return message;
   }
 
   /// -------------------------------
@@ -553,6 +598,9 @@ class SubscriptionReviewController extends BaseController {
     planId = plan!.id;
     expectedAmount = totalAmount;
     expectedAmountInPaise = (expectedAmount * 100).round();
+    _checkoutSettled = false;
+    transactionId = '';
+    signature = '';
 
     final orderResponse = await createOrder(planId, expectedAmount);
 
@@ -570,6 +618,12 @@ class SubscriptionReviewController extends BaseController {
         }
         return;
       }
+
+      final payableAmount =
+          (orderResponse['data']?['payableAmount'] as num?)?.toDouble() ??
+          expectedAmount;
+      expectedAmount = payableAmount;
+      expectedAmountInPaise = (payableAmount * 100).round();
 
       final form = _formData;
       razorpayService.openCheckout(
@@ -600,29 +654,6 @@ class SubscriptionReviewController extends BaseController {
               'Failed to create payment order. Please try again.',
         );
       }
-    }
-  }
-
-  /// Closes checkout overlays/routes after payment without breaking navigation.
-  void _finishSubscriptionFlow() {
-    try {
-      while (Get.isDialogOpen == true) {
-        Get.back();
-      }
-    } catch (e) {
-      debugPrint('Error closing subscription dialogs: $e');
-    }
-
-    try {
-      final path = Modular.to.path;
-      if (path.contains(HomeMainRoutes.subscriptionForm) ||
-          path.contains(HomeMainRoutes.subscriptionReview)) {
-        if (Modular.to.canPop()) {
-          Modular.to.pop();
-        }
-      }
-    } catch (e) {
-      debugPrint('Error popping subscription checkout route: $e');
     }
   }
 

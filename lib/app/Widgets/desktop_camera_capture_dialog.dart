@@ -1,4 +1,6 @@
+import 'package:billkaro/app/Widgets/app_dropdowns.dart';
 import 'package:camera/camera.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -164,7 +166,7 @@ class _DesktopCameraCaptureDialogState extends State<DesktopCameraCaptureDialog>
               if (_cameras.length > 1)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: DropdownButtonFormField<int>(
+                  child: AppDropdownFormField2<int>(
                     value: _selectedIndex.clamp(0, _cameras.length - 1),
                     decoration: const InputDecoration(
                       labelText: 'Camera device',
@@ -173,7 +175,7 @@ class _DesktopCameraCaptureDialogState extends State<DesktopCameraCaptureDialog>
                     ),
                     items: [
                       for (var i = 0; i < _cameras.length; i++)
-                        DropdownMenuItem(value: i, child: Text(_cameraLabel(i))),
+                        DropdownItem(value: i, child: Text(_cameraLabel(i))),
                     ],
                     onChanged: _initializing
                         ? null

@@ -6,6 +6,8 @@ import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/Home/showcase_controller.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_controller.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
+import 'package:billkaro/app/modules/StoreSession/store_session_controller.dart';
+import 'package:billkaro/app/modules/StoreSession/store_session_widget.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter_modular/flutter_modular.dart' as modular;
 import 'package:showcaseview/showcaseview.dart';
@@ -26,6 +28,7 @@ class _HomeMainShellState extends State<HomeMainShell> {
     super.initState();
     Get.put(HomeMainController());
     Get.put(HomeScreenController());
+    Get.put(StoreSessionController());
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {

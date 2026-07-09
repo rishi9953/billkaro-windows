@@ -25,7 +25,8 @@ CustomerData _$CustomerDataFromJson(Map<String, dynamic> json) => CustomerData(
   outletId: json['outletId'] as String,
   customerName: json['customerName'] as String,
   phoneNumber: json['phoneNumber'] as String,
-  loyalityDiscount: (json['loyalityDiscount'] as num).toInt(),
+  loyalityDiscount: (json['loyalityDiscount'] as num).toDouble(),
+  loyalityDiscountType: json['loyalityDiscountType'] as String? ?? 'percentage',
 );
 
 Map<String, dynamic> _$CustomerDataToJson(CustomerData instance) =>
@@ -38,6 +39,7 @@ Map<String, dynamic> _$CustomerDataToJson(CustomerData instance) =>
       'customerName': instance.customerName,
       'phoneNumber': instance.phoneNumber,
       'loyalityDiscount': instance.loyalityDiscount,
+      'loyalityDiscountType': instance.loyalityDiscountType,
     };
 
 CustomerDetailsResponse _$CustomerDetailsResponseFromJson(

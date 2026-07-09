@@ -11,7 +11,7 @@ class StaffDetailsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.put(StaffDetailsController());
     return Obx(() {
-      if (controller.isLoading.value) {
+      if (controller.isLoading.value && controller.staffList.isEmpty) {
         return const Scaffold(
           backgroundColor: Color(0xFFE8EEF7),
           body: Center(child: CircularProgressIndicator()),
@@ -198,7 +198,12 @@ class StaffDetailsScreen extends StatelessWidget {
         height: 56,
         child: ElevatedButton(
           onPressed: () async {
-            await Modular.to.pushNamed(HomeMainRoutes.addStaffScreen);
+            final result = await Modular.to.pushNamed(
+              HomeMainRoutes.addStaffScreen,
+            );
+            final created =
+                result == true || (result is Map && result['created'] == true);
+            if (!created) return;
             await Get.find<StaffDetailsController>().loadStaffList();
           },
           style: ElevatedButton.styleFrom(

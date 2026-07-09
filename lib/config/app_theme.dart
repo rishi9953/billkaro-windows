@@ -231,6 +231,7 @@ abstract class AppTheme {
     ),
 
     chipTheme: ChipThemeData(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       backgroundColor: Colors.grey.shade100,
       selectedColor: AppColor.primary.withOpacity(0.1),
       labelStyle: TextStyle(
@@ -238,7 +239,7 @@ abstract class AppTheme {
         fontSize: 12,
         fontWeight: FontWeight.w600,
       ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      // shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     ),
 
@@ -479,13 +480,19 @@ abstract class AppTheme {
       thickness: 1,
       space: 1,
     ),
+    dialogTheme: DialogThemeData(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    ),
   );
 
   static ThemeData lightThemeWithPrimary(Color primary) {
     final base = appTheme;
     return base.copyWith(
       primaryColor: primary,
-      colorScheme: base.colorScheme.copyWith(primary: primary, secondary: primary),
+      colorScheme: base.colorScheme.copyWith(
+        primary: primary,
+        secondary: primary,
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: base.elevatedButtonTheme.style?.copyWith(
           backgroundColor: WidgetStateProperty.all(primary),
@@ -519,7 +526,10 @@ abstract class AppTheme {
     final base = darkTheme;
     return base.copyWith(
       primaryColor: primary,
-      colorScheme: base.colorScheme.copyWith(primary: primary, secondary: primary),
+      colorScheme: base.colorScheme.copyWith(
+        primary: primary,
+        secondary: primary,
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: base.elevatedButtonTheme.style?.copyWith(
           backgroundColor: WidgetStateProperty.all(primary),

@@ -11,4 +11,8 @@ class ReportsController extends BaseController {
   void navigateToItemReports() {
     Modular.to.pushNamed(HomeMainRoutes.itemsReport);
   }
+
+  void navigateToStoreHistory() {
+    Modular.to.pushNamed(HomeMainRoutes.storeSessionHistory);
+  }
 }

@@ -1,4 +1,6 @@
+import 'package:billkaro/app/Widgets/app_dropdowns.dart';
 import 'package:billkaro/app/Widgets/gstin_verify_row.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:billkaro/app/modules/BusinessDetails/business_details_controller.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/staff_access.dart';
@@ -332,38 +334,32 @@ class BusinessDetailsScreen extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Obx(
-          () => Container(
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey[300]!),
+          () => AppFilterDropdown2<String>(
+            value: value.value,
+            decoration: appFilterDropdownDecoration(borderRadius: 8),
+            style: TextStyle(
+              color: value.value.contains('Tap to') || value.value == loc.none
+                  ? Colors.grey
+                  : Colors.black,
             ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: value.value,
-                isExpanded: true,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                icon: const Icon(Icons.keyboard_arrow_down),
-                items: items.map((String item) {
-                  return DropdownMenuItem<String>(
-                    value: item,
-                    child: Text(
-                      item.capitalize!,
-                      style: TextStyle(
-                        color: item.contains('Tap to') || item == loc.none
-                            ? Colors.grey
-                            : Colors.black,
-                      ),
-                    ),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    value.value = newValue;
-                  }
-                },
-              ),
-            ),
+            items: items.map((String item) {
+              return DropdownItem<String>(
+                value: item,
+                child: Text(
+                  item.capitalize!,
+                  style: TextStyle(
+                    color: item.contains('Tap to') || item == loc.none
+                        ? Colors.grey
+                        : Colors.black,
+                  ),
+                ),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              if (newValue != null) {
+                value.value = newValue;
+              }
+            },
           ),
         ),
       ],
@@ -384,32 +380,21 @@ class BusinessDetailsScreen extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Obx(
-          () => Container(
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey[300]!),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: value.value,
-                isExpanded: true,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                icon: const Icon(Icons.keyboard_arrow_down),
-                items: options.map((opt) {
-                  return DropdownMenuItem<String>(
-                    value: opt['value'],
-                    child: Text(
-                      opt['label']!,
-                      style: const TextStyle(color: Colors.black),
-                    ),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  if (newValue != null) value.value = newValue;
-                },
-              ),
-            ),
+          () => AppFilterDropdown2<String>(
+            value: value.value,
+            decoration: appFilterDropdownDecoration(borderRadius: 8),
+            items: options.map((opt) {
+              return DropdownItem<String>(
+                value: opt['value'],
+                child: Text(
+                  opt['label']!,
+                  style: const TextStyle(color: Colors.black),
+                ),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              if (newValue != null) value.value = newValue;
+            },
           ),
         ),
       ],

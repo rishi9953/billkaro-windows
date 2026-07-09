@@ -20,6 +20,10 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
   @override
   void initState() {
     super.initState();
+    // Recreate controller on each open so the form always starts fresh.
+    if (Get.isRegistered<AddStaffController>()) {
+      Get.delete<AddStaffController>(force: true);
+    }
     controller = Get.put(AddStaffController());
   }
 

@@ -41,6 +41,18 @@ abstract class ApiClient {
   @POST(staffLogin)
   Future<LoginResponse> onStaffLogin(@Body() LoginModel loginRequest);
 
+  @POST(sendPhoneOtpPath)
+  Future<dynamic> sendPhoneOtp(@Body() Map<String, dynamic> body);
+
+  @POST(verifyPhoneOtpPath)
+  Future<LoginResponse> verifyPhoneOtp(@Body() Map<String, dynamic> body);
+
+  @POST(sendStaffPhoneOtpPath)
+  Future<dynamic> sendStaffPhoneOtp(@Body() Map<String, dynamic> body);
+
+  @POST(verifyStaffPhoneOtpPath)
+  Future<LoginResponse> verifyStaffPhoneOtp(@Body() Map<String, dynamic> body);
+
   @POST(forgotPass)
   Future<dynamic> forgotPassword(@Body() Map<String, dynamic> body);
 
@@ -49,6 +61,9 @@ abstract class ApiClient {
 
   @POST(checkEmail)
   Future<dynamic> checkAuthEmail(@Body() Map<String, dynamic> body);
+
+  @POST(checkMobile)
+  Future<dynamic> checkAuthMobile(@Body() Map<String, dynamic> body);
 
   @POST(resendActivation)
   Future<dynamic> resendAuthActivation(@Body() Map<String, dynamic> body);
@@ -179,6 +194,9 @@ abstract class ApiClient {
     @Query('outletId') String outletId,
     @Query('limit') int? limit,
   );
+
+  @GET('$orders/next-bill-number')
+  Future<dynamic> getNextBillNumber(@Query('outletId') String outletId);
 
   @GET(orders)
   Future<OrderResponse> getOrders(
@@ -462,6 +480,13 @@ abstract class ApiClient {
     @Body() Map<String, dynamic> body,
   );
 
+  @PATCH('$outlets/{outletId}/$inventory/purchase-orders/{id}')
+  Future<dynamic> updatePurchaseOrder(
+    @Path('outletId') String outletId,
+    @Path('id') String id,
+    @Body() Map<String, dynamic> body,
+  );
+
   @PATCH('$outlets/{outletId}/$inventory/purchase-orders/{id}/receive')
   Future<dynamic> receivePurchaseOrder(
     @Path('outletId') String outletId,
@@ -487,9 +512,66 @@ abstract class ApiClient {
     @Body() Map<String, dynamic> body,
   );
 
+  @PATCH('$outlets/{outletId}/$inventory/recipes/{id}')
+  Future<dynamic> updateRecipe(
+    @Path('outletId') String outletId,
+    @Path('id') String id,
+    @Body() Map<String, dynamic> body,
+  );
+
   @DELETE('$outlets/{outletId}/$inventory/recipes/{id}')
   Future<dynamic> deleteRecipe(
     @Path('outletId') String outletId,
     @Path('id') String id,
+  );
+
+  // -------------------- STORE DAY SESSIONS --------------------
+
+  @GET('$outlets/{outletId}/$daySessions/current')
+  Future<dynamic> getCurrentDaySession(@Path('outletId') String outletId);
+
+  @GET('$outlets/{outletId}/$daySessions')
+  Future<dynamic> getDaySessionHistory(
+    @Path('outletId') String outletId,
+    @Query('startDate') String? startDate,
+    @Query('endDate') String? endDate,
+  );
+
+  @GET('$outlets/{outletId}/$daySessions/summary')
+  Future<dynamic> getDaySessionSummary(@Path('outletId') String outletId);
+
+  @POST('$outlets/{outletId}/$daySessions/open')
+  Future<dynamic> openDaySession(
+    @Path('outletId') String outletId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @POST('$outlets/{outletId}/$daySessions/close')
+  Future<dynamic> closeDaySession(
+    @Path('outletId') String outletId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  // -------------------- Wallet --------------------
+
+  @GET(walletCards)
+  Future<dynamic> getWalletCards(@Query('active') bool? active);
+
+  @GET('$outlets/{outletId}/wallet')
+  Future<dynamic> getOutletWallet(
+    @Path('outletId') String outletId,
+    @Query('userId') String userId,
+  );
+
+  @POST('$outlets/{outletId}/wallet/recharge/create-order')
+  Future<dynamic> createWalletRechargeOrder(
+    @Path('outletId') String outletId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @POST('$outlets/{outletId}/wallet/recharge/confirm')
+  Future<dynamic> confirmWalletRecharge(
+    @Path('outletId') String outletId,
+    @Body() Map<String, dynamic> body,
   );
 }

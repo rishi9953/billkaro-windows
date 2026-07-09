@@ -9,6 +9,7 @@ import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_import_file_dialog.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_import_preview_dialog.dart';
+import 'package:billkaro/app/modules/Items/menuItem/menu_products_template_service.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:billkaro/utils/offline/offline_category_loader.dart';
 
@@ -33,6 +34,9 @@ class MenuItemController extends BaseController {
 
   // Initial load done (so UI can show loader until first fetch completes)
   final RxBool initialLoadDone = false.obs;
+
+  // True while items are being fetched after a category change
+  final RxBool isCategoryLoading = false.obs;
 
   // Multi-select delete
   final RxBool isSelectionMode = false.obs;
@@ -268,6 +272,11 @@ class MenuItemController extends BaseController {
       '📥 loadMoreItems called - hasMore: ${hasMoreItems.value}, isLoading: ${isLoadingMore.value}, currentPage: ${currentPage.value}',
     );
 
+    if (searchQuery.value.isNotEmpty) {
+      debugPrint('⏸️ Cannot load more while searching');
+      return;
+    }
+
     if (!hasMoreItems.value) {
       debugPrint('⏸️ Cannot load more - hasMore: false');
       return;
@@ -320,10 +329,33 @@ class MenuItemController extends BaseController {
   /// ===============================
   /// CATEGORY SELECTION
   /// ===============================
-  void selectCategory(String? categoryId) {
+  Future<void> selectCategory(String? categoryId) async {
+    if (selectedCategoryId.value == categoryId) return;
+
     selectedCategoryId.value = categoryId;
-    _applyFilters();
+    currentPage.value = 1;
+    hasMoreItems.value = true;
+    isCategoryLoading.value = true;
+    items.clear();
+
     debugPrint('📂 Category selected: $categoryId');
+    try {
+      await getItems(showLoader: false, forceApiRefresh: true);
+    } finally {
+      isCategoryLoading.value = false;
+    }
+  }
+
+  Map<String, dynamic> buildAddItemArgs() {
+    final args = <String, dynamic>{'isEdit': false};
+    final id = selectedCategoryId.value;
+    if (id != null && id != 'none') {
+      final category = categories.firstWhereOrNull(
+        (c) => c.categoryName.toLowerCase() == id.toLowerCase(),
+      );
+      args['category'] = category?.categoryName ?? id;
+    }
+    return args;
   }
 
   /// ===============================
@@ -560,7 +592,7 @@ class MenuItemController extends BaseController {
   }
 
   /// ===============================
-  /// IMPORT FROM FILE (CSV / Excel)
+  /// IMPORT FROM FILE (Excel .xlsx)
   /// ===============================
   Future<void> importFromFile() async {
     final loc = AppLocalizations.of(Get.context!)!;
@@ -580,11 +612,16 @@ class MenuItemController extends BaseController {
     if (shouldPickFile != true) return;
 
     const typeGroup = XTypeGroup(
-      label: 'Spreadsheet',
-      extensions: ['csv', 'xlsx'],
+      label: 'Excel',
+      extensions: ['xlsx'],
     );
     final file = await openFile(acceptedTypeGroups: [typeGroup]);
     if (file == null) return;
+
+    if (!file.path.toLowerCase().endsWith('.xlsx')) {
+      showError(description: loc.failed_to_read_file_error('Only .xlsx files are supported.'));
+      return;
+    }
 
     List<ItemImportRow> rows;
     try {
@@ -604,19 +641,19 @@ class MenuItemController extends BaseController {
 
     final fileName = file.name;
     final previewRows = await showMenuImportPreviewDialog(
-      fileName: fileName.isNotEmpty ? fileName : loc.import_from_file,
-      items: rows.map((row) {
-        debugPrint(
-          'Preview Row - Name: ${row.name}, Price: ${row.price}, Category: ${row.category}, GST: ${row.gst}, WithTax: ${row.withTax}',
-        );
-        return MenuImportPreviewRow(
-          name: row.name,
-          price: row.price,
-          category: row.category,
-          gst: row.gst,
-          withTax: row.withTax,
-        );
-      }).toList(),
+      fileName: fileName.isNotEmpty ? fileName : loc.import_products_excel,
+      items: rows
+          .map(
+            (row) => MenuImportPreviewRow(
+              name: row.name,
+              price: row.price,
+              category: row.category,
+              gst: row.gst,
+              withTax: row.withTax,
+              imageUrl: row.imageUrl,
+            ),
+          )
+          .toList(),
     );
     if (previewRows == null) return;
 
@@ -635,6 +672,7 @@ class MenuItemController extends BaseController {
                 orderFrom: 'None',
                 category: row.category,
                 showItem: row.isAvailable,
+                itemImage: row.imageUrl,
               ),
             )
             .toList(),
@@ -663,6 +701,98 @@ class MenuItemController extends BaseController {
     } finally {
       dismissAllAppLoader();
     }
+  }
+
+  /// ===============================
+  /// EXPORT TO FILE (Excel .xlsx)
+  /// ===============================
+  Future<List<ItemData>> _fetchAllItemsForExport() async {
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null) return [];
+
+    final isOnline = await NetworkUtils.hasInternetConnection();
+    if (!isOnline) {
+      return AppDatabase().getItems(outletId: outletId);
+    }
+
+    const pageSize = 100;
+    final fetched = <ItemData>[];
+    var page = 1;
+    var hasMore = true;
+
+    while (hasMore) {
+      final response = await callApi(
+        apiClient.getItems(
+          outletId,
+          page,
+          pageSize,
+          null,
+          null,
+          null,
+          null,
+        ),
+        showLoader: false,
+      );
+
+      if (response?.status != 'success') break;
+
+      final batch = response!.data;
+      if (batch.isEmpty) break;
+
+      for (final item in batch) {
+        if (!fetched.any((existing) => existing.id == item.id)) {
+          fetched.add(item);
+        }
+      }
+
+      final pagination = response.pagination;
+      if (pagination?.hasNextPage != null) {
+        hasMore = pagination!.hasNextPage!;
+      } else {
+        hasMore = batch.length >= pageSize;
+      }
+      page++;
+    }
+
+    return fetched;
+  }
+
+  Future<void> exportToFile() async {
+    final loc = AppLocalizations.of(Get.context!)!;
+    if (!hasTrialOrSubscription(appPref)) {
+      checkSubscription();
+      return;
+    }
+
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null) {
+      showError(description: loc.please_select_outlet_first);
+      return;
+    }
+
+    final shouldExport = await showMenuExportFileDialog();
+    if (shouldExport != true) return;
+
+    try {
+      showAppLoader();
+      final itemsToExport = await _fetchAllItemsForExport();
+      if (itemsToExport.isEmpty) {
+        showError(description: loc.no_items_to_export);
+        return;
+      }
+      await MenuProductsTemplateService.exportItems(itemsToExport);
+    } catch (e) {
+      showError(description: '${loc.failed_to_export}: $e');
+    } finally {
+      dismissAllAppLoader();
+    }
+  }
+
+  /// ===============================
+  /// DOWNLOAD PRODUCTS TEMPLATE
+  /// ===============================
+  Future<void> downloadProductsTemplate() async {
+    await MenuProductsTemplateService.downloadTemplate();
   }
 
   void refreshItems() {

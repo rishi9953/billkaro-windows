@@ -195,7 +195,7 @@ class HomeScreenController extends BaseController {
 
         final response = await callApi(
           apiClient.getOrders(
-            appPref.user!.id!,
+            appPref.ordersApiUserId!,
             outletId,
             null,
             null,
@@ -409,7 +409,7 @@ class HomeScreenController extends BaseController {
       }
     }
 
-    final rows = latestOrderByTable.values.toList(growable: false)
+    final rows = latestOrderByTable.values.toList()
       ..sort(
         (a, b) =>
             _parseSafeDate(b.updatedAt).compareTo(_parseSafeDate(a.updatedAt)),
@@ -464,7 +464,7 @@ class HomeScreenController extends BaseController {
       }
     }
 
-    chartSalesData.value = weeklySales;
+    chartSalesData.value = List<double>.from(weeklySales);
     chartLabels.value = labels;
   }
 
@@ -516,7 +516,7 @@ class HomeScreenController extends BaseController {
       }
     }
 
-    chartSalesData.value = monthlySales;
+    chartSalesData.value = List<double>.from(monthlySales);
     chartLabels.value = labels;
   }
 
@@ -555,7 +555,7 @@ class HomeScreenController extends BaseController {
       }
     }
 
-    chartSalesData.value = quarterlySales;
+    chartSalesData.value = List<double>.from(quarterlySales);
     chartLabels.value = labels;
   }
 
@@ -587,7 +587,7 @@ class HomeScreenController extends BaseController {
       }
     }
 
-    chartSalesData.value = yearlySales;
+    chartSalesData.value = List<double>.from(yearlySales);
     chartLabels.value = labels;
   }
 
@@ -635,15 +635,15 @@ class HomeScreenController extends BaseController {
   void onOutletChanged() {
     // Stay on current route; restarting home route here re-creates ModularApp
     // and can trigger "Module ... is already started" exceptions.
-    allOrders.clear();
+    allOrders.value = <OrderModel>[];
     todaySales.value = 0.0;
     yesterdaySales.value = 0.0;
     todayOrders.value = 0;
     yesterdayOrders.value = 0;
-    chartSalesData.value = List.filled(7, 0.0);
-    todayCategorySales.clear();
-    topSellingItems.clear();
-    occupiedTableOrders.clear();
+    chartSalesData.value = List<double>.generate(7, (_) => 0.0);
+    todayCategorySales.value = <CategorySales>[];
+    topSellingItems.value = <TopSellingItem>[];
+    occupiedTableOrders.value = <OrderModel>[];
     _hasLoadedFromApi = false;
 
     getOrderList(forceApiRefresh: true);

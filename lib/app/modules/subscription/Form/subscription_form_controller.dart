@@ -5,6 +5,7 @@ import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/app/services/Modals/Subscriptions/subscription_response.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter/services.dart';
+import 'package:billkaro/app/services/outlet_scope_refresh.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:get/get.dart';
 import 'package:billkaro/app/services/razorpay/razorpay_service.dart';
@@ -21,6 +22,7 @@ class SubscriptionFormController extends BaseController {
   double expectedAmount = 0.0;
   int expectedAmountInPaise = 0;
   bool isProcessingPayment = false;
+  bool _checkoutSettled = false;
   Map<String, String> _latestFormData = const {};
 
   /// Cached from route args when opened via Buy Now with Printer.
@@ -263,24 +265,6 @@ class SubscriptionFormController extends BaseController {
     }
   }
 
-  void _finishSubscriptionCheckout() {
-    try {
-      while (Get.isDialogOpen == true) {
-        Get.back();
-      }
-    } catch (e) {
-      debugPrint('Error closing subscription dialogs: $e');
-    }
-
-    try {
-      if (Modular.to.canPop()) {
-        Modular.to.pop();
-      }
-    } catch (e) {
-      debugPrint('Error popping subscription form route: $e');
-    }
-  }
-
   void _openSubscriptionReview({
     required SubscriptionPlan plan,
     required Map<String, String> formData,
@@ -397,6 +381,9 @@ class SubscriptionFormController extends BaseController {
     planId = plan.id;
     expectedAmount = _calculateTotalAmount(plan);
     expectedAmountInPaise = _toPaise(expectedAmount);
+    _checkoutSettled = false;
+    transactionId = '';
+    signature = '';
 
     final orderResponse = await createOrder(planId, expectedAmount);
     if (orderResponse != null && orderResponse['status'] == 'success') {
@@ -408,6 +395,12 @@ class SubscriptionFormController extends BaseController {
         );
         return;
       }
+
+      final payableAmount =
+          (orderResponse['data']?['payableAmount'] as num?)?.toDouble() ??
+          expectedAmount;
+      expectedAmount = payableAmount;
+      expectedAmountInPaise = _toPaise(payableAmount);
 
       razorpayService.openCheckout(
         orderId: orderId,
@@ -435,12 +428,15 @@ class SubscriptionFormController extends BaseController {
   }
 
   Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
-    if (isProcessingPayment) return;
+    if (_checkoutSettled || isProcessingPayment) return;
+    _checkoutSettled = true;
+
+    final fallbackOrderId = orderId;
     isProcessingPayment = true;
     try {
-      if (response.orderId != null && response.orderId!.isNotEmpty) {
-        orderId = response.orderId!;
-      }
+      orderId = (response.orderId?.isNotEmpty ?? false)
+          ? response.orderId!
+          : fallbackOrderId;
       if (response.paymentId != null && response.paymentId!.isNotEmpty) {
         transactionId = response.paymentId!;
       }
@@ -448,11 +444,15 @@ class SubscriptionFormController extends BaseController {
         signature = response.signature!;
       }
 
+      if (orderId.isEmpty || transactionId.isEmpty || signature.isEmpty) {
+        throw Exception('Incomplete payment details from Razorpay');
+      }
+
       final paymentResponse = await makePayment();
       if (paymentResponse != null && paymentResponse['status'] == 'success') {
         await _createPrinterOrderAfterSuccess();
         showSuccess(description: 'Payment successful. Subscription activated.');
-        _finishSubscriptionCheckout();
+        await completeSubscriptionPurchase();
       } else {
         showError(
           title: 'Payment Failed',
@@ -464,8 +464,9 @@ class SubscriptionFormController extends BaseController {
     } catch (e) {
       showError(
         title: 'Payment Failed',
-        description:
-            'Payment successful but activation failed. Please contact support.',
+        description: e.toString().contains('Exception:')
+            ? e.toString().replaceFirst('Exception: ', '')
+            : 'Payment successful but activation failed. Please contact support.',
       );
     } finally {
       isProcessingPayment = false;
@@ -503,7 +504,18 @@ class SubscriptionFormController extends BaseController {
     );
   }
 
-  void _handlePaymentFailure(PaymentFailureResponse response) {
+  Future<void> _handlePaymentFailure(PaymentFailureResponse response) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    if (_checkoutSettled || isProcessingPayment) {
+      debugPrint(
+        'Subscription form payment failure ignored (checkout already settled): '
+        'code=${response.code}, message=${response.message}',
+      );
+      return;
+    }
+    _checkoutSettled = true;
+
     final msg = response.message?.toString();
     showError(
       title: 'Payment Failed',

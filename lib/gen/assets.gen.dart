@@ -104,11 +104,17 @@ class $AssetsSvgGen {
   /// File path: assets/svg/delete.svg
   SvgGenImage get delete => const SvgGenImage('assets/svg/delete.svg');
 
+  /// File path: assets/svg/download.svg
+  SvgGenImage get download => const SvgGenImage('assets/svg/download.svg');
+
   /// File path: assets/svg/excel.svg
   SvgGenImage get excel => const SvgGenImage('assets/svg/excel.svg');
 
   /// File path: assets/svg/export.svg
   SvgGenImage get export => const SvgGenImage('assets/svg/export.svg');
+
+  /// File path: assets/svg/file.svg
+  SvgGenImage get file => const SvgGenImage('assets/svg/file.svg');
 
   /// File path: assets/svg/group.svg
   SvgGenImage get group => const SvgGenImage('assets/svg/group.svg');
@@ -151,8 +157,10 @@ class $AssetsSvgGen {
     calendar,
     categories,
     delete,
+    download,
     excel,
     export,
+    file,
     group,
     home,
     items,
