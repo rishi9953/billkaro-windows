@@ -74,6 +74,25 @@ void main(List<String> args) async {
     final isKitchenDisplayWindow =
         KitchenDisplayWindowLauncher.isKitchenDisplayLaunch(args);
 
+    // Show the window BEFORE heavy init. On slow i3 / LTSC PCs, awaiting
+    // SharedPreferences/DB/sync with BDW_HIDE_ON_STARTUP looks like a dead app.
+    if (!kIsWeb && Platform.isWindows) {
+      doWhenWindowReady(() {
+        if (isKitchenDisplayWindow) {
+          appWindow.minSize = const Size(1024, 640);
+          appWindow.size = const Size(1440, 900);
+          appWindow.alignment = Alignment.center;
+          appWindow.title = 'Billkaro — Kitchen Display';
+        } else {
+          appWindow.minSize = const Size(1024, 640);
+          appWindow.size = const Size(1280, 720);
+          appWindow.alignment = Alignment.center;
+          appWindow.title = 'Billkaro ChillKaro';
+        }
+        appWindow.show();
+      });
+    }
+
     if (isKitchenDisplayWindow &&
         !kIsWeb &&
         Platform.isWindows &&
@@ -199,30 +218,13 @@ void main(List<String> args) async {
       }
       runApp(const KitchenDisplayWindowApp());
       if (!kIsWeb && Platform.isWindows) {
-        doWhenWindowReady(() {
-          appWindow.minSize = const Size(1024, 640);
-          appWindow.size = const Size(1440, 900);
-          appWindow.alignment = Alignment.center;
-          appWindow.title = 'Billkaro — Kitchen Display';
-          appWindow.show();
-          KitchenDisplayWindowLauncher.registerRunningInstance();
-        });
+        KitchenDisplayWindowLauncher.registerRunningInstance();
       }
       return;
     }
 
-    // Run the app
+    // Run the app (window already shown above on Windows)
     runApp(const _MyAppRoot());
-    if (!kIsWeb && Platform.isWindows) {
-      doWhenWindowReady(() {
-        const initialSize = Size(1280, 720);
-        appWindow.minSize = const Size(1024, 640);
-        appWindow.size = initialSize;
-        appWindow.alignment = Alignment.center;
-        appWindow.title = 'Billkaro ChillKaro';
-        appWindow.show();
-      });
-    }
   } catch (e, stack) {
     debugPrint('❌ [MAIN] Critical error during initialization: $e');
     debugPrint('❌ [STACK] $stack');
@@ -259,6 +261,15 @@ void main(List<String> args) async {
         ),
       ),
     );
+    if (!kIsWeb && Platform.isWindows) {
+      doWhenWindowReady(() {
+        appWindow.minSize = const Size(800, 500);
+        appWindow.size = const Size(960, 640);
+        appWindow.alignment = Alignment.center;
+        appWindow.title = 'Billkaro ChillKaro';
+        appWindow.show();
+      });
+    }
   }
 }
 

@@ -2351,6 +2351,50 @@ class AppLocalizationsHi extends AppLocalizations {
   String get search_table => 'टेबल खोजें';
 
   @override
+  String get table_section => 'सेक्शन';
+
+  @override
+  String get table_section_hint => 'सेक्शन चुनें या बनाएँ';
+
+  @override
+  String get table_section_general => 'जनरल';
+
+  @override
+  String get table_section_all => 'सभी सेक्शन';
+
+  @override
+  String get table_section_new => 'नया सेक्शन';
+
+  @override
+  String get add_section => 'सेक्शन जोड़ें';
+
+  @override
+  String get section_name => 'सेक्शन नाम';
+
+  @override
+  String get section_name_hint => 'जैसे AC Room, Rooftop';
+
+  @override
+  String get please_enter_section_name => 'कृपया सेक्शन नाम दर्ज करें';
+
+  @override
+  String get section_added_successfully => 'सेक्शन सफलतापूर्वक जोड़ा गया';
+
+  @override
+  String get failed_to_add_section => 'सेक्शन जोड़ने में विफल';
+
+  @override
+  String get section_already_exists => 'सेक्शन पहले से मौजूद है';
+
+  @override
+  String get no_sections_yet => 'अभी कोई सेक्शन नहीं। पहले सेक्शन जोड़ें।';
+
+  @override
+  String table_section_count(int count) {
+    return '$count टेबल';
+  }
+
+  @override
   String get filter_all => 'सभी';
 
   @override
@@ -2901,6 +2945,26 @@ class AppLocalizationsHi extends AppLocalizations {
   String get add_recipe => 'रेसिपी जोड़ें';
 
   @override
+  String get add_recipe_subtitle => 'इस आइटम की एक यूनिट बनाने के लिए सभी कच्चे माल जोड़ें (जैसे सैंडविच के लिए ब्रेड, चीज़, सलाद पत्ता)';
+
+  @override
+  String get add_another_ingredient => 'और सामग्री जोड़ें';
+
+  @override
+  String get recipe_ingredients_section => 'सामग्री';
+
+  @override
+  String get recipe_need_at_least_one_ingredient => 'कम से कम एक सामग्री मान्य मात्रा के साथ जोड़ें';
+
+  @override
+  String get recipe_duplicate_material => 'प्रत्येक कच्चा माल प्रति रेसिपी में केवल एक बार उपयोग किया जा सकता है';
+
+  @override
+  String ingredient_number(int number) {
+    return 'सामग्री $number';
+  }
+
+  @override
   String get edit_recipe => 'रेसिपी संपादित करें';
 
   @override
@@ -3133,6 +3197,9 @@ class AppLocalizationsHi extends AppLocalizations {
   String get po_hsn_sac => 'HSN/SAC कोड';
 
   @override
+  String get po_description => 'विवरण';
+
+  @override
   String get template_saved_opened => 'टेम्पलेट सहेजा और खोला गया';
 
   @override
@@ -3298,6 +3365,72 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get invite_sent_successfully => 'निमंत्रण सफलतापूर्वक भेजा गया';
+
+  @override
+  String get reinvite => 'पुनः आमंत्रित करें';
+
+  @override
+  String get reinvite_sent_successfully => 'निमंत्रण पुनः सफलतापूर्वक भेजा गया';
+
+  @override
+  String get unique_id => 'यूनिक आईडी';
+
+  @override
+  String get state_label => 'राज्य';
+
+  @override
+  String get district_label => 'ज़िला';
+
+  @override
+  String get pincode_label => 'पिनकोड';
+
+  @override
+  String get date_of_birth => 'जन्म तिथि';
+
+  @override
+  String get gender_label => 'लिंग';
+
+  @override
+  String get male => 'पुरुष';
+
+  @override
+  String get female => 'महिला';
+
+  @override
+  String get other_gender => 'अन्य';
+
+  @override
+  String get select_gender => 'लिंग चुनें';
+
+  @override
+  String get dd_mm_yyyy => 'dd/mm/yyyy';
+
+  @override
+  String get mobile_number => 'मोबाइल नंबर';
+
+  @override
+  String get staff_image => 'स्टाफ छवि';
+
+  @override
+  String get please_select_staff_image => 'कृपया स्टाफ छवि चुनें';
+
+  @override
+  String get please_select_date_of_birth => 'कृपया जन्म तिथि चुनें';
+
+  @override
+  String get please_enter_state => 'कृपया राज्य दर्ज करें';
+
+  @override
+  String get please_enter_district => 'कृपया ज़िला दर्ज करें';
+
+  @override
+  String get please_enter_pincode => 'कृपया पिनकोड दर्ज करें';
+
+  @override
+  String get please_enter_valid_pincode => 'कृपया एक वैध 6 अंकों का पिनकोड दर्ज करें';
+
+  @override
+  String get tap_to_upload_image => 'छवि अपलोड करने के लिए टैप करें';
 
   @override
   String get staff_member_updated_successfully => 'स्टाफ सदस्य सफलतापूर्वक अपडेट किया गया';
@@ -4606,6 +4739,48 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get wallet_menu_subtitle => 'प्लेटफ़ॉर्म शुल्क के लिए प्रीपेड बैलेंस रिचार्ज करें';
+
+  @override
+  String get settings_section_billing => 'बिलिंग प्लान';
+
+  @override
+  String get billing_mode_title => 'एक्सेस मोड';
+
+  @override
+  String get billing_mode_subtitle => 'चुनें कि यह आउटलेट BillKaro के लिए कैसे भुगतान करेगा';
+
+  @override
+  String get billing_mode_subscription => 'सब्सक्रिप्शन';
+
+  @override
+  String get billing_mode_subscription_desc => 'सक्रिय प्लान या ट्रायल के साथ असीमित एक्सेस';
+
+  @override
+  String get billing_mode_wallet => 'वॉलेट';
+
+  @override
+  String get billing_mode_wallet_desc => 'पे-एज़-यू-गो — हर बिल पर प्रीपेड बैलेंस कटेगा';
+
+  @override
+  String get billing_mode_switched_subscription => 'सब्सक्रिप्शन मोड में स्विच किया गया';
+
+  @override
+  String get billing_mode_switched_wallet => 'वॉलेट मोड में स्विच किया गया';
+
+  @override
+  String get billing_mode_switch_confirm_title => 'बिलिंग मोड बदलें?';
+
+  @override
+  String get billing_mode_switch_to_wallet_body => 'आप सब्सक्रिप्शन की जगह प्रीपेड वॉलेट क्रेडिट इस्तेमाल करेंगे। बिल बनाने से पहले वॉलेट में बैलेंस रखें।';
+
+  @override
+  String get billing_mode_switch_to_subscription_body => 'गेटेड फीचर्स के लिए सक्रिय सब्सक्रिप्शन या ट्रायल चाहिए। वॉलेट बैलेंस ऐप को अनलॉक नहीं करेगा।';
+
+  @override
+  String get billing_mode_confirm_switch => 'स्विच करें';
+
+  @override
+  String get billing_mode_owner_only => 'केवल आउटलेट ओनर बिलिंग मोड बदल सकते हैं';
 
   @override
   String get notifications => 'नोटिफ़िकेशन';

@@ -74,7 +74,7 @@ class ActivityModel {
   final String type;
   @JsonKey(readValue: _readOptionalString)
   final String userId;
-  @JsonKey(readValue: _readOptionalString)
+  @JsonKey(readValue: _readCreatedByName)
   final String createdByName;
   @JsonKey(readValue: _readOptionalString)
   final String outletId;
@@ -108,6 +108,46 @@ class ActivityModel {
 
   static Object? _readId(Map<dynamic, dynamic> json, String key) =>
       json['_id'] ?? json['id'] ?? '';
+
+  static Object? _readCreatedByName(Map<dynamic, dynamic> json, String key) {
+    final candidates = <dynamic>[
+      json['createdByName'],
+      json['created_by_name'],
+      json['staffName'],
+      json['staff_name'],
+      json['userName'],
+      json['user_name'],
+      json['performedBy'],
+      json['performed_by'],
+    ];
+
+    final user = json['user'];
+    if (user is Map) {
+      candidates.addAll([
+        user['name'],
+        user['userName'],
+        user['fullName'],
+        user['firstName'],
+      ]);
+    }
+
+    final createdBy = json['createdBy'];
+    if (createdBy is Map) {
+      candidates.addAll([
+        createdBy['name'],
+        createdBy['userName'],
+        createdBy['fullName'],
+        createdBy['firstName'],
+      ]);
+    }
+
+    for (final value in candidates) {
+      if (value != null && '$value'.trim().isNotEmpty) {
+        return '$value'.trim();
+      }
+    }
+    return '';
+  }
 
   static Object? _readOptionalString(Map<dynamic, dynamic> json, String key) {
     final direct = json[key];

@@ -695,42 +695,52 @@ class ThermalPrinterService extends GetxController {
     }
   }
 
-  Future<bool> ensureConnected() async {
-    // Check if already connected (Bluetooth or USB)
-    if (isConnected.value) {
-      return true;
-    }
+  bool get _hasAnyPrinterConnection =>
+      isConnected.value ||
+      (isUsbConnected.value && connectedUsbPrinter != null) ||
+      isNetworkConnected.value;
 
-    // 1️⃣ Check Bluetooth status
-    final bluetoothEnabled = await BluetoothHelper().isBluetoothEnabled();
+  Future<void> _showPrinterConnectionDialog() async {
+    // App loader (especially the Windows overlay) sits above navigator dialogs
+    // and would keep spinning on top of "Connect Printer".
+    dismissAllAppLoader();
+    await Get.dialog(
+      PrinterConnectionDialog(printerService: this),
+      barrierDismissible: true,
+    );
+  }
+
+  Future<bool> ensureConnected() async {
+    if (_hasAnyPrinterConnection) return true;
+
+    // Avoid hanging forever if BLE adapter state never emits (common on Windows).
+    var bluetoothEnabled = false;
+    try {
+      bluetoothEnabled = await BluetoothHelper()
+          .isBluetoothEnabled()
+          .timeout(const Duration(seconds: 3), onTimeout: () => false);
+    } catch (_) {
+      bluetoothEnabled = false;
+    }
     debugPrint('Bluetooth enabled: $bluetoothEnabled');
 
     if (!bluetoothEnabled) {
-      // Try USB connection as fallback
       await scanUsbPrinters();
-      if (usbPrinters.isNotEmpty) {
-        // Show dialog to select USB printer
-        await Get.dialog(
-          PrinterConnectionDialog(printerService: this),
-          barrierDismissible: true,
-        );
+      if (usbPrinters.isNotEmpty || !Platform.isWindows) {
+        await _showPrinterConnectionDialog();
       } else {
         showError(
           title: 'No Printer Available',
-          description: 'Please enable Bluetooth or connect a USB printer',
+          description:
+              'Please connect a USB or Ethernet printer from Printer settings',
         );
         return false;
       }
     } else {
-      // Show dialog to enable Bluetooth / connect printer
-      await Get.dialog(
-        PrinterConnectionDialog(printerService: this),
-        barrierDismissible: true,
-      );
+      await _showPrinterConnectionDialog();
     }
 
-    // 2️⃣ Final connection status
-    return isConnected.value;
+    return _hasAnyPrinterConnection;
   }
 
   /// Disconnects the BLE thermal path only. USB stays connected so bill (USB)
@@ -1014,6 +1024,10 @@ class ThermalPrinterService extends GetxController {
   Future<bool> ensureConnectedForRole(PrintRole role) async {
     if (kIsWeb) return false;
 
+    // Callers often show an app loader before print; drop it before any
+    // reconnect wait or Connect Printer dialog (Windows overlay sits on top).
+    dismissAllAppLoader();
+
     final roleKey = _roleKey(role);
 
     if (await _isConnectedForRole(role)) {
@@ -1039,10 +1053,12 @@ class ThermalPrinterService extends GetxController {
             await disconnectUsbPrinter(notifyUser: false);
           }
           final ok = await connectUsbPrinter(match);
-          if (!ok) return false;
+          if (!ok) return await ensureConnected();
         }
         return isUsbConnected.value && connectedUsbPrinter != null;
       }
+      // Saved USB printer not available — let the user pick another.
+      return await ensureConnected();
     }
 
     if (type == 'network') {
@@ -1054,8 +1070,10 @@ class ThermalPrinterService extends GetxController {
             _network.port == port) {
           return true;
         }
-        return await connectNetworkPrinter(ip, port: port);
+        final ok = await connectNetworkPrinter(ip, port: port);
+        if (ok) return true;
       }
+      return await ensureConnected();
     }
 
     if (type == 'bluetooth') {
@@ -1081,11 +1099,15 @@ class ThermalPrinterService extends GetxController {
         await sub.cancel();
 
         if (targetDevice != null) {
-          return await connectToDevice(targetDevice!);
+          final ok = await connectToDevice(targetDevice!);
+          if (ok) return true;
         }
+        // Saved BLE printer not found — let the user pick another.
+        return await ensureConnected();
       }
     }
 
+    // No printer assigned for this role yet — let the user pick one.
     final ok = await ensureConnected();
 
     if (ok) {

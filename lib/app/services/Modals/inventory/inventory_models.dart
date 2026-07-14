@@ -502,6 +502,18 @@ class RecipeData {
   }
 }
 
+class RecipeLineInput {
+  const RecipeLineInput({
+    this.id,
+    required this.rawMaterialId,
+    required this.quantity,
+  });
+
+  final String? id;
+  final String rawMaterialId;
+  final double quantity;
+}
+
 class PoLineSuggestion {
   final String rawMaterialId;
   final double quantity;

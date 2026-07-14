@@ -28,6 +28,7 @@ class TableFormDialog extends StatefulWidget {
 class _TableFormDialogState extends State<TableFormDialog> {
   late final TextEditingController _numberController;
   late final TextEditingController _seatsController;
+  late final TextEditingController _sectionController;
   bool _submitting = false;
 
   static String _digitsOnly(String? value) {
@@ -48,12 +49,16 @@ class _TableFormDialogState extends State<TableFormDialog> {
       text:
           '${widget.editTable?.seatingCapacity ?? widget.controller.defaultSeatsForNewTable}',
     );
+    _sectionController = TextEditingController(
+      text: widget.editTable?.section.trim() ?? '',
+    );
   }
 
   @override
   void dispose() {
     _numberController.dispose();
     _seatsController.dispose();
+    _sectionController.dispose();
     super.dispose();
   }
 
@@ -62,15 +67,18 @@ class _TableFormDialogState extends State<TableFormDialog> {
     setState(() => _submitting = true);
 
     final seats = int.tryParse(_seatsController.text.trim()) ?? 0;
+    final section = _sectionController.text.trim();
     final ok = widget.isEdit
         ? await widget.controller.updateTable(
             table: widget.editTable!,
             tableNumber: _numberController.text,
             seatingCapacity: seats,
+            section: section,
           )
         : await widget.controller.addTable(
             tableNumber: _numberController.text,
             seatingCapacity: seats,
+            section: section,
           );
 
     if (!mounted) return;
@@ -91,7 +99,7 @@ class _TableFormDialogState extends State<TableFormDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 440),
+        constraints: const BoxConstraints(maxWidth: 440, maxHeight: 640),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -159,79 +167,179 @@ class _TableFormDialogState extends State<TableFormDialog> {
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextField(
-                    controller: _numberController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    textInputAction: TextInputAction.next,
-                    decoration: InputDecoration(
-                      labelText: loc.table_number,
-                      hintText: loc.table_number_hint,
-                      prefixIcon: const Icon(Icons.numbers),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      filled: true,
-                      fillColor: colorScheme.surfaceContainerHighest.withValues(
-                        alpha: 0.35,
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
+                      controller: _numberController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      textInputAction: TextInputAction.next,
+                      decoration: InputDecoration(
+                        labelText: loc.table_number,
+                        hintText: loc.table_number_hint,
+                        prefixIcon: const Icon(Icons.numbers),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.35),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _seatsController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    textInputAction: TextInputAction.done,
-                    decoration: InputDecoration(
-                      labelText: loc.seats_label,
-                      hintText: limit > 0 && !widget.isEdit
-                          ? loc.table_seats_exceed_remaining(remaining, limit)
-                          : loc.seats_hint,
-                      prefixIcon: const Icon(Icons.chair_outlined),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      filled: true,
-                      fillColor: colorScheme.surfaceContainerHighest.withValues(
-                        alpha: 0.35,
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _seatsController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      textInputAction: TextInputAction.next,
+                      decoration: InputDecoration(
+                        labelText: loc.seats_label,
+                        hintText: limit > 0 && !widget.isEdit
+                            ? loc.table_seats_exceed_remaining(remaining, limit)
+                            : loc.seats_hint,
+                        prefixIcon: const Icon(Icons.chair_outlined),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.35),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [2, 4, 6, 8].map((n) {
-                      final selected = _seatsController.text.trim() == '$n';
-                      return ChoiceChip(
-                        label: Text('$n ${loc.seats_label}'),
-                        selected: selected,
-                        showCheckmark: false,
-                        onSelected: (_) {
-                          setState(() => _seatsController.text = '$n');
-                        },
-                        selectedColor: AppColor.primary.withValues(alpha: 0.2),
-                        labelStyle: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: selected
-                              ? AppColor.primary
-                              : colorScheme.onSurfaceVariant,
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [2, 4, 6, 8].map((n) {
+                        final selected = _seatsController.text.trim() == '$n';
+                        return ChoiceChip(
+                          label: Text('$n ${loc.seats_label}'),
+                          selected: selected,
+                          showCheckmark: false,
+                          onSelected: (_) {
+                            setState(() => _seatsController.text = '$n');
+                          },
+                          selectedColor: AppColor.primary.withValues(
+                            alpha: 0.2,
+                          ),
+                          labelStyle: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: selected
+                                ? AppColor.primary
+                                : colorScheme.onSurfaceVariant,
+                          ),
+                          side: BorderSide(
+                            color: selected
+                                ? AppColor.primary
+                                : colorScheme.outlineVariant,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            loc.table_section,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
                         ),
-                        side: BorderSide(
-                          color: selected
-                              ? AppColor.primary
-                              : colorScheme.outlineVariant,
+                        TextButton.icon(
+                          onPressed: () {
+                            widget.controller.promptAddSection();
+                          },
+                          icon: const Icon(Icons.add, size: 18),
+                          label: Text(loc.add_section),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Obx(() {
+                      final managed = widget.controller.sectionSuggestions;
+                      final current = _sectionController.text.trim();
+                      final suggestions = <String>[
+                        ...managed,
+                        if (current.isNotEmpty &&
+                            !managed.any(
+                              (s) => s.toLowerCase() == current.toLowerCase(),
+                            ))
+                          current,
+                      ];
+                      if (suggestions.isEmpty) {
+                        return Text(
+                          loc.no_sections_yet,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        );
+                      }
+                      return Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          ChoiceChip(
+                            label: Text(loc.table_section_general),
+                            selected: current.isEmpty,
+                            showCheckmark: false,
+                            onSelected: (_) {
+                              setState(() => _sectionController.text = '');
+                            },
+                            selectedColor: AppColor.primary.withValues(
+                              alpha: 0.2,
+                            ),
+                            labelStyle: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: current.isEmpty
+                                  ? AppColor.primary
+                                  : colorScheme.onSurfaceVariant,
+                            ),
+                            side: BorderSide(
+                              color: current.isEmpty
+                                  ? AppColor.primary
+                                  : colorScheme.outlineVariant,
+                            ),
+                          ),
+                          ...suggestions.map((name) {
+                            final selected =
+                                current.toLowerCase() == name.toLowerCase();
+                            return ChoiceChip(
+                              label: Text(name),
+                              selected: selected,
+                              showCheckmark: false,
+                              onSelected: (_) {
+                                setState(() => _sectionController.text = name);
+                              },
+                              selectedColor: AppColor.primary.withValues(
+                                alpha: 0.2,
+                              ),
+                              labelStyle: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: selected
+                                    ? AppColor.primary
+                                    : colorScheme.onSurfaceVariant,
+                              ),
+                              side: BorderSide(
+                                color: selected
+                                    ? AppColor.primary
+                                    : colorScheme.outlineVariant,
+                              ),
+                            );
+                          }),
+                        ],
                       );
-                    }).toList(),
-                  ),
-                ],
+                    }),
+                  ],
+                ),
               ),
             ),
             Container(

@@ -2,6 +2,7 @@ import 'package:billkaro/app/Widgets/app_dropdowns.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:billkaro/app/modules/Staff/staff_details_controller.dart';
+import 'package:billkaro/app/modules/Staff/staff_view_dialog.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 
@@ -186,7 +187,7 @@ class StaffListScreen extends StatelessWidget {
             ),
           ),
           Expanded(
-            flex: 2,
+            flex: 3,
             child: Text(
               loc.role_label,
               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
@@ -213,7 +214,14 @@ class StaffListScreen extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ),
-          const SizedBox(width: 96),
+          SizedBox(
+            width: 56,
+            child: Text(
+              loc.actions,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+          ),
         ],
       ),
     );
@@ -564,7 +572,7 @@ class _WindowsStaffRow extends StatelessWidget {
                 ),
               ),
               Expanded(
-                flex: 2,
+                flex: 3,
                 child: _RoleChip(
                   title: roleTitle,
                   isSecondaryAdmin: isSecondaryAdmin,
@@ -591,9 +599,8 @@ class _WindowsStaffRow extends StatelessWidget {
                 child: Center(child: _StatusChip(isActive: member.isActive)),
               ),
               SizedBox(
-                width: 96,
-                child: Align(
-                  alignment: Alignment.centerRight,
+                width: 56,
+                child: Center(
                   child: _StaffActionMenu(
                     member: member,
                     controller: controller,
@@ -632,7 +639,9 @@ class _StaffActionMenu extends StatelessWidget {
       final staffId = member.id.trim();
       final deleting =
           staffId.isNotEmpty && controller.deletingStaffIds.contains(staffId);
-      if (deleting) {
+      final reinviting =
+          staffId.isNotEmpty && controller.reinvitingStaffIds.contains(staffId);
+      if (deleting || reinviting) {
         return const SizedBox(
           width: 24,
           height: 24,
@@ -640,50 +649,61 @@ class _StaffActionMenu extends StatelessWidget {
         );
       }
 
-      if (isWindows) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              tooltip: loc.edit,
-              icon: Icon(
-                Icons.edit_outlined,
-                size: 18,
-                color: AppColor.primary,
-              ),
-              onPressed: () => controller.onEditStaff(member),
-              style: IconButton.styleFrom(
-                backgroundColor: AppColor.primary.withValues(alpha: 0.08),
-                minimumSize: const Size(36, 36),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-            ),
-            const SizedBox(width: 6),
-            IconButton(
-              tooltip: loc.delete,
-              icon: const Icon(
-                Icons.delete_outline,
-                size: 18,
-                color: Colors.red,
-              ),
-              onPressed: () => _confirmDelete(context, member, loc),
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.red.withValues(alpha: 0.08),
-                minimumSize: const Size(36, 36),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-            ),
-          ],
-        );
-      }
-
       return AppActionDropdown2<String>(
-        customButton: const Icon(Icons.more_vert, size: 20),
+        width: isWindows ? 180 : 160,
+        customButton: Icon(
+          Icons.more_vert,
+          size: isWindows ? 20 : 22,
+          color: isWindows ? Colors.grey.shade700 : null,
+        ),
         items: [
-          DropdownItem(value: 'edit', height: 44, child: Text(loc.edit)),
-          DropdownItem(value: 'remove', height: 44, child: Text(loc.remove)),
+          DropdownItem(
+            value: 'view',
+            height: 44,
+            child: _staffActionMenuItem(
+              icon: Icons.visibility_outlined,
+              label: loc.view,
+              iconColor: Colors.blueGrey.shade700,
+            ),
+          ),
+          if (!member.isActive)
+            DropdownItem(
+              value: 'reinvite',
+              height: 44,
+              child: _staffActionMenuItem(
+                icon: Icons.mail_outline,
+                label: loc.reinvite,
+                iconColor: Colors.orange.shade800,
+              ),
+            ),
+          DropdownItem(
+            value: 'edit',
+            height: 44,
+            child: _staffActionMenuItem(
+              icon: Icons.edit_outlined,
+              label: loc.edit,
+              iconColor: AppColor.primary,
+            ),
+          ),
+          DropdownItem(
+            value: 'remove',
+            height: 44,
+            child: _staffActionMenuItem(
+              icon: Icons.delete_outline,
+              label: loc.remove,
+              iconColor: Colors.red,
+            ),
+          ),
         ],
         onChanged: (value) async {
+          if (value == 'view') {
+            await showStaffViewDialog(context, member);
+            return;
+          }
+          if (value == 'reinvite') {
+            await controller.reinviteStaff(member);
+            return;
+          }
           if (value == 'edit') {
             await controller.onEditStaff(member);
             return;
@@ -764,7 +784,8 @@ class _RoleChip extends StatelessWidget {
       ),
       child: Text(
         title,
-        overflow: TextOverflow.ellipsis,
+        softWrap: true,
+        maxLines: 2,
         style: TextStyle(
           color: fg,
           fontSize: compact ? 11 : 12,
@@ -933,4 +954,23 @@ class _PermissionReadOnlyRow extends StatelessWidget {
       ],
     );
   }
+}
+
+Widget _staffActionMenuItem({
+  required IconData icon,
+  required String label,
+  Color? iconColor,
+}) {
+  return Row(
+    children: [
+      Icon(icon, size: 18, color: iconColor),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        ),
+      ),
+    ],
+  );
 }

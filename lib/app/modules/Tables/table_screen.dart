@@ -50,16 +50,36 @@ class _TableScreenState extends State<TableScreen> {
 
     return Scaffold(
       backgroundColor: AppColor.backGroundColor,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: controller.promptAddTable,
-        backgroundColor: AppColor.secondaryPrimary,
-        foregroundColor: AppColor.white,
-        elevation: 4,
-        icon: Icon(Icons.add, size: 24),
-        label: Text(
-          loc.add_new_table,
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          FloatingActionButton.extended(
+            heroTag: 'add_section_fab',
+            onPressed: controller.promptAddSection,
+            backgroundColor: AppColor.white,
+            foregroundColor: AppColor.primary,
+            elevation: 3,
+            icon: const Icon(Icons.meeting_room_outlined, size: 22),
+            label: Text(
+              loc.add_section,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton.extended(
+            heroTag: 'add_table_fab',
+            onPressed: controller.promptAddTable,
+            backgroundColor: AppColor.secondaryPrimary,
+            foregroundColor: AppColor.white,
+            elevation: 4,
+            icon: const Icon(Icons.add, size: 24),
+            label: Text(
+              loc.add_new_table,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
       ),
       appBar: AppBar(
         elevation: 0,
@@ -165,90 +185,151 @@ class _TableScreenState extends State<TableScreen> {
                                     : width >= 600
                                     ? 220.0
                                     : 180.0;
+                                final bySection =
+                                    controller.filteredTablesBySection;
+                                final showSectionHeaders =
+                                    controller.selectedSection.value == null &&
+                                    bySection.length > 1;
+                                final sectionEntries = bySection.entries
+                                    .toList();
 
                                 return Scrollbar(
                                   controller: _scrollController,
                                   thumbVisibility: isWindows,
-                                  child: GridView.builder(
+                                  child: CustomScrollView(
                                     controller: _scrollController,
-                                    padding: const EdgeInsets.fromLTRB(
-                                      16,
-                                      8,
-                                      16,
-                                      16,
-                                    ),
                                     physics: scrollPhysics,
-                                    itemCount: filteredTables.length,
-                                    gridDelegate:
-                                        SliverGridDelegateWithMaxCrossAxisExtent(
-                                          maxCrossAxisExtent: maxExtent,
-                                          crossAxisSpacing: 12,
-                                          mainAxisSpacing: 12,
-                                          childAspectRatio: width >= 900
-                                              ? 1.2
-                                              : 1.1,
+                                    slivers: [
+                                      for (
+                                        var i = 0;
+                                        i < sectionEntries.length;
+                                        i++
+                                      ) ...[
+                                        if (showSectionHeaders)
+                                          SliverToBoxAdapter(
+                                            child: _SectionHeader(
+                                              title: controller
+                                                  .sectionDisplayName(
+                                                    sectionEntries[i].key,
+                                                    loc,
+                                                  ),
+                                              count: sectionEntries[i]
+                                                  .value
+                                                  .length,
+                                            ),
+                                          ),
+                                        SliverPadding(
+                                          padding: EdgeInsets.fromLTRB(
+                                            16,
+                                            showSectionHeaders ? 0 : 8,
+                                            16,
+                                            i == sectionEntries.length - 1
+                                                ? 16
+                                                : 8,
+                                          ),
+                                          sliver: SliverGrid(
+                                            gridDelegate:
+                                                SliverGridDelegateWithMaxCrossAxisExtent(
+                                                  maxCrossAxisExtent: maxExtent,
+                                                  crossAxisSpacing: 12,
+                                                  mainAxisSpacing: 12,
+                                                  childAspectRatio: width >= 900
+                                                      ? 1.2
+                                                      : 1.1,
+                                                ),
+                                            delegate: SliverChildBuilderDelegate(
+                                              (context, index) {
+                                                final tws = sectionEntries[i]
+                                                    .value[index];
+                                                return _TableCard(
+                                                  enableHover: isWindows,
+                                                  tableWithStatus: tws,
+                                                  onTap: () => controller
+                                                      .onTableTap(tws),
+                                                  onLongPress:
+                                                      tws.table.hasMergedTables
+                                                      ? () =>
+                                                            _showUnmergeDialog(
+                                                              context,
+                                                              tws,
+                                                            )
+                                                      : tws.isAvailable
+                                                      ? () =>
+                                                            ReserveTableDialog.show(
+                                                              controller:
+                                                                  controller,
+                                                              table: tws.table,
+                                                            )
+                                                      : null,
+                                                  onUnmerge:
+                                                      tws.table.hasMergedTables
+                                                      ? () =>
+                                                            _showUnmergeDialog(
+                                                              context,
+                                                              tws,
+                                                            )
+                                                      : null,
+                                                  onReserve:
+                                                      tws.isAvailable &&
+                                                          !tws
+                                                              .table
+                                                              .hasMergedTables
+                                                      ? () =>
+                                                            ReserveTableDialog.show(
+                                                              controller:
+                                                                  controller,
+                                                              table: tws.table,
+                                                            )
+                                                      : null,
+                                                  onEdit:
+                                                      tws.currentOrder ==
+                                                              null &&
+                                                          (tws.isAvailable ||
+                                                              tws.isReserved ||
+                                                              tws
+                                                                  .table
+                                                                  .hasMergedTables)
+                                                      ? () {
+                                                          if (tws
+                                                              .table
+                                                              .hasMergedTables) {
+                                                            controller
+                                                                .openEditMergedTablesDialog(
+                                                                  tws,
+                                                                );
+                                                          } else {
+                                                            TableFormDialog.show(
+                                                              controller:
+                                                                  controller,
+                                                              editTable:
+                                                                  tws.table,
+                                                            );
+                                                          }
+                                                        }
+                                                      : null,
+                                                  onQr: () => controller
+                                                      .showTableQr(tws.table),
+                                                  onDelete:
+                                                      tws.isAvailable &&
+                                                          !tws
+                                                              .table
+                                                              .hasMergedTables
+                                                      ? () =>
+                                                            _showDeleteTableDialog(
+                                                              context,
+                                                              tws,
+                                                            )
+                                                      : null,
+                                                );
+                                              },
+                                              childCount: sectionEntries[i]
+                                                  .value
+                                                  .length,
+                                            ),
+                                          ),
                                         ),
-                                    itemBuilder: (_, index) {
-                                      final tws = filteredTables[index];
-                                      return _TableCard(
-                                        enableHover: isWindows,
-                                        tableWithStatus: tws,
-                                        onTap: () => controller.onTableTap(tws),
-                                        onLongPress: tws.table.hasMergedTables
-                                            ? () => _showUnmergeDialog(
-                                                context,
-                                                tws,
-                                              )
-                                            : tws.isAvailable
-                                            ? () => ReserveTableDialog.show(
-                                                controller: controller,
-                                                table: tws.table,
-                                              )
-                                            : null,
-                                        onUnmerge: tws.table.hasMergedTables
-                                            ? () => _showUnmergeDialog(
-                                                context,
-                                                tws,
-                                              )
-                                            : null,
-                                        onReserve:
-                                            tws.isAvailable &&
-                                                !tws.table.hasMergedTables
-                                            ? () => ReserveTableDialog.show(
-                                                controller: controller,
-                                                table: tws.table,
-                                              )
-                                            : null,
-                                        onEdit:
-                                            tws.currentOrder == null &&
-                                                (tws.isAvailable ||
-                                                    tws.isReserved ||
-                                                    tws.table.hasMergedTables)
-                                            ? () {
-                                                if (tws.table.hasMergedTables) {
-                                                  controller
-                                                      .openEditMergedTablesDialog(
-                                                    tws,
-                                                  );
-                                                } else {
-                                                  TableFormDialog.show(
-                                                    controller: controller,
-                                                    editTable: tws.table,
-                                                  );
-                                                }
-                                              }
-                                            : null,
-                                        onQr: () => controller.showTableQr(tws.table),
-                                        onDelete:
-                                            tws.isAvailable &&
-                                                !tws.table.hasMergedTables
-                                            ? () => _showDeleteTableDialog(
-                                                context,
-                                                tws,
-                                              )
-                                            : null,
-                                      );
-                                    },
+                                      ],
+                                    ],
                                   ),
                                 );
                               },
@@ -371,6 +452,9 @@ class _TableScreenState extends State<TableScreen> {
     final loc = AppLocalizations.of(context)!;
     Get.dialog(
       AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadiusGeometry.circular(8),
+        ),
         title: Text(loc.delete_table),
         content: Text(loc.delete_table_confirm_message(tws.table.displayName)),
         actions: [
@@ -853,6 +937,31 @@ class _TableHeader extends StatelessWidget {
           ),
         );
 
+        final sectionFilters = Obx(() {
+          final sections = controller.availableSections;
+          if (sections.isEmpty) return const SizedBox.shrink();
+          return SizedBox(
+            height: 36,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _FilterChip(
+                  label: loc.table_section_all,
+                  selected: controller.selectedSection.value == null,
+                  onTap: () => controller.setSectionFilter(null),
+                ),
+                ...sections.map(
+                  (section) => _FilterChip(
+                    label: controller.sectionDisplayName(section, loc),
+                    selected: controller.selectedSection.value == section,
+                    onTap: () => controller.setSectionFilter(section),
+                  ),
+                ),
+              ],
+            ),
+          );
+        });
+
         return Container(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
           child: Column(
@@ -889,6 +998,8 @@ class _TableHeader extends StatelessWidget {
                   : Column(
                       children: [search, const SizedBox(height: 10), filters],
                     ),
+              const SizedBox(height: 10),
+              sectionFilters,
             ],
           ),
         );
@@ -922,6 +1033,46 @@ class _FilterChip extends StatelessWidget {
           color: selected ? AppColor.primary : colorScheme.onSurfaceVariant,
           fontWeight: FontWeight.w600,
         ),
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final int count;
+
+  const _SectionHeader({required this.title, required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Row(
+        children: [
+          Icon(Icons.meeting_room_outlined, size: 18, color: AppColor.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: colorScheme.onSurface,
+              ),
+            ),
+          ),
+          Text(
+            loc.table_section_count(count),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1035,9 +1186,9 @@ class _EmptyState extends StatelessWidget {
                       if (canCreateAll) const SizedBox(height: 12),
                       OutlinedButton.icon(
                         onPressed: controller.promptAddTable,
-                          icon: const Icon(Icons.add),
-                          label: Text(loc.add_new_table),
-                        ),
+                        icon: const Icon(Icons.add),
+                        label: Text(loc.add_new_table),
+                      ),
                     ],
                   ),
                 ),

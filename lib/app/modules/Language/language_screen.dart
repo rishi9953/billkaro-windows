@@ -99,7 +99,7 @@ class LanguageScreen extends StatelessWidget {
                           final language = controller.languages[index];
                           final isSelected =
                               language == controller.selectedLanguage.value;
-                          final flag = index == 0 ? "🇬🇧" : "🇮🇳";
+                          final flag = index == 0 ? "EN" : "HI";
                           final nativeName = index == 0 ? "English" : "हिन्दी";
                           final subtitle = index == 0
                               ? "English (US)"
@@ -116,10 +116,10 @@ class LanguageScreen extends StatelessWidget {
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 300),
                               curve: Curves.easeInOut,
-                      margin: const EdgeInsets.only(bottom: 12),
+                              margin: const EdgeInsets.only(bottom: 12),
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
+                                borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
                                   color: isSelected
                                       ? const Color(0xff083c6b)

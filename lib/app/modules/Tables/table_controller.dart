@@ -38,11 +38,15 @@ class TableController extends BaseController {
   final db = Get.find<dbs.AppDatabase>();
 
   final RxList<TableWithStatus> tables = <TableWithStatus>[].obs;
+  final RxList<TableSectionModel> sections = <TableSectionModel>[].obs;
   final RxList<TableReservationModel> reservations =
       <TableReservationModel>[].obs;
   final RxBool isLoading = false.obs;
   final RxString searchQuery = ''.obs;
   final Rx<TableFilter> selectedFilter = TableFilter.all.obs;
+
+  /// `null` = all sections. Otherwise matches [TableModel.section] (`''` = General).
+  final RxnString selectedSection = RxnString();
   final RxString errorMessage = ''.obs;
   final RxString reservationFilterDate = ''.obs;
 
@@ -133,6 +137,7 @@ class TableController extends BaseController {
       final outletId = appPref.selectedOutlet?.id;
       if (outletId == null) {
         tables.clear();
+        sections.clear();
         return;
       }
 
@@ -155,6 +160,8 @@ class TableController extends BaseController {
         final loc = AppLocalizations.of(Get.context!)!;
         errorMessage.value = loc.unable_to_load_tables_from_server;
       }
+
+      await _loadSections(outletId);
 
       if (tableList.isEmpty) {
         final cached = appPref.getCachedOutletTables(outletId);
@@ -324,6 +331,7 @@ class TableController extends BaseController {
 
   List<TableWithStatus> get filteredTables {
     final query = searchQuery.value.trim().toLowerCase();
+    final sectionFilter = selectedSection.value;
     return tables
         .where((tws) {
           final searchable = tws.table.hasMergedTables
@@ -341,10 +349,65 @@ class TableController extends BaseController {
             TableFilter.merged => tws.table.hasMergedTables,
           };
 
-          return matchesQuery && matchesFilter;
+          final matchesSection = sectionFilter == null
+              ? true
+              : _normalizeSectionKey(tws.table.section) ==
+                    _normalizeSectionKey(sectionFilter);
+
+          return matchesQuery && matchesFilter && matchesSection;
         })
         .toList(growable: false);
   }
+
+  /// Section names for filters (managed + any used on tables). General first.
+  List<String> get availableSections {
+    final named = <String>{};
+    for (final s in sections) {
+      final n = s.name.trim();
+      if (n.isNotEmpty) named.add(n);
+    }
+    for (final tws in tables) {
+      final n = tws.table.section.trim();
+      if (n.isNotEmpty) named.add(n);
+    }
+    final sorted = named.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final hasGeneral = tables.any((t) => t.table.section.trim().isEmpty);
+    return [if (hasGeneral) '', ...sorted];
+  }
+
+  /// Sections created for this outlet — used in the add/edit table dialog.
+  List<String> get sectionSuggestions {
+    return sections
+        .map((s) => s.name.trim())
+        .where((s) => s.isNotEmpty)
+        .toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  }
+
+  /// Groups [filteredTables] by section key for the grid UI.
+  Map<String, List<TableWithStatus>> get filteredTablesBySection {
+    final map = <String, List<TableWithStatus>>{};
+    for (final tws in filteredTables) {
+      final key = tws.table.section.trim();
+      map.putIfAbsent(key, () => []).add(tws);
+    }
+    final orderedKeys = map.keys.toList()
+      ..sort((a, b) {
+        if (a.isEmpty && b.isNotEmpty) return -1;
+        if (a.isNotEmpty && b.isEmpty) return 1;
+        return a.toLowerCase().compareTo(b.toLowerCase());
+      });
+    return {for (final k in orderedKeys) k: map[k]!};
+  }
+
+  String sectionDisplayName(String section, AppLocalizations loc) {
+    final trimmed = section.trim();
+    return trimmed.isEmpty ? loc.table_section_general : trimmed;
+  }
+
+  static String _normalizeSectionKey(String value) =>
+      value.trim().toLowerCase();
 
   int get mergedTableGroupsCount =>
       tables.where((t) => t.table.hasMergedTables).length;
@@ -355,8 +418,107 @@ class TableController extends BaseController {
 
   void setSearchQuery(String value) => searchQuery.value = value;
   void setFilter(TableFilter filter) => selectedFilter.value = filter;
+  void setSectionFilter(String? section) => selectedSection.value = section;
 
   bool get canAddMoreTables => remainingSeats >= 1;
+
+  Future<void> _loadSections(String outletId) async {
+    try {
+      final response = await callApi(
+        apiClient.getOutletTableSections(outletId),
+        showLoader: false,
+      );
+      if (response is Map && response['status'] == 'success') {
+        final raw = response['data'];
+        if (raw is List) {
+          sections.assignAll(
+            raw
+                .whereType<Map>()
+                .map(
+                  (e) =>
+                      TableSectionModel.fromJson(Map<String, dynamic>.from(e)),
+                )
+                .where((s) => s.name.isNotEmpty)
+                .toList(),
+          );
+          return;
+        }
+      }
+    } catch (_) {}
+  }
+
+  void promptAddSection() {
+    final loc = AppLocalizations.of(Get.context!)!;
+    final nameController = TextEditingController();
+    Get.dialog(
+      AlertDialog(
+        title: Text(loc.add_section),
+        content: TextField(
+          controller: nameController,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: InputDecoration(
+            labelText: loc.section_name,
+            hintText: loc.section_name_hint,
+          ),
+          onSubmitted: (_) async {
+            final ok = await addSection(nameController.text);
+            if (ok && Get.isDialogOpen == true) Get.back();
+          },
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: Text(loc.cancel)),
+          FilledButton(
+            onPressed: () async {
+              final ok = await addSection(nameController.text);
+              if (ok && Get.isDialogOpen == true) Get.back();
+            },
+            child: Text(loc.add),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool> addSection(String name) async {
+    final loc = AppLocalizations.of(Get.context!)!;
+    final input = name.trim();
+    if (input.isEmpty) {
+      showError(description: loc.please_enter_section_name);
+      return false;
+    }
+
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null) {
+      showError(description: loc.please_select_outlet_first);
+      return false;
+    }
+
+    final exists = sections.any(
+      (s) => s.name.trim().toLowerCase() == input.toLowerCase(),
+    );
+    if (exists) {
+      showError(description: loc.section_already_exists);
+      return false;
+    }
+
+    final response = await callApi(
+      apiClient.createOutletTableSection({'outletId': outletId, 'name': input}),
+    );
+
+    if (response is Map && response['status'] == 'success') {
+      await _loadSections(outletId);
+      showSuccess(description: loc.section_added_successfully);
+      return true;
+    }
+
+    showError(
+      description: response is Map
+          ? (response['message']?.toString() ?? loc.failed_to_add_section)
+          : loc.failed_to_add_section,
+    );
+    return false;
+  }
 
   /// Shows an alert when outlet seating is full; otherwise opens the add-table dialog.
   void promptAddTable() {
@@ -429,6 +591,7 @@ class TableController extends BaseController {
   Future<bool> addTable({
     required String tableNumber,
     required int seatingCapacity,
+    String section = '',
   }) async {
     final loc = AppLocalizations.of(Get.context!)!;
     final input = tableNumber.trim();
@@ -478,6 +641,7 @@ class TableController extends BaseController {
         'outletId': outletId,
         'tableNumber': input,
         'seatingcapacity': seatingCapacity,
+        'section': section.trim(),
         'status': 'available',
       }),
     );
@@ -496,6 +660,7 @@ class TableController extends BaseController {
     required TableModel table,
     required String tableNumber,
     required int seatingCapacity,
+    String? section,
   }) async {
     final loc = AppLocalizations.of(Get.context!)!;
     final input = tableNumber.trim();
@@ -532,6 +697,7 @@ class TableController extends BaseController {
       apiClient.updateTable(table.id, {
         'tableNumber': input,
         'seatingcapacity': seatingCapacity,
+        'section': (section ?? table.section).trim(),
       }),
     );
 
@@ -825,9 +991,8 @@ class TableController extends BaseController {
         .toList(growable: false);
   }
 
-  List<String> mergedChildIds(String primaryId) => mergedChildModels(primaryId)
-      .map((t) => t.id)
-      .toList(growable: false);
+  List<String> mergedChildIds(String primaryId) =>
+      mergedChildModels(primaryId).map((t) => t.id).toList(growable: false);
 
   List<TableWithStatus> mergeEditCandidates(TableModel primary) {
     final childModels = mergedChildModels(primary.id);
@@ -855,10 +1020,7 @@ class TableController extends BaseController {
 
   Future<void> openEditMergedTablesDialog(TableWithStatus tws) async {
     if (!tws.table.hasMergedTables) return;
-    await MergeTablesDialog.showEdit(
-      controller: this,
-      mergedPrimary: tws,
-    );
+    await MergeTablesDialog.showEdit(controller: this, mergedPrimary: tws);
   }
 
   Future<bool> updateMergedTables(

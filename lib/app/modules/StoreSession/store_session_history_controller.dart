@@ -7,7 +7,7 @@ class StaffFilterOption {
   const StaffFilterOption({required this.id, required this.name});
 
   final String id;
-  final String name;
+  final String name; 
 }
 
 class StoreSessionHistoryController extends BaseController {

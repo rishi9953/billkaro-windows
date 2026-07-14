@@ -116,6 +116,15 @@ class ThemeController extends BaseController {
     await _persistCustomThemeColors();
   }
 
+  /// Removes a saved custom color from the picker list. Does not change the active theme.
+  Future<void> removeCustomThemeColor(Color color) async {
+    final norm = color.value & 0xFFFFFFFF;
+    final before = customThemeColors.length;
+    customThemeColors.removeWhere((e) => (e & 0xFFFFFFFF) == norm);
+    if (customThemeColors.length == before) return;
+    await _persistCustomThemeColors();
+  }
+
   Future<void> _loadSavedThemeColor() async {
     final prefs = Get.find<SharedPreferences>();
     final stored = prefs.getInt(_themeColorKey);

@@ -110,6 +110,9 @@ class KOTPreviewController extends BaseController {
     try {
       showAppLoader();
 
+      // Drop loader before connect UI / print so it cannot sit over the dialog.
+      dismissAllAppLoader();
+
       await printerService.printKOT(
         kotNumber: kotNumber.value,
         brandName: appPref.user!.brandName ?? '',
@@ -133,10 +136,9 @@ class KOTPreviewController extends BaseController {
         orderId: (Get.arguments ?? Modular.args.data)?['orderId']?.toString(),
       );
 
-      dismissAppLoader();
       showSuccess(description: 'KOT printed successfully');
     } catch (e) {
-      dismissAppLoader();
+      dismissAllAppLoader();
       showError(description: 'Failed to print KOT: $e');
       debugPrint('Print KOT Error: $e');
     }

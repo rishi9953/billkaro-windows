@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:billkaro/app/services/Modals/login_response.dart';
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
-import 'package:billkaro/app/services/Modals/orders/split_payment.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/Modals/tables/tables_response.dart';
 import 'package:billkaro/app/services/sync/bill_number_util.dart';
@@ -25,29 +24,15 @@ class OrderDetailsController extends BaseController {
   bool get isDineIn => orderFrom.value.trim().toLowerCase() == 'dine in';
 
   final discountType = 'percentage'.obs;
-  final paymentRecieved = 'cash'.obs;
   final status = 'pending'.obs;
-
-  // Split payment support
-  final RxList<SplitPayment> splitPayments = <SplitPayment>[].obs;
-  final RxBool useSplitPayment = false.obs;
-  double? totalAmount; // Will be set from order details
 
   final RxBool isLoading = true.obs;
   final RxList<TableModel> availableTables = <TableModel>[].obs;
+  final RxBool hasOutletTables = false.obs;
   Timer? _phoneLookupTimer;
 
-  double _asDouble(dynamic value) {
-    if (value is num) return value.toDouble();
-    return double.tryParse('${value ?? 0}') ?? 0.0;
-  }
-
-  String _normalizePaymentMethod(dynamic value) {
-    final method = (value ?? '').toString().trim().toLowerCase();
-    return (method == 'cash' || method == 'card' || method == 'upi')
-        ? method
-        : 'cash';
-  }
+  bool get showTableField =>
+      isDineIn && HomeMainRoutes.outletShowsTables() && hasOutletTables.value;
 
   /// All orders from API
   final RxList<OrderModel> allOrders = <OrderModel>[].obs;
@@ -59,44 +44,14 @@ class OrderDetailsController extends BaseController {
 
   /// Save Order Details (bill number is preview-only; server assigns on create).
   Future<CreateorderRequest?> buildOrderDetails() async {
-    final loc = AppLocalizations.of(Get.context!)!;
-
-    // Validate split payments if enabled
-    if (useSplitPayment.value) {
-      final splitTotal = splitPayments.fold<double>(
-        0.0,
-        (sum, payment) => sum + payment.amount,
-      );
-
-      if (splitPayments.isEmpty) {
-        showError(description: 'Please add at least one payment method');
-        return null;
-      }
-
-      if (totalAmount != null && (splitTotal - totalAmount!).abs() > 0.01) {
-        showError(
-          description:
-              'Split payment total (₹${splitTotal.toStringAsFixed(2)}) does not match order total (₹${totalAmount!.toStringAsFixed(2)})',
-        );
-        return null;
-      }
-    }
-
     return CreateorderRequest(
       billNumber: null,
-      tableNumber:
-          (isDineIn && HomeMainRoutes.outletShowsTables())
-              ? tableNumber.text
-              : '',
+      tableNumber: showTableField ? tableNumber.text : '',
       customerName: customerName.text,
       phoneNumber: phoneNumber.text,
       discount: double.tryParse(discount.text) ?? 0.0,
       discountType: discountType.value,
       serviceCharge: double.tryParse(serviceCharge.text) ?? 0.0,
-      paymentReceivedIn: useSplitPayment.value ? null : paymentRecieved.value,
-      splitPayments: useSplitPayment.value && splitPayments.isNotEmpty
-          ? splitPayments.toList()
-          : null,
       status: 'pending',
     );
   }
@@ -181,30 +136,13 @@ class OrderDetailsController extends BaseController {
           rawDiscountType == 'amount' ? 'amount' : 'percentage';
       serviceCharge.text = '${args['serviceCharge'] ?? 0.0}';
       status.value = args['status'] ?? '';
-      paymentRecieved.value = _normalizePaymentMethod(args['paymentReceivedIn']);
-      totalAmount = _asDouble(args['totalAmount']);
-
-      // Load split payments if available
-      if (args['splitPayments'] != null && args['splitPayments'] is List) {
-        final List<dynamic> splitList = args['splitPayments'];
-        splitPayments.value = splitList.map((json) {
-          final p = SplitPayment.fromJson(json as Map<String, dynamic>);
-          final method = p.paymentMethod.trim().toLowerCase();
-          // Normalize legacy / API values like "Cash" / "UPI" to expected keys.
-          final normalized =
-              (method == 'cash' || method == 'card' || method == 'upi')
-              ? method
-              : 'cash';
-          return SplitPayment(paymentMethod: normalized, amount: p.amount);
-        }).toList();
-        useSplitPayment.value = splitPayments.isNotEmpty;
-      }
       // billNumber.text = args['billNumber'] ?? '';
     }
 
     // Ensure table number isn't kept when not dine-in or outlet has no seating.
     if (!isDineIn || !HomeMainRoutes.outletShowsTables()) {
       tableNumber.text = '';
+      hasOutletTables.value = false;
     }
 
     phoneNumber.addListener(_onPhoneChanged);
@@ -266,12 +204,14 @@ class OrderDetailsController extends BaseController {
   Future<void> loadAvailableTables() async {
     if (!isDineIn || !HomeMainRoutes.outletShowsTables()) {
       availableTables.clear();
+      hasOutletTables.value = false;
       return;
     }
 
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) {
       availableTables.clear();
+      hasOutletTables.value = false;
       return;
     }
 
@@ -285,6 +225,12 @@ class OrderDetailsController extends BaseController {
         final allTables = response!.data
             .map((e) => TableModel.fromTableData(e))
             .toList();
+        hasOutletTables.value = allTables.isNotEmpty;
+        if (!hasOutletTables.value) {
+          availableTables.clear();
+          tableNumber.text = '';
+          return;
+        }
         final currentTable = tableNumber.text.trim();
 
         final tables = allTables.where((t) {
@@ -311,18 +257,9 @@ class OrderDetailsController extends BaseController {
       debugPrint('⚠️ Failed to load available tables: $e');
     }
 
-    final currentTable = tableNumber.text.trim();
-    if (currentTable.isNotEmpty) {
-      availableTables.assignAll([
-        TableModel(
-          id: 'current_table',
-          tableNumber: currentTable,
-          status: 'occupied',
-        ),
-      ]);
-    } else {
-      availableTables.clear();
-    }
+    hasOutletTables.value = false;
+    availableTables.clear();
+    tableNumber.text = '';
   }
 
   /// Fetch orders & set latest bill number
@@ -507,34 +444,6 @@ class OrderDetailsController extends BaseController {
   OrderModel? getLatestOrder() {
     if (allOrders.isEmpty) return null;
     return allOrders.first;
-  }
-
-  /// Add a split payment
-  void addSplitPayment(String paymentMethod, double amount) {
-    splitPayments.add(
-      SplitPayment(paymentMethod: paymentMethod, amount: amount),
-    );
-  }
-
-  /// Remove a split payment
-  void removeSplitPayment(int index) {
-    if (index >= 0 && index < splitPayments.length) {
-      splitPayments.removeAt(index);
-    }
-  }
-
-  /// Get total of split payments
-  double get splitPaymentTotal {
-    return splitPayments.fold<double>(
-      0.0,
-      (sum, payment) => sum + payment.amount,
-    );
-  }
-
-  /// Get remaining amount for split payment
-  double? get remainingAmount {
-    if (totalAmount == null) return null;
-    return totalAmount! - splitPaymentTotal;
   }
 
   @override

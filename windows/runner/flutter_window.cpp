@@ -6,6 +6,32 @@
 
 #include "flutter/generated_plugin_registrant.h"
 
+namespace {
+
+// Isolated so MSVC can use SEH without conflicting with C++ object unwinding
+// in FlutterWindow::OnCreate (error C2712).
+void RegisterPluginsSafely(flutter::FlutterEngine* engine) {
+#if defined(_MSC_VER)
+  __try {
+    RegisterPlugins(engine);
+  } __except (EXCEPTION_EXECUTE_HANDLER) {
+    OutputDebugStringA("Plugin registration failed with SEH exception.\n");
+  }
+#else
+  try {
+    RegisterPlugins(engine);
+  } catch (const std::exception& e) {
+    OutputDebugStringA(
+        ("Plugin registration failed: " + std::string(e.what()) + "\n")
+            .c_str());
+  } catch (...) {
+    OutputDebugStringA("Plugin registration failed with unknown exception.\n");
+  }
+#endif
+}
+
+}  // namespace
+
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
 
@@ -26,16 +52,10 @@ bool FlutterWindow::OnCreate() {
   if (!flutter_controller_->engine() || !flutter_controller_->view()) {
     return false;
   }
-  // Some Windows plugins may throw C++ exceptions during registration on
-  // specific machines (missing runtimes/devices/COM mode mismatch). Guarding
-  // registration prevents a hard native abort() dialog from killing the app.
-  try {
-    RegisterPlugins(flutter_controller_->engine());
-  } catch (const std::exception& e) {
-    OutputDebugStringA(("Plugin registration failed: " + std::string(e.what()) + "\n").c_str());
-  } catch (...) {
-    OutputDebugStringA("Plugin registration failed with unknown exception.\n");
-  }
+  // Some Windows plugins may throw / AV during registration on LTSC / value
+  // images (missing BLE radios, COM mismatches, missing runtimes). Guard both
+  // C++ exceptions and SEH so the app can still open.
+  RegisterPluginsSafely(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {

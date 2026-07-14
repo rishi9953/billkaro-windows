@@ -111,6 +111,11 @@ class AddOrderController extends BaseController {
   // Trigger UI rebuilds when non-reactive orderDetails map changes.
   final RxInt orderDetailsVersion = 0.obs;
 
+  static const Set<String> _allowedPaymentMethods = {'cash', 'card', 'upi'};
+  final RxString paymentReceivedIn = 'cash'.obs;
+  final RxBool useSplitPayment = false.obs;
+  final RxList<SplitPayment> splitPayments = <SplitPayment>[].obs;
+
   Timer? _searchDebounce;
 
   double _asDouble(dynamic value) {
@@ -133,8 +138,137 @@ class AddOrderController extends BaseController {
     return raw;
   }
 
+  String _normalizePaymentMethod(dynamic value) {
+    final method = (value ?? '').toString().trim().toLowerCase();
+    return _allowedPaymentMethods.contains(method) ? method : 'cash';
+  }
+
+  void _loadPaymentFromOrderDetails() {
+    paymentReceivedIn.value = _normalizePaymentMethod(
+      orderDetails['paymentReceivedIn'],
+    );
+
+    splitPayments.clear();
+    final rawSplits = orderDetails['splitPayments'];
+    if (rawSplits is List && rawSplits.isNotEmpty) {
+      for (final entry in rawSplits) {
+        if (entry is SplitPayment) {
+          splitPayments.add(
+            SplitPayment(
+              paymentMethod: _normalizePaymentMethod(entry.paymentMethod),
+              amount: entry.amount,
+            ),
+          );
+        } else if (entry is Map<String, dynamic>) {
+          final parsed = SplitPayment.fromJson(entry);
+          splitPayments.add(
+            SplitPayment(
+              paymentMethod: _normalizePaymentMethod(parsed.paymentMethod),
+              amount: parsed.amount,
+            ),
+          );
+        }
+      }
+      useSplitPayment.value = true;
+    } else {
+      useSplitPayment.value = false;
+    }
+  }
+
+  void _syncPaymentToOrderDetails() {
+    if (useSplitPayment.value && splitPayments.isNotEmpty) {
+      orderDetails.remove('paymentReceivedIn');
+      orderDetails['splitPayments'] = splitPayments
+          .map((payment) => payment.toJson())
+          .toList();
+    } else {
+      orderDetails.remove('splitPayments');
+      orderDetails['paymentReceivedIn'] = paymentReceivedIn.value;
+    }
+  }
+
+  void setPaymentMethod(String method) {
+    paymentReceivedIn.value = _normalizePaymentMethod(method);
+    _syncPaymentToOrderDetails();
+    orderDetailsVersion.value++;
+  }
+
+  void setUseSplitPayment(bool enabled) {
+    useSplitPayment.value = enabled;
+    if (!enabled) {
+      splitPayments.clear();
+    }
+    _syncPaymentToOrderDetails();
+    orderDetailsVersion.value++;
+  }
+
+  void addSplitPayment(String paymentMethod, double amount) {
+    splitPayments.add(
+      SplitPayment(
+        paymentMethod: _normalizePaymentMethod(paymentMethod),
+        amount: amount,
+      ),
+    );
+    _syncPaymentToOrderDetails();
+    orderDetailsVersion.value++;
+  }
+
+  void updateSplitPayment(int index, SplitPayment payment) {
+    if (index < 0 || index >= splitPayments.length) return;
+    splitPayments[index] = SplitPayment(
+      paymentMethod: _normalizePaymentMethod(payment.paymentMethod),
+      amount: payment.amount,
+    );
+    _syncPaymentToOrderDetails();
+    orderDetailsVersion.value++;
+  }
+
+  void removeSplitPayment(int index) {
+    if (index < 0 || index >= splitPayments.length) return;
+    splitPayments.removeAt(index);
+    _syncPaymentToOrderDetails();
+    orderDetailsVersion.value++;
+  }
+
+  double get splitPaymentTotal =>
+      splitPayments.fold<double>(0.0, (sum, payment) => sum + payment.amount);
+
+  double get remainingPaymentAmount => totalAmount.value - splitPaymentTotal;
+
+  bool validatePayment() {
+    _syncPaymentToOrderDetails();
+    if (useSplitPayment.value) {
+      if (splitPayments.isEmpty) {
+        showError(description: 'Please add at least one payment method');
+        return false;
+      }
+      if ((splitPaymentTotal - totalAmount.value).abs() > 0.01) {
+        showError(
+          description:
+              'Split payment total (₹${splitPaymentTotal.toStringAsFixed(2)}) does not match order total (₹${totalAmount.value.toStringAsFixed(2)})',
+        );
+        return false;
+      }
+      return true;
+    }
+
+    if (paymentReceivedIn.value.trim().isEmpty) {
+      showError(description: 'Please select a payment method');
+      return false;
+    }
+    return true;
+  }
+
   void setOrderDetails(Map<String, dynamic> details) {
     orderDetails = details;
+    final hasPayment =
+        (details['paymentReceivedIn']?.toString().trim().isNotEmpty ?? false) ||
+        (details['splitPayments'] is List &&
+            (details['splitPayments'] as List).isNotEmpty);
+    if (hasPayment) {
+      _loadPaymentFromOrderDetails();
+    }
+    _syncPaymentToOrderDetails();
     orderDetailsVersion.value++;
     calculateTotals();
   }
@@ -150,6 +284,9 @@ class AddOrderController extends BaseController {
     subtotal.value = 0.0;
     totalTax.value = 0.0;
     totalAmount.value = 0.0;
+    paymentReceivedIn.value = 'cash';
+    useSplitPayment.value = false;
+    splitPayments.clear();
     orderDetailsVersion.value++;
   }
 
@@ -193,6 +330,12 @@ class AddOrderController extends BaseController {
           ..['serviceCharge'] = orders!.serviceCharge ?? 0.0
           ..['paymentReceivedIn'] = orders!.paymentReceivedIn ?? ''
           ..['status'] = orders!.status;
+        if (orders!.splitPayments != null && orders!.splitPayments!.isNotEmpty) {
+          orderDetails['splitPayments'] = orders!.splitPayments!
+              .map((payment) => payment.toJson())
+              .toList();
+        }
+        _loadPaymentFromOrderDetails();
         if (orders!.specialInstructions?.trim().isNotEmpty ?? false) {
           remarkController.text = orders!.specialInstructions!.trim();
         }
@@ -603,26 +746,7 @@ class AddOrderController extends BaseController {
     orderDetailsVersion.value++;
   }
 
-  Future<bool> ensureBillDetails() async {
-    final payment = (orderDetails['paymentReceivedIn'] ?? '').toString().trim();
-    if (payment.isNotEmpty) return true;
-
-    final result = await Modular.to.pushNamed(
-      HomeMainRoutes.orderDetails,
-      arguments: {
-        ...orderDetails,
-        'orderFrom': selectedOrderSource.value,
-        'tableNumber': orderDetails['tableNumber'] ?? '',
-        'totalAmount': totalAmount.value,
-        'requirePayment': true,
-      },
-    );
-    if (result != null && result is CreateorderRequest) {
-      setOrderDetails(result.toJson());
-      return true;
-    }
-    return false;
-  }
+  Future<bool> ensureBillDetails() async => validatePayment();
 
   /// Petpooja-style POS: KOT stays on screen; Hold saves & exits; Bill settles.
   Future<void> executePosAction(PosOrderAction action) async {
@@ -2040,6 +2164,20 @@ class AddOrderController extends BaseController {
   // Save & Bill (with Edit support)
   // --------------------
 
+  bool _isCashPayment(CreateorderRequest request) {
+    final payment = (request.paymentReceivedIn ?? '').trim().toLowerCase();
+    if (payment == 'cash') return true;
+
+    final splits = request.splitPayments;
+    if (splits == null || splits.isEmpty) return false;
+    return splits.any((s) => s.paymentMethod.trim().toLowerCase() == 'cash');
+  }
+
+  Future<void> _maybeOpenCashDrawerOnBill(CreateorderRequest request) async {
+    if (!_isCashPayment(request)) return;
+    await ThermalPrinterService.instance.maybeOpenCashDrawerForPayment('Cash');
+  }
+
   Future<void> saveAndBill(
     String status, {
     bool stayOnScreen = false,
@@ -2074,6 +2212,8 @@ class AddOrderController extends BaseController {
       showError(description: loc.add_items);
       return;
     }
+
+    _syncPaymentToOrderDetails();
 
     if (_requiresDineInTable()) {
       final tableNumber = (orderDetails['tableNumber'] ?? '').toString().trim();
@@ -2273,6 +2413,7 @@ class AddOrderController extends BaseController {
 
         showSuccess(description: loc.order_saved);
         await _refreshTablesAfterOrderSave();
+        await _maybeOpenCashDrawerOnBill(request);
 
         final invoiceRequest =
             serverBillNumber != null && serverBillNumber.isNotEmpty
@@ -2359,6 +2500,7 @@ class AddOrderController extends BaseController {
         }
 
         showSuccess(description: loc.order_saved_offline);
+        await _maybeOpenCashDrawerOnBill(request);
 
         await Modular.to.pushNamed(
           HomeMainRoutes.invoiceScreen,
@@ -2563,9 +2705,11 @@ class AddOrderController extends BaseController {
   bool _isDineInOrder() =>
       selectedOrderSource.value.trim().toLowerCase() == 'dine in';
 
-  /// Table is mandatory for Dine In when outlet uses table management.
+  /// Table is mandatory for Dine In only when the outlet has configured tables.
   bool _requiresDineInTable() =>
-      _isDineInOrder() && HomeMainRoutes.outletShowsTables();
+      _isDineInOrder() &&
+      HomeMainRoutes.outletShowsTables() &&
+      availableTables.isNotEmpty;
 
   String _normalizeTableNumber(String value) {
     var normalized = value.trim().toLowerCase();

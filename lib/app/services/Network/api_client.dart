@@ -274,6 +274,15 @@ abstract class ApiClient {
   @DELETE('$outletTables/{id}')
   Future<dynamic> deleteTable(@Path('id') String id);
 
+  @GET(outletTableSections)
+  Future<dynamic> getOutletTableSections(@Query('outletId') String outletId);
+
+  @POST(outletTableSections)
+  Future<dynamic> createOutletTableSection(@Body() Map<String, dynamic> body);
+
+  @DELETE('$outletTableSections/{id}')
+  Future<dynamic> deleteOutletTableSection(@Path('id') String id);
+
   // Update table status (Available/Occupied/Billing/Paid)
   @PATCH('$outletTables/{tableId}/status')
   Future<dynamic> updateTableStatus(
@@ -336,6 +345,12 @@ abstract class ApiClient {
     @Body() Map<String, dynamic> body,
   );
 
+  @POST('outlets/{outletId}/$staff/$checkStaffEmails')
+  Future<dynamic> checkStaffEmail(
+    @Path('outletId') String outletId,
+    @Body() Map<String, dynamic> body,
+  );
+
   @GET('outlets/{outletId}/$staff')
   Future<dynamic> getStaffList(@Path('outletId') String outletId);
 
@@ -348,6 +363,12 @@ abstract class ApiClient {
 
   @DELETE('outlets/{outletId}/$staff/{staffId}')
   Future<dynamic> deleteStaff(
+    @Path('outletId') String outletId,
+    @Path('staffId') String staffId,
+  );
+
+  @POST('outlets/{outletId}/$staff/{staffId}/reinvite')
+  Future<dynamic> reinviteStaff(
     @Path('outletId') String outletId,
     @Path('staffId') String staffId,
   );
@@ -436,6 +457,18 @@ abstract class ApiClient {
 
   @POST('$outlets/{outletId}/$inventory/suppliers')
   Future<dynamic> createSupplier(
+    @Path('outletId') String outletId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @POST('$outlets/{outletId}/$inventory/$supplierCheckEmail')
+  Future<dynamic> checkSupplierEmail(
+    @Path('outletId') String outletId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @POST('$outlets/{outletId}/$inventory/$supplierCheckPhone')
+  Future<dynamic> checkSupplierPhone(
     @Path('outletId') String outletId,
     @Body() Map<String, dynamic> body,
   );

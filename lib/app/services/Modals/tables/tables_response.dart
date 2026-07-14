@@ -43,6 +43,8 @@ class TableData {
   final String outletId;
   final String tableNumber;
   final String status;
+  @JsonKey(defaultValue: '')
+  final String section;
   final String? currentBillNumber;
   final String? qrToken;
   final String? qrMenuUrl;
@@ -60,6 +62,7 @@ class TableData {
     required this.outletId,
     required this.tableNumber,
     required this.status,
+    this.section = '',
     this.currentBillNumber,
     this.qrToken,
     this.qrMenuUrl,
@@ -80,6 +83,7 @@ class TableModel {
   final String id;
   final String tableNumber;
   final String status;
+  final String section;
   final String? currentBillNumber;
   final String? qrToken;
   final String? qrMenuUrl;
@@ -92,6 +96,7 @@ class TableModel {
     required this.id,
     required this.tableNumber,
     required this.status,
+    this.section = '',
     this.currentBillNumber,
     this.qrToken,
     this.qrMenuUrl,
@@ -129,6 +134,7 @@ class TableModel {
       id: d.id,
       tableNumber: d.tableNumber,
       status: d.status,
+      section: d.section,
       currentBillNumber: d.currentBillNumber,
       qrToken: d.qrToken,
       qrMenuUrl: d.qrMenuUrl,
@@ -136,6 +142,27 @@ class TableModel {
       mergedIntoTableId: d.mergedIntoTableId,
       mergedTableNumbers: d.mergedTableNumbers,
       seatingCapacity: d.seatingCapacity,
+    );
+  }
+}
+
+/// Named area/section for grouping tables (e.g. AC Room).
+class TableSectionModel {
+  final String id;
+  final String outletId;
+  final String name;
+
+  TableSectionModel({
+    required this.id,
+    required this.outletId,
+    required this.name,
+  });
+
+  factory TableSectionModel.fromJson(Map<String, dynamic> json) {
+    return TableSectionModel(
+      id: json['id'] as String? ?? '',
+      outletId: json['outletId'] as String? ?? '',
+      name: (json['name'] as String? ?? '').trim(),
     );
   }
 }

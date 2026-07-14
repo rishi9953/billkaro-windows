@@ -2,11 +2,14 @@ import 'package:billkaro/app/modules/AddOrder/add_order_controller.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/Home/showcase_controller.dart';
 import 'package:billkaro/app/modules/OrderPrefrences/order_prefrences_controller.dart';
+import 'package:billkaro/app/services/billing/billing_access_mode.dart';
+import 'package:billkaro/app/services/billing/billing_access_service.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/helpers/cash_drawer_helper.dart';
 import 'package:billkaro/app/services/sync/sync_manager.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/download_path_util.dart';
 import 'package:billkaro/utils/po_print_orientation.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:file_selector/file_selector.dart';
 
 class AppSettingsController extends BaseController {
@@ -22,10 +25,15 @@ class AppSettingsController extends BaseController {
   late final RxString cashDrawerPin;
   late final RxString downloadPath;
   late final Rx<PoPrintOrientation> poPrintOrientation;
+  late final Rx<BillingAccessMode> billingAccessMode;
+  late final BillingAccessService _billingAccess;
+
+  bool get canChangeBillingMode => StaffAccess.isOwnerSession;
 
   @override
   void onInit() {
     super.onInit();
+    _billingAccess = BillingAccessService(appPref);
     isListView = appPref.isListView.obs;
     notificationsEnabled = appPref.notificationsEnabled.obs;
     showQrOnBill = appPref.showQrOnBill.obs;
@@ -37,6 +45,7 @@ class AppSettingsController extends BaseController {
     cashDrawerPin = appPref.cashDrawerPin.obs;
     downloadPath = appPref.downloadPath.obs;
     poPrintOrientation = appPref.poPrintOrientation.obs;
+    billingAccessMode = _billingAccess.mode.obs;
     _ensureDefaultDownloadPath();
   }
 
@@ -120,6 +129,54 @@ class AppSettingsController extends BaseController {
     poPrintOrientation.value = value;
   }
 
+  /// Asks for confirmation, then persists the new billing mode.
+  Future<void> requestBillingModeChange(BillingAccessMode next) async {
+    final loc = AppLocalizations.of(Get.context!)!;
+
+    if (!canChangeBillingMode) {
+      showError(description: loc.billing_mode_owner_only);
+      return;
+    }
+
+    // Outlet may have changed since settings opened.
+    billingAccessMode.value = _billingAccess.mode;
+    if (next == billingAccessMode.value) return;
+
+    final body = next.isWallet
+        ? loc.billing_mode_switch_to_wallet_body
+        : loc.billing_mode_switch_to_subscription_body;
+
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadiusGeometry.circular(8),
+        ),
+        title: Text(loc.billing_mode_switch_confirm_title),
+        content: Text(body),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: Text(loc.cancel),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: Text(loc.billing_mode_confirm_switch),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    _billingAccess.setMode(next);
+    billingAccessMode.value = next;
+    showSuccess(
+      description: next.isWallet
+          ? loc.billing_mode_switched_wallet
+          : loc.billing_mode_switched_subscription,
+    );
+  }
+
   void resetOnboarding() {
     if (Get.isRegistered<ShowcaseController>()) {
       Get.find<ShowcaseController>().resetShowcaseForReplay();
@@ -147,5 +204,4 @@ class AppSettingsController extends BaseController {
       showError(description: loc.unable_to_update_download_path);
     }
   }
-
 }

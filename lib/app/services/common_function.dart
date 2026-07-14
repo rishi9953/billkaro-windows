@@ -1,6 +1,9 @@
 import 'package:billkaro/app/Widgets/membershipSheet.dart';
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/Modals/login_response.dart';
+import 'package:billkaro/app/services/billing/billing_access_mode.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -37,11 +40,11 @@ DateTime? trialEndDate(OutletData? outlet, User? user) {
   return start.add(kFreeTrialDuration);
 }
 
-/// Returns true if the user can access features that require trial or subscription.
-/// Allowed when: user is on an active trial (isTrial and within [kFreeTrialDuration]
-/// from [trialCreatedAtStart]) OR has an active outlet subscription.
-/// Not allowed when: isTrial == false and no active outlet subscription exists.
-/// Use for voice add item, or any other feature gated by trial/subscription.
+/// Returns true if the user can access features that require billing entitlement.
+///
+/// - Active trial → always allowed
+/// - [BillingAccessMode.wallet] → allowed (pay-as-you-go)
+/// - [BillingAccessMode.subscription] → requires an active outlet subscription
 bool hasTrialOrSubscription(AppPref appPref) {
   final user = appPref.user;
   if (user == null) return false;
@@ -52,7 +55,12 @@ bool hasTrialOrSubscription(AppPref appPref) {
     return DateTime.now().isBefore(end);
   }
 
-  // Non-trial: allow if selected outlet (or matched user outlet) has active subscription.
+  final mode = BillingAccessModeX.fromStorage(
+    appPref.billingAccessModeRawForOutlet(appPref.selectedOutlet?.id),
+  );
+  if (mode.isWallet) return true;
+
+  // Subscription mode: allow if selected outlet (or matched user outlet) has active subscription.
   final selectedOutlet = appPref.selectedOutlet;
   if (outletHasAnyActiveSubscription(selectedOutlet)) return true;
 
@@ -251,18 +259,27 @@ Future<void> sendRegularCustomerWelcomeWhatsApp({
 
 Future<void> checkSubscription() async {
   final appPref = Get.find<AppPref>();
-  // Show membership sheet when user has neither active trial nor subscription.
-  if (!hasTrialOrSubscription(appPref)) {
-    showModalBottomSheet(
-      context: Get.context!,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => const GoldMembershipSheet(),
-    );
+  if (hasTrialOrSubscription(appPref)) return;
+
+  final mode = BillingAccessModeX.fromStorage(
+    appPref.billingAccessModeRawForOutlet(appPref.selectedOutlet?.id),
+  );
+
+  // Wallet mode without entitlement (e.g. logged out edge cases): send to wallet.
+  if (mode.isWallet) {
+    Modular.to.pushNamed(HomeMainRoutes.wallet);
+    return;
   }
+
+  showModalBottomSheet(
+    context: Get.context!,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (_) => const GoldMembershipSheet(),
+  );
 }
 
 Future<void> callCheckSubscription() async {

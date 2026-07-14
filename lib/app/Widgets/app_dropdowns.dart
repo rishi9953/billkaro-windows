@@ -63,6 +63,7 @@ class AppDropdownFormField2<T> extends StatefulWidget {
     this.buttonStyleData,
     this.autovalidateMode,
     this.style,
+    this.selectedItemBuilder,
   });
 
   final T? value;
@@ -79,6 +80,7 @@ class AppDropdownFormField2<T> extends StatefulWidget {
   final FormFieldButtonStyleData? buttonStyleData;
   final AutovalidateMode? autovalidateMode;
   final TextStyle? style;
+  final DropdownButtonBuilder? selectedItemBuilder;
 
   @override
   State<AppDropdownFormField2<T>> createState() =>
@@ -118,6 +120,7 @@ class _AppDropdownFormField2State<T> extends State<AppDropdownFormField2<T>> {
       style: widget.style,
       valueListenable: _valueListenable,
       items: widget.items,
+      selectedItemBuilder: widget.selectedItemBuilder,
       onChanged: widget.onChanged,
       validator: widget.validator,
       autovalidateMode: widget.autovalidateMode,

@@ -13,10 +13,45 @@ class GstinVerifyHelper {
   final isGstinVerified = false.obs;
   final gstinVerificationMessage = ''.obs;
   final verifiedGstin = ''.obs;
+  final savedGstin = ''.obs;
+
+  /// Marks GSTIN already stored on the server as verified (no re-verify on load).
+  void markSavedFromServer(String? gstin) {
+    final normalized = (gstin ?? '').trim().toUpperCase();
+    savedGstin.value = normalized;
+    if (normalized.isEmpty) {
+      isGstinVerified.value = false;
+      verifiedGstin.value = '';
+      gstinVerificationMessage.value = '';
+      return;
+    }
+    isGstinVerified.value = true;
+    verifiedGstin.value = normalized;
+    gstinVerificationMessage.value = '';
+  }
+
+  /// Call after a successful save so the current value is treated as verified.
+  void markSavedAfterSubmit(String current) {
+    final normalized = current.trim().toUpperCase();
+    savedGstin.value = normalized;
+    if (normalized.isEmpty) {
+      isGstinVerified.value = false;
+      verifiedGstin.value = '';
+      return;
+    }
+    isGstinVerified.value = true;
+    verifiedGstin.value = normalized;
+  }
 
   void resetIfChanged(String current) {
     final normalized = current.trim().toUpperCase();
     if (normalized == verifiedGstin.value) return;
+    if (normalized == savedGstin.value) {
+      isGstinVerified.value = normalized.isNotEmpty;
+      verifiedGstin.value = normalized.isNotEmpty ? normalized : '';
+      gstinVerificationMessage.value = '';
+      return;
+    }
     if (gstinVerificationMessage.value.isNotEmpty || isGstinVerified.value) {
       isGstinVerified.value = false;
       verifiedGstin.value = '';
@@ -26,8 +61,9 @@ class GstinVerifyHelper {
 
   bool requiresVerification(String current) {
     final gstin = current.trim().toUpperCase();
-    return gstin.isNotEmpty &&
-        (!isGstinVerified.value || verifiedGstin.value != gstin);
+    if (gstin.isEmpty) return false;
+    if (gstin == savedGstin.value) return false;
+    return !isGstinVerified.value || verifiedGstin.value != gstin;
   }
 
   Future<GstinVerificationDetails?> verify(

@@ -1,13 +1,16 @@
 import 'package:billkaro/app/modules/AppSettings/app_settings_controller.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
+import 'package:billkaro/app/modules/Language/language_dialog.dart';
 import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_dialogs.dart';
 import 'package:billkaro/app/modules/Theme/theme_controller.dart';
+import 'package:billkaro/app/Widgets/billing_mode_selector.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/helpers/cash_drawer_helper.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/kitchen_display_browser.dart';
 import 'package:billkaro/utils/po_print_orientation.dart';
 import 'package:billkaro/utils/staff_access.dart';
+import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 
 class AppSettingsScreen extends StatelessWidget {
@@ -42,21 +45,21 @@ class AppSettingsScreen extends StatelessWidget {
               _buildSection(
                 loc.settings_section_general,
                 _withDividers([
-                  _buildSwitchTile(
-                    icon: Icons.view_list_rounded,
-                    title: loc.billing_list_view,
-                    subtitle: loc.billing_list_view_subtitle,
-                    value: controller.isListView,
-                    onChanged: controller.setListView,
-                  ),
-                  _buildActionOrNavTile(
-                    icon: Icons.description_outlined,
-                    title: loc.settings_po_terms,
-                    subtitle: loc.settings_po_terms_subtitle,
-                    onTap: showPoDefaultTermsSettingsDialog,
-                    showChevron: true,
-                  ),
-                  _buildPoPrintOrientationTile(loc),
+                  // _buildSwitchTile(
+                  //   icon: Icons.view_list_rounded,
+                  //   title: loc.billing_list_view,
+                  //   subtitle: loc.billing_list_view_subtitle,
+                  //   value: controller.isListView,
+                  //   onChanged: controller.setListView,
+                  // ),
+                  // _buildActionOrNavTile(
+                  //   icon: Icons.description_outlined,
+                  //   title: loc.settings_po_terms,
+                  //   subtitle: loc.settings_po_terms_subtitle,
+                  //   onTap: showPoDefaultTermsSettingsDialog,
+                  //   showChevron: true,
+                  // ),
+                  // _buildPoPrintOrientationTile(loc),
                   _buildSwitchTile(
                     icon: Icons.qr_code_2_outlined,
                     title: loc.show_qr_on_bill,
@@ -168,6 +171,33 @@ class AppSettingsScreen extends StatelessWidget {
                 ]),
               ),
               const Gap(24),
+              if (StaffAccess.isOwnerSession) ...[
+                _buildSection(loc.settings_section_billing, [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(loc.billing_mode_title, style: _titleStyle),
+                        const Gap(4),
+                        Text(loc.billing_mode_subtitle, style: _subtitleStyle),
+                      ],
+                    ),
+                  ),
+                  Obx(
+                    () => BillingModeSelector(
+                      selected: controller.billingAccessMode.value,
+                      enabled: controller.canChangeBillingMode,
+                      onSelected: controller.requestBillingModeChange,
+                      subscriptionTitle: loc.billing_mode_subscription,
+                      subscriptionSubtitle: loc.billing_mode_subscription_desc,
+                      walletTitle: loc.billing_mode_wallet,
+                      walletSubtitle: loc.billing_mode_wallet_desc,
+                    ),
+                  ),
+                ]),
+                const Gap(24),
+              ],
               _buildSection(loc.settings_section_notifications, [
                 _buildSwitchTile(
                   icon: Icons.notifications_outlined,
@@ -229,8 +259,7 @@ class AppSettingsScreen extends StatelessWidget {
                   icon: Icons.language,
                   title: loc.language,
                   subtitle: loc.change_app_language,
-                  onTap: () =>
-                      Modular.to.pushNamed(HomeMainRoutes.changeLanguage),
+                  onTap: () => showLanguagePickerDialog(context),
                   showChevron: true,
                 ),
               ]),
@@ -290,7 +319,10 @@ class AppSettingsScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: Colors.grey.shade200, width: 1),
       ),
-      child: Column(children: children),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
     );
   }
 
@@ -465,304 +497,373 @@ class AppSettingsScreen extends StatelessWidget {
     );
   }
 
+  static const double _dialogRadius = 8;
+
   Future<void> _showThemeColorPicker(
     BuildContext context,
     AppLocalizations loc,
   ) async {
-    await showModalBottomSheet<void>(
+    await showDialog<void>(
       context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        return SafeArea(
-          child: Obx(() {
-            final selected =
-                themeController.themeColor.value.value & 0xFFFFFFFF;
-            final customs = themeController.customThemeColors.toList();
-            return CustomScrollView(
-              shrinkWrap: true,
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
+      builder: (dialogContext) {
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(_dialogRadius),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440, maxHeight: 640),
+            child: Obx(() {
+              final selectedColor = themeController.themeColor.value;
+              final selected =
+                  selectedColor.value & 0xFFFFFFFF;
+              final customs = themeController.customThemeColors.toList();
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 8, 0),
                     child: Row(
                       children: [
-                        const SizedBox(width: 48),
                         Expanded(
                           child: Text(
                             loc.theme_color,
-                            textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
                               color: Colors.grey[900],
                             ),
                           ),
                         ),
-                        SizedBox(
-                          width: 48,
-                          height: 48,
-                          child: IconButton(
-                            onPressed: () => Navigator.of(sheetContext).pop(),
-                            tooltip: loc.close,
-                            icon: Icon(Icons.close, color: Colors.grey[700]),
-                          ),
+                        IconButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          tooltip: loc.close,
+                          icon: Icon(Icons.close, color: Colors.grey[700]),
                         ),
                       ],
                     ),
                   ),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                    child: Text(
-                      loc.custom_hex,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: _ThemeHexInputRow(
-                    themeController: themeController,
-                    loc: loc,
-                  ),
-                ),
-                const SliverToBoxAdapter(child: SizedBox(height: 8)),
-                if (customs.isNotEmpty) ...[
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                      child: Text(
-                        loc.my_colors,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[700],
-                        ),
-                      ),
-                    ),
-                  ),
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      final color = Color(customs[index] & 0xFFFFFFFF);
-                      final label = ThemeController.hexRgbString(color);
-                      final isSelected = (color.value & 0xFFFFFFFF) == selected;
-                      return Column(
-                        mainAxisSize: MainAxisSize.min,
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          if (index > 0)
-                            Divider(
-                              height: 1,
-                              color: Colors.grey.shade200,
-                              indent: 16,
-                              endIndent: 16,
+                          _buildCurrentThemeColorCard(
+                            color: selectedColor,
+                            name: themeController.selectedThemeColorName,
+                          ),
+                          const SizedBox(height: 20),
+                          _buildThemeSectionLabel(loc.presets),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              for (final item in ThemeController.colorOptions)
+                                _ThemeColorSwatch(
+                                  color: item.value,
+                                  label: item.key,
+                                  selected:
+                                      (item.value.value & 0xFFFFFFFF) ==
+                                      selected,
+                                  onTap: () =>
+                                      themeController.setThemeColor(item.value),
+                                ),
+                            ],
+                          ),
+                          if (customs.isNotEmpty) ...[
+                            const SizedBox(height: 20),
+                            _buildThemeSectionLabel(loc.my_colors),
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: [
+                                for (final argb in customs)
+                                  _ThemeColorSwatch(
+                                    color: Color(argb & 0xFFFFFFFF),
+                                    label: ThemeController.hexRgbString(
+                                      Color(argb & 0xFFFFFFFF),
+                                    ),
+                                    selected:
+                                        (argb & 0xFFFFFFFF) == selected,
+                                    onTap: () => themeController.setThemeColor(
+                                      Color(argb & 0xFFFFFFFF),
+                                    ),
+                                    onDelete: () => themeController
+                                        .removeCustomThemeColor(
+                                      Color(argb & 0xFFFFFFFF),
+                                    ),
+                                    deleteTooltip: loc.delete,
+                                  ),
+                              ],
                             ),
-                          ListTile(
-                            leading: Container(
-                              width: 20,
-                              height: 20,
-                              decoration: BoxDecoration(
-                                color: color,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.grey.shade300),
+                          ],
+                          const SizedBox(height: 20),
+                          _buildThemeSectionLabel(loc.custom_hex),
+                          const SizedBox(height: 10),
+                          OutlinedButton.icon(
+                            onPressed: () => _pickCustomThemeColor(
+                              dialogContext,
+                              loc,
+                            ),
+                            icon: const Icon(Icons.colorize_rounded, size: 18),
+                            label: Text(loc.custom_hex),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColor.primary,
+                              side: BorderSide(
+                                color: AppColor.primary.withOpacity(0.35),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  _dialogRadius,
+                                ),
                               ),
                             ),
-                            title: Text(label),
-                            trailing: isSelected
-                                ? Icon(Icons.check, color: color)
-                                : const SizedBox.shrink(),
-                            onTap: () async {
-                              Navigator.of(sheetContext).pop();
-                              WidgetsBinding.instance.addPostFrameCallback((
-                                _,
-                              ) async {
-                                await themeController.setThemeColor(color);
-                              });
-                            },
                           ),
                         ],
-                      );
-                    }, childCount: customs.length),
-                  ),
-                  SliverToBoxAdapter(
-                    child: Divider(
-                      height: 1,
-                      color: Colors.grey.shade200,
-                      indent: 16,
-                      endIndent: 16,
+                      ),
                     ),
                   ),
                 ],
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                    child: Text(
-                      loc.presets,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                  ),
-                ),
-                SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    final item = ThemeController.colorOptions[index];
-                    final isSelected =
-                        (item.value.value & 0xFFFFFFFF) == selected;
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (index > 0)
-                          Divider(
-                            height: 1,
-                            color: Colors.grey.shade200,
-                            indent: 16,
-                            endIndent: 16,
-                          ),
-                        ListTile(
-                          leading: Container(
-                            width: 20,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              color: item.value,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.grey.shade300),
-                            ),
-                          ),
-                          title: Text(item.key),
-                          trailing: isSelected
-                              ? Icon(Icons.check, color: item.value)
-                              : const SizedBox.shrink(),
-                          onTap: () async {
-                            Navigator.of(sheetContext).pop();
-                            WidgetsBinding.instance.addPostFrameCallback((
-                              _,
-                            ) async {
-                              await themeController.setThemeColor(item.value);
-                            });
-                          },
-                        ),
-                      ],
-                    );
-                  }, childCount: ThemeController.colorOptions.length),
-                ),
-              ],
-            );
-          }),
+              );
+            }),
+          ),
         );
       },
     );
   }
-}
 
-class _ThemeHexInputRow extends StatefulWidget {
-  const _ThemeHexInputRow({required this.themeController, required this.loc});
-
-  final ThemeController themeController;
-  final AppLocalizations loc;
-
-  @override
-  State<_ThemeHexInputRow> createState() => _ThemeHexInputRowState();
-}
-
-class _ThemeHexInputRowState extends State<_ThemeHexInputRow> {
-  late final TextEditingController _hexController;
-  String? _errorText;
-
-  @override
-  void initState() {
-    super.initState();
-    _hexController = TextEditingController(
-      text: ThemeController.hexRgbString(
-        widget.themeController.themeColor.value,
+  Widget _buildCurrentThemeColorCard({
+    required Color color,
+    required String name,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(_dialogRadius),
+        border: Border.all(color: color.withOpacity(0.25)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(_dialogRadius),
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.35),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  ThemeController.hexRgbString(color),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.4,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  @override
-  void dispose() {
-    _hexController.dispose();
-    super.dispose();
+  Widget _buildThemeSectionLabel(String label) {
+    return Text(
+      label,
+      style: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: Colors.grey[700],
+      ),
+    );
   }
 
-  Future<void> _apply() async {
-    final ok = await widget.themeController.setThemeColorFromHex(
-      _hexController.text,
+  Future<void> _pickCustomThemeColor(
+    BuildContext context,
+    AppLocalizations loc,
+  ) async {
+    final start = themeController.themeColor.value;
+    final picked = await showColorPickerDialog(
+      context,
+      start,
+      title: Text(
+        loc.custom_hex,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      width: 40,
+      height: 40,
+      spacing: 6,
+      runSpacing: 6,
+      borderRadius: _dialogRadius,
+      wheelDiameter: 190,
+      wheelWidth: 18,
+      enableOpacity: false,
+      showColorCode: true,
+      colorCodeHasColor: true,
+      showColorName: true,
+      pickersEnabled: const <ColorPickerType, bool>{
+        ColorPickerType.both: false,
+        ColorPickerType.primary: true,
+        ColorPickerType.accent: true,
+        ColorPickerType.bw: false,
+        ColorPickerType.custom: false,
+        ColorPickerType.wheel: true,
+      },
+      copyPasteBehavior: const ColorPickerCopyPasteBehavior(
+        longPressMenu: true,
+      ),
+      actionButtons: const ColorPickerActionButtons(
+        dialogActionButtons: true,
+      ),
+      constraints: const BoxConstraints(
+        minHeight: 480,
+        minWidth: 320,
+        maxWidth: 420,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(_dialogRadius),
+      ),
     );
-    if (!mounted) return;
-    if (ok) {
-      setState(() => _errorText = null);
-      _hexController.text = ThemeController.hexRgbString(
-        widget.themeController.themeColor.value,
-      );
-    } else {
-      setState(() {
-        _errorText = widget.loc.hex_format_error;
-      });
-    }
+
+    if ((picked.value & 0xFFFFFFFF) == (start.value & 0xFFFFFFFF)) return;
+    await themeController.registerCustomThemeColor(picked);
+    await themeController.setThemeColor(picked);
   }
+}
+
+class _ThemeColorSwatch extends StatelessWidget {
+  const _ThemeColorSwatch({
+    required this.color,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.onDelete,
+    this.deleteTooltip,
+  });
+
+  final Color color;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final VoidCallback? onDelete;
+  final String? deleteTooltip;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _hexController,
-                  autocorrect: false,
-                  textCapitalization: TextCapitalization.characters,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.5,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: '#083C6B',
-                    errorText: _errorText,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 12,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  onSubmitted: (_) => _apply(),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: FilledButton(
-                  onPressed: _apply,
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 14,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Text(widget.loc.apply),
-                ),
-              ),
-            ],
+    final swatch = InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: selected ? Colors.black87 : Colors.grey.shade300,
+            width: selected ? 2.5 : 1,
           ),
-        ],
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: color.withOpacity(0.4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: selected
+            ? Icon(
+                Icons.check_rounded,
+                size: 20,
+                color:
+                    ThemeData.estimateBrightnessForColor(color) ==
+                        Brightness.dark
+                    ? Colors.white
+                    : Colors.black87,
+              )
+            : null,
+      ),
+    );
+
+    return Tooltip(
+      message: label,
+      child: SizedBox(
+        width: 44,
+        height: 44,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(left: 0, bottom: 0, child: swatch),
+            if (onDelete != null)
+              Positioned(
+                top: -2,
+                right: -2,
+                child: Tooltip(
+                  message: deleteTooltip ?? 'Delete',
+                  child: Material(
+                    color: Colors.white,
+                    shape: const CircleBorder(),
+                    elevation: 1,
+                    child: InkWell(
+                      onTap: onDelete,
+                      customBorder: const CircleBorder(),
+                      child: Container(
+                        width: 18,
+                        height: 18,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: 12,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

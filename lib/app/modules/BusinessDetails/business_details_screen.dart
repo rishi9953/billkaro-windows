@@ -138,7 +138,7 @@ class BusinessDetailsScreen extends StatelessWidget {
                           items: controller.businessCategoryOptions,
                         ),
                         _buildTextField(
-                          label: loc.gstin_number,
+                          label: '${loc.gstin_number} (optional)',
                           controller: controller.gstinController,
                           hint: loc.tap_to_enter,
                         ),

@@ -98,6 +98,12 @@ class $AssetsSvgGen {
   /// File path: assets/svg/calendar.svg
   SvgGenImage get calendar => const SvgGenImage('assets/svg/calendar.svg');
 
+  /// File path: assets/svg/cardIcon.svg
+  SvgGenImage get cardIcon => const SvgGenImage('assets/svg/cardIcon.svg');
+
+  /// File path: assets/svg/cashIcon.svg
+  SvgGenImage get cashIcon => const SvgGenImage('assets/svg/cashIcon.svg');
+
   /// File path: assets/svg/categories.svg
   SvgGenImage get categories => const SvgGenImage('assets/svg/categories.svg');
 
@@ -144,6 +150,9 @@ class $AssetsSvgGen {
   /// File path: assets/svg/swiggy.svg
   SvgGenImage get swiggy => const SvgGenImage('assets/svg/swiggy.svg');
 
+  /// File path: assets/svg/upiIcon.svg
+  SvgGenImage get upiIcon => const SvgGenImage('assets/svg/upiIcon.svg');
+
   /// File path: assets/svg/whatsapp.svg
   SvgGenImage get whatsapp => const SvgGenImage('assets/svg/whatsapp.svg');
 
@@ -155,6 +164,8 @@ class $AssetsSvgGen {
     smallShop,
     bank,
     calendar,
+    cardIcon,
+    cashIcon,
     categories,
     delete,
     download,
@@ -170,6 +181,7 @@ class $AssetsSvgGen {
     print,
     reports,
     swiggy,
+    upiIcon,
     whatsapp,
     zomato,
   ];

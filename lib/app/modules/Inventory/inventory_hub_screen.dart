@@ -872,9 +872,25 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
                           color: _accent,
                           size: 22,
                         ),
-                        title: Text(
-                          itemName,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        title: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                itemName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.edit_outlined, size: 20),
+                              tooltip: loc.edit_recipe,
+                              onPressed: () => showEditRecipeDialog(
+                                controller,
+                                itemId: itemId,
+                              ),
+                            ),
+                          ],
                         ),
                         subtitle: Text(
                           loc.recipe_lines_count(lines.length),
@@ -890,32 +906,6 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
                                 title: Text(r.rawMaterialName),
                                 subtitle: Text(
                                   '${r.quantity} ${r.rawMaterialUnit}',
-                                ),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.edit_outlined,
-                                        size: 20,
-                                      ),
-                                      tooltip: loc.edit_recipe,
-                                      onPressed: () =>
-                                          showEditRecipeDialog(controller, r),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.delete_outline,
-                                        color: Colors.red,
-                                        size: 20,
-                                      ),
-                                      onPressed: () => _confirmDelete(
-                                        loc.this_recipe,
-                                        () => controller.deleteRecipe(r.id),
-                                        loc,
-                                      ),
-                                    ),
-                                  ],
                                 ),
                               ),
                             )

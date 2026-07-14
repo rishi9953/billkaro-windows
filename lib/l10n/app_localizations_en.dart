@@ -2351,6 +2351,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String get search_table => 'Search table';
 
   @override
+  String get table_section => 'Section';
+
+  @override
+  String get table_section_hint => 'Select or create a section';
+
+  @override
+  String get table_section_general => 'General';
+
+  @override
+  String get table_section_all => 'All sections';
+
+  @override
+  String get table_section_new => 'New section';
+
+  @override
+  String get add_section => 'Add Section';
+
+  @override
+  String get section_name => 'Section name';
+
+  @override
+  String get section_name_hint => 'e.g. AC Room, Rooftop';
+
+  @override
+  String get please_enter_section_name => 'Please enter a section name';
+
+  @override
+  String get section_added_successfully => 'Section added successfully';
+
+  @override
+  String get failed_to_add_section => 'Failed to add section';
+
+  @override
+  String get section_already_exists => 'Section already exists';
+
+  @override
+  String get no_sections_yet => 'No sections yet. Add a section first.';
+
+  @override
+  String table_section_count(int count) {
+    return '$count tables';
+  }
+
+  @override
   String get filter_all => 'All';
 
   @override
@@ -2901,6 +2945,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get add_recipe => 'Add Recipe';
 
   @override
+  String get add_recipe_subtitle => 'Add all raw materials needed to make one unit of this item (e.g. bread, cheese, lettuce for a sandwich)';
+
+  @override
+  String get add_another_ingredient => 'Add Another Ingredient';
+
+  @override
+  String get recipe_ingredients_section => 'Ingredients';
+
+  @override
+  String get recipe_need_at_least_one_ingredient => 'Add at least one ingredient with a valid quantity';
+
+  @override
+  String get recipe_duplicate_material => 'Each raw material can only be used once per recipe';
+
+  @override
+  String ingredient_number(int number) {
+    return 'Ingredient $number';
+  }
+
+  @override
   String get edit_recipe => 'Edit Recipe';
 
   @override
@@ -3133,6 +3197,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get po_hsn_sac => 'HSN/SAC Code';
 
   @override
+  String get po_description => 'Description';
+
+  @override
   String get template_saved_opened => 'Template saved and opened';
 
   @override
@@ -3298,6 +3365,72 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get invite_sent_successfully => 'Invite sent successfully';
+
+  @override
+  String get reinvite => 'Reinvite';
+
+  @override
+  String get reinvite_sent_successfully => 'Invite resent successfully';
+
+  @override
+  String get unique_id => 'Unique ID';
+
+  @override
+  String get state_label => 'State';
+
+  @override
+  String get district_label => 'District';
+
+  @override
+  String get pincode_label => 'Pincode';
+
+  @override
+  String get date_of_birth => 'Date of Birth';
+
+  @override
+  String get gender_label => 'Gender';
+
+  @override
+  String get male => 'Male';
+
+  @override
+  String get female => 'Female';
+
+  @override
+  String get other_gender => 'Other';
+
+  @override
+  String get select_gender => 'Select gender';
+
+  @override
+  String get dd_mm_yyyy => 'dd/mm/yyyy';
+
+  @override
+  String get mobile_number => 'Mobile number';
+
+  @override
+  String get staff_image => 'Staff Image';
+
+  @override
+  String get please_select_staff_image => 'Please select a staff image';
+
+  @override
+  String get please_select_date_of_birth => 'Please select date of birth';
+
+  @override
+  String get please_enter_state => 'Please enter state';
+
+  @override
+  String get please_enter_district => 'Please enter district';
+
+  @override
+  String get please_enter_pincode => 'Please enter pincode';
+
+  @override
+  String get please_enter_valid_pincode => 'Please enter a valid 6-digit pincode';
+
+  @override
+  String get tap_to_upload_image => 'Tap to upload image';
 
   @override
   String get staff_member_updated_successfully => 'Staff member updated successfully';
@@ -4606,6 +4739,48 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wallet_menu_subtitle => 'Recharge prepaid balance for platform fees';
+
+  @override
+  String get settings_section_billing => 'Billing plan';
+
+  @override
+  String get billing_mode_title => 'Access mode';
+
+  @override
+  String get billing_mode_subtitle => 'Choose how this outlet pays for BillKaro';
+
+  @override
+  String get billing_mode_subscription => 'Subscription';
+
+  @override
+  String get billing_mode_subscription_desc => 'Unlimited access with an active plan or trial';
+
+  @override
+  String get billing_mode_wallet => 'Wallet';
+
+  @override
+  String get billing_mode_wallet_desc => 'Pay as you go — prepaid balance deducted per bill';
+
+  @override
+  String get billing_mode_switched_subscription => 'Switched to subscription mode';
+
+  @override
+  String get billing_mode_switched_wallet => 'Switched to wallet mode';
+
+  @override
+  String get billing_mode_switch_confirm_title => 'Switch billing mode?';
+
+  @override
+  String get billing_mode_switch_to_wallet_body => 'You\'ll use prepaid wallet credits instead of a subscription. Keep your wallet funded before creating bills.';
+
+  @override
+  String get billing_mode_switch_to_subscription_body => 'You\'ll need an active subscription or trial for gated features. Wallet balance will not unlock the app.';
+
+  @override
+  String get billing_mode_confirm_switch => 'Switch';
+
+  @override
+  String get billing_mode_owner_only => 'Only the outlet owner can change billing mode';
 
   @override
   String get notifications => 'Notifications';

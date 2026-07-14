@@ -529,9 +529,11 @@ class _PoLineDraft {
   _PoLineDraft({
     required this.rawMaterialId,
     String hsnSac = '',
+    String description = '',
     double qty = 0,
     double price = 0,
   }) : hsnSacCtrl = TextEditingController(text: hsnSac),
+       descriptionCtrl = TextEditingController(text: description),
        qtyCtrl = TextEditingController(
          text: qty > 0 ? _PoLineDraft._num(qty) : '',
        ),
@@ -541,6 +543,7 @@ class _PoLineDraft {
 
   String rawMaterialId;
   final TextEditingController hsnSacCtrl;
+  final TextEditingController descriptionCtrl;
   final TextEditingController qtyCtrl;
   final TextEditingController priceCtrl;
 
@@ -555,6 +558,7 @@ class _PoLineDraft {
 
   void dispose() {
     hsnSacCtrl.dispose();
+    descriptionCtrl.dispose();
     qtyCtrl.dispose();
     priceCtrl.dispose();
   }
@@ -738,6 +742,7 @@ Future<void> showCreatePurchaseOrderDialog(
         _PoLineDraft(
           rawMaterialId: item.rawMaterialId,
           hsnSac: item.hsnSacCode,
+          description: item.description,
           qty: item.quantity,
           price: item.unitPrice,
         ),
@@ -844,12 +849,14 @@ Future<void> showCreatePurchaseOrderDialog(
             (m) => m.id == line.rawMaterialId,
           );
           final hsn = line.hsnSacCtrl.text.trim();
+          final desc = line.descriptionCtrl.text.trim();
           items.add({
             'rawMaterialId': line.rawMaterialId,
             'quantity': qty,
             'unitPrice': price,
             'taxRate': material?.taxRate ?? 18,
             'lineNumber': i + 1,
+            'description': desc,
             if (hsn.isNotEmpty)
               'hsnSacCode': hsn
             else if (material?.hsnSacCode.isNotEmpty == true)
@@ -1274,6 +1281,17 @@ Future<void> showCreatePurchaseOrderDialog(
                                         ),
                                       ),
                                     ),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Text(
+                                        loc.po_description,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 12,
+                                          color: Color(0xFF374151),
+                                        ),
+                                      ),
+                                    ),
                                     SizedBox(
                                       width: 72,
                                       child: Text(
@@ -1442,9 +1460,36 @@ Future<void> showCreatePurchaseOrderDialog(
                                                   line.hsnSacCtrl.text =
                                                       m.hsnSacCode;
                                                 }
+                                                if (line.descriptionCtrl.text
+                                                    .trim()
+                                                    .isEmpty) {
+                                                  line.descriptionCtrl.text =
+                                                      m.name;
+                                                }
                                               }
                                             });
                                           },
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        flex: 2,
+                                        child: TextFormField(
+                                          controller: line.descriptionCtrl,
+                                          decoration: const InputDecoration(
+                                            isDense: true,
+                                            border: OutlineInputBorder(
+                                              borderRadius: BorderRadius.all(
+                                                Radius.circular(8),
+                                              ),
+                                            ),
+                                            contentPadding:
+                                                EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                  vertical: 8,
+                                                ),
+                                          ),
+                                          onChanged: (_) => setState(() {}),
                                         ),
                                       ),
                                       const SizedBox(width: 6),

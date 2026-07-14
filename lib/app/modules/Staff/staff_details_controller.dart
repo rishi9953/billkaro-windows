@@ -11,6 +11,14 @@ class StaffMember {
     required this.email,
     required this.isActive,
     required this.permissions,
+    this.uniqueId = '',
+    this.address = '',
+    this.state = '',
+    this.district = '',
+    this.pincode = '',
+    this.dateOfBirth = '',
+    this.gender = '',
+    this.profileImage = '',
   });
 
   final String id;
@@ -20,6 +28,14 @@ class StaffMember {
   final String email;
   final bool isActive;
   final List<String> permissions;
+  final String uniqueId;
+  final String address;
+  final String state;
+  final String district;
+  final String pincode;
+  final String dateOfBirth;
+  final String gender;
+  final String profileImage;
 
   /// API uses `role: staff` for account type; actual role is in `staffRole`.
   static String roleFromApiMap(
@@ -48,6 +64,7 @@ class StaffDetailsController extends BaseController {
   final isLoading = false.obs;
   final staffList = <Map<String, dynamic>>[].obs;
   final deletingStaffIds = <String>{}.obs;
+  final reinvitingStaffIds = <String>{}.obs;
   final searchController = TextEditingController();
   final searchQuery = ''.obs;
 
@@ -108,19 +125,15 @@ class StaffDetailsController extends BaseController {
   }
 
   Future<void> onAddStaff() async {
-    final result = await Modular.to.pushNamed(HomeMainRoutes.addStaffScreen);
+    final result = await Modular.to.pushNamed(
+      HomeMainRoutes.addStaffScreen,
+      arguments: 'add',
+    );
     final created =
         result == true || (result is Map && result['created'] == true);
     if (!created) return;
 
     await loadStaffList();
-    final message = result is Map
-        ? (result['message']?.toString() ?? '').trim()
-        : '';
-    final loc = AppLocalizations.of(Get.context!)!;
-    showSuccess(
-      description: message.isNotEmpty ? message : loc.invite_sent_successfully,
-    );
   }
 
   Future<void> onEditStaff(StaffMember member) async {
@@ -131,17 +144,40 @@ class StaffDetailsController extends BaseController {
     final isUpdated =
         result == true || (result is Map && result['updated'] == true);
     if (!isUpdated) return;
-    if (result is Map && result['handled'] == true) return;
     await loadStaffList();
-    final message = result is Map
-        ? (result['message']?.toString() ?? '').trim()
-        : '';
-    final loc = AppLocalizations.of(Get.context!)!;
-    showSuccess(
-      description: message.isNotEmpty
-          ? message
-          : loc.staff_member_updated_successfully,
-    );
+  }
+
+  Future<void> reinviteStaff(StaffMember member) async {
+    final outletId = appPref.selectedOutlet?.id;
+    final staffId = member.id.trim();
+    if (outletId == null || outletId.isEmpty || staffId.isEmpty) {
+      final loc = AppLocalizations.of(Get.context!)!;
+      showError(description: loc.unable_to_delete_staff);
+      return;
+    }
+    if (member.isActive) return;
+    if (reinvitingStaffIds.contains(staffId)) return;
+
+    reinvitingStaffIds.add(staffId);
+    try {
+      final response = await callApi(
+        apiClient.reinviteStaff(outletId, staffId),
+        showLoader: false,
+      );
+      if (response == null) return;
+
+      final loc = AppLocalizations.of(Get.context!)!;
+      final message = response is Map
+          ? (response['message']?.toString() ?? '').trim()
+          : '';
+      showSuccess(
+        description: message.isNotEmpty
+            ? message
+            : loc.reinvite_sent_successfully,
+      );
+    } finally {
+      reinvitingStaffIds.remove(staffId);
+    }
   }
 
   Future<void> deleteStaffById(String staffId) async {
@@ -273,6 +309,22 @@ class StaffDetailsController extends BaseController {
         defaultValue: true,
       ),
       permissions: _asStringList(raw['permissions'] ?? userMap?['permissions']),
+      uniqueId: _firstNonEmpty([raw['uniqueId'], userMap?['uniqueId']]),
+      address: _firstNonEmpty([raw['address'], userMap?['address']]),
+      state: _firstNonEmpty([raw['state'], userMap?['state']]),
+      district: _firstNonEmpty([raw['district'], userMap?['district']]),
+      pincode: _firstNonEmpty([raw['pincode'], userMap?['pincode']]),
+      dateOfBirth: _firstNonEmpty([
+        raw['dateOfBirth'],
+        raw['date_of_birth'],
+        userMap?['dateOfBirth'],
+      ]),
+      gender: _firstNonEmpty([raw['gender'], userMap?['gender']]),
+      profileImage: _firstNonEmpty([
+        raw['profileImage'],
+        raw['profile_image'],
+        userMap?['profileImage'],
+      ]),
     );
   }
 

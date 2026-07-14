@@ -200,6 +200,7 @@ class StaffDetailsScreen extends StatelessWidget {
           onPressed: () async {
             final result = await Modular.to.pushNamed(
               HomeMainRoutes.addStaffScreen,
+              arguments: 'add',
             );
             final created =
                 result == true || (result is Map && result['created'] == true);

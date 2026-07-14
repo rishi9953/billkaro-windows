@@ -44,6 +44,7 @@ class AppPref {
   static const String keyWalletBalancePrefix = 'wallet_balance_';
   static const String keyWalletHistoryPrefix = 'wallet_history_';
   static const String keyWalletInitializedPrefix = 'wallet_initialized_';
+  static const String keyBillingAccessModePrefix = 'billing_access_mode_';
 
   AppPref(this._preferences);
 
@@ -351,6 +352,19 @@ class AppPref {
     _preferences.setBool(
       '${keyWalletInitializedPrefix}${_walletOutletKey(outletId)}',
       value,
+    );
+  }
+
+  /// Per-outlet billing access mode (`subscription` | `wallet`).
+  String? billingAccessModeRawForOutlet(String? outletId) =>
+      _preferences.getString(
+        '${keyBillingAccessModePrefix}${_walletOutletKey(outletId)}',
+      );
+
+  void setBillingAccessModeRawForOutlet(String? outletId, String mode) {
+    _preferences.setString(
+      '${keyBillingAccessModePrefix}${_walletOutletKey(outletId)}',
+      mode,
     );
   }
 

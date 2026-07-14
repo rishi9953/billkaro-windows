@@ -207,6 +207,7 @@ class BusinessDetailsController extends BaseController {
     upiIdController.text = outlet.upiId ?? '';
     fssaiController.text = outlet.fssaiNumber ?? '';
     gstinController.text = outlet.gstinNumber ?? '';
+    gstinVerify.markSavedFromServer(outlet.gstinNumber);
     googleProfileController.text = outlet.googleProfileLink ?? '';
     swiggyLinkController.text = outlet.swiggyLink ?? '';
     zomatoLinkController.text = outlet.zomatoLink ?? '';
@@ -366,6 +367,7 @@ class BusinessDetailsController extends BaseController {
     }
 
     debugPrint('✅ Outlet updated on server');
+    gstinVerify.markSavedAfterSubmit(gstinController.text);
     return true;
   }
 

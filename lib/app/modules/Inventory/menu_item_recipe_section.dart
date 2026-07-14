@@ -63,12 +63,17 @@ class _MenuItemRecipeSectionState extends State<MenuItemRecipeSection> {
                 ),
               ),
               TextButton.icon(
-                onPressed: () => showAddRecipeDialog(
+                onPressed: () => showRecipeDialog(
                   _inventory,
                   preselectedItemId: widget.itemId,
                 ),
-                icon: const Icon(Icons.add, size: 18),
-                label: Text(loc.add_ingredient),
+                icon: Icon(
+                  lines.isEmpty ? Icons.add : Icons.edit_outlined,
+                  size: 18,
+                ),
+                label: Text(
+                  lines.isEmpty ? loc.add_recipe : loc.edit_recipe,
+                ),
               ),
             ],
           ),
@@ -83,7 +88,7 @@ class _MenuItemRecipeSectionState extends State<MenuItemRecipeSection> {
                 border: Border.all(color: Colors.grey.shade200),
               ),
               child: Text(
-                loc.no_ingredients_yet,
+                loc.add_recipe_subtitle,
                 style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
               ),
             )
@@ -112,17 +117,6 @@ class _MenuItemRecipeSectionState extends State<MenuItemRecipeSection> {
                         style: const TextStyle(fontSize: 13),
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined, size: 20),
-                      tooltip: loc.edit_recipe,
-                      onPressed: () =>
-                          showEditRecipeDialog(_inventory, r),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline,
-                          color: Colors.red, size: 20),
-                      onPressed: () => _confirmDelete(r.id, loc),
-                    ),
                   ],
                 ),
               ),
@@ -130,26 +124,5 @@ class _MenuItemRecipeSectionState extends State<MenuItemRecipeSection> {
         ],
       );
     });
-  }
-
-  void _confirmDelete(String recipeId, AppLocalizations loc) {
-    Get.dialog(
-      AlertDialog(
-        title: Text(loc.confirm_delete),
-        content: Text(loc.delete_confirm_message(loc.this_recipe)),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: Text(loc.cancel)),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () async {
-              await _inventory.deleteRecipe(recipeId);
-              await _inventory.loadRecipes();
-              Get.back();
-            },
-            child: Text(loc.delete),
-          ),
-        ],
-      ),
-    );
   }
 }

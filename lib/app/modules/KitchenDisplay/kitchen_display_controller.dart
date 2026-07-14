@@ -294,12 +294,30 @@ class KitchenDisplayController extends BaseController {
 
       await callApi(apiClient.bumpKdsTicket(ticket.orderId));
 
+      // Remove immediately so the elapsed timer stops even before WS refresh.
+
+      tickets.removeWhere((t) => t.orderId == ticket.orderId);
+
+      _knownFiredAtByOrder.remove(ticket.orderId);
+
+      _recomputeSummaryFromTickets();
+
     } catch (e) {
 
       showError(description: 'Failed to bump ticket');
 
     }
 
+  }
+
+  void _recomputeSummaryFromTickets() {
+    final list = tickets;
+    summary.value = KdsQueueSummary(
+      newCount: list.where((t) => t.kitchenStatus == 'new').length,
+      preparing: list.where((t) => t.kitchenStatus == 'preparing').length,
+      ready: list.where((t) => t.kitchenStatus == 'ready').length,
+      total: list.length,
+    );
   }
 
 

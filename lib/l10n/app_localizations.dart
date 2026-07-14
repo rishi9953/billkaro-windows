@@ -4595,6 +4595,90 @@ abstract class AppLocalizations {
   /// **'Search table'**
   String get search_table;
 
+  /// No description provided for @table_section.
+  ///
+  /// In en, this message translates to:
+  /// **'Section'**
+  String get table_section;
+
+  /// No description provided for @table_section_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select or create a section'**
+  String get table_section_hint;
+
+  /// No description provided for @table_section_general.
+  ///
+  /// In en, this message translates to:
+  /// **'General'**
+  String get table_section_general;
+
+  /// No description provided for @table_section_all.
+  ///
+  /// In en, this message translates to:
+  /// **'All sections'**
+  String get table_section_all;
+
+  /// No description provided for @table_section_new.
+  ///
+  /// In en, this message translates to:
+  /// **'New section'**
+  String get table_section_new;
+
+  /// No description provided for @add_section.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Section'**
+  String get add_section;
+
+  /// No description provided for @section_name.
+  ///
+  /// In en, this message translates to:
+  /// **'Section name'**
+  String get section_name;
+
+  /// No description provided for @section_name_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. AC Room, Rooftop'**
+  String get section_name_hint;
+
+  /// No description provided for @please_enter_section_name.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a section name'**
+  String get please_enter_section_name;
+
+  /// No description provided for @section_added_successfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Section added successfully'**
+  String get section_added_successfully;
+
+  /// No description provided for @failed_to_add_section.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to add section'**
+  String get failed_to_add_section;
+
+  /// No description provided for @section_already_exists.
+  ///
+  /// In en, this message translates to:
+  /// **'Section already exists'**
+  String get section_already_exists;
+
+  /// No description provided for @no_sections_yet.
+  ///
+  /// In en, this message translates to:
+  /// **'No sections yet. Add a section first.'**
+  String get no_sections_yet;
+
+  /// No description provided for @table_section_count.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} tables'**
+  String table_section_count(int count);
+
   /// No description provided for @filter_all.
   ///
   /// In en, this message translates to:
@@ -5579,6 +5663,42 @@ abstract class AppLocalizations {
   /// **'Add Recipe'**
   String get add_recipe;
 
+  /// No description provided for @add_recipe_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add all raw materials needed to make one unit of this item (e.g. bread, cheese, lettuce for a sandwich)'**
+  String get add_recipe_subtitle;
+
+  /// No description provided for @add_another_ingredient.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Another Ingredient'**
+  String get add_another_ingredient;
+
+  /// No description provided for @recipe_ingredients_section.
+  ///
+  /// In en, this message translates to:
+  /// **'Ingredients'**
+  String get recipe_ingredients_section;
+
+  /// No description provided for @recipe_need_at_least_one_ingredient.
+  ///
+  /// In en, this message translates to:
+  /// **'Add at least one ingredient with a valid quantity'**
+  String get recipe_need_at_least_one_ingredient;
+
+  /// No description provided for @recipe_duplicate_material.
+  ///
+  /// In en, this message translates to:
+  /// **'Each raw material can only be used once per recipe'**
+  String get recipe_duplicate_material;
+
+  /// No description provided for @ingredient_number.
+  ///
+  /// In en, this message translates to:
+  /// **'Ingredient {number}'**
+  String ingredient_number(int number);
+
   /// No description provided for @edit_recipe.
   ///
   /// In en, this message translates to:
@@ -6035,6 +6155,12 @@ abstract class AppLocalizations {
   /// **'HSN/SAC Code'**
   String get po_hsn_sac;
 
+  /// No description provided for @po_description.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get po_description;
+
   /// No description provided for @template_saved_opened.
   ///
   /// In en, this message translates to:
@@ -6340,6 +6466,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Invite sent successfully'**
   String get invite_sent_successfully;
+
+  /// No description provided for @reinvite.
+  ///
+  /// In en, this message translates to:
+  /// **'Reinvite'**
+  String get reinvite;
+
+  /// No description provided for @reinvite_sent_successfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite resent successfully'**
+  String get reinvite_sent_successfully;
+
+  /// No description provided for @unique_id.
+  ///
+  /// In en, this message translates to:
+  /// **'Unique ID'**
+  String get unique_id;
+
+  /// No description provided for @state_label.
+  ///
+  /// In en, this message translates to:
+  /// **'State'**
+  String get state_label;
+
+  /// No description provided for @district_label.
+  ///
+  /// In en, this message translates to:
+  /// **'District'**
+  String get district_label;
+
+  /// No description provided for @pincode_label.
+  ///
+  /// In en, this message translates to:
+  /// **'Pincode'**
+  String get pincode_label;
+
+  /// No description provided for @date_of_birth.
+  ///
+  /// In en, this message translates to:
+  /// **'Date of Birth'**
+  String get date_of_birth;
+
+  /// No description provided for @gender_label.
+  ///
+  /// In en, this message translates to:
+  /// **'Gender'**
+  String get gender_label;
+
+  /// No description provided for @male.
+  ///
+  /// In en, this message translates to:
+  /// **'Male'**
+  String get male;
+
+  /// No description provided for @female.
+  ///
+  /// In en, this message translates to:
+  /// **'Female'**
+  String get female;
+
+  /// No description provided for @other_gender.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get other_gender;
+
+  /// No description provided for @select_gender.
+  ///
+  /// In en, this message translates to:
+  /// **'Select gender'**
+  String get select_gender;
+
+  /// No description provided for @dd_mm_yyyy.
+  ///
+  /// In en, this message translates to:
+  /// **'dd/mm/yyyy'**
+  String get dd_mm_yyyy;
+
+  /// No description provided for @mobile_number.
+  ///
+  /// In en, this message translates to:
+  /// **'Mobile number'**
+  String get mobile_number;
+
+  /// No description provided for @staff_image.
+  ///
+  /// In en, this message translates to:
+  /// **'Staff Image'**
+  String get staff_image;
+
+  /// No description provided for @please_select_staff_image.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a staff image'**
+  String get please_select_staff_image;
+
+  /// No description provided for @please_select_date_of_birth.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select date of birth'**
+  String get please_select_date_of_birth;
+
+  /// No description provided for @please_enter_state.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter state'**
+  String get please_enter_state;
+
+  /// No description provided for @please_enter_district.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter district'**
+  String get please_enter_district;
+
+  /// No description provided for @please_enter_pincode.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter pincode'**
+  String get please_enter_pincode;
+
+  /// No description provided for @please_enter_valid_pincode.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid 6-digit pincode'**
+  String get please_enter_valid_pincode;
+
+  /// No description provided for @tap_to_upload_image.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to upload image'**
+  String get tap_to_upload_image;
 
   /// No description provided for @staff_member_updated_successfully.
   ///
@@ -8716,6 +8974,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recharge prepaid balance for platform fees'**
   String get wallet_menu_subtitle;
+
+  /// No description provided for @settings_section_billing.
+  ///
+  /// In en, this message translates to:
+  /// **'Billing plan'**
+  String get settings_section_billing;
+
+  /// No description provided for @billing_mode_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Access mode'**
+  String get billing_mode_title;
+
+  /// No description provided for @billing_mode_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how this outlet pays for BillKaro'**
+  String get billing_mode_subtitle;
+
+  /// No description provided for @billing_mode_subscription.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription'**
+  String get billing_mode_subscription;
+
+  /// No description provided for @billing_mode_subscription_desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited access with an active plan or trial'**
+  String get billing_mode_subscription_desc;
+
+  /// No description provided for @billing_mode_wallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet'**
+  String get billing_mode_wallet;
+
+  /// No description provided for @billing_mode_wallet_desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay as you go — prepaid balance deducted per bill'**
+  String get billing_mode_wallet_desc;
+
+  /// No description provided for @billing_mode_switched_subscription.
+  ///
+  /// In en, this message translates to:
+  /// **'Switched to subscription mode'**
+  String get billing_mode_switched_subscription;
+
+  /// No description provided for @billing_mode_switched_wallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Switched to wallet mode'**
+  String get billing_mode_switched_wallet;
+
+  /// No description provided for @billing_mode_switch_confirm_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch billing mode?'**
+  String get billing_mode_switch_confirm_title;
+
+  /// No description provided for @billing_mode_switch_to_wallet_body.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ll use prepaid wallet credits instead of a subscription. Keep your wallet funded before creating bills.'**
+  String get billing_mode_switch_to_wallet_body;
+
+  /// No description provided for @billing_mode_switch_to_subscription_body.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ll need an active subscription or trial for gated features. Wallet balance will not unlock the app.'**
+  String get billing_mode_switch_to_subscription_body;
+
+  /// No description provided for @billing_mode_confirm_switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch'**
+  String get billing_mode_confirm_switch;
+
+  /// No description provided for @billing_mode_owner_only.
+  ///
+  /// In en, this message translates to:
+  /// **'Only the outlet owner can change billing mode'**
+  String get billing_mode_owner_only;
 
   /// No description provided for @notifications.
   ///

@@ -1,5 +1,10 @@
+import 'package:billkaro/app/Widgets/app_dropdowns.dart';
 import 'package:billkaro/app/modules/Staff/add_staff_controller.dart';
+import 'package:billkaro/app/modules/Staff/staff_details_controller.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
+import 'package:flutter/material.dart' show Image;
+import 'package:flutter_modular/flutter_modular.dart';
 
 class AddStaffScreen extends StatefulWidget {
   const AddStaffScreen({super.key});
@@ -25,6 +30,14 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
       Get.delete<AddStaffController>(force: true);
     }
     controller = Get.put(AddStaffController());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _prepareScreen());
+  }
+
+  void _prepareScreen() {
+    if (!mounted) return;
+    final rawArgs = Get.arguments ?? Modular.args.data;
+    controller.prepareScreen(rawArgs is StaffMember ? rawArgs : null);
+    setState(() {});
   }
 
   @override
@@ -95,50 +108,258 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
     );
   }
 
-  Widget _roleSelector(BuildContext context, AppLocalizations loc, bool isWin) {
+  Widget _buildEmailField(
+    BuildContext context,
+    AppLocalizations loc,
+    bool isWin,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _labelRequired(loc, loc.email),
+        const SizedBox(height: 8),
+        Obx(() {
+          final Widget? suffixIcon;
+          final String? helperText;
+
+          if (controller.isEmailChecking.value) {
+            suffixIcon = Padding(
+              padding: const EdgeInsets.all(12),
+              child: SizedBox(
+                width: 15,
+                height: 15,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: AppColor.primary,
+                ),
+              ),
+            );
+            helperText = 'Checking email availability...';
+          } else if (controller.isEmailAvailable.value == true) {
+            suffixIcon = const Icon(
+              Icons.check_circle_rounded,
+              color: AppColor.lightgreen,
+            );
+            helperText = 'Email is available';
+          } else if (controller.emailVerificationError.value != null) {
+            suffixIcon = Icon(
+              Icons.info_outline_rounded,
+              color: Colors.orange.shade700,
+            );
+            helperText = controller.emailVerificationError.value;
+          } else if (controller.isEmailAvailable.value == false) {
+            suffixIcon = Icon(
+              Icons.error_outline_rounded,
+              color: Theme.of(context).colorScheme.error,
+            );
+            helperText =
+                'This email is already registered. Please use a different email.';
+          } else {
+            suffixIcon = null;
+            helperText = null;
+          }
+
+          return TextFormField(
+            controller: controller.emailController,
+            keyboardType: TextInputType.emailAddress,
+            validator: controller.validateEmail,
+            onChanged: controller.onEmailChanged,
+            decoration: _fieldDecoration(
+              context,
+              hint: loc.tap_to_enter,
+              isWin: isWin,
+            ).copyWith(
+              suffixIcon: suffixIcon,
+              suffixIconConstraints: const BoxConstraints(
+                minWidth: 44,
+                minHeight: 44,
+              ),
+              helperText: helperText,
+              helperStyle: TextStyle(
+                color: controller.isEmailAvailable.value == false
+                    ? Theme.of(context).colorScheme.error
+                    : controller.emailVerificationError.value != null
+                    ? Colors.orange.shade700
+                    : controller.isEmailAvailable.value == true
+                    ? AppColor.lightgreen
+                    : Colors.grey.shade600,
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _roleDropdown(BuildContext context, AppLocalizations loc, bool isWin) {
     return Obx(
-      () => Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: controller.showRolePicker,
-          borderRadius: BorderRadius.circular(isWin ? 10 : 8),
-          child: Container(
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(
-              horizontal: isWin ? 14 : 16,
-              vertical: isWin ? 14 : 16,
-            ),
-            decoration: BoxDecoration(
-              color: isWin
-                  ? Theme.of(context).colorScheme.surface
-                  : const Color(0xFFF9FAFB),
-              borderRadius: BorderRadius.circular(isWin ? 10 : 8),
-              border: isWin ? Border.all(color: Colors.grey[300]!) : null,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    controller.selectedRole.value == 'Secondary Admin'
-                        ? loc.secondary_admin
-                        : controller.selectedRole.value == 'Biller'
-                        ? loc.biller
-                        : controller.selectedRole.value,
-                    style: TextStyle(
-                      color: const Color(0xFF374151),
-                      fontSize: 16,
+      () => AppDropdownFormField2<String>(
+        value: controller.selectedRole.value,
+        decoration: _fieldDecoration(
+          context,
+          hint: loc.select_user_role,
+          isWin: isWin,
+        ),
+        selectedItemBuilder: (context) => _roleSelectedItems(loc),
+        items: AddStaffController.roleOptions
+            .map(
+              (role) =>
+                  DropdownItem(value: role, child: Text(_roleLabel(loc, role))),
+            )
+            .toList(),
+        onChanged: (value) {
+          if (value != null) {
+            controller.selectedRole.value = value;
+          }
+        },
+      ),
+    );
+  }
+
+  String _roleLabel(AppLocalizations loc, String role) {
+    return role == 'Secondary Admin' ? loc.secondary_admin : loc.biller;
+  }
+
+  List<Widget> _roleSelectedItems(AppLocalizations loc) {
+    return AddStaffController.roleOptions
+        .map(
+          (role) => Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(_roleLabel(loc, role), maxLines: 2, softWrap: true),
+          ),
+        )
+        .toList();
+  }
+
+  Widget _buildStaffImageSection(
+    BuildContext context,
+    AppLocalizations loc,
+    bool isWin,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _labelRequired(loc, loc.staff_image),
+        const SizedBox(height: 8),
+        Obx(() {
+          final file = controller.selectedImage.value;
+          final url = resolvedMediaUrl(controller.imageUrl.value);
+          final uploading = controller.isUploadingImage.value;
+          final hasImage = controller.hasStaffImage;
+          final showErrors = controller.showValidationErrors.value;
+          final imageError =
+              showErrors ? controller.validateStaffImage() : null;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                  GestureDetector(
+                    onTap: uploading ? null : controller.pickStaffImage,
+                    child: Container(
+                      height: isWin ? 180 : 160,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: isWin
+                            ? Theme.of(context).colorScheme.surface
+                            : const Color(0xFFF9FAFB),
+                        borderRadius: BorderRadius.circular(isWin ? 10 : 8),
+                        border: Border.all(
+                          color: imageError != null
+                              ? Colors.red.shade300
+                              : Colors.grey.shade300,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(isWin ? 10 : 8),
+                        child: uploading
+                            ? const Center(child: CircularProgressIndicator())
+                            : file != null
+                            ? Image.file(
+                                file,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                              )
+                            : url.isNotEmpty
+                            ? CachedNetworkImage(
+                                imageUrl: url,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                errorWidget: (_, __, ___) =>
+                                    _buildImagePlaceholder(loc),
+                              )
+                            : _buildImagePlaceholder(loc),
+                      ),
                     ),
                   ),
-                ),
-                Icon(
-                  Icons.keyboard_arrow_down,
-                  color: Colors.grey.shade600,
-                  size: 24,
+                  if (hasImage && !uploading)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Material(
+                        color: Colors.black.withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(20),
+                        child: InkWell(
+                          onTap: controller.removeStaffImage,
+                          borderRadius: BorderRadius.circular(20),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Tooltip(
+                              message: loc.remove_image,
+                              child: const Icon(
+                                Icons.delete_outline,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              if (hasImage && !uploading) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: controller.removeStaffImage,
+                    icon: const Icon(Icons.delete_outline, size: 18),
+                    label: Text(loc.remove_image),
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                  ),
                 ),
               ],
-            ),
+              if (imageError != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  imageError,
+                  style: TextStyle(color: Colors.red.shade700, fontSize: 12),
+                ),
+              ],
+            ],
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildImagePlaceholder(AppLocalizations loc) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.add_a_photo_outlined,
+            size: 36,
+            color: Colors.grey.shade500,
           ),
-        ),
+          const SizedBox(height: 8),
+          Text(
+            loc.tap_to_upload_image,
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+          ),
+        ],
       ),
     );
   }
@@ -151,10 +372,13 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _labelRequired(loc, loc.user_name),
+        _buildStaffImageSection(context, loc, isWin),
+        SizedBox(height: isWin ? 20 : 24),
+        _labelRequired(loc, loc.name_label),
         const SizedBox(height: 8),
-        TextField(
+        TextFormField(
           controller: controller.userNameController,
+          validator: controller.validateUserName,
           decoration: _fieldDecoration(
             context,
             hint: loc.tap_to_enter,
@@ -162,33 +386,242 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
           ),
         ),
         SizedBox(height: isWin ? 20 : 24),
-        _labelRequired(loc, loc.email),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller.emailController,
-          keyboardType: TextInputType.emailAddress,
-          decoration: _fieldDecoration(
-            context,
-            hint: loc.tap_to_enter,
-            isWin: isWin,
-          ),
-        ),
+        _buildEmailField(context, loc, isWin),
         SizedBox(height: isWin ? 20 : 24),
-        _labelRequired(loc, loc.user_phone_number),
+        _labelRequired(loc, loc.mobile_number),
         const SizedBox(height: 8),
-        TextField(
+        TextFormField(
           controller: controller.phoneNumberController,
           keyboardType: TextInputType.phone,
           maxLength: 10,
+          validator: controller.validatePhone,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration:
+              _fieldDecoration(
+                context,
+                hint: loc.tap_to_enter,
+                isWin: isWin,
+              ).copyWith(
+                counterText: '',
+                prefixText: '+91 ',
+                prefixStyle: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.black,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+        ),
+        SizedBox(height: isWin ? 20 : 24),
+        _labelRequired(loc, loc.address_label),
+        const SizedBox(height: 8),
+        TextFormField(
+          maxLines: 3,
+          controller: controller.addressController,
+          validator: controller.validateAddress,
           decoration: _fieldDecoration(
             context,
             hint: loc.tap_to_enter,
             isWin: isWin,
-          ).copyWith(counterText: ''),
+          ),
         ),
+        SizedBox(height: isWin ? 20 : 24),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _labelRequired(loc, loc.state_label),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: controller.stateController,
+                    validator: controller.validateState,
+                    decoration: _fieldDecoration(
+                      context,
+                      hint: loc.tap_to_enter,
+                      isWin: isWin,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _labelRequired(loc, loc.district_label),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: controller.districtController,
+                    validator: controller.validateDistrict,
+                    decoration: _fieldDecoration(
+                      context,
+                      hint: loc.tap_to_enter,
+                      isWin: isWin,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: isWin ? 20 : 24),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _labelRequired(loc, loc.pincode_label),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: controller.pincodeController,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    validator: controller.validatePincode,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: _fieldDecoration(
+                      context,
+                      hint: loc.tap_to_enter,
+                      isWin: isWin,
+                    ).copyWith(counterText: ''),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _labelRequired(loc, loc.date_of_birth),
+                  const SizedBox(height: 8),
+                  Obx(() {
+                    final showErrors = controller.showValidationErrors.value;
+                    final dobError =
+                        showErrors ? controller.validateDateOfBirth() : null;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: controller.pickDateOfBirth,
+                            borderRadius: BorderRadius.circular(isWin ? 10 : 8),
+                            child: Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isWin ? 14 : 16,
+                                vertical: isWin ? 14 : 16,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isWin
+                                    ? Theme.of(context).colorScheme.surface
+                                    : const Color(0xFFF9FAFB),
+                                borderRadius: BorderRadius.circular(
+                                  isWin ? 10 : 8,
+                                ),
+                                border: Border.all(
+                                  color: dobError != null
+                                      ? Colors.red.shade300
+                                      : (isWin
+                                            ? Colors.grey[300]!
+                                            : Colors.transparent),
+                                ),
+                              ),
+                              child: Text(
+                                controller.dateOfBirthLabel.isEmpty
+                                    ? loc.dd_mm_yyyy
+                                    : controller.dateOfBirthLabel,
+                                style: TextStyle(
+                                  color: controller.dateOfBirthLabel.isEmpty
+                                      ? Colors.grey[400]
+                                      : const Color(0xFF374151),
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (dobError != null) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            dobError,
+                            style: TextStyle(
+                              color: Colors.red.shade700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ],
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: isWin ? 20 : 24),
+        _labelRequired(loc, loc.gender_label),
+        const SizedBox(height: 8),
+        Obx(() {
+          final showErrors = controller.showValidationErrors.value;
+          final genderError = showErrors
+              ? controller.validateGender(
+                  controller.selectedGender.value.isEmpty
+                      ? null
+                      : controller.selectedGender.value,
+                )
+              : null;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppDropdownFormField2<String>(
+                value: controller.selectedGender.value.isEmpty
+                    ? null
+                    : controller.selectedGender.value,
+                hint: Text(
+                  loc.select_gender,
+                  style: TextStyle(color: Colors.grey[400]),
+                ),
+                decoration: _fieldDecoration(
+                  context,
+                  hint: loc.select_gender,
+                  isWin: isWin,
+                ).copyWith(errorText: genderError),
+                items: AddStaffController.genderOptions
+                    .map(
+                      (gender) => DropdownItem(
+                        value: gender,
+                        child: Text(_genderLabel(loc, gender)),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  controller.selectedGender.value = value ?? '';
+                },
+              ),
+            ],
+          );
+        }),
       ],
     );
+  }
+
+  String _genderLabel(AppLocalizations loc, String gender) {
+    switch (gender) {
+      case 'Male':
+        return loc.male;
+      case 'Female':
+        return loc.female;
+      case 'Other':
+        return loc.other_gender;
+      default:
+        return gender;
+    }
   }
 
   Widget _buildRoleSection(
@@ -199,16 +632,41 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          loc.user_role,
-          style: const TextStyle(
-            color: Color(0xFF6B7280),
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _labelRequired(loc, loc.user_role),
+                  const SizedBox(height: 8),
+                  _roleDropdown(context, loc, isWin),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            SizedBox(
+              width: isWin ? 160 : 120,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _labelRequired(loc, loc.unique_id),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: controller.uniqueIdController,
+                    readOnly: true,
+                    decoration: _fieldDecoration(
+                      context,
+                      hint: loc.tap_to_enter,
+                      isWin: isWin,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
-        _roleSelector(context, loc, isWin),
         SizedBox(height: isWin ? 20 : 32),
         Obx(
           () => controller.selectedRole.value == 'Biller'
@@ -268,27 +726,35 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                 final maxW = isWin ? _windowsMaxFormWidth : double.infinity;
                 final isWide = isWin && constraints.maxWidth >= 960;
 
-                final formContent = isWide
-                    ? Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: _buildFormFields(context, loc, isWin: isWin),
-                          ),
-                          const SizedBox(width: 28),
-                          Expanded(
-                            child: _buildRoleSection(context, loc, isWin),
-                          ),
-                        ],
-                      )
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildFormFields(context, loc, isWin: isWin),
-                          SizedBox(height: isWin ? 20 : 24),
-                          _buildRoleSection(context, loc, isWin),
-                        ],
-                      );
+                final formContent = Form(
+                  key: controller.formKey,
+                  autovalidateMode: AutovalidateMode.disabled,
+                  child: isWide
+                      ? Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _buildFormFields(
+                                context,
+                                loc,
+                                isWin: isWin,
+                              ),
+                            ),
+                            const SizedBox(width: 28),
+                            Expanded(
+                              child: _buildRoleSection(context, loc, isWin),
+                            ),
+                          ],
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildFormFields(context, loc, isWin: isWin),
+                            SizedBox(height: isWin ? 20 : 24),
+                            _buildRoleSection(context, loc, isWin),
+                          ],
+                        ),
+                );
 
                 final cardBody = Card(
                   elevation: 0,
@@ -430,8 +896,8 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                     width: isWin ? 220 : double.infinity,
                     child: ElevatedButton(
                       onPressed: isEditMode
-                          ? controller.onUpdateStaff
-                          : controller.sendInvite,
+                          ? () => controller.onUpdateStaff(context)
+                          : () => controller.sendInvite(context),
                       style: ElevatedButton.styleFrom(
                         elevation: 0,
                         padding: EdgeInsets.symmetric(

@@ -1,9 +1,11 @@
 import 'package:billkaro/app/Widgets/app_dropdowns.dart';
+import 'package:billkaro/app/Widgets/horizontal_scroll_with_arrows.dart';
 import 'package:billkaro/app/modules/AddOrder/add_order_controller.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:billkaro/app/modules/AddOrder/add_order_list_screen.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
+import 'package:billkaro/app/services/Modals/orders/split_payment.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
@@ -151,114 +153,119 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                         ),
                       ],
                     )
-                  : SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        spacing: _isDesktopPlatform ? 12 : 10,
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          OutlinedButton(
-                            onPressed: () {
-                              controller.showSearchBarFunction();
-                            },
-                            style: desktopButtonStyle,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12.0,
-                                vertical: 0,
-                              ),
-                              child: Icon(Icons.search, size: 20),
+                  : Row(
+                      children: [
+                        OutlinedButton(
+                          onPressed: () {
+                            controller.showSearchBarFunction();
+                          },
+                          style: desktopButtonStyle,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12.0,
+                              vertical: 0,
                             ),
+                            child: Icon(Icons.search, size: 20),
                           ),
-                          OutlinedButton(
-                            onPressed: () {
-                              controller.selectCategory('none');
-                            },
-                            style: desktopButtonStyle.copyWith(
-                              backgroundColor: WidgetStatePropertyAll(
-                                controller.selectedCategory.value
-                                            .toLowerCase() ==
-                                        'none'
-                                    ? AppColor.secondaryPrimary.withOpacity(0.5)
-                                    : Colors.transparent,
-                              ),
-                              side: WidgetStatePropertyAll(
-                                BorderSide(
-                                  color:
+                        ),
+                        SizedBox(width: _isDesktopPlatform ? 8 : 6),
+                        Expanded(
+                          child: HorizontalScrollWithArrows(
+                            arrowButtonSize: _isDesktopPlatform ? 34 : 30,
+                            child: Row(
+                              spacing: _isDesktopPlatform ? 12 : 10,
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                OutlinedButton(
+                                  onPressed: () {
+                                    controller.selectCategory('none');
+                                  },
+                                  style: desktopButtonStyle.copyWith(
+                                    backgroundColor: WidgetStatePropertyAll(
                                       controller.selectedCategory.value
-                                              .toLowerCase() ==
-                                          'none'
-                                      ? AppColor.secondaryPrimary
-                                      : AppColor.primary,
-                                ),
-                              ),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12.0,
-                                vertical: 0,
-                              ),
-                              child: Text(loc.all),
-                            ),
-                          ),
-                          ...controller.categories.map((category) {
-                            return OutlinedButton(
-                              onPressed: () {
-                                controller.selectCategory(
-                                  category.categoryName.toLowerCase(),
-                                );
-                              },
-                              style: desktopButtonStyle.copyWith(
-                                backgroundColor: WidgetStatePropertyAll(
-                                  controller.selectedCategory.value ==
-                                          category.categoryName.toLowerCase()
-                                      ? AppColor.secondaryPrimary.withOpacity(
-                                          0.5,
-                                        )
-                                      : Colors.transparent,
-                                ),
-                                side: WidgetStatePropertyAll(
-                                  BorderSide(
-                                    color:
-                                        controller.selectedCategory.value ==
-                                            category.categoryName.toLowerCase()
-                                        ? AppColor.secondaryPrimary
-                                        : AppColor.primary,
+                                                  .toLowerCase() ==
+                                              'none'
+                                          ? AppColor.secondaryPrimary
+                                                .withOpacity(0.5)
+                                          : Colors.transparent,
+                                    ),
+                                    side: WidgetStatePropertyAll(
+                                      BorderSide(
+                                        color:
+                                            controller.selectedCategory.value
+                                                    .toLowerCase() ==
+                                                'none'
+                                            ? AppColor.secondaryPrimary
+                                            : AppColor.primary,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12.0,
+                                      vertical: 0,
+                                    ),
+                                    child: Text(loc.all),
                                   ),
                                 ),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12.0,
-                                  vertical: 0,
-                                ),
-                                child: Text(
-                                  category.categoryName.capitalize ?? '',
-                                ),
-                              ),
-                            );
-                          }),
-                          OutlinedButton(
-                            onPressed: () {
-                              Modular.to.pushNamed(
-                                HomeMainRoutes.category,
-                                arguments: {
-                                  'voiceCallback': controller.getCategories,
-                                },
-                              );
-                              // Get.toNamed(
-                              //   AppRoute.addCategory,
-                              //   arguments: {
-                              //     'voiceCallback': controller.getCategories,
-                              //   },
-                              // );
-                            },
-                            style: desktopButtonStyle,
-                            child: const Icon(Icons.add),
+                                ...controller.categories.map((category) {
+                                  return OutlinedButton(
+                                    onPressed: () {
+                                      controller.selectCategory(
+                                        category.categoryName.toLowerCase(),
+                                      );
+                                    },
+                                    style: desktopButtonStyle.copyWith(
+                                      backgroundColor: WidgetStatePropertyAll(
+                                        controller.selectedCategory.value ==
+                                                category.categoryName
+                                                    .toLowerCase()
+                                            ? AppColor.secondaryPrimary
+                                                  .withOpacity(0.5)
+                                            : Colors.transparent,
+                                      ),
+                                      side: WidgetStatePropertyAll(
+                                        BorderSide(
+                                          color:
+                                              controller
+                                                      .selectedCategory
+                                                      .value ==
+                                                  category.categoryName
+                                                      .toLowerCase()
+                                              ? AppColor.secondaryPrimary
+                                              : AppColor.primary,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12.0,
+                                        vertical: 0,
+                                      ),
+                                      child: Text(
+                                        category.categoryName.capitalize ?? '',
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              ],
+                            ),
                           ),
-                        ],
-                      ),
+                        ),
+                        SizedBox(width: _isDesktopPlatform ? 8 : 6),
+                        OutlinedButton(
+                          onPressed: () {
+                            Modular.to.pushNamed(
+                              HomeMainRoutes.category,
+                              arguments: {
+                                'voiceCallback': controller.getCategories,
+                              },
+                            );
+                          },
+                          style: desktopButtonStyle,
+                          child: const Icon(Icons.add),
+                        ),
+                      ],
                     ),
             );
           }),
@@ -858,64 +865,64 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                 ),
               );
             }),
-            Gap(8),
-            Obx(() {
-              if (controller.items.isEmpty) {
-                return Container();
-              }
-              if (!controller.showAddDetailsOnCreateOrder.value) {
-                return Container();
-              }
-              return InkWell(
-                onTap: () async {
-                  final result = await Modular.to.pushNamed(
-                    HomeMainRoutes.orderDetails,
-                    arguments: {
-                      ...controller.orderDetails,
-                      'orderFrom': controller.selectedOrderSource.value,
-                      'totalAmount': controller.totalAmount.value,
-                    },
-                  );
-                  // final result = await Get.toNamed(
-                  //   AppRoute.orderDetails,
-                  //   arguments: {
-                  //     ...controller.orderDetails,
-                  //     'orderFrom': controller.selectedOrderSource.value,
-                  //     'totalAmount': controller.totalAmount.value,
-                  //   },
-                  // );
-                  if (result != null && result is CreateorderRequest) {
-                    controller.setOrderDetails(result.toJson());
-                    debugPrint(controller.orderDetails.toString());
-                  }
-                },
-                child: Container(
-                  margin: const EdgeInsets.only(top: 10, bottom: 10, right: 8),
-                  height: _appBarActionButtonHeight,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(
-                      _isDesktopPlatform ? _desktopRadius : 6,
-                    ),
-                    border: Border.all(color: AppColor.white, width: 1),
-                    color: AppColor.white,
-                  ),
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Text(
-                        loc.add_details,
-                        style: TextStyle(
-                          color: AppColor.primary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }),
 
+            // Gap(8),
+            // Obx(() {
+            //   if (controller.items.isEmpty) {
+            //     return Container();
+            //   }
+            //   if (!controller.showAddDetailsOnCreateOrder.value) {
+            //     return Container();
+            //   }
+            //   return InkWell(
+            //     onTap: () async {
+            //       final result = await Modular.to.pushNamed(
+            //         HomeMainRoutes.orderDetails,
+            //         arguments: {
+            //           ...controller.orderDetails,
+            //           'orderFrom': controller.selectedOrderSource.value,
+            //           'totalAmount': controller.totalAmount.value,
+            //         },
+            //       );
+            //       // final result = await Get.toNamed(
+            //       //   AppRoute.orderDetails,
+            //       //   arguments: {
+            //       //     ...controller.orderDetails,
+            //       //     'orderFrom': controller.selectedOrderSource.value,
+            //       //     'totalAmount': controller.totalAmount.value,
+            //       //   },
+            //       // );
+            //       if (result != null && result is CreateorderRequest) {
+            //         controller.setOrderDetails(result.toJson());
+            //         debugPrint(controller.orderDetails.toString());
+            //       }
+            //     },
+            //     child: Container(
+            //       margin: const EdgeInsets.only(top: 10, bottom: 10, right: 8),
+            //       height: _appBarActionButtonHeight,
+            //       decoration: BoxDecoration(
+            //         borderRadius: BorderRadius.circular(
+            //           _isDesktopPlatform ? _desktopRadius : 6,
+            //         ),
+            //         border: Border.all(color: AppColor.white, width: 1),
+            //         color: AppColor.white,
+            //       ),
+            //       child: Center(
+            //         child: Padding(
+            //           padding: const EdgeInsets.symmetric(horizontal: 12),
+            //           child: Text(
+            //             loc.add_details,
+            //             style: TextStyle(
+            //               color: AppColor.primary,
+            //               fontSize: 16,
+            //               fontWeight: FontWeight.w500,
+            //             ),
+            //           ),
+            //         ),
+            //       ),
+            //     ),
+            //   );
+            // }),
             IconButton(
               icon: const Icon(Icons.settings_outlined, color: AppColor.white),
               onPressed: controller.openSettings,
@@ -924,16 +931,16 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
         ),
         body: Column(
           children: [
-            Obx(() {
-              controller.homeController.selectedOutlet.value;
-              if (!HomeMainRoutes.outletIsCafeOrRestaurant()) {
-                return const SizedBox.shrink();
-              }
-              return _OrderTypeBar(
-                controller: controller,
-                orderSourceIcon: _orderSourceIcon,
-              );
-            }),
+            // Obx(() {
+            //   controller.homeController.selectedOutlet.value;
+            //   if (!HomeMainRoutes.outletIsCafeOrRestaurant()) {
+            //     return const SizedBox.shrink();
+            //   }
+            //   return _OrderTypeBar(
+            //     controller: controller,
+            //     orderSourceIcon: _orderSourceIcon,
+            //   );
+            // }),
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -1683,6 +1690,11 @@ class _CartPanel extends StatelessWidget {
             ),
             const Divider(height: 1),
             Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: _PaymentSection(controller: controller, loc: loc),
+            ),
+            const Divider(height: 1),
+            Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
@@ -1723,6 +1735,366 @@ class _CartPanel extends StatelessWidget {
         ),
       );
     });
+  }
+}
+
+class _PaymentSection extends StatelessWidget {
+  final AddOrderController controller;
+  final AppLocalizations loc;
+
+  const _PaymentSection({required this.controller, required this.loc});
+
+  static const Set<String> _allowedPaymentMethods = {'cash', 'card', 'upi'};
+
+  String _normalizePaymentMethod(String value) {
+    final normalized = value.trim().toLowerCase();
+    return _allowedPaymentMethods.contains(normalized) ? normalized : 'cash';
+  }
+
+  Widget _paymentSvgIcon(String method, {double size = 20}) {
+    switch (_normalizePaymentMethod(method)) {
+      case 'card':
+        return Assets.svg.cardIcon.svg(width: size, height: size);
+      case 'upi':
+        return Assets.svg.upiIcon.svg(width: size, height: size);
+      case 'cash':
+      default:
+        return Assets.svg.cashIcon.svg(width: size, height: size);
+    }
+  }
+
+  List<(String method, String label)> get _paymentMethods => [
+    ('cash', loc.cash),
+    ('card', loc.card),
+    ('upi', loc.upi),
+  ];
+
+  Widget _buildPaymentMethodWrap({
+    required String selected,
+    required ValueChanged<String> onSelected,
+  }) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _paymentMethods.map((entry) {
+        final method = entry.$1;
+        final label = entry.$2;
+        final isSelected = selected == method;
+        return ChoiceChip(
+          label: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _paymentSvgIcon(method, size: 18),
+              const SizedBox(width: 8),
+              Text(label),
+            ],
+          ),
+          selected: isSelected,
+          onSelected: (_) => onSelected(method),
+          selectedColor: AppColor.primary.withOpacity(0.15),
+          labelStyle: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: isSelected ? AppColor.primary : Colors.grey[700],
+          ),
+          side: BorderSide(
+            color: isSelected
+                ? AppColor.primary
+                : Colors.grey.shade400.withOpacity(0.6),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Obx(() {
+      controller.orderDetailsVersion.value;
+      controller.totalAmount.value;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  loc.payment_received_in,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: Colors.grey[700],
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Text(
+                'Split',
+                style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+              ),
+              Switch(
+                value: controller.useSplitPayment.value,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                onChanged: controller.setUseSplitPayment,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (!controller.useSplitPayment.value)
+            _buildPaymentMethodWrap(
+              selected: _normalizePaymentMethod(
+                controller.paymentReceivedIn.value,
+              ),
+              onSelected: controller.setPaymentMethod,
+            )
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue[200]!),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue[900],
+                          fontSize: 12.5,
+                        ),
+                      ),
+                      Text(
+                        '₹${controller.totalAmount.value.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Colors.blue[900],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...controller.splitPayments.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final payment = entry.value;
+                  return _buildSplitPaymentItem(index, payment);
+                }),
+                Builder(
+                  builder: (context) {
+                    final remaining = controller.remainingPaymentAmount;
+                    final bg = remaining < 0
+                        ? Colors.red[50]
+                        : remaining > 0.01
+                        ? Colors.orange[50]
+                        : Colors.green[50];
+                    final border = remaining < 0
+                        ? Colors.red[300]!
+                        : remaining > 0.01
+                        ? Colors.orange[300]!
+                        : Colors.green[300]!;
+                    final fg = remaining < 0
+                        ? Colors.red[900]
+                        : remaining > 0.01
+                        ? Colors.orange[900]
+                        : Colors.green[900];
+
+                    return Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: bg,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: border),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            remaining < 0
+                                ? 'Excess'
+                                : remaining > 0.01
+                                ? 'Remaining'
+                                : 'Complete',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: fg,
+                              fontSize: 12.5,
+                            ),
+                          ),
+                          Text(
+                            '₹${remaining.abs().toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: fg,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showAddSplitPaymentDialog(context),
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Add Payment'),
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      foregroundColor: theme.colorScheme.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+        ],
+      );
+    });
+  }
+
+  Widget _buildSplitPaymentItem(int index, SplitPayment payment) {
+    final safeMethod = _normalizePaymentMethod(payment.paymentMethod);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _buildPaymentMethodWrap(
+                  selected: safeMethod,
+                  onSelected: (method) {
+                    controller.updateSplitPayment(
+                      index,
+                      SplitPayment(
+                        paymentMethod: method,
+                        amount: payment.amount,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              IconButton(
+                icon: const Icon(
+                  Icons.delete_outline,
+                  color: Colors.red,
+                  size: 20,
+                ),
+                onPressed: () => controller.removeSplitPayment(index),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            initialValue: payment.amount.toStringAsFixed(2),
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: 'Amount',
+              prefixText: '₹',
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 8,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onChanged: (value) {
+              final amount = double.tryParse(value) ?? 0.0;
+              controller.updateSplitPayment(
+                index,
+                SplitPayment(
+                  paymentMethod: payment.paymentMethod,
+                  amount: amount,
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddSplitPaymentDialog(BuildContext context) {
+    final amountController = TextEditingController();
+    var selectedMethod = 'cash';
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Add Payment Method'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Payment Method',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: Colors.grey[700],
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _buildPaymentMethodWrap(
+                selected: selectedMethod,
+                onSelected: (method) {
+                  setDialogState(() => selectedMethod = method);
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: amountController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Amount',
+                  prefixText: '₹',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final amount = double.tryParse(amountController.text) ?? 0.0;
+                if (amount > 0) {
+                  controller.addSplitPayment(selectedMethod, amount);
+                  Navigator.of(dialogCtx).pop();
+                }
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

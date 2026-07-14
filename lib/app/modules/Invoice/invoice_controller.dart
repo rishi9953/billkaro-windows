@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
+import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/date_util.dart';
 import 'package:billkaro/utils/download_path_util.dart';
@@ -484,17 +485,48 @@ class InvoicePreviewController extends BaseController {
   }
 
   Future<void> generateAndPrintInvoice() async {
-    showAppLoader();
+    // Never leave the Windows overlay loader up across Connect Printer —
+    // that overlay paints above Get.dialog and looks like an infinite spinner.
+    dismissAllAppLoader();
 
     try {
       _buildPdfDocument();
-      Get.back(); // Close the invoice preview after printing
-      await printPdf(pdf);
+
+      // printInvoice may open Connect Printer; loader must stay off until that resolves.
+      await ThermalPrinterService.instance.printInvoice(
+        brandName: appPref.user!.brandName ?? '',
+        businessName: appPref.selectedOutlet!.businessName ?? '',
+        address: appPref.user!.address ?? '',
+        city: appPref.user!.city ?? '',
+        zipcode: appPref.user!.zipcode ?? '',
+        state: appPref.user!.state ?? '',
+        orderFrom: orderFrom.value,
+        customerName: customerName.value,
+        paymentMode: paymentMode.value,
+        date: date.value,
+        time: time.value,
+        fssaiNumber: appPref.selectedOutlet!.fssaiNumber ?? '',
+        gstinNumber: appPref.selectedOutlet!.gstinNumber ?? '',
+        invoiceNo: invoiceNo.value,
+        items: itemList,
+        subtotal: subtotal,
+        totalTax: totalTax,
+        serviceCharge: serviceCharge.value,
+        discount: discount.value,
+        totalAmount: totalAmount,
+        upiId: appPref.selectedOutlet!.upiId ?? '',
+      );
+
+      showSuccess(description: 'Invoice printed successfully');
+
+      // Pop only after success. Route was opened with Modular, not Get.back().
+      if (Modular.to.canPop()) {
+        Modular.to.pop();
+      }
     } catch (e) {
-      showError(description: 'Failed to print invoice: $e');
-    } finally {
       dismissAllAppLoader();
-      if (Get.isDialogOpen == true) Get.back();
+      debugPrint('Failed to print invoice: $e');
+      showError(description: 'Failed to print invoice: $e');
     }
   }
 
@@ -505,6 +537,7 @@ class InvoicePreviewController extends BaseController {
 
   Future<void> printPdf(pw.Document pdf) async {
     try {
+      dismissAllAppLoader();
       await Get.context!.printer.printInvoice(
         brandName: appPref.user!.brandName ?? '',
         businessName: appPref.selectedOutlet!.businessName ?? '',
@@ -530,6 +563,7 @@ class InvoicePreviewController extends BaseController {
       );
       showSuccess(description: 'Invoice printed successfully');
     } catch (e) {
+      dismissAllAppLoader();
       debugPrint('Failed to print PDF: $e');
       showError(description: 'Failed to print PDF: $e');
     }

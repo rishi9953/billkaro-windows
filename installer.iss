@@ -1,6 +1,6 @@
 #define MyAppName "BillKaro ChillKaro"
 #define MyAppVersion "1.0.0"
-#define MyAppExeName "BillKaro-ChillKaro.exe"
+#define MyAppExeName "billkaro_windows.exe"
 #define BuildOutput "build\windows\x64\runner\Release"
 
 [Setup]
@@ -24,8 +24,7 @@ PrivilegesRequired=admin
 ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
 
-; ✅ IMPORTANT FIX
-UninstallDisplayIcon={sys}\shell32.dll
+UninstallDisplayIcon={app}\{#MyAppExeName}
 
 CloseApplications=yes
 RestartApplications=no
@@ -36,14 +35,15 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 
 [Files]
-Source: "{#BuildOutput}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "{#BuildOutput}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion; Excludes: "*.pdb,*.lib,*.exp"
+Source: "{#BuildOutput}\data\flutter_assets\.env"; DestDir: "{app}\data\flutter_assets"; Flags: ignoreversion skipifsourcedoesntexist
 
 
 [Icons]
-Name: "{group}\BillKaro"; Filename: "{app}\{#MyAppExeName}"
+Name: "{group}\BillKaro"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
 Name: "{group}\Uninstall BillKaro"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\BillKaro"; Filename: "{app}\{#MyAppExeName}"
+Name: "{autodesktop}\BillKaro"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
 
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent skipifdoesntexist

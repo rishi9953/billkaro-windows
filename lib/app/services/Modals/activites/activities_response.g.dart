@@ -35,7 +35,7 @@ ActivityModel _$ActivityModelFromJson(
   type: ActivityModel._readOptionalString(json, 'type') as String,
   userId: ActivityModel._readOptionalString(json, 'userId') as String,
   createdByName:
-      ActivityModel._readOptionalString(json, 'createdByName') as String,
+      ActivityModel._readCreatedByName(json, 'createdByName') as String,
   outletId: ActivityModel._readOptionalString(json, 'outletId') as String,
   entityId: ActivityModel._readOptionalString(json, 'entityId') as String,
   entityName: ActivityModel._readOptionalString(json, 'entityName') as String,

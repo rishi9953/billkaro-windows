@@ -1,4 +1,5 @@
 import 'package:billkaro/app/Widgets/app_dropdowns.dart';
+import 'package:billkaro/app/Widgets/horizontal_scroll_with_arrows.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_item_controller.dart';
 import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
@@ -799,9 +800,8 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                scrollDirection: Axis.horizontal,
+              child: HorizontalScrollWithArrows(
+                arrowButtonSize: isTablet ? 36 : 32,
                 child: Row(
                   children: [
                     _CategoryChip(
@@ -1116,19 +1116,20 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
       }
 
       if (!hasMore && itemsCount > 0) {
-        return Padding(
-          padding: EdgeInsets.symmetric(vertical: isTablet ? 20 : 16),
-          child: Center(
-            child: Text(
-              loc.no_more_items,
-              style: TextStyle(
-                fontSize: isTablet ? 14 : 12,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        );
+        return SizedBox();
+        // Padding(
+        //   padding: EdgeInsets.symmetric(vertical: isTablet ? 20 : 16),
+        //   child: Center(
+        //     child: Text(
+        //       loc.no_more_items,
+        //       style: TextStyle(
+        //         fontSize: isTablet ? 14 : 12,
+        //         color: Colors.grey[600],
+        //         fontWeight: FontWeight.w500,
+        //       ),
+        //     ),
+        //   ),
+        // );
       }
 
       if (hasMore && itemsCount > 0) {

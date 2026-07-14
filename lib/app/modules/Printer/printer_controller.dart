@@ -148,6 +148,8 @@ class PrinterController extends BaseController
   Future<void> testPrintForRole(PrintRole role) async {
     try {
       showAppLoader();
+      // Ensure connect dialog is never blocked by the loader overlay.
+      dismissAllAppLoader();
       await printerService.testPrintForRole(role);
       showSuccess(
         description:
@@ -156,7 +158,7 @@ class PrinterController extends BaseController
     } catch (e) {
       showError(description: e.toString());
     } finally {
-      dismissAppLoader();
+      dismissAllAppLoader();
     }
   }
 
@@ -540,6 +542,8 @@ class PrinterController extends BaseController
     } catch (e) {
       showError(description: 'Failed to print via Bluetooth: $e');
       debugPrint('Bluetooth print error: $e');
+    } finally {
+      dismissAllAppLoader();
     }
   }
 

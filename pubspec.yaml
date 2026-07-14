@@ -21,6 +21,7 @@ dependencies:
   dotted_border: ^3.1.0
   cached_network_image: ^3.4.1
   dropdown_button2: ^3.1.0
+  flex_color_picker: ^3.7.2
   intl: ^0.20.2
   showcaseview: ^3.0.0
 

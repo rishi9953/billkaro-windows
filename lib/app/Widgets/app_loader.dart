@@ -36,18 +36,25 @@ void dismissAllAppLoader() {
 }
 
 void _closeLoadingDialogIfVisible() {
-  if (!_isLoaderDialogVisible) return;
-
+  // Always tear down a leftover overlay, even if the visible flag drifted.
   if (_loaderOverlayEntry != null) {
-    _loaderOverlayEntry!.remove();
+    try {
+      _loaderOverlayEntry!.remove();
+    } catch (_) {}
     _loaderOverlayEntry = null;
     _isLoaderDialogVisible = false;
     if (_noOfCallRunning < 0) _noOfCallRunning = 0;
     return;
   }
 
+  if (!_isLoaderDialogVisible) return;
+
   final context = Get.overlayContext;
-  if (context == null) return;
+  if (context == null) {
+    _isLoaderDialogVisible = false;
+    if (_noOfCallRunning < 0) _noOfCallRunning = 0;
+    return;
+  }
 
   final navigator = Navigator.of(context, rootNavigator: true);
   final route = ModalRoute.of(context);
@@ -55,6 +62,8 @@ void _closeLoadingDialogIfVisible() {
   if (navigator.canPop() || isLoadingRoute) {
     navigator.pop();
   }
+  _isLoaderDialogVisible = false;
+  if (_noOfCallRunning < 0) _noOfCallRunning = 0;
 }
 
 double _effectiveLoaderTopPadding(double? loaderTopPadding) {

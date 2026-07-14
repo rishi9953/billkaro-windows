@@ -5,10 +5,36 @@ import 'package:billkaro/app/services/Modals/activites/activities_response.dart'
 import 'package:billkaro/config/config.dart';
 import 'package:intl/intl.dart';
 
+String _staffActorName(ActivityModel activity) {
+  final direct = activity.createdByName.trim();
+  if (direct.isNotEmpty) return direct;
+
+  final desc = activity.description.trim();
+  if (desc.isNotEmpty) {
+    final match = RegExp(
+      r'^(.+?)\s+(added|edited|deleted|enabled|disabled)\s',
+      caseSensitive: false,
+    ).firstMatch(desc);
+    final parsed = match?.group(1)?.trim();
+    if (parsed != null && parsed.isNotEmpty) return parsed;
+  }
+
+  return '—';
+}
+
 String _activitySubtitle(ActivityModel a, AppLocalizations loc) {
   final parts = <String>[];
   if (a.entityName.isNotEmpty) {
-    parts.add(loc.activity_entity_name(a.entityName));
+    final type = a.type.toLowerCase();
+    if (type.contains('item')) {
+      parts.add('${loc.item_name}: ${a.entityName}');
+    } else if (type.contains('customer')) {
+      parts.add('${loc.customer_name}: ${a.entityName}');
+    } else if (type.contains('order')) {
+      parts.add('${loc.bill_number}: ${a.entityName}');
+    } else {
+      parts.add(loc.activity_entity_name(a.entityName));
+    }
   }
   final category = a.details.category;
   if (category != null && category.isNotEmpty) {
@@ -25,6 +51,17 @@ String _formatActivityTimestamp(String createdAt) {
     return DateFormat('dd MMM yyyy · hh:mm a').format(parsed.toLocal());
   }
   return trimmed;
+}
+
+DateTime _todayDateOnly() {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month, now.day);
+}
+
+DateTime _clampDate(DateTime date, DateTime min, DateTime max) {
+  if (date.isBefore(min)) return min;
+  if (date.isAfter(max)) return max;
+  return date;
 }
 
 IconData _activityTypeIcon(String type) {
@@ -69,9 +106,7 @@ class StaffActivityScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: isWindows
-          ? _buildWindowsLayout(context, controller)
-          : _buildMobileLayout(context, controller),
+      body: _buildWindowsLayout(context, controller),
     );
   }
 
@@ -175,26 +210,22 @@ class StaffActivityScreen extends StatelessWidget {
         }
         return false;
       },
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
-        ),
-        padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-        children: [
-          Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1100),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1100),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
                         Text(
                           loc.filters,
@@ -203,170 +234,184 @@ class StaffActivityScreen extends StatelessWidget {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          loc.staff_activity_filters_hint,
-                          style: TextStyle(
-                            color: Colors.grey.shade700,
-                            fontSize: 13,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        LayoutBuilder(
-                          builder: (context, constraints) {
-                            final isWide = constraints.maxWidth >= 820;
-                            if (isWide) {
-                              return Row(
-                                children: [
-                                  Expanded(
-                                    flex: 2,
-                                    child: Obx(
-                                      () => _FilterButton(
-                                        label: controller.timePeriodLabel(
-                                          loc,
-                                          controller.selectedTimePeriod.value,
-                                        ),
-                                        icon: Icons.keyboard_arrow_down_rounded,
-                                        onTap: () => _showTimePeriodSheet(
-                                          context,
-                                          controller,
-                                        ),
-                                      ),
+                        const Spacer(),
+                        Obx(
+                          () => controller.hasActiveFilters
+                              ? TextButton.icon(
+                                  onPressed: controller.resetFilters,
+                                  icon: const Icon(
+                                    Icons.filter_alt_off_outlined,
+                                    size: 18,
+                                  ),
+                                  label: Text(loc.reset),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.grey.shade800,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 8,
                                     ),
                                   ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    flex: 3,
-                                    child: Obx(
-                                      () => _FilterButton(
-                                        label: controller
-                                            .selectedDateRangeLabelLocalized(
-                                              loc,
-                                            ),
-                                        icon: Icons.calendar_today_outlined,
-                                        onTap: () => _showDateRangeSheet(
-                                          context,
-                                          controller,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Obx(
-                                      () => _FilterButton(
-                                        label: controller
-                                            .selectedUserLabelLocalized(loc),
-                                        icon: Icons.people_outline_rounded,
-                                        onTap: () => _showUsersSheet(
-                                          context,
-                                          controller,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Obx(
-                                      () => _FilterButton(
-                                        label: controller
-                                            .activityTypeFilterLabelLocalized(
-                                              loc,
-                                            ),
-                                        icon: Icons.edit_note_rounded,
-                                        onTap: () => _showActivityTypeSheet(
-                                          context,
-                                          controller,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            }
-                            return Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Obx(
-                                        () => _FilterButton(
-                                          label: controller.timePeriodLabel(
-                                            loc,
-                                            controller.selectedTimePeriod.value,
-                                          ),
-                                          icon:
-                                              Icons.keyboard_arrow_down_rounded,
-                                          onTap: () => _showTimePeriodSheet(
-                                            context,
-                                            controller,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Obx(
-                                        () => _FilterButton(
-                                          label: controller
-                                              .selectedDateRangeLabelLocalized(
-                                                loc,
-                                              ),
-                                          icon: Icons.calendar_today_outlined,
-                                          onTap: () => _showDateRangeSheet(
-                                            context,
-                                            controller,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 10),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Obx(
-                                        () => _FilterButton(
-                                          label: controller
-                                              .selectedUserLabelLocalized(loc),
-                                          icon: Icons.people_outline_rounded,
-                                          onTap: () => _showUsersSheet(
-                                            context,
-                                            controller,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Obx(
-                                        () => _FilterButton(
-                                          label: controller
-                                              .activityTypeFilterLabelLocalized(
-                                                loc,
-                                              ),
-                                          icon: Icons.edit_note_rounded,
-                                          onTap: () => _showActivityTypeSheet(
-                                            context,
-                                            controller,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            );
-                          },
+                                )
+                              : const SizedBox.shrink(),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
+                    const SizedBox(height: 4),
+                    Text(
+                      loc.staff_activity_filters_hint,
+                      style: TextStyle(
+                        color: Colors.grey.shade700,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isWide = constraints.maxWidth >= 820;
+                        if (isWide) {
+                          return Row(
+                            children: [
+                              Expanded(
+                                flex: 2,
+                                child: Obx(
+                                  () => _FilterButton(
+                                    label: controller.timePeriodLabel(
+                                      loc,
+                                      controller.selectedTimePeriod.value,
+                                    ),
+                                    icon: Icons.keyboard_arrow_down_rounded,
+                                    onTap: () => _showTimePeriodSheet(
+                                      context,
+                                      controller,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                flex: 3,
+                                child: Obx(
+                                  () => _FilterButton(
+                                    label: controller
+                                        .selectedDateRangeLabelLocalized(loc),
+                                    icon: Icons.calendar_today_outlined,
+                                    onTap: () => _showDateRangeSheet(
+                                      context,
+                                      controller,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                flex: 2,
+                                child: Obx(
+                                  () => _FilterButton(
+                                    label: controller
+                                        .selectedUserLabelLocalized(loc),
+                                    icon: Icons.people_outline_rounded,
+                                    onTap: () =>
+                                        _showUsersSheet(context, controller),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                flex: 2,
+                                child: Obx(
+                                  () => _FilterButton(
+                                    label: controller
+                                        .activityTypeFilterLabelLocalized(loc),
+                                    icon: Icons.edit_note_rounded,
+                                    onTap: () => _showActivityTypeSheet(
+                                      context,
+                                      controller,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+                        return Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Obx(
+                                    () => _FilterButton(
+                                      label: controller.timePeriodLabel(
+                                        loc,
+                                        controller.selectedTimePeriod.value,
+                                      ),
+                                      icon: Icons.keyboard_arrow_down_rounded,
+                                      onTap: () => _showTimePeriodSheet(
+                                        context,
+                                        controller,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Obx(
+                                    () => _FilterButton(
+                                      label: controller
+                                          .selectedDateRangeLabelLocalized(loc),
+                                      icon: Icons.calendar_today_outlined,
+                                      onTap: () => _showDateRangeSheet(
+                                        context,
+                                        controller,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Obx(
+                                    () => _FilterButton(
+                                      label: controller
+                                          .selectedUserLabelLocalized(loc),
+                                      icon: Icons.people_outline_rounded,
+                                      onTap: () =>
+                                          _showUsersSheet(context, controller),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Obx(
+                                    () => _FilterButton(
+                                      label: controller
+                                          .activityTypeFilterLabelLocalized(
+                                            loc,
+                                          ),
+                                      icon: Icons.edit_note_rounded,
+                                      onTap: () => _showActivityTypeSheet(
+                                        context,
+                                        controller,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -405,11 +450,11 @@ class StaffActivityScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -696,14 +741,21 @@ class StaffActivityScreen extends StatelessWidget {
       title: loc.select_date_range,
       builder: (setState) {
         Future<void> pickDate({required bool isFrom}) async {
-          final initialDate = isFrom
-              ? (tempFrom ?? DateTime.now())
-              : (tempTo ?? tempFrom ?? DateTime.now());
+          final today = _todayDateOnly();
+          final earliest = DateTime(2020);
+          final minDate = earliest;
+          final maxDate = isFrom
+              ? (tempTo != null ? _clampDate(tempTo!, earliest, today) : today)
+              : today;
+          final rawInitial = isFrom
+              ? (tempFrom ?? today)
+              : (tempTo ?? tempFrom ?? today);
+          final initialDate = _clampDate(rawInitial, minDate, maxDate);
           final picked = await showAppDatePicker(
             context: context,
             initialDate: initialDate,
-            firstDate: DateTime(2020),
-            lastDate: DateTime(2100),
+            firstDate: minDate,
+            lastDate: maxDate,
           );
           if (picked == null) return;
           setState(() {
@@ -714,6 +766,9 @@ class StaffActivityScreen extends StatelessWidget {
               }
             } else {
               tempTo = picked;
+              if (tempFrom != null && tempFrom!.isAfter(picked)) {
+                tempFrom = picked;
+              }
             }
           });
         }
@@ -734,9 +789,7 @@ class StaffActivityScreen extends StatelessWidget {
               const SizedBox(height: 10),
               _DatePickerTile(
                 label: loc.to_date,
-                value: tempTo == null
-                    ? loc.select_date
-                    : _formatDate(tempTo!),
+                value: tempTo == null ? loc.select_date : _formatDate(tempTo!),
                 onTap: () => pickDate(isFrom: false),
               ),
             ],
@@ -1130,14 +1183,12 @@ class _StaffActivityListCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final subtitle = _activitySubtitle(activity, loc);
     final when = _formatActivityTimestamp(activity.createdAt);
-    final title = StaffActivityController.displayActivityTypeLabel(
+    final staffName = _staffActorName(activity);
+    final activityType = StaffActivityController.displayActivityTypeLabel(
       loc,
       activity.type,
     );
     final desc = activity.description.trim();
-    final by = activity.createdByName.trim().isNotEmpty
-        ? activity.createdByName
-        : '—';
 
     return Container(
       width: double.infinity,
@@ -1176,7 +1227,7 @@ class _StaffActivityListCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  staffName,
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -1191,14 +1242,12 @@ class _StaffActivityListCard extends StatelessWidget {
                 ],
                 const SizedBox(height: 6),
                 Text(
-                  by,
+                  activityType,
                   style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade700,
+                    fontSize: 13,
+                    color: AppColor.primary,
                     fontWeight: FontWeight.w500,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 if (subtitle.isNotEmpty) ...[
                   const SizedBox(height: 6),
@@ -1223,11 +1272,11 @@ class _StaffActivityListCard extends StatelessWidget {
               ],
             ),
           ),
-          Icon(
-            Icons.chevron_right_rounded,
-            color: Colors.grey.shade600,
-            size: 26,
-          ),
+          // Icon(
+          //   Icons.chevron_right_rounded,
+          //   color: Colors.grey.shade600,
+          //   size: 26,
+          // ),
         ],
       ),
     );

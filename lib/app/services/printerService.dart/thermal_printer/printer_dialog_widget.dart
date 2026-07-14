@@ -233,6 +233,8 @@ class PrinterConnectionDialog extends StatelessWidget {
   // Static method to show dialog
   static Future<void> show() async {
     final printerService = ThermalPrinterService.instance;
+    // Clear any blocking loader so this dialog is usable.
+    dismissAllAppLoader();
 
     return Get.dialog(
       PrinterConnectionDialog(printerService: printerService),
@@ -244,10 +246,14 @@ class PrinterConnectionDialog extends StatelessWidget {
 // Extension method for easy usage
 extension PrinterServiceExtension on ThermalPrinterService {
   Future<bool> ensureConnected() async {
-    if (!isConnected.value) {
-      await PrinterConnectionDialog.show();
-      return isConnected.value;
+    if (isConnected.value ||
+        (isUsbConnected.value && connectedUsbPrinter != null) ||
+        isNetworkConnected.value) {
+      return true;
     }
-    return true;
+    await PrinterConnectionDialog.show();
+    return isConnected.value ||
+        (isUsbConnected.value && connectedUsbPrinter != null) ||
+        isNetworkConnected.value;
   }
 }

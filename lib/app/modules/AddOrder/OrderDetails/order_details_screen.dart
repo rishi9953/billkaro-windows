@@ -2,8 +2,6 @@ import 'package:billkaro/app/Widgets/app_dropdowns.dart';
 import 'package:billkaro/app/modules/AddOrder/OrderDetails/order_details_controller.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
-import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
-import 'package:billkaro/app/services/Modals/orders/split_payment.dart';
 import 'package:billkaro/config/config.dart';
 
 class OrderDetailsScreen extends StatefulWidget {
@@ -17,12 +15,6 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   late final OrderDetailsController c;
 
   static const double _desktopBreakpoint = 980;
-  static const Set<String> _allowedPaymentMethods = {'cash', 'card', 'upi'};
-
-  String _normalizePaymentMethod(String value) {
-    final v = value.trim().toLowerCase();
-    return _allowedPaymentMethods.contains(v) ? v : 'cash';
-  }
 
   @override
   void initState() {
@@ -65,10 +57,11 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                   _buildBillNumberDisplay(c, loc),
                   Obx(() {
                     c.orderFrom.value;
+                    c.hasOutletTables.value;
                     if (Get.isRegistered<HomeScreenController>()) {
                       Get.find<HomeScreenController>().selectedOutlet.value;
                     }
-                    if (!c.isDineIn || !HomeMainRoutes.outletShowsTables()) {
+                    if (!c.showTableField) {
                       return const SizedBox.shrink();
                     }
                     return _buildTableNumberField(c, loc);
@@ -154,15 +147,6 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               ),
             );
 
-            final paymentCard = _sectionCard(
-              title: 'Payment',
-              icon: Icons.payments_outlined,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [_buildPayment(c, loc), _buildSplitPayment(c, loc)],
-              ),
-            );
-
             final content = Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 1100),
@@ -184,11 +168,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                             const SizedBox(width: 16),
                             Expanded(
                               child: Column(
-                                children: [
-                                  customerCard,
-                                  const SizedBox(height: 16),
-                                  paymentCard,
-                                ],
+                                children: [customerCard],
                               ),
                             ),
                           ],
@@ -201,8 +181,6 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                             customerCard,
                             const SizedBox(height: 16),
                             chargesCard,
-                            const SizedBox(height: 16),
-                            paymentCard,
                           ],
                         ),
                 ),
@@ -515,315 +493,6 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               ),
             );
           }),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPayment(OrderDetailsController c, AppLocalizations loc) {
-    return Obx(
-      () => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(child: _label(loc.payment_received_in)),
-              Switch(
-                value: c.useSplitPayment.value,
-                onChanged: (value) {
-                  c.useSplitPayment.value = value;
-                  if (!value) {
-                    c.splitPayments.clear();
-                  }
-                },
-              ),
-              Text(
-                'Split Payment',
-                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (!c.useSplitPayment.value)
-            AppDropdownFormField2<String>(
-              value: c.paymentRecieved.value,
-              items: [
-                DropdownItem(value: 'cash', child: Text(loc.cash)),
-                DropdownItem(value: 'card', child: Text(loc.card)),
-                DropdownItem(value: 'upi', child: Text(loc.upi)),
-              ],
-              onChanged: (v) => c.paymentRecieved.value = v!,
-              decoration: _fieldDecoration(
-                hintText: '',
-                prefixIcon: Icons.payments_outlined,
-              ),
-            ),
-          const SizedBox(height: 12),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSplitPayment(OrderDetailsController c, AppLocalizations loc) {
-    return Obx(
-      () => c.useSplitPayment.value
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _label('Split Payment'),
-                  const SizedBox(height: 8),
-                  if (c.totalAmount != null)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.blue[50],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.blue[200]!),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Total Amount:',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.blue[900],
-                            ),
-                          ),
-                          Text(
-                            '₹${(c.totalAmount ?? 0).toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Colors.blue[900],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  const SizedBox(height: 12),
-                  ...c.splitPayments.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final payment = entry.value;
-                    return _buildSplitPaymentItem(c, loc, index, payment);
-                  }),
-                  const SizedBox(height: 8),
-                  Builder(
-                    builder: (context) {
-                      final remaining = c.remainingAmount;
-                      if (remaining == null) return const SizedBox.shrink();
-
-                      final bg = remaining < 0
-                          ? Colors.red[50]
-                          : remaining > 0.01
-                          ? Colors.orange[50]
-                          : Colors.green[50];
-                      final border = remaining < 0
-                          ? Colors.red[300]!
-                          : remaining > 0.01
-                          ? Colors.orange[300]!
-                          : Colors.green[300]!;
-                      final fg = remaining < 0
-                          ? Colors.red[900]
-                          : remaining > 0.01
-                          ? Colors.orange[900]
-                          : Colors.green[900];
-
-                      return Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: bg,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: border),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              remaining < 0
-                                  ? 'Excess:'
-                                  : remaining > 0.01
-                                  ? 'Remaining:'
-                                  : 'Complete!',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: fg,
-                              ),
-                            ),
-                            Text(
-                              '₹${remaining.abs().toStringAsFixed(2)}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: fg,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    onPressed: () => _showAddSplitPaymentDialog(c, loc),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add Payment Method'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 12,
-                        horizontal: 16,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : const SizedBox.shrink(),
-    );
-  }
-
-  Widget _buildSplitPaymentItem(
-    OrderDetailsController c,
-    AppLocalizations loc,
-    int index,
-    dynamic payment,
-  ) {
-    final safeMethod = _normalizePaymentMethod(payment.paymentMethod);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: AppDropdownFormField2<String>(
-              value: safeMethod,
-              decoration: InputDecoration(
-                labelText: 'Payment Method',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-              ),
-              items: [
-                DropdownItem(value: 'cash', child: Text(loc.cash)),
-                DropdownItem(value: 'card', child: Text(loc.card)),
-                DropdownItem(value: 'upi', child: Text(loc.upi)),
-              ],
-              onChanged: (value) {
-                if (value != null) {
-                  c.splitPayments[index] = SplitPayment(
-                    paymentMethod: _normalizePaymentMethod(value),
-                    amount: payment.amount,
-                  );
-                }
-              },
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: TextFormField(
-              initialValue: payment.amount.toStringAsFixed(2),
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Amount',
-                prefixText: '₹',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-              ),
-              onChanged: (value) {
-                final amount = double.tryParse(value) ?? 0.0;
-                c.splitPayments[index] = SplitPayment(
-                  paymentMethod: payment.paymentMethod,
-                  amount: amount,
-                );
-              },
-            ),
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.delete, color: Colors.red),
-            onPressed: () => c.removeSplitPayment(index),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAddSplitPaymentDialog(
-    OrderDetailsController c,
-    AppLocalizations loc,
-  ) {
-    final amountController = TextEditingController();
-    String selectedMethod = 'cash';
-
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Add Payment Method'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppDropdownFormField2<String>(
-              value: selectedMethod,
-              decoration: InputDecoration(
-                labelText: 'Payment Method',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              items: [
-                DropdownItem(value: 'cash', child: Text(loc.cash)),
-                DropdownItem(value: 'card', child: Text(loc.card)),
-                DropdownItem(value: 'upi', child: Text(loc.upi)),
-              ],
-              onChanged: (value) {
-                if (value != null) {
-                  selectedMethod = value;
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: amountController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Amount',
-                prefixText: '₹',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              final amount = double.tryParse(amountController.text) ?? 0.0;
-              if (amount > 0) {
-                c.addSplitPayment(selectedMethod, amount);
-                Get.back();
-              }
-            },
-            child: const Text('Add'),
-          ),
         ],
       ),
     );

@@ -179,6 +179,19 @@ class StaffActivityController extends BaseController {
 
   DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
+  ({DateTime start, DateTime end}) _clampBoundsToToday(
+    DateTime start,
+    DateTime end,
+  ) {
+    final today = _dateOnly(DateTime.now());
+    var s = _dateOnly(start);
+    var e = _dateOnly(end);
+    if (e.isAfter(today)) e = today;
+    if (s.isAfter(today)) s = today;
+    if (e.isBefore(s)) e = s;
+    return (start: s, end: e);
+  }
+
   ({DateTime start, DateTime end}) _activityDateBounds() {
     final now = DateTime.now();
     if (selectedTimePeriod.value == timePeriodCustom) {
@@ -189,7 +202,7 @@ class StaffActivityController extends BaseController {
         from = to;
         to = tmp;
       }
-      return (start: from, end: to);
+      return _clampBoundsToToday(from, to);
     }
 
     switch (selectedTimePeriod.value) {
@@ -201,31 +214,49 @@ class StaffActivityController extends BaseController {
           now.subtract(Duration(days: now.weekday - DateTime.monday)),
         );
         final sunday = _dateOnly(monday.add(const Duration(days: 6)));
-        return (start: monday, end: sunday);
+        return _clampBoundsToToday(monday, sunday);
       case timePeriodThisMonth:
         final start = DateTime(now.year, now.month, 1);
         final end = DateTime(now.year, now.month + 1, 0);
-        return (start: start, end: end);
+        return _clampBoundsToToday(start, end);
       case timePeriodThisQuarter:
         final startMonth = ((now.month - 1) ~/ 3) * 3 + 1;
         final start = DateTime(now.year, startMonth, 1);
         final end = DateTime(now.year, startMonth + 3, 0);
-        return (start: start, end: end);
+        return _clampBoundsToToday(start, end);
       case timePeriodFinancialYear:
         if (now.month >= 4) {
-          return (
-            start: DateTime(now.year, 4, 1),
-            end: DateTime(now.year + 1, 3, 31),
+          return _clampBoundsToToday(
+            DateTime(now.year, 4, 1),
+            DateTime(now.year + 1, 3, 31),
           );
         }
-        return (
-          start: DateTime(now.year - 1, 4, 1),
-          end: DateTime(now.year, 3, 31),
+        return _clampBoundsToToday(
+          DateTime(now.year - 1, 4, 1),
+          DateTime(now.year, 3, 31),
         );
       default:
         final d = _dateOnly(now);
         return (start: d, end: d);
     }
+  }
+
+  bool get hasActiveFilters {
+    if (selectedActivityType.value != activityTypeAll) return true;
+    if (selectedUserId.value.trim().isNotEmpty) return true;
+    if (selectedTimePeriod.value != timePeriodToday) return true;
+    return false;
+  }
+
+  Future<void> resetFilters() async {
+    selectedTimePeriod.value = timePeriodToday;
+    final today = _dateOnly(DateTime.now());
+    selectedFromDate.value = today;
+    selectedToDate.value = today;
+    selectedUserId.value = '';
+    selectedUserName.value = usersFilterLabel;
+    selectedActivityType.value = activityTypeAll;
+    await getStaffActivities();
   }
 
   Future<void> applyTimePeriod(String value) async {
@@ -264,8 +295,14 @@ class StaffActivityController extends BaseController {
 
   void applyDateRange(DateTime? from, DateTime? to) {
     if (from == null || to == null) return;
-    selectedFromDate.value = from;
-    selectedToDate.value = to;
+    final today = _dateOnly(DateTime.now());
+    var start = _dateOnly(from);
+    var end = _dateOnly(to);
+    if (start.isAfter(today)) start = today;
+    if (end.isAfter(today)) end = today;
+    if (end.isBefore(start)) end = start;
+    selectedFromDate.value = start;
+    selectedToDate.value = end;
     selectedTimePeriod.value = timePeriodCustom;
   }
 

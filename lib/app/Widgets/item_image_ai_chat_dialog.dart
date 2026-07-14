@@ -99,7 +99,7 @@ class _ItemImageAiChatDialogState extends State<ItemImageAiChatDialog> {
                   },
                   decoration: InputDecoration(
                     hintText: loc.describe_image_for_ai_hint,
-                    hintStyle: TextStyle(color: Colors.grey[400]),
+                    hintStyle: TextStyle(color: Colors.grey[500]),
                     filled: true,
                     fillColor: theme.colorScheme.surface,
                     border: OutlineInputBorder(

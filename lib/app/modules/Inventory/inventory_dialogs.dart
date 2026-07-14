@@ -6,6 +6,7 @@ import 'package:billkaro/app/modules/Inventory/inventory_controller.dart';
 import 'package:billkaro/app/services/Modals/inventory/inventory_models.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/gstin_verify_helper.dart';
+import 'package:billkaro/utils/supplier_contact_verifier.dart';
 
 double? _parseNonNegativeNumber(String text) {
   final trimmed = text.trim();
@@ -29,6 +30,13 @@ final _numberInputFormatters = [
 
 final _phoneInputFormatters = [FilteringTextInputFormatter.digitsOnly];
 
+Widget _optionalLabel(String label) {
+  return Text(
+    '$label (optional)',
+    style: const TextStyle(color: Colors.black87, fontSize: 16),
+  );
+}
+
 Widget _requiredLabel(String label) {
   return RichText(
     text: TextSpan(
@@ -42,11 +50,6 @@ Widget _requiredLabel(String label) {
       ],
     ),
   );
-}
-
-bool _isValidEmail(String email) {
-  final regex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
-  return regex.hasMatch(email);
 }
 
 Future<void> showInventoryEndDrawer({
@@ -383,10 +386,14 @@ Future<void> _showSupplierDialog(
   final addressCtrl = TextEditingController(text: supplier?.address ?? '');
   final gstCtrl = TextEditingController(text: supplier?.gstNumber ?? '');
   final gstinVerify = GstinVerifyHelper();
-  final originalGst = (supplier?.gstNumber ?? '').trim().toUpperCase();
-  if (isEdit && originalGst.isNotEmpty) {
-    gstinVerify.isGstinVerified.value = true;
-    gstinVerify.verifiedGstin.value = originalGst;
+  final contactVerifier = SupplierContactVerifier(
+    outletId: c.outletId,
+    editingSupplierId: supplier?.id,
+    originalEmail: supplier?.email,
+    originalPhone: supplier?.phone,
+  );
+  if (isEdit) {
+    gstinVerify.markSavedFromServer(supplier!.gstNumber);
   }
 
   void handleGstinChanged() => gstinVerify.resetIfChanged(gstCtrl.text);
@@ -459,37 +466,57 @@ Future<void> _showSupplierDialog(
             },
           ),
           const SizedBox(height: 12),
-          TextFormField(
-            controller: phoneCtrl,
-            keyboardType: TextInputType.phone,
-            inputFormatters: _phoneInputFormatters,
-            maxLength: 10,
-            decoration: InputDecoration(
-              label: _requiredLabel(loc.phone_label),
-              border: OutlineInputBorder(),
+          Obx(
+            () => TextFormField(
+              controller: phoneCtrl,
+              keyboardType: TextInputType.phone,
+              inputFormatters: _phoneInputFormatters,
+              maxLength: 10,
+              onChanged: contactVerifier.onPhoneChanged,
+              decoration: InputDecoration(
+                label: _requiredLabel(loc.phone_label),
+                border: OutlineInputBorder(),
+                suffixIcon: contactVerifier.buildPhoneSuffixIcon(),
+                suffixIconConstraints: const BoxConstraints(
+                  minWidth: 44,
+                  minHeight: 44,
+                ),
+                helperText: contactVerifier.buildPhoneHelperText(),
+                helperStyle: TextStyle(
+                  color: contactVerifier.buildPhoneHelperColor(),
+                ),
+                errorMaxLines: 2,
+                helperMaxLines: 2,
+              ),
+              validator: (value) => contactVerifier.validatePhone(
+                value,
+                emptyMessage: loc.please_enter_phone_number,
+              ),
             ),
-            validator: (value) {
-              final phone = (value ?? '').trim().replaceAll(' ', '');
-              if (phone.isEmpty) return loc.please_enter_phone_number;
-              if (!RegExp(r'^\d{10}$').hasMatch(phone)) {
-                return loc.please_enter_valid_10_digit_phone;
-              }
-              return null;
-            },
           ),
           const SizedBox(height: 12),
-          TextFormField(
-            controller: emailCtrl,
-            decoration: InputDecoration(
-              label: _requiredLabel(loc.email),
-              border: OutlineInputBorder(),
+          Obx(
+            () => TextFormField(
+              controller: emailCtrl,
+              keyboardType: TextInputType.emailAddress,
+              onChanged: contactVerifier.onEmailChanged,
+              decoration: InputDecoration(
+                label: _requiredLabel(loc.email),
+                border: OutlineInputBorder(),
+                suffixIcon: contactVerifier.buildEmailSuffixIcon(),
+                suffixIconConstraints: const BoxConstraints(
+                  minWidth: 44,
+                  minHeight: 44,
+                ),
+                helperText: contactVerifier.buildEmailHelperText(),
+                helperStyle: TextStyle(
+                  color: contactVerifier.buildEmailHelperColor(),
+                ),
+                errorMaxLines: 2,
+                helperMaxLines: 2,
+              ),
+              validator: contactVerifier.validateEmail,
             ),
-            validator: (value) {
-              final email = (value ?? '').trim();
-              if (email.isEmpty) return loc.please_enter_email;
-              if (!_isValidEmail(email)) return loc.please_enter_valid_email;
-              return null;
-            },
           ),
           const SizedBox(height: 12),
           TextFormField(
@@ -511,12 +538,12 @@ Future<void> _showSupplierDialog(
             controller: gstCtrl,
             textCapitalization: TextCapitalization.characters,
             decoration: InputDecoration(
-              label: _requiredLabel(loc.gst_number_label),
+              label: _optionalLabel(loc.gst_number_label),
               border: OutlineInputBorder(),
             ),
             validator: (value) {
               final gst = (value ?? '').trim().toUpperCase();
-              if (gst.isEmpty) return loc.please_enter_gst_number;
+              if (gst.isEmpty) return null;
               if (gstinVerify.requiresVerification(gst)) {
                 return 'Please verify GSTIN before saving supplier';
               }
@@ -538,6 +565,8 @@ Future<void> _showSupplierDialog(
           final contactPerson = contactPersonCtrl.text.trim();
           final phone = phoneCtrl.text.trim().replaceAll(' ', '');
           final email = emailCtrl.text.trim();
+          if (!await contactVerifier.ensurePhoneAvailable(phone)) return;
+          if (!await contactVerifier.ensureEmailAvailable(email)) return;
           final address = addressCtrl.text.trim();
           final gst = gstCtrl.text.trim().toUpperCase();
           final payload = {
@@ -560,6 +589,7 @@ Future<void> _showSupplierDialog(
   );
 
   gstCtrl.removeListener(handleGstinChanged);
+  contactVerifier.dispose();
   gstCtrl.dispose();
   vendorNoCtrl.dispose();
   contactPersonCtrl.dispose();
@@ -656,145 +686,302 @@ Future<void> showStockAdjustDialog(
   );
 }
 
+Future<void> showRecipeDialog(
+  InventoryController c, {
+  String? preselectedItemId,
+}) =>
+    _showRecipeMultiDialog(c, preselectedItemId: preselectedItemId);
+
 Future<void> showAddRecipeDialog(
   InventoryController c, {
   String? preselectedItemId,
-}) => _showRecipeDialog(c, preselectedItemId: preselectedItemId);
+}) =>
+    showRecipeDialog(c, preselectedItemId: preselectedItemId);
 
-Future<void> showEditRecipeDialog(InventoryController c, RecipeData recipe) =>
-    _showRecipeDialog(c, recipe: recipe);
-
-Future<void> _showRecipeDialog(
+Future<void> showEditRecipeDialog(
   InventoryController c, {
-  RecipeData? recipe,
+  required String itemId,
+}) =>
+    showRecipeDialog(c, preselectedItemId: itemId);
+
+class _RecipeIngredientDraft {
+  _RecipeIngredientDraft({
+    this.recipeId,
+    this.rawMaterialId = '',
+    double? quantity,
+  }) : qtyCtrl = TextEditingController(
+          text: quantity != null && quantity > 0 ? quantity.toString() : '',
+        );
+
+  final String? recipeId;
+  String rawMaterialId;
+  final TextEditingController qtyCtrl;
+
+  void dispose() => qtyCtrl.dispose();
+}
+
+List<RawMaterialData> _availableMaterialsForRecipe(
+  InventoryController c,
+  String itemId,
+  List<_RecipeIngredientDraft> lines,
+  int excludeIndex, {
+  required bool isEdit,
+}) {
+  final draftMaterialIds = lines
+      .where((l) => l.rawMaterialId.isNotEmpty)
+      .map((l) => l.rawMaterialId)
+      .toSet();
+  final usedInRecipe =
+      c.recipesForItem(itemId).map((r) => r.rawMaterialId).toSet();
+  final blockedFromDb =
+      isEdit ? usedInRecipe.difference(draftMaterialIds) : usedInRecipe;
+  final usedInDraft = <String>{};
+  for (var i = 0; i < lines.length; i++) {
+    if (i != excludeIndex && lines[i].rawMaterialId.isNotEmpty) {
+      usedInDraft.add(lines[i].rawMaterialId);
+    }
+  }
+  return c.rawMaterials
+      .where((m) => !blockedFromDb.contains(m.id) && !usedInDraft.contains(m.id))
+      .toList();
+}
+
+List<_RecipeIngredientDraft> _initialRecipeDrafts(
+  InventoryController c,
+  String itemId,
+) {
+  final existing = itemId.isNotEmpty ? c.recipesForItem(itemId) : <RecipeData>[];
+  if (existing.isNotEmpty) {
+    return existing
+        .map(
+          (r) => _RecipeIngredientDraft(
+            recipeId: r.id,
+            rawMaterialId: r.rawMaterialId,
+            quantity: r.quantity,
+          ),
+        )
+        .toList();
+  }
+  return [_RecipeIngredientDraft(), _RecipeIngredientDraft()];
+}
+
+Future<void> _showRecipeMultiDialog(
+  InventoryController c, {
   String? preselectedItemId,
 }) async {
   final loc = AppLocalizations.of(Get.context!)!;
-  final isEdit = recipe != null;
 
   if (c.menuItems.isEmpty || c.rawMaterials.isEmpty) {
     await c.loadRecipeData();
   }
 
-  final qtyCtrl = TextEditingController(
-    text: isEdit ? recipe.quantity.toString() : '',
-  );
-  var selectedItemId = preselectedItemId ?? recipe?.itemId ?? '';
-  var selectedMaterialId = recipe?.rawMaterialId ?? '';
-
-  if (!isEdit) {
-    if (selectedItemId.isEmpty && c.menuItems.length == 1) {
-      selectedItemId = c.menuItems.first.id;
-    }
-    if (selectedMaterialId.isEmpty && c.rawMaterials.length == 1) {
-      selectedMaterialId = c.rawMaterials.first.id;
-    }
+  var selectedItemId = preselectedItemId ?? '';
+  if (selectedItemId.isEmpty && c.menuItems.length == 1) {
+    selectedItemId = c.menuItems.first.id;
   }
 
-  final lockItem = isEdit || preselectedItemId != null;
+  final lockedItemId = preselectedItemId;
+  final lockItem = lockedItemId != null;
+  final initialItemId = lockedItemId ?? selectedItemId;
+  var isEdit = initialItemId.isNotEmpty &&
+      c.recipesForItem(initialItemId).isNotEmpty;
+  final lines = _initialRecipeDrafts(c, initialItemId);
+
+  Future<void> saveRecipe() async {
+    final itemId = lockedItemId ?? selectedItemId;
+    if (itemId.isEmpty) {
+      showError(description: loc.select_menu_item_required);
+      return;
+    }
+
+    final parsed = <RecipeLineInput>[];
+    final seenMaterials = <String>{};
+
+    for (final line in lines) {
+      if (line.rawMaterialId.isEmpty) continue;
+      final qty = double.tryParse(line.qtyCtrl.text.trim());
+      if (qty == null || qty <= 0) continue;
+      if (!seenMaterials.add(line.rawMaterialId)) {
+        showError(description: loc.recipe_duplicate_material);
+        return;
+      }
+      parsed.add(
+        RecipeLineInput(
+          id: line.recipeId,
+          rawMaterialId: line.rawMaterialId,
+          quantity: qty,
+        ),
+      );
+    }
+
+    if (parsed.isEmpty) {
+      showError(description: loc.recipe_need_at_least_one_ingredient);
+      return;
+    }
+
+    final ok = await c.saveRecipesForItem(itemId: itemId, ingredients: parsed);
+    if (ok) Get.back();
+  }
 
   await showInventoryEndDrawer(
     title: isEdit ? loc.edit_recipe : loc.add_recipe,
+    width: 520,
     body: StatefulBuilder(
-      builder: (context, setState) => Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (lockItem)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Text(
-                isEdit ? recipe.itemName : c.menuItemName(preselectedItemId!),
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15,
-                ),
-              ),
-            )
-          else
-            AppDropdownFormField2<String>(
-              value: selectedItemId.isEmpty ? null : selectedItemId,
-              decoration: InputDecoration(
-                labelText: loc.select_menu_item,
-                border: const OutlineInputBorder(),
-              ),
-              items: c.menuItems
-                  .map(
-                    (item) => DropdownItem(
-                      value: item.id,
-                      child: Text(item.itemName),
+      builder: (context, setState) {
+        final itemId = lockedItemId ?? selectedItemId;
+        isEdit = itemId.isNotEmpty && c.recipesForItem(itemId).isNotEmpty;
+
+        Widget buildIngredientRow(int index) {
+          final line = lines[index];
+          final available = itemId.isEmpty
+              ? c.rawMaterials
+              : _availableMaterialsForRecipe(
+                  c,
+                  itemId,
+                  lines,
+                  index,
+                  isEdit: isEdit,
+                );
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        loc.ingredient_number(index + 1),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
                     ),
-                  )
-                  .toList(),
-              onChanged: (v) => setState(() => selectedItemId = v ?? ''),
-            ),
-          const SizedBox(height: 12),
-          AppDropdownFormField2<String>(
-            value: selectedMaterialId.isEmpty ? null : selectedMaterialId,
-            decoration: InputDecoration(
-              labelText: loc.select_raw_material,
-              border: const OutlineInputBorder(),
-            ),
-            items: c.rawMaterials
-                .map(
-                  (m) => DropdownItem(
-                    value: m.id,
-                    child: Text('${m.name} (${m.unit})'),
+                    if (lines.length > 1)
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        tooltip: loc.delete,
+                        onPressed: () {
+                          setState(() {
+                            lines[index].dispose();
+                            lines.removeAt(index);
+                          });
+                        },
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                AppDropdownFormField2<String>(
+                  value: line.rawMaterialId.isEmpty ? null : line.rawMaterialId,
+                  decoration: InputDecoration(
+                    labelText: loc.select_raw_material,
+                    border: const OutlineInputBorder(),
+                    isDense: true,
                   ),
-                )
-                .toList(),
-            onChanged: (v) => setState(() => selectedMaterialId = v ?? ''),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: qtyCtrl,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(
-              labelText: loc.recipe_quantity_hint,
-              helperText: loc.recipe_quantity_helper,
-              border: const OutlineInputBorder(),
+                  items: available
+                      .map(
+                        (m) => DropdownItem(
+                          value: m.id,
+                          child: Text('${m.name} (${m.unit})'),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) =>
+                      setState(() => line.rawMaterialId = v ?? ''),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: line.qtyCtrl,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: _numberInputFormatters,
+                  decoration: InputDecoration(
+                    labelText: loc.recipe_quantity_hint,
+                    helperText: loc.recipe_quantity_helper,
+                    border: const OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
+          );
+        }
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              loc.add_recipe_subtitle,
+              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 16),
+            if (lockItem)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  c.menuItemName(lockedItemId!),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
+              )
+            else
+              AppDropdownFormField2<String>(
+                value: selectedItemId.isEmpty ? null : selectedItemId,
+                decoration: InputDecoration(
+                  labelText: loc.select_menu_item,
+                  border: const OutlineInputBorder(),
+                ),
+                items: c.menuItems
+                    .map(
+                      (item) => DropdownItem(
+                        value: item.id,
+                        child: Text(item.itemName),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) => setState(() => selectedItemId = v ?? ''),
+              ),
+            const SizedBox(height: 16),
+            Text(
+              loc.recipe_ingredients_section,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            ...List.generate(lines.length, buildIngredientRow),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () =>
+                    setState(() => lines.add(_RecipeIngredientDraft())),
+                icon: const Icon(Icons.add, size: 18),
+                label: Text(loc.add_another_ingredient),
+              ),
+            ),
+          ],
+        );
+      },
     ),
     footerActions: [
       TextButton(onPressed: () => Get.back(), child: Text(loc.cancel)),
       ElevatedButton(
-        onPressed: () async {
-          final itemId = lockItem
-              ? (recipe?.itemId ?? preselectedItemId ?? '')
-              : selectedItemId;
-          if (itemId.isEmpty) {
-            showError(description: loc.select_menu_item_required);
-            return;
-          }
-          if (selectedMaterialId.isEmpty) {
-            showError(description: loc.select_raw_material_required);
-            return;
-          }
-          final qty = double.tryParse(qtyCtrl.text.trim());
-          if (qty == null || qty <= 0) {
-            showError(description: loc.recipe_quantity_invalid);
-            return;
-          }
-          final ok = isEdit
-              ? await c.updateRecipe(
-                  id: recipe.id,
-                  rawMaterialId: selectedMaterialId,
-                  quantity: qty,
-                )
-              : await c.createRecipe(
-                  itemId: itemId,
-                  rawMaterialId: selectedMaterialId,
-                  quantity: qty,
-                );
-          if (ok) Get.back();
-        },
+        onPressed: saveRecipe,
         child: Text(loc.save),
       ),
     ],
   );
 
-  qtyCtrl.dispose();
+  for (final line in lines) {
+    line.dispose();
+  }
 }

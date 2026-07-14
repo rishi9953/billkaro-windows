@@ -310,6 +310,99 @@ class InventoryController extends BaseController {
     return false;
   }
 
+  /// Creates multiple recipe lines for one menu item (e.g. sandwich ingredients).
+  Future<bool> createRecipesBatch({
+    required String itemId,
+    required List<MapEntry<String, double>> ingredients,
+  }) async {
+    if (ingredients.isEmpty) return false;
+
+    var successCount = 0;
+    for (var i = 0; i < ingredients.length; i++) {
+      final entry = ingredients[i];
+      final res = await callApi(
+        apiClient.createRecipe(outletId, {
+          'userId': userId,
+          'outletId': outletId,
+          'itemId': itemId,
+          'rawMaterialId': entry.key,
+          'quantity': entry.value,
+        }),
+        showLoader: i == 0,
+      );
+      if (res != null) successCount++;
+    }
+
+    if (successCount > 0) {
+      await loadRecipes();
+      await loadDashboard();
+    }
+    return successCount == ingredients.length;
+  }
+
+  /// Creates, updates, and deletes recipe lines to match the submitted list.
+  Future<bool> saveRecipesForItem({
+    required String itemId,
+    required List<RecipeLineInput> ingredients,
+  }) async {
+    if (ingredients.isEmpty) return false;
+
+    final existing = recipesForItem(itemId);
+    final existingById = {for (final r in existing) r.id: r};
+    final keptIds = <String>{};
+
+    var allOk = true;
+    var showLoader = true;
+
+    for (final ing in ingredients) {
+      if (ing.id != null && ing.id!.isNotEmpty) {
+        keptIds.add(ing.id!);
+        final prev = existingById[ing.id!];
+        if (prev != null &&
+            prev.rawMaterialId == ing.rawMaterialId &&
+            prev.quantity == ing.quantity) {
+          continue;
+        }
+        final res = await callApi(
+          apiClient.updateRecipe(outletId, ing.id!, {
+            'rawMaterialId': ing.rawMaterialId,
+            'quantity': ing.quantity,
+          }),
+          showLoader: showLoader,
+        );
+        showLoader = false;
+        if (res == null) allOk = false;
+      } else {
+        final res = await callApi(
+          apiClient.createRecipe(outletId, {
+            'userId': userId,
+            'outletId': outletId,
+            'itemId': itemId,
+            'rawMaterialId': ing.rawMaterialId,
+            'quantity': ing.quantity,
+          }),
+          showLoader: showLoader,
+        );
+        showLoader = false;
+        if (res == null) allOk = false;
+      }
+    }
+
+    for (final r in existing) {
+      if (!keptIds.contains(r.id)) {
+        final res = await callApi(
+          apiClient.deleteRecipe(outletId, r.id),
+          showLoader: false,
+        );
+        if (res == null) allOk = false;
+      }
+    }
+
+    await loadRecipes();
+    await loadDashboard();
+    return allOk;
+  }
+
   Future<bool> updateRecipe({
     required String id,
     required String rawMaterialId,
