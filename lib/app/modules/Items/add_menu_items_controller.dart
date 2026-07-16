@@ -4,6 +4,7 @@ import 'package:billkaro/app/Widgets/desktop_camera_capture_dialog.dart';
 import 'package:billkaro/app/Widgets/item_image_ai_chat_dialog.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_item_controller.dart';
 import 'package:billkaro/app/services/Modals/addItem/addItem_modal.dart';
+import 'package:billkaro/app/services/Modals/addItem/combo_component.dart';
 import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/app/services/uploadFile.dart';
@@ -15,17 +16,23 @@ import 'package:flutter_modular/flutter_modular.dart';
 import 'package:billkaro/utils/offline/offline_category_loader.dart';
 
 class AddMenuItemController extends BaseController {
+  static const String comboCategoryName = 'combo';
+
   final formKey = GlobalKey<FormState>();
   final itemNameController = TextEditingController();
   final salePriceController = TextEditingController();
   final prepTimeController = TextEditingController(text: '15');
   late MenuItemController menuItemController;
 
-  var selectedCategory = 'None'.obs;
+  var selectedCategory = 'none'.obs;
   var selectedTaxPercentage = 'None'.obs;
   var isWithTax = false.obs;
   var makeDefaultTax = true.obs;
   var markAsFavorite = false.obs;
+  var isComboItem = false.obs;
+  final RxMap<String, double> comboComponentQuantities = <String, double>{}.obs;
+  final RxList<ItemData> comboOptionItems = <ItemData>[].obs;
+  final isLoadingComboOptions = false.obs;
   var itemId = ''.obs;
   var imageUrl = ''.obs;
   var isAvailable = true.obs;
@@ -46,6 +53,36 @@ class AddMenuItemController extends BaseController {
 
   // Default category list
   RxList<String> categories = <String>['none'].obs;
+
+  void _setCategoryNames(Iterable<String> names) {
+    final unique = <String>['none'];
+    final seen = <String>{'none'};
+    for (final name in names) {
+      final trimmed = name.trim();
+      final normalized = trimmed.toLowerCase();
+      if (trimmed.isEmpty || seen.contains(normalized)) continue;
+      seen.add(normalized);
+      unique.add(trimmed);
+    }
+    categories.assignAll(unique);
+    _syncSelectedCategoryToList();
+  }
+
+  /// Exact list entry for the dropdown (casing must match [DropdownItem] values).
+  String? get selectedCategoryDropdownValue {
+    final selected = selectedCategory.value.trim();
+    if (selected.isEmpty) return null;
+    return categories.firstWhereOrNull(
+      (c) => c.trim().toLowerCase() == selected.toLowerCase(),
+    );
+  }
+
+  void _syncSelectedCategoryToList() {
+    final match = selectedCategoryDropdownValue;
+    if (match != null) {
+      selectedCategory.value = match;
+    }
+  }
 
   // Upload image from gallery
   Future<void> uploadImageFromGallery() async {
@@ -613,7 +650,108 @@ class AddMenuItemController extends BaseController {
     return null;
   }
 
-  bool _validateForm() => formKey.currentState?.validate() ?? false;
+  bool _validateForm() {
+    final valid = formKey.currentState?.validate() ?? false;
+    if (!valid) return false;
+    if (isComboItem.value && selectedComboComponents.isEmpty) {
+      showError(description: 'Please add at least one item to this meal');
+      return false;
+    }
+    return true;
+  }
+
+  void selectCategory(String category) {
+    final normalized = category.trim().toLowerCase();
+    final match = categories.firstWhereOrNull(
+      (c) => c.trim().toLowerCase() == normalized,
+    );
+    selectedCategory.value = match ?? category.trim();
+    isComboItem.value = normalized == comboCategoryName;
+  }
+
+  void setComboItem(bool value) {
+    isComboItem.value = value;
+    if (value) {
+      final existing = categories.firstWhereOrNull(
+        (c) => c.trim().toLowerCase() == comboCategoryName,
+      );
+      if (existing == null) {
+        _setCategoryNames([...categories, comboCategoryName]);
+      }
+      selectedCategory.value = existing ?? comboCategoryName;
+    } else if (selectedCategory.value.trim().toLowerCase() ==
+        comboCategoryName) {
+      selectedCategory.value = 'none';
+      comboComponentQuantities.clear();
+    }
+  }
+
+  List<ItemData> get comboComponentOptions {
+    try {
+      final source = comboOptionItems.isNotEmpty
+          ? comboOptionItems
+          : menuItemController.allItems.isNotEmpty
+          ? menuItemController.allItems
+          : menuItemController.items;
+      return source
+          .where((item) => item.id != itemId.value && !item.isCombo)
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<void> loadComboComponentOptions() async {
+    if (isLoadingComboOptions.value) return;
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null) return;
+
+    isLoadingComboOptions.value = true;
+    try {
+      final response = await callApi(
+        apiClient.getItems(outletId, 1, 500, null, null, null, null),
+        showLoader: false,
+      );
+      if (response?.status == 'success') {
+        comboOptionItems.assignAll(response!.data);
+      }
+    } finally {
+      isLoadingComboOptions.value = false;
+    }
+  }
+
+  List<ComboComponent> get selectedComboComponents => comboComponentQuantities
+      .entries
+      .where((entry) => entry.value > 0)
+      .map((entry) => ComboComponent(itemId: entry.key, quantity: entry.value))
+      .toList();
+
+  List<ItemData> get selectedComboItems => comboComponentOptions
+      .where((item) => comboComponentQuantities.containsKey(item.id))
+      .toList();
+
+  void setComboComponent(ItemData item, bool selected) {
+    if (selected) {
+      comboComponentQuantities[item.id] =
+          comboComponentQuantities[item.id] ?? 1;
+    } else {
+      comboComponentQuantities.remove(item.id);
+    }
+  }
+
+  void incrementComboComponent(String itemId) {
+    comboComponentQuantities[itemId] =
+        (comboComponentQuantities[itemId] ?? 0) + 1;
+  }
+
+  void decrementComboComponent(String itemId) {
+    final current = comboComponentQuantities[itemId] ?? 0;
+    if (current <= 1) {
+      comboComponentQuantities.remove(itemId);
+      return;
+    }
+    comboComponentQuantities[itemId] = current - 1;
+  }
 
   void saveAndNew() {
     // Save and keep screen open; reset only after SUCCESS.
@@ -699,6 +837,8 @@ class AddMenuItemController extends BaseController {
           : selectedCategory.value,
       orderFrom: 'None',
       prepTimeMinutes: _parsedPrepTimeMinutes(),
+      isCombo: isComboItem.value,
+      comboComponents: selectedComboComponents,
     );
     final response = await callApi(
       apiClient.updateItem(request, itemId.value.trim()),
@@ -724,9 +864,7 @@ class AddMenuItemController extends BaseController {
       fetchFromApi: () => callApi(apiClient.getCategories(outletId)),
     );
 
-    categories.clear();
-    categories.add('none');
-    categories.addAll(categoryList.map((e) => e.categoryName));
+    _setCategoryNames(categoryList.map((e) => e.categoryName));
     dismissAllAppLoader();
   }
 
@@ -742,6 +880,8 @@ class AddMenuItemController extends BaseController {
     isWithTax.value = false;
     isAvailable.value = true;
     markAsFavorite.value = false;
+    isComboItem.value = false;
+    comboComponentQuantities.clear();
     itemId.value = '';
     imageUrl.value = '';
     selectedImage.value = null;
@@ -755,6 +895,8 @@ class AddMenuItemController extends BaseController {
 
     if (!edit) {
       _applyCategoryFromArgs(args['category']);
+      isComboItem.value =
+          selectedCategory.value.trim().toLowerCase() == comboCategoryName;
       return;
     }
 
@@ -767,6 +909,14 @@ class AddMenuItemController extends BaseController {
     prepTimeController.text = item.prepTimeMinutes.toString();
 
     _applyCategoryFromArgs(item.category);
+    isComboItem.value =
+        item.isCombo ||
+        selectedCategory.value.trim().toLowerCase() == comboCategoryName;
+    comboComponentQuantities.assignAll({
+      for (final component in item.comboComponents)
+        if (component.itemId.isNotEmpty && component.quantity > 0)
+          component.itemId: component.quantity,
+    });
 
     isWithTax.value = item.withTax;
     itemId.value = item.id;
@@ -801,9 +951,11 @@ class AddMenuItemController extends BaseController {
 
     // Category may have just been created and not yet in this screen's list.
     if (!categories.any((c) => c.toLowerCase() == normalized)) {
-      categories.add(categoryName);
+      _setCategoryNames([...categories, categoryName]);
     }
-    selectedCategory.value = categoryName;
+    selectedCategory.value =
+        categories.firstWhereOrNull((c) => c.toLowerCase() == normalized) ??
+        categoryName;
   }
 
   void _seedCategoriesFromMenuController() {
@@ -812,9 +964,7 @@ class AddMenuItemController extends BaseController {
       final menuCategories = Get.find<MenuItemController>().categories;
       if (menuCategories.isEmpty) return;
 
-      categories.clear();
-      categories.add('none');
-      categories.addAll(menuCategories.map((e) => e.categoryName));
+      _setCategoryNames(menuCategories.map((e) => e.categoryName));
     } catch (e) {
       debugPrint('Failed to seed categories from menu screen: $e');
     }
@@ -848,6 +998,8 @@ class AddMenuItemController extends BaseController {
     aiScanResult.value = null;
     makeDefaultTax.value = true;
     markAsFavorite.value = false;
+    isComboItem.value = false;
+    comboComponentQuantities.clear();
   }
 
   // Save API Call
@@ -877,6 +1029,8 @@ class AddMenuItemController extends BaseController {
           : selectedCategory.value,
       orderFrom: 'None',
       prepTimeMinutes: _parsedPrepTimeMinutes(),
+      isCombo: isComboItem.value,
+      comboComponents: selectedComboComponents,
     );
 
     final response = await callApi(apiClient.addItem(request));
@@ -954,7 +1108,7 @@ class AddMenuItemController extends BaseController {
         }
 
         if (result.category != null && categories.contains(result.category)) {
-          selectedCategory.value = result.category!;
+          selectCategory(result.category!);
         }
 
         dismissAppLoader();

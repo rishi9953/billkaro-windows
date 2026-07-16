@@ -59,6 +59,12 @@ ItemData _$ItemDataFromJson(Map<String, dynamic> json) => ItemData(
   showItem: json['showItem'] as bool? ?? true,
   isRecommended: json['isRecommended'] as bool? ?? false,
   prepTimeMinutes: (json['prepTimeMinutes'] as num?)?.toInt() ?? 15,
+  isCombo: json['isCombo'] as bool? ?? false,
+  comboComponents:
+      (json['comboComponents'] as List<dynamic>?)
+          ?.map((e) => ComboComponent.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
 );
 
 Map<String, dynamic> _$ItemDataToJson(ItemData instance) => <String, dynamic>{
@@ -77,4 +83,6 @@ Map<String, dynamic> _$ItemDataToJson(ItemData instance) => <String, dynamic>{
   'showItem': instance.showItem,
   'isRecommended': instance.isRecommended,
   'prepTimeMinutes': instance.prepTimeMinutes,
+  'isCombo': instance.isCombo,
+  'comboComponents': instance.comboComponents.map((e) => e.toJson()).toList(),
 };

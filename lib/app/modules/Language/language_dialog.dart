@@ -56,9 +56,11 @@ Future<void> showLanguagePickerDialog(BuildContext context) {
                 Obx(() {
                   return Column(
                     children: [
-                      for (var index = 0;
-                          index < controller.languages.length;
-                          index++)
+                      for (
+                        var index = 0;
+                        index < controller.languages.length;
+                        index++
+                      )
                         Padding(
                           padding: EdgeInsets.only(
                             bottom: index == controller.languages.length - 1

@@ -96,25 +96,106 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                   children: [
                     Row(
                       children: [
-                        Text(
-                          loc.all_categories,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.black87,
-                          ),
-                        ),
+                        Obx(() {
+                          if (controller.isSelectionMode.value) {
+                            final count =
+                                controller.selectedCategoryIds.length;
+                            return Text(
+                              count == 0
+                                  ? loc.select_items
+                                  : loc.items_selected_count(count),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.black87,
+                              ),
+                            );
+                          }
+                          return Text(
+                            loc.all_categories,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.black87,
+                            ),
+                          );
+                        }),
                         const Spacer(),
-                        IconButton(
-                          tooltip: loc.add_category,
-                          onPressed: () {
-                            controller.isEdit.value = false;
-                            controller.resetForm();
-                          },
-                          icon: const Icon(Icons.add),
-                          color: AppColor.primary,
-                          splashRadius: 18,
-                        ),
+                        Obx(() {
+                          if (controller.isSelectionMode.value) {
+                            final allSelected =
+                                controller.categories.isNotEmpty &&
+                                controller.selectedCategoryIds.length ==
+                                    controller.categories.length;
+                            return Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                TextButton(
+                                  onPressed: controller.categories.isEmpty
+                                      ? null
+                                      : allSelected
+                                      ? controller.clearCategorySelection
+                                      : controller.selectAllCategories,
+                                  child: Text(
+                                    allSelected
+                                        ? loc.clear_all
+                                        : loc.select_all,
+                                  ),
+                                ),
+                                IconButton(
+                                  tooltip: loc.delete_selected,
+                                  onPressed:
+                                      controller.selectedCategoryIds.isEmpty ||
+                                          controller.isDeletingCategories.value
+                                      ? null
+                                      : controller.deleteSelectedCategories,
+                                  icon: controller.isDeletingCategories.value
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(
+                                          Icons.delete_outline,
+                                          color: Colors.red,
+                                        ),
+                                ),
+                                IconButton(
+                                  tooltip: loc.cancel,
+                                  onPressed: controller.exitSelectionMode,
+                                  icon: const Icon(Icons.close),
+                                  splashRadius: 18,
+                                ),
+                              ],
+                            );
+                          }
+                          return Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (controller.categories.isNotEmpty)
+                                IconButton(
+                                  tooltip: loc.select_items_to_delete,
+                                  onPressed: controller.toggleSelectionMode,
+                                  icon: const Icon(Icons.checklist),
+                                  color: AppColor.primary,
+                                  splashRadius: 18,
+                                ),
+                              IconButton(
+                                tooltip: loc.add_category,
+                                onPressed: () {
+                                  controller.exitSelectionMode();
+                                  controller.isEdit.value = false;
+                                  controller.resetForm();
+                                },
+                                icon: const Icon(Icons.add),
+                                color: AppColor.primary,
+                                splashRadius: 18,
+                              ),
+                            ],
+                          );
+                        }),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -128,6 +209,10 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                             ),
                           );
                         }
+                        final selectionMode = controller.isSelectionMode.value;
+                        // Touch selection list so Obx rebuilds on Select all / Clear all.
+                        final selectedIds = controller.selectedCategoryIds
+                            .toList(growable: false);
                         return Scrollbar(
                           controller: _categoriesScrollController,
                           thumbVisibility: isDesktop,
@@ -139,39 +224,58 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                                 Divider(height: 1, color: Colors.grey.shade200),
                             itemBuilder: (context, index) {
                               final cat = controller.categories[index];
+                              final isChecked = selectionMode
+                                  ? selectedIds.contains(cat.id)
+                                  : controller.categoryId.value == cat.id;
                               return ListTile(
                                 dense: true,
-                                selected: controller.categoryId.value == cat.id,
-                                onTap: () => controller.startEditCategory(cat),
-                                leading: cat.imageURL.isNotEmpty
-                                    ? ClipRRect(
-                                        borderRadius: BorderRadius.circular(6),
-                                        child: Image.network(
-                                          cat.imageURL,
-                                          width: 36,
-                                          height: 36,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) {
-                                            return CircleAvatar(
+                                selected: isChecked,
+                                onTap: () {
+                                  if (selectionMode) {
+                                    controller.toggleCategorySelection(cat.id);
+                                  } else {
+                                    controller.startEditCategory(cat);
+                                  }
+                                },
+                                leading: selectionMode
+                                    ? Checkbox(
+                                        value: isChecked,
+                                        onChanged: (_) => controller
+                                            .toggleCategorySelection(cat.id),
+                                        activeColor: AppColor.primary,
+                                      )
+                                    : (cat.imageURL.isNotEmpty
+                                          ? ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                              child: Image.network(
+                                                cat.imageURL,
+                                                width: 36,
+                                                height: 36,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (_, __, ___) {
+                                                  return CircleAvatar(
+                                                    radius: 18,
+                                                    backgroundColor:
+                                                        Colors.grey.shade300,
+                                                    child: const Icon(
+                                                      Icons.category,
+                                                      color: Colors.white,
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            )
+                                          : CircleAvatar(
                                               radius: 18,
                                               backgroundColor:
                                                   Colors.grey.shade300,
                                               child: const Icon(
-                                                Icons.category,
+                                                Icons
+                                                    .image_not_supported_outlined,
                                                 color: Colors.white,
                                               ),
-                                            );
-                                          },
-                                        ),
-                                      )
-                                    : CircleAvatar(
-                                        radius: 18,
-                                        backgroundColor: Colors.grey.shade300,
-                                        child: const Icon(
-                                          Icons.image_not_supported_outlined,
-                                          color: Colors.white,
-                                        ),
-                                      ),
+                                            )),
                                 title: Text(
                                   (cat.categoryName.capitalize ??
                                       cat.categoryName),
@@ -181,17 +285,19 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                trailing: IconButton(
-                                  tooltip: loc.delete,
-                                  icon: Assets.svg.delete.svg(
-                                    width: 20,
-                                    height: 20,
-                                  ),
-                                  onPressed: () => _confirmDeleteCategory(
-                                    index,
-                                    cat.categoryName,
-                                  ),
-                                ),
+                                trailing: selectionMode
+                                    ? null
+                                    : IconButton(
+                                        tooltip: loc.delete,
+                                        icon: Assets.svg.delete.svg(
+                                          width: 20,
+                                          height: 20,
+                                        ),
+                                        onPressed: () => _confirmDeleteCategory(
+                                          index,
+                                          cat.categoryName,
+                                        ),
+                                      ),
                               );
                             },
                           ),

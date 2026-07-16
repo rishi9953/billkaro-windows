@@ -1,3 +1,4 @@
+import 'package:billkaro/app/services/Modals/Categories/bulk_delete_categories_request.dart';
 import 'package:billkaro/app/services/Modals/Categories/categories_response.dart';
 import 'package:billkaro/app/services/Modals/PrinterOrderRequest/printer_order_request.dart';
 import 'package:billkaro/app/services/Modals/Subscriptions/subscription_response.dart';
@@ -133,6 +134,13 @@ abstract class ApiClient {
   Future<dynamic> deleteCategory(
     @Path('outletId') String outletId,
     @Path('id') String id,
+  );
+
+  // ✅ Bulk delete categories
+  @DELETE('$outlets/{outletId}/categories/bulk')
+  Future<dynamic> deleteBulkCategories(
+    @Path('outletId') String outletId,
+    @Body() BulkDeleteCategoriesRequest request,
   );
 
   // -------------------- REGULAR CUSTOMER --------------------

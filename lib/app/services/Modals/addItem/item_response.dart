@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'combo_component.dart';
 
 part 'item_response.g.dart';
 
@@ -8,11 +9,7 @@ class ItemResponse {
   final List<ItemData> data;
   final PaginationMeta? pagination;
 
-  ItemResponse({
-    required this.status,
-    required this.data,
-    this.pagination,
-  });
+  ItemResponse({required this.status, required this.data, this.pagination});
 
   factory ItemResponse.fromJson(Map<String, dynamic> json) =>
       _$ItemResponseFromJson(json);
@@ -64,6 +61,10 @@ class ItemData {
   final bool isRecommended;
   @JsonKey(defaultValue: 15)
   final int prepTimeMinutes;
+  @JsonKey(defaultValue: false)
+  final bool isCombo;
+  @JsonKey(defaultValue: [])
+  final List<ComboComponent> comboComponents;
 
   ItemData({
     required this.id,
@@ -81,6 +82,8 @@ class ItemData {
     this.showItem = true,
     this.isRecommended = false,
     this.prepTimeMinutes = 15,
+    this.isCombo = false,
+    this.comboComponents = const [],
   });
 
   factory ItemData.fromJson(Map<String, dynamic> json) =>

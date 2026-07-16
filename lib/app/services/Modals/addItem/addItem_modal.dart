@@ -1,4 +1,9 @@
+// ignore_for_file: unnecessary_library_name
+
+library add_item_modal;
+
 import 'package:json_annotation/json_annotation.dart';
+import 'combo_component.dart';
 
 part 'addItem_modal.g.dart';
 
@@ -17,6 +22,8 @@ class ItemRequest {
   @JsonKey(includeIfNull: false)
   final bool? isRecommended;
   final int prepTimeMinutes;
+  final bool isCombo;
+  final List<ComboComponent> comboComponents;
 
   ItemRequest({
     required this.itemName,
@@ -31,6 +38,8 @@ class ItemRequest {
     this.itemImage = '',
     this.isRecommended,
     this.prepTimeMinutes = 15,
+    this.isCombo = false,
+    this.comboComponents = const [],
   });
 
   factory ItemRequest.fromJson(Map<String, dynamic> json) =>

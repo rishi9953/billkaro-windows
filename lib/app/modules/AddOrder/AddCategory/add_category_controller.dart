@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:billkaro/app/Widgets/desktop_camera_capture_dialog.dart';
 import 'package:billkaro/app/modules/AddOrder/add_order_controller.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_item_controller.dart';
+import 'package:billkaro/app/services/Modals/Categories/bulk_delete_categories_request.dart';
 import 'package:billkaro/app/services/Modals/Categories/categories_response.dart';
 import 'package:billkaro/app/services/uploadFile.dart';
 import 'package:billkaro/config/config.dart';
@@ -23,6 +24,9 @@ class AddCategoryController extends BaseController {
   var selectedImage = Rx<File?>(null);
 
   final isEdit = false.obs;
+  final isSelectionMode = false.obs;
+  final selectedCategoryIds = <String>[].obs;
+  final isDeletingCategories = false.obs;
   AddOrderController? addOrderController;
   MenuItemController? menuItemController;
 
@@ -74,59 +78,153 @@ class AddCategoryController extends BaseController {
     return Platform.isWindows || Platform.isLinux || Platform.isMacOS;
   }
 
-  void uploadImage() {
-    Get.bottomSheet(
-      Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 8),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
+  Future<void> uploadImage() async {
+    final source = await _pickImageSourceDialog();
+    if (source == null) return;
+
+    if (source == ImageSource.camera) {
+      await uploadImageFromCamera();
+    } else {
+      await uploadImageFromGallery();
+    }
+  }
+
+  Future<ImageSource?> _pickImageSourceDialog() async {
+    final isDesktop = _usesDesktopCameraPlugin();
+    final screenWidth = MediaQuery.of(Get.context!).size.width;
+    final dialogWidth = isDesktop
+        ? (screenWidth * 0.35).clamp(320.0, 480.0)
+        : (screenWidth * 0.9).clamp(280.0, 420.0);
+
+    return Get.dialog<ImageSource>(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: SizedBox(
+          width: dialogWidth,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColor.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.add_photo_alternate_outlined,
+                        color: AppColor.primary,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Select Image Source',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Close',
+                      onPressed: () => Get.back(),
+                      icon: const Icon(Icons.close),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: Icon(
-                  Icons.photo_library_outlined,
-                  color: AppColor.primary,
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Choose how you want to add a category image',
+                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                  ),
                 ),
-                title: const Text('Gallery'),
-                onTap: () {
-                  Get.back();
-                  uploadImageFromGallery();
-                },
-              ),
-              ListTile(
-                leading: Icon(
-                  Icons.camera_alt_outlined,
-                  color: AppColor.primary,
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _imageSourceOption(
+                        icon: Icons.camera_alt_outlined,
+                        label: 'Camera',
+                        subtitle: isDesktop ? 'USB / webcam' : 'Take photo',
+                        onTap: () => Get.back(result: ImageSource.camera),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _imageSourceOption(
+                        icon: isDesktop
+                            ? Icons.folder_open_outlined
+                            : Icons.photo_library_outlined,
+                        label: isDesktop ? 'Browse Files' : 'Gallery',
+                        subtitle: 'Choose photo',
+                        onTap: () => Get.back(result: ImageSource.gallery),
+                      ),
+                    ),
+                  ],
                 ),
-                title: const Text('Camera'),
-                onTap: () {
-                  Get.back();
-                  uploadImageFromCamera();
-                },
-              ),
-              const SizedBox(height: 8),
-            ],
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => Get.back(),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      barrierDismissible: true,
+    );
+  }
+
+  Widget _imageSourceOption({
+    required IconData icon,
+    required String label,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: AppColor.primary.withOpacity(0.06),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColor.primary.withOpacity(0.28)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+            child: Column(
+              children: [
+                Icon(icon, size: 30, color: AppColor.primary),
+                const SizedBox(height: 10),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -238,7 +336,45 @@ class AddCategoryController extends BaseController {
     }
   }
 
-  void deleteCategory(int index) async {
+  void toggleSelectionMode() {
+    if (isSelectionMode.value) {
+      exitSelectionMode();
+    } else {
+      isSelectionMode.value = true;
+      isEdit.value = false;
+      resetForm();
+    }
+  }
+
+  void exitSelectionMode() {
+    isSelectionMode.value = false;
+    selectedCategoryIds.clear();
+  }
+
+  void toggleCategorySelection(String categoryId) {
+    if (selectedCategoryIds.contains(categoryId)) {
+      selectedCategoryIds.remove(categoryId);
+    } else {
+      selectedCategoryIds.add(categoryId);
+    }
+  }
+
+  bool isCategorySelected(String categoryId) =>
+      selectedCategoryIds.contains(categoryId);
+
+  void selectAllCategories() {
+    selectedCategoryIds
+      ..clear()
+      ..addAll(categories.map((e) => e.id));
+    selectedCategoryIds.refresh();
+  }
+
+  void clearCategorySelection() {
+    selectedCategoryIds.clear();
+    selectedCategoryIds.refresh();
+  }
+
+  Future<void> deleteCategory(int index) async {
     final loc = AppLocalizations.of(Get.context!)!;
     if (index < 0 || index >= categories.length) {
       showError(description: loc.invalid_category_selection);
@@ -246,35 +382,111 @@ class AddCategoryController extends BaseController {
     }
 
     final id = categories[index].id;
+    final ok = await _deleteCategoriesByIds([id], clearSelection: false);
+    if (ok) {
+      showSuccess(description: loc.category_deleted_successfully);
+    }
+  }
+
+  Future<void> deleteSelectedCategories() async {
+    final loc = AppLocalizations.of(Get.context!)!;
+    if (selectedCategoryIds.isEmpty) {
+      showError(description: loc.select_at_least_one_item_to_delete);
+      return;
+    }
+
+    final count = selectedCategoryIds.length;
+    final shouldDelete =
+        await Get.dialog<bool>(
+          AlertDialog(
+            title: Text(loc.delete),
+            content: Text(
+              count == 1
+                  ? 'Are you sure you want to delete the selected category?'
+                  : 'Are you sure you want to delete $count selected categories?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(result: false),
+                child: Text(loc.cancel),
+              ),
+              ElevatedButton(
+                onPressed: () => Get.back(result: true),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child: Text(loc.delete),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!shouldDelete) return;
+
+    final ids = selectedCategoryIds.toList();
+    final ok = await _deleteCategoriesByIds(ids, clearSelection: true);
+    if (ok) {
+      showSuccess(
+        description: count == 1
+            ? loc.category_deleted_successfully
+            : '$count categories deleted successfully',
+      );
+    }
+  }
+
+  Future<bool> _deleteCategoriesByIds(
+    List<String> ids, {
+    required bool clearSelection,
+  }) async {
+    if (ids.isEmpty) return false;
+    final loc = AppLocalizations.of(Get.context!)!;
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null) {
+      showError(description: loc.please_select_outlet_first);
+      return false;
+    }
+
+    isDeletingCategories.value = true;
+    showAppLoader();
 
     try {
+      final uniqueIds = ids.map((id) => id.trim()).where((id) => id.isNotEmpty).toSet().toList();
       final response = await callApi(
-        apiClient.deleteCategory(appPref.selectedOutlet!.id!, id),
+        apiClient.deleteBulkCategories(
+          outletId,
+          BulkDeleteCategoriesRequest(categoryIds: uniqueIds),
+        ),
         showLoader: false,
       );
-      debugPrint('Delete response: $response');
 
       if (response != null && response['status'] == 'success') {
-        if (categoryId.value == id) {
-          isEdit.value = false;
-          resetForm();
+        for (final id in uniqueIds) {
+          if (categoryId.value == id) {
+            isEdit.value = false;
+            resetForm();
+            break;
+          }
         }
-        // Refresh categories in both controllers
+        if (clearSelection) {
+          exitSelectionMode();
+        }
         await getCategories(showloader: false);
         await addOrderController?.getCategories();
         await menuItemController?.getCategories();
-        dismissAllAppLoader();
-        showSuccess(
-          description: response['message'] ?? loc.category_deleted_successfully,
-        );
-      } else {
-        showError(
-          description: response?['message'] ?? loc.failed_to_delete_category,
-        );
+        return true;
       }
+
+      showError(
+        description: response?['message']?.toString().isNotEmpty == true
+            ? response!['message'].toString()
+            : loc.failed_to_delete_category,
+      );
+      return false;
     } catch (e) {
       showError(description: loc.error_deleting_category);
-      debugPrint('Error in deleteCategory: $e');
+      debugPrint('Error in _deleteCategoriesByIds: $e');
+      return false;
+    } finally {
+      isDeletingCategories.value = false;
+      dismissAllAppLoader();
     }
   }
 

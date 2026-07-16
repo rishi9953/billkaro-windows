@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'addItem_modal.dart';
+part of add_item_modal;
 
 // **************************************************************************
 // JsonSerializableGenerator
@@ -19,20 +19,29 @@ ItemRequest _$ItemRequestFromJson(Map<String, dynamic> json) => ItemRequest(
   itemImage: json['itemImage'] as String? ?? '',
   isRecommended: json['isRecommended'] as bool?,
   prepTimeMinutes: (json['prepTimeMinutes'] as num?)?.toInt() ?? 15,
+  isCombo: json['isCombo'] as bool? ?? false,
+  comboComponents:
+      (json['comboComponents'] as List<dynamic>?)
+          ?.map((e) => ComboComponent.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
 );
 
-Map<String, dynamic> _$ItemRequestToJson(ItemRequest instance) =>
-    <String, dynamic>{
-      'itemName': instance.itemName,
-      'salePrice': instance.salePrice,
-      'withTax': instance.withTax,
-      'orderFrom': instance.orderFrom,
-      'gst': instance.gst,
-      'userId': instance.userId,
-      'outletId': instance.outletId,
-      'category': instance.category,
-      'itemImage': instance.itemImage,
-      'showItem': instance.showItem,
-      'isRecommended': ?instance.isRecommended,
-      'prepTimeMinutes': instance.prepTimeMinutes,
-    };
+Map<String, dynamic> _$ItemRequestToJson(
+  ItemRequest instance,
+) => <String, dynamic>{
+  'itemName': instance.itemName,
+  'salePrice': instance.salePrice,
+  'withTax': instance.withTax,
+  'orderFrom': instance.orderFrom,
+  'gst': instance.gst,
+  'userId': instance.userId,
+  'outletId': instance.outletId,
+  'category': instance.category,
+  'itemImage': instance.itemImage,
+  'showItem': instance.showItem,
+  'isRecommended': ?instance.isRecommended,
+  'prepTimeMinutes': instance.prepTimeMinutes,
+  'isCombo': instance.isCombo,
+  'comboComponents': instance.comboComponents.map((e) => e.toJson()).toList(),
+};

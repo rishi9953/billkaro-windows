@@ -165,10 +165,20 @@ class _PrinterScreen2State extends State<PrinterScreen2>
 
   @override
   Widget build(BuildContext context) {
-    if (_isWindowsDesktop) {
-      return _buildWindowsScaffold(context);
-    }
-    return _buildMobileScaffold(context);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.hasBoundedWidth
+            ? constraints.maxWidth
+            : MediaQuery.sizeOf(context).width;
+        final useWideWindowsLayout =
+            _isWindowsDesktop && width >= _winTwoColumnBreakpoint;
+        if (useWideWindowsLayout) {
+          return _buildWindowsScaffold(context);
+        }
+        // Small / narrow: same structure as billkaro-app
+        return _buildCompactScaffold(context);
+      },
+    );
   }
 
   PreferredSizeWidget _buildAppBarBottom(BuildContext context) {
@@ -210,54 +220,32 @@ class _PrinterScreen2State extends State<PrinterScreen2>
             constraints: const BoxConstraints(maxWidth: _winMaxContentWidth),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final useTwoColumns =
-                      constraints.maxWidth >= _winTwoColumnBreakpoint;
-                  Widget sidebarContent() {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildMultiplePrinterSettingsCard(context),
-                        const Gap(14),
-                        _buildPaperSizeCard(context),
-                        const Gap(14),
-                        _buildCashDrawerCard(context),
-                        const Gap(14),
-                        _buildConnectionStatusCards(context),
-                        const Gap(12),
-                        _buildWindowsHelpCard(context),
-                      ],
-                    );
-                  }
-
-                  final devices = _buildWindowsDevicePanel(context);
-
-                  if (useTwoColumns) {
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        SizedBox(
-                          width: 400,
-                          child: SingleChildScrollView(child: sidebarContent()),
-                        ),
-                        const Gap(20),
-                        Expanded(child: devices),
-                      ],
-                    );
-                  }
-                  return Column(
-                    children: [
-                      Flexible(
-                        flex: 0,
-                        child: SingleChildScrollView(child: sidebarContent()),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    width: 400,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildMultiplePrinterSettingsCard(context),
+                          const Gap(14),
+                          _buildPaperSizeCard(context),
+                          const Gap(14),
+                          _buildCashDrawerCard(context),
+                          const Gap(14),
+                          _buildConnectionStatusCards(context),
+                          const Gap(12),
+                          _buildWindowsHelpCard(context),
+                        ],
                       ),
-                      const Gap(14),
-                      Expanded(child: devices),
-                    ],
-                  );
-                },
+                    ),
+                  ),
+                  const Gap(20),
+                  Expanded(child: _buildWindowsDevicePanel(context)),
+                ],
               ),
             ),
           ),
@@ -266,78 +254,383 @@ class _PrinterScreen2State extends State<PrinterScreen2>
     );
   }
 
-  Widget _buildMobileScaffold(BuildContext context) {
+  /// App-style layout used on mobile and on narrow Windows windows.
+  Widget _buildCompactScaffold(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: AppColor.backGroundColor,
       appBar: AppBar(
-        title: Text(loc.printer_settings),
+        elevation: 0,
+        foregroundColor: AppColor.white,
+        title: Text(
+          loc.printer_settings,
+          style: const TextStyle(
+            color: AppColor.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Theme.of(context).colorScheme.onPrimary,
-          unselectedLabelColor: Theme.of(
-            context,
-          ).colorScheme.onSurface.withOpacity(0.7),
-          indicatorColor: Theme.of(context).colorScheme.onPrimary,
-          indicatorSize: TabBarIndicatorSize.tab,
+          indicatorColor: AppColor.white,
+          indicatorWeight: 3,
+          labelColor: AppColor.white,
+          unselectedLabelColor: AppColor.white.withOpacity(0.65),
+          labelStyle: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
           tabs: [
-            Tab(icon: const Icon(Icons.bluetooth), text: loc.bluetooth),
-            Tab(icon: const Icon(Icons.usb), text: loc.usb),
-            Tab(icon: const Icon(Icons.settings_ethernet), text: loc.ethernet),
+            Tab(
+              icon: const Icon(Icons.bluetooth, size: 20),
+              text: loc.bluetooth,
+            ),
+            Tab(icon: const Icon(Icons.usb, size: 20), text: loc.usb),
+            Tab(
+              icon: const Icon(Icons.settings_ethernet, size: 20),
+              text: loc.ethernet,
+            ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: AppColor.white),
             onPressed: _onRefreshPressed,
+            tooltip: loc.refresh,
           ),
         ],
       ),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1080),
+      body: Column(
+        children: [
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * 0.45,
+            ),
+            child: SingleChildScrollView(
+              child: _buildCompactSettingsPanel(context, loc, scheme),
+            ),
+          ),
+          Expanded(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: Column(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+              child: TabBarView(
+                controller: _tabController,
                 children: [
-                  _buildMultiplePrinterSettingsCard(context),
-                  const SizedBox(height: 12),
-                  _buildPaperSizeCard(context),
-                  const SizedBox(height: 12),
-                  _buildCashDrawerCard(context),
-                  const SizedBox(height: 12),
-                  _buildConnectionStatusCards(context),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: Card(
-                      margin: EdgeInsets.zero,
-                      elevation: 1,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: BorderSide(
-                          color: Theme.of(
-                            context,
-                          ).dividerColor.withOpacity(0.2),
-                        ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: TabBarView(
-                          controller: _tabController,
-                          children: [
-                            _buildBluetoothTab(),
-                            _buildUsbTab(),
-                            _buildEthernetTab(context),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
+                  _buildBluetoothTab(),
+                  _buildUsbTab(),
+                  _buildEthernetTab(context),
                 ],
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  String _roleSummaryLine(
+    AppLocalizations loc,
+    bool billSet,
+    String? billName,
+    bool showKot,
+    bool kotSet,
+    String? kotName,
+  ) {
+    final bill = billSet
+        ? loc.bill_role_summary(billName!)
+        : loc.bill_role_not_set;
+    if (!showKot) return bill;
+    final kot = kotSet
+        ? loc.kot_role_summary(kotName!)
+        : loc.kot_role_not_set;
+    return '$bill · $kot';
+  }
+
+  Widget _buildCompactSettingsPanel(
+    BuildContext context,
+    AppLocalizations loc,
+    ColorScheme scheme,
+  ) {
+    return Obx(() {
+      if (Get.isRegistered<HomeScreenController>()) {
+        Get.find<HomeScreenController>().selectedOutlet.value;
+      }
+      final showKot = HomeMainRoutes.outletIsCafeOrRestaurant();
+      final loading = roleController.isRoleActionLoading.value;
+      final billName = roleController.savedBillPrinterName.value;
+      final kotName = roleController.savedKotPrinterName.value;
+      final billSet = billName != null && billName.isNotEmpty;
+      final kotSet = kotName != null && kotName.isNotEmpty;
+      final appPref = Get.find<AppPref>();
+      final showCashDrawer = appPref.cashDrawerEnabled;
+
+      return Material(
+        color: Colors.white,
+        child: Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+            childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            title: Row(
+              children: [
+                Icon(Icons.tune, size: 20, color: scheme.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    loc.printer_setup,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                if (loading)
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+              ],
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(left: 30, top: 2),
+              child: Text(
+                _roleSummaryLine(
+                  loc,
+                  billSet,
+                  billName,
+                  showKot,
+                  kotSet,
+                  kotName,
+                ),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: scheme.onSurface.withOpacity(0.6),
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            children: [
+              _buildCompactRolePrinterTile(
+                context,
+                loc,
+                icon: Icons.receipt_long_outlined,
+                title: loc.bill_label,
+                isKot: false,
+                name: billName,
+                connectionType: roleController.savedBillPrinterType.value,
+                onTest: () => roleController.testPrintForRole(PrintRole.bill),
+                onClear: () => roleController.clearRolePrinter(PrintRole.bill),
+              ),
+              if (showKot) ...[
+                const SizedBox(height: 8),
+                _buildCompactRolePrinterTile(
+                  context,
+                  loc,
+                  icon: Icons.restaurant_menu_outlined,
+                  title: loc.kot_label,
+                  isKot: true,
+                  name: kotName,
+                  connectionType: roleController.savedKotPrinterType.value,
+                  onTest: () => roleController.testPrintForRole(PrintRole.kot),
+                  onClear: () =>
+                      roleController.clearRolePrinter(PrintRole.kot),
+                ),
+                if (billSet)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: loading
+                          ? null
+                          : roleController.useSamePrinterForKot,
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      child: Text(loc.same_as_bill),
+                    ),
+                  ),
+              ],
+              if (showCashDrawer) ...[
+                const Divider(height: 20),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    loc.cash_drawer,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  loc.cash_drawer_printer_help,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: loading || !billSet
+                        ? null
+                        : roleController.testOpenCashDrawer,
+                    icon: const Icon(Icons.point_of_sale_outlined, size: 18),
+                    label: Text(loc.test_cash_drawer),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColor.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+                if (!billSet) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    loc.cash_drawer_assign_bill_printer_first,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onSurface.withOpacity(0.6),
+                    ),
+                  ),
+                ],
+              ],
+              const Divider(height: 20),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  loc.paper_size,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                loc.paper_size_subtitle,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: scheme.onSurface.withOpacity(0.6),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SegmentedButton<ThermalPaperSize>(
+                segments: [
+                  ButtonSegment(
+                    value: ThermalPaperSize.mm58,
+                    label: Text(
+                      loc.paper_size_2inch,
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                  ),
+                  ButtonSegment(
+                    value: ThermalPaperSize.mm80,
+                    label: Text(
+                      loc.paper_size_3inch,
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                  ),
+                  ButtonSegment(
+                    value: ThermalPaperSize.mm104,
+                    label: Text(
+                      loc.paper_size_4inch,
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                  ),
+                ],
+                selected: {roleController.selectedPaperSize.value},
+                onSelectionChanged: (set) {
+                  final size = set.first;
+                  if (size != roleController.selectedPaperSize.value) {
+                    roleController.setPaperSize(size);
+                  }
+                },
+              ),
+            ],
+          ),
         ),
+      );
+    });
+  }
+
+  Widget _buildCompactRolePrinterTile(
+    BuildContext context,
+    AppLocalizations loc, {
+    required IconData icon,
+    required String title,
+    required bool isKot,
+    required String? name,
+    required String? connectionType,
+    required VoidCallback onTest,
+    required VoidCallback onClear,
+  }) {
+    final configured = name != null && name.isNotEmpty;
+    final accent = isKot ? AppColor.secondaryPrimary : AppColor.primary;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: configured
+            ? accent.withOpacity(0.06)
+            : AppColor.backGroundColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: configured ? accent.withOpacity(0.2) : Colors.grey.shade200,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: accent, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                    color: accent,
+                  ),
+                ),
+                Text(
+                  configured
+                      ? '$name${connectionType != null ? ' · $connectionType' : ''}'
+                      : loc.assign_from_device_below,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: configured ? Colors.black87 : Colors.grey[600],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          if (configured) ...[
+            IconButton(
+              icon: const Icon(Icons.print_outlined, size: 18),
+              tooltip: loc.test_print,
+              onPressed: onTest,
+              color: accent,
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 18),
+              tooltip: loc.clear_tooltip,
+              onPressed: onClear,
+              color: Colors.red.shade400,
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            ),
+          ],
+        ],
       ),
     );
   }

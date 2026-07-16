@@ -82,32 +82,73 @@ class AppSettingsScreen extends StatelessWidget {
                     onChanged: controller.setAutoSyncEnabled,
                   ),
 
-                  Obx(() {
-                    final drawerOn = controller.cashDrawerEnabled.value;
-                    return Column(
-                      children: [
-                        _buildSwitchTile(
-                          icon: Icons.point_of_sale_outlined,
-                          title: loc.cash_drawer,
-                          subtitle: loc.cash_drawer_subtitle,
-                          value: controller.cashDrawerEnabled,
-                          onChanged: controller.setCashDrawerEnabled,
-                        ),
-                        if (drawerOn) ...[
-                          _buildSwitchTile(
-                            icon: Icons.payments_outlined,
-                            title: loc.open_cash_drawer_on_cash_payment,
-                            subtitle:
-                                loc.open_cash_drawer_on_cash_payment_subtitle,
-                            value: controller.openCashDrawerOnCashPayment,
-                            onChanged:
-                                controller.setOpenCashDrawerOnCashPayment,
-                          ),
-                          _buildCashDrawerPinTile(context, loc),
-                        ],
-                      ],
-                    );
-                  }),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildSwitchTile(
+                        icon: Icons.point_of_sale_outlined,
+                        title: loc.cash_drawer,
+                        subtitle: loc.cash_drawer_subtitle,
+                        value: controller.cashDrawerEnabled,
+                        onChanged: controller.setCashDrawerEnabled,
+                      ),
+                      Obx(() {
+                        if (!controller.cashDrawerEnabled.value) {
+                          return const SizedBox.shrink();
+                        }
+                        final openOnCash =
+                            controller.openCashDrawerOnCashPayment.value;
+                        final selected = cashDrawerPinFromStorage(
+                          controller.cashDrawerPin.value,
+                        );
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildDivider(),
+                            _buildTile(
+                              icon: Icons.payments_outlined,
+                              title: loc.open_cash_drawer_on_cash_payment,
+                              subtitle: loc
+                                  .open_cash_drawer_on_cash_payment_subtitle,
+                              trailing: Switch(
+                                value: openOnCash,
+                                onChanged:
+                                    controller.setOpenCashDrawerOnCashPayment,
+                                activeColor: AppColor.primary,
+                              ),
+                            ),
+                            _buildDivider(),
+                            _buildTile(
+                              icon: Icons.settings_input_component_outlined,
+                              title: loc.cash_drawer_kick_pin,
+                              subtitle: loc.cash_drawer_kick_pin_subtitle,
+                              trailing: SegmentedButton<CashDrawerPin>(
+                                segments: [
+                                  ButtonSegment(
+                                    value: CashDrawerPin.pin2,
+                                    label: Text(loc.cash_drawer_pin_2),
+                                  ),
+                                  ButtonSegment(
+                                    value: CashDrawerPin.pin5,
+                                    label: Text(loc.cash_drawer_pin_5),
+                                  ),
+                                ],
+                                selected: {selected},
+                                onSelectionChanged: (set) {
+                                  controller.setCashDrawerPin(set.first);
+                                },
+                                style: const ButtonStyle(
+                                  visualDensity: VisualDensity.compact,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      }),
+                    ],
+                  ),
                   if (Get.isRegistered<HomeScreenController>())
                     Obx(() {
                       Get.find<HomeScreenController>().selectedOutlet.value;
@@ -116,46 +157,63 @@ class AppSettingsScreen extends StatelessWidget {
                       }
                       final kotOn = controller.kotModeEnabled.value;
                       return Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          _buildSwitchTile(
+                          _buildTile(
                             icon: Icons.restaurant_menu_outlined,
                             title: loc.kot_mode,
-                            subtitle: loc.printKOT_desc.replaceAll('\n', ' '),
-                            value: controller.kotModeEnabled,
-                            onChanged: controller.setKotMode,
+                            subtitle:
+                                loc.printKOT_desc.replaceAll('\n', ' '),
+                            trailing: Switch(
+                              value: kotOn,
+                              onChanged: controller.setKotMode,
+                              activeColor: AppColor.primary,
+                            ),
                           ),
-                          if (kotOn)
+                          if (kotOn) ...[
+                            _buildDivider(),
                             _buildActionOrNavTile(
                               icon: Icons.open_in_browser_rounded,
                               title: loc.kitchen_display_in_browser,
-                              subtitle: loc.kitchen_display_browser_subtitle,
+                              subtitle:
+                                  loc.kitchen_display_browser_subtitle,
                               onTap: KitchenDisplayBrowser.open,
                             ),
+                          ],
                         ],
                       );
                     })
                   else if (HomeMainRoutes.outletIsCafeOrRestaurant())
-                    Obx(() {
-                      final kotOn = controller.kotModeEnabled.value;
-                      return Column(
-                        children: [
-                          _buildSwitchTile(
-                            icon: Icons.restaurant_menu_outlined,
-                            title: loc.kot_mode,
-                            subtitle: loc.printKOT_desc.replaceAll('\n', ' '),
-                            value: controller.kotModeEnabled,
-                            onChanged: controller.setKotMode,
-                          ),
-                          if (kotOn)
-                            _buildActionOrNavTile(
-                              icon: Icons.open_in_browser_rounded,
-                              title: loc.kitchen_display_in_browser,
-                              subtitle: loc.kitchen_display_browser_subtitle,
-                              onTap: KitchenDisplayBrowser.open,
-                            ),
-                        ],
-                      );
-                    }),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildSwitchTile(
+                          icon: Icons.restaurant_menu_outlined,
+                          title: loc.kot_mode,
+                          subtitle: loc.printKOT_desc.replaceAll('\n', ' '),
+                          value: controller.kotModeEnabled,
+                          onChanged: controller.setKotMode,
+                        ),
+                        Obx(() {
+                          if (!controller.kotModeEnabled.value) {
+                            return const SizedBox.shrink();
+                          }
+                          return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildDivider(),
+                              _buildActionOrNavTile(
+                                icon: Icons.open_in_browser_rounded,
+                                title: loc.kitchen_display_in_browser,
+                                subtitle:
+                                    loc.kitchen_display_browser_subtitle,
+                                onTap: KitchenDisplayBrowser.open,
+                              ),
+                            ],
+                          );
+                        }),
+                      ],
+                    ),
 
                   Obx(
                     () => _buildActionOrNavTile(

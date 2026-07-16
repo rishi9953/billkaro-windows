@@ -308,13 +308,13 @@ class _OutletSwitcherButtonState extends State<OutletSwitcherButton> {
       final selected = widget.controller.selectedOutlet.value;
       final name = widget.controller.selectedOutletName.capitalizeFirst!;
       final isStaff = StaffAccess.isStaffSession;
-      final outletCount = widget.controller.appPref.allOutlets.length;
-      final canSwitchOutlets = !isStaff && outletCount > 1;
+      // Owners can open the menu even with a single outlet (manage / create outlet).
+      final canOpenOutletMenu = !isStaff;
 
       return _buildOutletChip(
         name: name,
         selected: selected,
-        interactive: canSwitchOutlets,
+        interactive: canOpenOutletMenu,
       );
     });
   }
