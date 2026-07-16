@@ -3551,6 +3551,24 @@ abstract class AppLocalizations {
   /// **'Box'**
   String get box;
 
+  /// No description provided for @piece_pcs.
+  ///
+  /// In en, this message translates to:
+  /// **'Piece (Pcs)'**
+  String get piece_pcs;
+
+  /// No description provided for @packet_pkt.
+  ///
+  /// In en, this message translates to:
+  /// **'Packet (Pkt)'**
+  String get packet_pkt;
+
+  /// No description provided for @box_box.
+  ///
+  /// In en, this message translates to:
+  /// **'Box (BOX)'**
+  String get box_box;
+
   /// No description provided for @stock.
   ///
   /// In en, this message translates to:

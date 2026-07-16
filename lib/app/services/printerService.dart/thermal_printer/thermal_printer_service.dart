@@ -179,8 +179,7 @@ class ThermalPrinterService extends GetxController {
   void _syncNetworkConnectionObservables({bool? connected}) {
     final ready = connected ?? _network.hasActiveEndpoint;
     isNetworkConnected.value = ready;
-    connectedNetworkLabel.value =
-        ready ? _network.connectionLabel : null;
+    connectedNetworkLabel.value = ready ? _network.connectionLabel : null;
   }
 
   /// Restores Ethernet status from live socket or saved IP (after print disconnects).
@@ -302,10 +301,7 @@ class ThermalPrinterService extends GetxController {
       return;
     }
     _lastOfflineNoticeAt = now;
-    showError(
-      title: 'Printer offline',
-      description: message,
-    );
+    showError(title: 'Printer offline', description: message);
   }
 
   /// Clears BLE state when the device drops off (power off, out of range, etc.).
@@ -352,9 +348,7 @@ class ThermalPrinterService extends GetxController {
       debugPrint('🔌 USB printer offline — disconnecting');
       try {
         if (connectedUsbPrinter != null) {
-          await FlutterThermalPrinter.instance.disconnect(
-            connectedUsbPrinter!,
-          );
+          await FlutterThermalPrinter.instance.disconnect(connectedUsbPrinter!);
         }
       } catch (e) {
         debugPrint('USB plugin disconnect on offline: $e');
@@ -716,9 +710,10 @@ class ThermalPrinterService extends GetxController {
     // Avoid hanging forever if BLE adapter state never emits (common on Windows).
     var bluetoothEnabled = false;
     try {
-      bluetoothEnabled = await BluetoothHelper()
-          .isBluetoothEnabled()
-          .timeout(const Duration(seconds: 3), onTimeout: () => false);
+      bluetoothEnabled = await BluetoothHelper().isBluetoothEnabled().timeout(
+        const Duration(seconds: 3),
+        onTimeout: () => false,
+      );
     } catch (_) {
       bluetoothEnabled = false;
     }
@@ -1003,7 +998,8 @@ class ThermalPrinterService extends GetxController {
     }
     if (type == 'network') {
       final savedIp = await StorageHelper.getRoleSavedNetworkIp(roleKey);
-      final savedPort = await StorageHelper.getRoleSavedNetworkPort(roleKey) ?? 9100;
+      final savedPort =
+          await StorageHelper.getRoleSavedNetworkPort(roleKey) ?? 9100;
       if (savedIp == null || savedIp.isEmpty) return false;
       if (_network.isConnected &&
           _network.host == savedIp &&
@@ -1326,9 +1322,7 @@ class ThermalPrinterService extends GetxController {
     builder.line();
 
     // Items — same row layout as ThermalKOTReceipt preview
-    builder.bold(
-      '${TextHelper.formatRow('Description', 'Qty.', receiptW)}\n',
-    );
+    builder.bold('${TextHelper.formatRow('Description', 'Qty.', receiptW)}\n');
     builder.line();
 
     for (var item in items) {
@@ -1351,8 +1345,7 @@ class ThermalPrinterService extends GetxController {
     builder
       ..line()
       ..bold(
-        TextHelper.formatRow('Total Items', '$totalQuantity', receiptW) +
-            '\n',
+        TextHelper.formatRow('Total Items', '$totalQuantity', receiptW) + '\n',
       );
 
     if (specialInstructions.isNotEmpty) {
@@ -1486,7 +1479,7 @@ class ThermalPrinterService extends GetxController {
     builder.bold('${TextHelper.formatRow('', 'Date: $date', w)}\n');
     builder
       ..bold(
-        '${TextHelper.formatRow('Sale In: $paymentMode', 'Time: $time', w)}\n',
+        '${TextHelper.formatRow('Payment In: $paymentMode', 'Time: $time', w)}\n',
       )
       ..text('${TextHelper.formatRow('', 'Invoice No: $invoiceNo', w)}\n')
       ..line();
@@ -1738,10 +1731,17 @@ class ThermalPrinterService extends GetxController {
             ),
             pw.SizedBox(height: 16),
             pw.Center(
-              child: pw.Image(pw.MemoryImage(pngBytes), width: 180, height: 180),
+              child: pw.Image(
+                pw.MemoryImage(pngBytes),
+                width: 180,
+                height: 180,
+              ),
             ),
             pw.SizedBox(height: 12),
-            pw.Text('Scan to order & pay', style: const pw.TextStyle(fontSize: 12)),
+            pw.Text(
+              'Scan to order & pay',
+              style: const pw.TextStyle(fontSize: 12),
+            ),
             pw.SizedBox(height: 4),
             pw.Text(
               'Powered by Billkaro',
@@ -2251,7 +2251,10 @@ class ThermalPrinterService extends GetxController {
 
   /// Sends ESC/POS to the transport saved for [forRole] (USB vs Bluetooth),
   /// so bill and KOT can use different printers when both are connected.
-  Future<void> _printBytes(List<int> bytes, {required PrintRole forRole}) async {
+  Future<void> _printBytes(
+    List<int> bytes, {
+    required PrintRole forRole,
+  }) async {
     try {
       final roleKey = _roleKey(forRole);
       final type = await StorageHelper.getRoleLastPrinterType(roleKey);
@@ -2344,5 +2347,4 @@ class ThermalPrinterService extends GetxController {
     final autoConnectEnabled = await StorageHelper.isAutoConnectEnabled();
     if (autoConnectEnabled) await tryAutoConnect();
   }
-
 }

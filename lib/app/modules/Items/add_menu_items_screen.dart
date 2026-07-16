@@ -750,7 +750,14 @@ class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
                     () => TextFormField(
                       controller: controller.salePriceController,
                       validator: controller.validateSalePrice,
-                      keyboardType: TextInputType.number,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d+\.?\d{0,2}'),
+                        ),
+                      ],
                       decoration: inputDecoration(
                         hintText: loc.tap_to_enter,
                         suffixText: controller.isWithTax.value
@@ -823,6 +830,7 @@ class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
                     controller: controller.prepTimeController,
                     validator: controller.validatePrepTime,
                     keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: inputDecoration(hintText: 'e.g. 15'),
                   ),
 

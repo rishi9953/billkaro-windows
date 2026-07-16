@@ -1479,15 +1479,15 @@ class _CartPanel extends StatelessWidget {
                   const SizedBox(height: 8),
                   if (isDineIn && HomeMainRoutes.outletShowsTables())
                     controller.availableTables.isEmpty
-                        ? Text(
-                            selectedTable.isEmpty
-                                ? 'Select table from Tables screen'
-                                : 'Table: $selectedTable',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          )
+                        ? (selectedTable.isEmpty
+                              ? const SizedBox.shrink()
+                              : Text(
+                                  'Table: $selectedTable',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ))
                         : AppDropdownFormField2<String>(
                             value: selectedTable.isEmpty
                                 ? null

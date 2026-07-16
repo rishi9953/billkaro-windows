@@ -1,5 +1,4 @@
-import 'package:billkaro/app/Database/app_database.dart';
-import 'package:billkaro/app/modules/Theme/theme_controller.dart';
+import 'package:billkaro/app/services/auth/auth_session_service.dart';
 import 'package:billkaro/app/services/Network/api_config.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/trusted_http_client.dart';
@@ -211,22 +210,7 @@ class NetworkModule {
       // Ensure loader is dismissed at the start
       safelyDismissLoader();
 
-      final appPref = Get.find<AppPref>();
-
-      // Clear user token first
-      appPref.token = '';
-
-      // Clear all database data
-      try {
-        final db = AppDatabase();
-        await db.clearAllData();
-      } catch (e) {
-        debugPrint('Error clearing database: $e');
-      }
-
-      // Clear all SharedPreferences data
-      await appPref.clearAllData();
-      await ThemeController.resetAfterLogout();
+      await AuthSessionService.clearSessionData();
 
       debugPrint('User data cleared, showing session expired dialog...');
 

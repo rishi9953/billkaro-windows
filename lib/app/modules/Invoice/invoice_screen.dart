@@ -135,7 +135,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                                     ),
 
                                     Text(
-                                      'Sale In : ${controller.paymentMode} ',
+                                      'Payment In : ${controller.paymentMode} ',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                       ),

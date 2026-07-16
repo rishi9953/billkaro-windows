@@ -1,5 +1,6 @@
 import 'package:billkaro/app/services/Modals/login_modal.dart';
 import 'package:billkaro/app/services/Modals/login_response.dart';
+import 'package:billkaro/app/services/auth/auth_session_service.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/staff_outlet_sync.dart';
 import 'dart:async';
@@ -329,6 +330,13 @@ class LoginController extends BaseController {
       final response = await callApi(
         isStaff ? apiClient.onStaffLogin(request) : apiClient.onLogin(request),
         showLoader: false,
+        apiErrorHandler: (error) async {
+          if (!isStaff && AuthSessionService.isAccountNotActivatedError(error)) {
+            AuthSessionService.showActivationDialogForEmail(request.email);
+            return true;
+          }
+          return false;
+        },
       );
       debugPrint('Login Response: $response');
       if (response == null) {

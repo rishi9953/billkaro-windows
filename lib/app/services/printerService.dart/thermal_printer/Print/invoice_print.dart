@@ -105,7 +105,8 @@ class InvoicePrintJob extends PrintJob {
             '\n',
       )
       ..bold(
-        TextHelper.formatRow('Sale In: $paymentMode', 'Time: $time', 48) + '\n',
+        TextHelper.formatRow('Payment In: $paymentMode', 'Time: $time', 48) +
+            '\n',
       )
       ..text(TextHelper.formatRow('', 'Invoice No: $invoiceNo', 48) + '\n')
       ..line();

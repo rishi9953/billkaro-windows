@@ -1797,6 +1797,15 @@ class AppLocalizationsHi extends AppLocalizations {
   String get box => 'बॉक्स';
 
   @override
+  String get piece_pcs => 'पीस (Pcs)';
+
+  @override
+  String get packet_pkt => 'पैकेट (Pkt)';
+
+  @override
+  String get box_box => 'बॉक्स (BOX)';
+
+  @override
   String get stock => 'स्टॉक';
 
   @override

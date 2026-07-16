@@ -1538,6 +1538,13 @@ Future<void> showCreatePurchaseOrderDialog(
                                               const TextInputType.numberWithOptions(
                                                 decimal: true,
                                               ),
+                                          minLines: 1,
+                                          maxLines: 3,
+                                          inputFormatters: [
+                                            FilteringTextInputFormatter.allow(
+                                              RegExp(r'^\d+\.?\d{0,2}'),
+                                            ),
+                                          ],
                                           decoration: const InputDecoration(
                                             isDense: true,
                                             border: OutlineInputBorder(
@@ -1574,6 +1581,13 @@ Future<void> showCreatePurchaseOrderDialog(
                                               const TextInputType.numberWithOptions(
                                                 decimal: true,
                                               ),
+                                          minLines: 1,
+                                          maxLines: 3,
+                                          inputFormatters: [
+                                            FilteringTextInputFormatter.allow(
+                                              RegExp(r'^\d+\.?\d{0,2}'),
+                                            ),
+                                          ],
                                           decoration: const InputDecoration(
                                             isDense: true,
                                             prefixText: '₹',

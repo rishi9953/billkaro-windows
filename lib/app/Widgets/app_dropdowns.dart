@@ -121,7 +121,12 @@ class _AppDropdownFormField2State<T> extends State<AppDropdownFormField2<T>> {
       valueListenable: _valueListenable,
       items: widget.items,
       selectedItemBuilder: widget.selectedItemBuilder,
-      onChanged: widget.onChanged,
+      onChanged: widget.onChanged == null
+          ? null
+          : (T? value) {
+              _valueListenable.value = value;
+              widget.onChanged!(value);
+            },
       validator: widget.validator,
       autovalidateMode: widget.autovalidateMode,
       iconStyleData: widget.iconStyleData ?? appDropdownIconStyle(),
@@ -213,7 +218,12 @@ class _AppFilterDropdown2State<T> extends State<AppFilterDropdown2<T>> {
           style: widget.style,
           valueListenable: _valueListenable,
           items: widget.items,
-          onChanged: widget.onChanged,
+          onChanged: widget.onChanged == null
+              ? null
+              : (T? value) {
+                  _valueListenable.value = value;
+                  widget.onChanged!(value);
+                },
           iconStyleData: widget.iconStyleData ?? appDropdownIconStyle(),
           dropdownStyleData:
               widget.dropdownStyleData ??

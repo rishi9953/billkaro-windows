@@ -46,6 +46,9 @@ class ApiConfig {
         'or set KDS_WS_USE_LOCAL=false in .env',
       );
     }
+    debugPrint(
+      '🔌 [API] Session WebSocket: ${sessionWebSocketUri('token')} (sample)',
+    );
   }
 
   /// WebSocket for KDS — on Windows dev, prefer local backend (tunnel REST + local WS).
@@ -93,6 +96,42 @@ class ApiConfig {
       port: api.hasPort ? api.port : null,
       path: kdsPath,
       queryParameters: {'outletId': outletId},
+    );
+  }
+
+  /// WebSocket for session events (account deactivation, etc.).
+  static Uri sessionWebSocketUri(String token, {bool forceRemote = false}) {
+    if (!forceRemote &&
+        !kIsWeb &&
+        Platform.isWindows &&
+        _useLocalKdsWebSocket) {
+      final port =
+          int.tryParse(dotenv.env['KDS_WS_LOCAL_PORT']?.trim() ?? '3000') ??
+          3000;
+      return Uri(
+        scheme: 'ws',
+        host: '127.0.0.1',
+        port: port,
+        path: '/api/session',
+        queryParameters: {'token': token},
+      );
+    }
+
+    final api = Uri.parse(_baseUrl);
+    final wsScheme = api.scheme == 'https' ? 'wss' : 'ws';
+    var path = api.path;
+    if (!path.endsWith('/')) path = '$path/';
+    if (!path.contains('/api')) {
+      path = '${path}api/';
+    }
+    final sessionPath = '${path}session';
+
+    return Uri(
+      scheme: wsScheme,
+      host: api.host,
+      port: api.hasPort ? api.port : null,
+      path: sessionPath,
+      queryParameters: {'token': token},
     );
   }
 

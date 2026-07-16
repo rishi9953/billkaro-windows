@@ -7,10 +7,12 @@ import 'package:billkaro/utils/date_util.dart';
 import 'package:billkaro/utils/download_path_util.dart';
 import 'package:billkaro/utils/extensions.dart';
 import 'package:flutter_modular/flutter_modular.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 
 class InvoicePreviewController extends BaseController {
   final phone = ''.obs;
@@ -603,7 +605,26 @@ class InvoicePreviewController extends BaseController {
         return;
       }
       final name = _sanitizeFileName(invoiceNo.value);
-      await Printing.sharePdf(bytes: bytes, filename: 'invoice_$name.pdf');
+      final fileName = 'invoice_$name.pdf';
+
+      // `Printing.sharePdf` just opens the PDF in the default viewer on
+      // Windows, so use the native Windows share sheet via share_plus instead.
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}${Platform.pathSeparator}$fileName');
+      await file.writeAsBytes(bytes, flush: true);
+
+      try {
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(file.path, mimeType: 'application/pdf')],
+            subject: 'Invoice ${invoiceNo.value}',
+            title: 'Invoice ${invoiceNo.value}',
+          ),
+        );
+      } on UnimplementedError {
+        // Older Windows without the share UI — fall back to opening the file.
+        await Printing.sharePdf(bytes: bytes, filename: fileName);
+      }
     } catch (e) {
       showError(description: 'Failed to share PDF: $e');
     }
