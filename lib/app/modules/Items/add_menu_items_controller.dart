@@ -2,11 +2,14 @@
 import 'dart:io';
 import 'package:billkaro/app/Widgets/desktop_camera_capture_dialog.dart';
 import 'package:billkaro/app/Widgets/item_image_ai_chat_dialog.dart';
+import 'package:billkaro/app/Widgets/remote_barcode_pair_dialog.dart';
+import 'package:billkaro/app/modules/AddOrder/add_order_controller.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_item_controller.dart';
 import 'package:billkaro/app/services/Modals/addItem/addItem_modal.dart';
 import 'package:billkaro/app/services/Modals/addItem/combo_component.dart';
 import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
 import 'package:billkaro/app/services/common_function.dart';
+import 'package:billkaro/app/services/open_food_facts_service.dart';
 import 'package:billkaro/app/services/uploadFile.dart';
 import 'package:billkaro/app/services/ai/menu_ai_scanner.dart';
 import 'package:billkaro/app/services/ai/pollinations_ai_image_service.dart';
@@ -21,8 +24,13 @@ class AddMenuItemController extends BaseController {
   final formKey = GlobalKey<FormState>();
   final itemNameController = TextEditingController();
   final salePriceController = TextEditingController();
+  final costPriceController = TextEditingController();
+  final barcodeController = TextEditingController();
+  final skuController = TextEditingController();
+  final stockController = TextEditingController();
+  final minStockController = TextEditingController();
   final prepTimeController = TextEditingController(text: '15');
-  late MenuItemController menuItemController;
+  MenuItemController? menuItemController;
 
   var selectedCategory = 'none'.obs;
   var selectedTaxPercentage = 'None'.obs;
@@ -36,6 +44,29 @@ class AddMenuItemController extends BaseController {
   var itemId = ''.obs;
   var imageUrl = ''.obs;
   var isAvailable = true.obs;
+  var trackStock = false.obs;
+  var selectedSoldBy = 'Each'.obs;
+  var selectedPosColor = ''.obs;
+
+  static const soldByOptions = ['Each', 'Weight', 'Open'];
+  static const posColorOptions = <String>[
+    '',
+    '#2196F3',
+    '#FF9800',
+    '#4CAF50',
+    '#E91E63',
+    '#9C27B0',
+    '#00BCD4',
+    '#FF5722',
+    '#795548',
+    '#9E9E9E',
+    '#3F51B5',
+    '#009688',
+    '#CDDC39',
+    '#F44336',
+    '#212121',
+  ];
+
   // Image picker
   final ImagePicker _picker = ImagePicker();
   var selectedImage = Rx<File?>(null);
@@ -53,6 +84,7 @@ class AddMenuItemController extends BaseController {
 
   // Default category list
   RxList<String> categories = <String>['none'].obs;
+  final RxList<CategoryData> categoryDetails = <CategoryData>[].obs;
 
   void _setCategoryNames(Iterable<String> names) {
     final unique = <String>['none'];
@@ -82,6 +114,14 @@ class AddMenuItemController extends BaseController {
     if (match != null) {
       selectedCategory.value = match;
     }
+  }
+
+  String getCategoryImageUrl(String categoryName) {
+    final normalized = categoryName.trim().toLowerCase();
+    final category = categoryDetails.firstWhereOrNull(
+      (item) => item.categoryName.trim().toLowerCase() == normalized,
+    );
+    return category?.imageURL ?? '';
   }
 
   // Upload image from gallery
@@ -669,6 +709,303 @@ class AddMenuItemController extends BaseController {
     isComboItem.value = normalized == comboCategoryName;
   }
 
+  /// Quick-add a category from the add-item form and select it.
+  Future<void> showQuickAddCategoryDialog() async {
+    final context = Get.context;
+    if (context == null) return;
+
+    final loc = AppLocalizations.of(context)!;
+    final nameController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final isSaving = false.obs;
+
+    try {
+      final createdName = await Get.dialog<String>(
+        Dialog(
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 32,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Builder(
+              builder: (dialogContext) {
+                return Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.viewInsetsOf(dialogContext).bottom,
+                  ),
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColor.primary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  Icons.category_outlined,
+                                  color: AppColor.primary,
+                                  size: 22,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  loc.add_category,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: loc.cancel,
+                                onPressed: () => Get.back(),
+                                icon: const Icon(Icons.close),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                          child: Text(
+                            loc.enter_category_name,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                          child: TextFormField(
+                            controller: nameController,
+                            autofocus: true,
+                            textInputAction: TextInputAction.done,
+                            textCapitalization: TextCapitalization.words,
+                            decoration: InputDecoration(
+                              labelText: loc.category_name,
+                              hintText: loc.enter_category_name,
+                              filled: true,
+                              fillColor: Colors.grey[50],
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide:
+                                    BorderSide(color: Colors.grey[300]!),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: AppColor.primary,
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                            validator: (value) {
+                              final trimmed = value?.trim() ?? '';
+                              if (trimmed.isEmpty ||
+                                  trimmed.toLowerCase() == 'none') {
+                                return loc.category_name_cannot_be_empty;
+                              }
+                              return null;
+                            },
+                            onFieldSubmitted: (_) async {
+                              if (isSaving.value) return;
+                              await _submitQuickAddCategory(
+                                formKey: formKey,
+                                nameController: nameController,
+                                isSaving: isSaving,
+                              );
+                            },
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                          child: Obx(
+                            () => Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: isSaving.value
+                                        ? null
+                                        : () => Get.back(),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.grey[700],
+                                      side:
+                                          BorderSide(color: Colors.grey[300]!),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                    ),
+                                    child: Text(loc.cancel),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: isSaving.value
+                                        ? null
+                                        : () => _submitQuickAddCategory(
+                                            formKey: formKey,
+                                            nameController: nameController,
+                                            isSaving: isSaving,
+                                          ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColor.primary,
+                                      foregroundColor: Colors.white,
+                                      disabledBackgroundColor:
+                                          AppColor.primary.withOpacity(0.6),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                    ),
+                                    child: isSaving.value
+                                        ? const SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : Text(loc.add_category),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        barrierDismissible: false,
+      );
+
+      if (createdName != null && createdName.isNotEmpty) {
+        selectCategory(createdName);
+      }
+    } finally {
+      nameController.dispose();
+    }
+  }
+
+  Future<void> _submitQuickAddCategory({
+    required GlobalKey<FormState> formKey,
+    required TextEditingController nameController,
+    required RxBool isSaving,
+  }) async {
+    if (!(formKey.currentState?.validate() ?? false)) return;
+    if (isSaving.value) return;
+
+    isSaving.value = true;
+    try {
+      final created = await createCategoryQuick(nameController.text);
+      if (created != null) {
+        Get.back(result: created);
+      }
+    } finally {
+      isSaving.value = false;
+    }
+  }
+
+  /// Creates a category via API (or returns existing local match), then refreshes lists.
+  Future<String?> createCategoryQuick(String rawName) async {
+    final loc = AppLocalizations.of(Get.context!)!;
+    final name = rawName.trim();
+    if (name.isEmpty || name.toLowerCase() == 'none') {
+      showError(description: loc.category_name_cannot_be_empty);
+      return null;
+    }
+
+    final normalized = name.toLowerCase();
+    final existing = categories.firstWhereOrNull(
+      (c) => c.trim().toLowerCase() == normalized,
+    );
+    if (existing != null) return existing;
+
+    final outletId = appPref.selectedOutlet?.id;
+    final userId = appPref.user?.id;
+    if (outletId == null || userId == null) return null;
+
+    final response = await callApi(
+      apiClient.addCategory(outletId, {
+        'userId': userId,
+        'outletId': outletId,
+        'categoryName': normalized,
+      }),
+      showLoader: false,
+    );
+
+    if (response == null || response['status'] != 'success') {
+      showError(
+        description: response?['message'] ?? loc.failed_to_add_category,
+      );
+      return null;
+    }
+
+    await getCategories();
+    await _refreshCategoryListsOnly();
+
+    final match = categories.firstWhereOrNull(
+      (c) => c.trim().toLowerCase() == normalized,
+    );
+    if (match == null) {
+      _setCategoryNames([...categories, name]);
+    }
+
+    showSuccess(
+      description: response['message'] ?? loc.category_added_successfully,
+    );
+    return categories.firstWhereOrNull(
+          (c) => c.trim().toLowerCase() == normalized,
+        ) ??
+        name;
+  }
+
+  Future<void> _refreshCategoryListsOnly() async {
+    try {
+      if (Get.isRegistered<MenuItemController>()) {
+        await Get.find<MenuItemController>().getCategories();
+      }
+    } catch (e) {
+      debugPrint('Failed to refresh menu categories: $e');
+    }
+
+    try {
+      if (Get.isRegistered<AddOrderController>()) {
+        await Get.find<AddOrderController>().getCategories();
+      }
+    } catch (e) {
+      debugPrint('Failed to refresh add-order categories: $e');
+    }
+  }
+
   void setComboItem(bool value) {
     isComboItem.value = value;
     if (value) {
@@ -686,27 +1023,108 @@ class AddMenuItemController extends BaseController {
     }
   }
 
-  List<ItemData> get comboComponentOptions {
+  /// Persists the selected category (e.g. "combo") so menu/order screens can show it.
+  Future<void> _ensureSelectedCategoryExists() async {
+    final categoryName = selectedCategory.value.trim().toLowerCase();
+    if (categoryName.isEmpty || categoryName == 'none') return;
+
+    final outletId = appPref.selectedOutlet?.id;
+    final userId = appPref.user?.id;
+    if (outletId == null || userId == null) return;
+
+    if (Get.isRegistered<MenuItemController>()) {
+      final menu = Get.find<MenuItemController>();
+      final alreadyPersisted = menu.categories.any(
+        (c) => c.categoryName.trim().toLowerCase() == categoryName,
+      );
+      if (alreadyPersisted) return;
+    }
+
+    await callApi(
+      apiClient.addCategory(outletId, {
+        'userId': userId,
+        'outletId': outletId,
+        'categoryName': categoryName,
+      }),
+      showLoader: false,
+      // Category may already exist on the server — ignore conflict toasts.
+      apiErrorHandler: (_) async => true,
+    );
+  }
+
+  Future<void> _refreshRelatedLists() async {
     try {
-      final source = comboOptionItems.isNotEmpty
-          ? comboOptionItems
-          : menuItemController.allItems.isNotEmpty
-          ? menuItemController.allItems
-          : menuItemController.items;
-      return source
-          .where((item) => item.id != itemId.value && !item.isCombo)
-          .toList();
-    } catch (_) {
-      return const [];
+      if (Get.isRegistered<MenuItemController>()) {
+        final menu = Get.find<MenuItemController>();
+        await menu.getCategories();
+        await menu.getItems(showLoader: false, forceApiRefresh: true);
+      }
+    } catch (e) {
+      debugPrint('Failed to refresh menu lists: $e');
+    }
+
+    try {
+      if (Get.isRegistered<AddOrderController>()) {
+        final addOrderController = Get.find<AddOrderController>();
+        await addOrderController.getCategories();
+        addOrderController.resetPagination();
+        await addOrderController.getItems();
+      }
+    } catch (e) {
+      debugPrint('Failed to refresh add-order lists: $e');
+    }
+  }
+
+  List<ItemData> _comboOptionSource() {
+    _ensureMenuItemController();
+    if (comboOptionItems.isNotEmpty) {
+      return List<ItemData>.from(comboOptionItems);
+    }
+    final menu = menuItemController;
+    if (menu == null) return const [];
+    if (menu.allItems.isNotEmpty) return List<ItemData>.from(menu.allItems);
+    return List<ItemData>.from(menu.items);
+  }
+
+  void _ensureMenuItemController() {
+    if (menuItemController != null) return;
+    if (Get.isRegistered<MenuItemController>()) {
+      menuItemController = Get.find<MenuItemController>();
+    }
+  }
+
+  List<ItemData> get comboComponentOptions {
+    final currentId = itemId.value;
+    return _comboOptionSource()
+        .where(
+          (item) =>
+              item.id.isNotEmpty && item.id != currentId && !item.isCombo,
+        )
+        .toList();
+  }
+
+  /// Instantly fills picker options from in-memory menu items (no network).
+  void seedComboComponentOptions() {
+    if (comboOptionItems.isNotEmpty) return;
+    final cached = _comboOptionSource();
+    if (cached.isNotEmpty) {
+      comboOptionItems.assignAll(cached);
     }
   }
 
   Future<void> loadComboComponentOptions() async {
     if (isLoadingComboOptions.value) return;
+
+    seedComboComponentOptions();
+
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) return;
 
-    isLoadingComboOptions.value = true;
+    final hadCachedOptions = comboOptionItems.isNotEmpty;
+    // Only show the spinner when there is nothing to display yet.
+    if (!hadCachedOptions) {
+      isLoadingComboOptions.value = true;
+    }
     try {
       final response = await callApi(
         apiClient.getItems(outletId, 1, 500, null, null, null, null),
@@ -716,7 +1134,9 @@ class AddMenuItemController extends BaseController {
         comboOptionItems.assignAll(response!.data);
       }
     } finally {
-      isLoadingComboOptions.value = false;
+      if (!hadCachedOptions) {
+        isLoadingComboOptions.value = false;
+      }
     }
   }
 
@@ -731,26 +1151,30 @@ class AddMenuItemController extends BaseController {
       .toList();
 
   void setComboComponent(ItemData item, bool selected) {
+    if (item.id.isEmpty) return;
     if (selected) {
       comboComponentQuantities[item.id] =
           comboComponentQuantities[item.id] ?? 1;
     } else {
       comboComponentQuantities.remove(item.id);
     }
+    comboComponentQuantities.refresh();
   }
 
   void incrementComboComponent(String itemId) {
     comboComponentQuantities[itemId] =
         (comboComponentQuantities[itemId] ?? 0) + 1;
+    comboComponentQuantities.refresh();
   }
 
   void decrementComboComponent(String itemId) {
     final current = comboComponentQuantities[itemId] ?? 0;
     if (current <= 1) {
       comboComponentQuantities.remove(itemId);
-      return;
+    } else {
+      comboComponentQuantities[itemId] = current - 1;
     }
-    comboComponentQuantities[itemId] = current - 1;
+    comboComponentQuantities.refresh();
   }
 
   void saveAndNew() {
@@ -794,7 +1218,7 @@ class AddMenuItemController extends BaseController {
       if (Get.isDialogOpen == true) {
         Get.back();
       }
-      menuItemController.getItems(showLoader: false, forceApiRefresh: true);
+      menuItemController?.getItems(showLoader: false, forceApiRefresh: true);
       if (Modular.to.canPop()) {
         Modular.to.pop();
       }
@@ -812,7 +1236,7 @@ class AddMenuItemController extends BaseController {
       checkSubscription();
       return;
     }
-    onAddItem(closeOnSuccess: false);
+    onAddItem(closeOnSuccess: true);
   }
 
   void onUpdateItem() async {
@@ -820,6 +1244,7 @@ class AddMenuItemController extends BaseController {
     if (selectedImage.value != null) {
       await uploadItemImage();
     }
+    await _ensureSelectedCategoryExists();
     final request = ItemRequest(
       showItem: isAvailable.value,
       isRecommended: markAsFavorite.value,
@@ -836,6 +1261,14 @@ class AddMenuItemController extends BaseController {
           ? 'none'
           : selectedCategory.value,
       orderFrom: 'None',
+      barcode: barcodeController.text.trim(),
+      sku: skuController.text.trim(),
+      soldBy: selectedSoldBy.value,
+      costPrice: double.tryParse(costPriceController.text) ?? 0.0,
+      posColor: selectedPosColor.value,
+      trackStock: trackStock.value,
+      stockQuantity: double.tryParse(stockController.text) ?? 0.0,
+      minStock: double.tryParse(minStockController.text) ?? 0.0,
       prepTimeMinutes: _parsedPrepTimeMinutes(),
       isCombo: isComboItem.value,
       comboComponents: selectedComboComponents,
@@ -847,8 +1280,8 @@ class AddMenuItemController extends BaseController {
       selectedImage.value = null;
       imagePath.value = '';
       aiScanResult.value = null;
+      await _refreshRelatedLists();
       Get.back();
-      menuItemController.getItems(showLoader: false, forceApiRefresh: true);
       dismissAllAppLoader();
       showSuccess(description: response['message']);
     }
@@ -864,6 +1297,7 @@ class AddMenuItemController extends BaseController {
       fetchFromApi: () => callApi(apiClient.getCategories(outletId)),
     );
 
+    categoryDetails.assignAll(categoryList);
     _setCategoryNames(categoryList.map((e) => e.categoryName));
     dismissAllAppLoader();
   }
@@ -874,11 +1308,19 @@ class AddMenuItemController extends BaseController {
     isEdit.value = false;
     itemNameController.clear();
     salePriceController.clear();
+    costPriceController.clear();
+    barcodeController.clear();
+    skuController.clear();
+    stockController.clear();
+    minStockController.clear();
     prepTimeController.text = '15';
     selectedCategory.value = 'none';
     selectedTaxPercentage.value = 'None';
     isWithTax.value = false;
     isAvailable.value = true;
+    trackStock.value = false;
+    selectedSoldBy.value = 'Each';
+    selectedPosColor.value = '';
     markAsFavorite.value = false;
     isComboItem.value = false;
     comboComponentQuantities.clear();
@@ -906,7 +1348,18 @@ class AddMenuItemController extends BaseController {
 
     itemNameController.text = item.itemName;
     salePriceController.text = item.salePrice.toString();
+    costPriceController.text =
+        item.costPrice > 0 ? item.costPrice.toString() : '';
+    barcodeController.text = item.barcode;
+    skuController.text = item.sku;
+    stockController.text =
+        item.trackStock ? item.stockQuantity.toString() : '';
+    minStockController.text = item.minStock > 0 ? item.minStock.toString() : '';
     prepTimeController.text = item.prepTimeMinutes.toString();
+    trackStock.value = item.trackStock;
+    selectedSoldBy.value =
+        soldByOptions.contains(item.soldBy) ? item.soldBy : 'Each';
+    selectedPosColor.value = item.posColor;
 
     _applyCategoryFromArgs(item.category);
     isComboItem.value =
@@ -964,6 +1417,7 @@ class AddMenuItemController extends BaseController {
       final menuCategories = Get.find<MenuItemController>().categories;
       if (menuCategories.isEmpty) return;
 
+      categoryDetails.assignAll(menuCategories);
       _setCategoryNames(menuCategories.map((e) => e.categoryName));
     } catch (e) {
       debugPrint('Failed to seed categories from menu screen: $e');
@@ -987,11 +1441,19 @@ class AddMenuItemController extends BaseController {
   void resetForm() {
     itemNameController.clear();
     salePriceController.clear();
+    costPriceController.clear();
+    barcodeController.clear();
+    skuController.clear();
+    stockController.clear();
+    minStockController.clear();
     prepTimeController.text = '15';
     selectedCategory.value = 'none';
     selectedTaxPercentage.value = 'None';
     isWithTax.value = false;
     isAvailable.value = true;
+    trackStock.value = false;
+    selectedSoldBy.value = 'Each';
+    selectedPosColor.value = '';
     selectedImage.value = null;
     imagePath.value = '';
     imageUrl.value = '';
@@ -1012,6 +1474,8 @@ class AddMenuItemController extends BaseController {
       }
     }
 
+    await _ensureSelectedCategoryExists();
+
     final request = ItemRequest(
       showItem: isAvailable.value,
       isRecommended: markAsFavorite.value,
@@ -1028,6 +1492,14 @@ class AddMenuItemController extends BaseController {
           ? 'none'
           : selectedCategory.value,
       orderFrom: 'None',
+      barcode: barcodeController.text.trim(),
+      sku: skuController.text.trim(),
+      soldBy: selectedSoldBy.value,
+      costPrice: double.tryParse(costPriceController.text) ?? 0.0,
+      posColor: selectedPosColor.value,
+      trackStock: trackStock.value,
+      stockQuantity: double.tryParse(stockController.text) ?? 0.0,
+      minStock: double.tryParse(minStockController.text) ?? 0.0,
       prepTimeMinutes: _parsedPrepTimeMinutes(),
       isCombo: isComboItem.value,
       comboComponents: selectedComboComponents,
@@ -1036,7 +1508,7 @@ class AddMenuItemController extends BaseController {
     final response = await callApi(apiClient.addItem(request));
 
     if (response['status'] == 'success') {
-      menuItemController.getItems(showLoader: false, forceApiRefresh: true);
+      await _refreshRelatedLists();
       showSuccess(
         description: response['message'] ?? 'Item added successfully',
       );
@@ -1068,10 +1540,10 @@ class AddMenuItemController extends BaseController {
   }
 
   void initializecontroller() {
-    try {
+    if (Get.isRegistered<MenuItemController>()) {
       menuItemController = Get.find<MenuItemController>();
-    } catch (e) {
-      debugPrint('MenuItemController not found: $e');
+    } else {
+      debugPrint('MenuItemController not registered yet');
     }
   }
 
@@ -1132,10 +1604,300 @@ class AddMenuItemController extends BaseController {
     }
   }
 
+  /// Opens barcode scan options (handheld USB / phone camera) and fills
+  /// [barcodeController] with the result.
+  Future<void> scanBarcode() async {
+    final method = await Get.dialog<String>(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.qr_code_scanner, color: AppColor.primary),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text(
+                        'Scan barcode',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Get.back(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Choose how you want to scan',
+                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 14),
+                _scanMethodTile(
+                  icon: Icons.scanner,
+                  title: 'Handheld scanner (USB)',
+                  subtitle: 'Retsol LS450 or any keyboard scanner',
+                  onTap: () => Get.back(result: 'usb'),
+                ),
+                const SizedBox(height: 10),
+                _scanMethodTile(
+                  icon: Icons.phone_android,
+                  title: 'Phone camera',
+                  subtitle: 'Use BillKaro mobile on the same Wi‑Fi',
+                  onTap: () => Get.back(result: 'phone'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (method == null) return;
+
+    final String? result;
+    if (method == 'phone') {
+      result = await showPhoneBarcodePairDialog();
+    } else {
+      result = await _scanBarcodeWithHandheld();
+    }
+
+    if (result == null || result.isEmpty) return;
+    barcodeController.text = result;
+    showSuccess(description: 'Barcode scanned: $result');
+    await lookupOpenFoodFactsByBarcode(result);
+  }
+
+  /// Fetches product details from Open Food Facts and fills/refreshes the form.
+  Future<void> lookupOpenFoodFactsByBarcode([String? barcode]) async {
+    final code = (barcode ?? barcodeController.text).trim();
+    if (code.isEmpty) {
+      showError(description: 'Enter or scan a barcode first');
+      return;
+    }
+
+    showAppLoader();
+    try {
+      final details = await OpenFoodFactsService.fetchByBarcode(code);
+      if (details == null) {
+        showError(
+          description: 'No product found on Open Food Facts for $code',
+        );
+        return;
+      }
+
+      barcodeController.text = details.barcode;
+
+      final name = details.displayName;
+      if (name != null && name.isNotEmpty) {
+        itemNameController.text = name;
+      }
+
+      if (details.imageUrl != null && details.imageUrl!.isNotEmpty) {
+        final file =
+            await OpenFoodFactsService.downloadImage(details.imageUrl!);
+        if (file != null) {
+          selectedImage.value = file;
+          imagePath.value = file.path;
+          // Clear previous remote URL so the new local file is used on save.
+          imageUrl.value = '';
+        }
+      }
+
+      if (details.price != null && details.price! > 0) {
+        salePriceController.text = details.price!
+            .toStringAsFixed(details.price!.truncateToDouble() == details.price! ? 0 : 2);
+      }
+
+      final priceLabel = details.price != null
+          ? ' · ₹${details.price}'
+          : '';
+      showSuccess(
+        description: name != null && name.isNotEmpty
+            ? 'Updated from Open Food Facts: $name$priceLabel'
+            : 'Product updated from Open Food Facts$priceLabel',
+      );
+    } finally {
+      dismissAppLoader();
+    }
+  }
+
+  Widget _scanMethodTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.grey.shade50,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: AppColor.primary, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: Colors.grey[500]),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<String?> _scanBarcodeWithHandheld() async {
+    final inputController = TextEditingController(
+      text: barcodeController.text,
+    );
+    final result = await Get.dialog<String>(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.qr_code_scanner, color: AppColor.primary),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text(
+                        'Handheld scanner',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Get.back(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '1. Plug in your handheld scanner (e.g. Retsol LS450) via USB.\n'
+                  '2. Keep this box focused (already ready).\n'
+                  '3. Aim at the barcode and press the trigger.\n'
+                  'The code will appear here automatically — then press Enter or Use barcode.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: inputController,
+                  autofocus: true,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (value) {
+                    final trimmed = value.trim();
+                    if (trimmed.isNotEmpty) Get.back(result: trimmed);
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Point scanner here and pull the trigger…',
+                    prefixIcon: Icon(
+                      Icons.qr_code_scanner,
+                      color: AppColor.primary,
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                        color: AppColor.primary,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Get.back(),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          final trimmed = inputController.text.trim();
+                          if (trimmed.isEmpty) return;
+                          Get.back(result: trimmed);
+                        },
+                        child: const Text('Use barcode'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: true,
+    );
+    inputController.dispose();
+    return result;
+  }
+
   @override
   void onClose() {
     itemNameController.dispose();
     salePriceController.dispose();
+    costPriceController.dispose();
+    barcodeController.dispose();
+    skuController.dispose();
+    stockController.dispose();
+    minStockController.dispose();
     prepTimeController.dispose();
     super.onClose();
   }

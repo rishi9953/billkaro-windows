@@ -282,7 +282,7 @@ class PurchaseOrderController extends BaseController {
 
   Future<bool> receiveOrder(String id) => receivePurchaseOrder(id);
 
-  void confirmDelete(
+  void confirmCancelPo(
     String name,
     Future<bool> Function() onConfirm,
     AppLocalizations loc,
@@ -290,17 +290,20 @@ class PurchaseOrderController extends BaseController {
     Get.dialog(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        title: Text(loc.confirm_delete),
-        content: Text(loc.delete_confirm_message(name)),
+        title: Text(loc.cancel_po_title),
+        content: Text(loc.cancel_po_confirm_message(name)),
         actions: [
-          TextButton(onPressed: () => Get.back(), child: Text(loc.cancel)),
+          TextButton(onPressed: () => Get.back(), child: Text(loc.keep_po)),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () async {
               await onConfirm();
               Get.back();
             },
-            child: Text(loc.delete),
+            child: Text(loc.yes_cancel_po),
           ),
         ],
       ),

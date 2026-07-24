@@ -365,8 +365,8 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                                   ) {
                                                     return Obx(
                                                       () => OrderItemCard(
-                                                        imageUrl:
-                                                            item.itemImage,
+                                                        imageUrl: item.itemImage,
+                                                        posColor: item.posColor,
                                                         itemName:
                                                             item
                                                                 .itemName
@@ -452,8 +452,8 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                                   ...noneItems.map((item) {
                                                     return Obx(
                                                       () => OrderItemCard(
-                                                        imageUrl:
-                                                            item.itemImage,
+                                                        imageUrl: item.itemImage,
+                                                        posColor: item.posColor,
                                                         itemName:
                                                             item
                                                                 .itemName
@@ -558,6 +558,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                                   return Obx(
                                                     () => OrderItemCard(
                                                       imageUrl: item.itemImage,
+                                                        posColor: item.posColor,
                                                       itemName:
                                                           item
                                                               .itemName
@@ -681,6 +682,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                             return Obx(
                                               () => OrderItemCard(
                                                 imageUrl: item.itemImage,
+                                                        posColor: item.posColor,
                                                 itemName:
                                                     item.itemName.capitalize ??
                                                     '',
@@ -2390,6 +2392,7 @@ class OrderItemCard extends StatelessWidget {
   final String itemName;
   final double price;
   final String? imageUrl;
+  final String posColor;
   final int quantity;
   final VoidCallback onDelete;
   final VoidCallback onIncrement;
@@ -2405,13 +2408,24 @@ class OrderItemCard extends StatelessWidget {
     required this.onDecrement,
     this.onQuickAdd,
     this.imageUrl,
+    this.posColor = '',
     this.quantity = 0,
   });
+
+  Color? get _posColor {
+    if (posColor.isEmpty) return null;
+    var value = posColor.replaceFirst('#', '');
+    if (value.length == 6) value = 'FF$value';
+    if (value.length != 8) return null;
+    return Color(int.parse(value, radix: 16));
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDesktop =
         GetPlatform.isWindows || GetPlatform.isMacOS || GetPlatform.isLinux;
+    final tileColor = _posColor;
+    final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
     return InkWell(
       onTap: onQuickAdd ?? onIncrement,
       borderRadius: BorderRadius.circular(isDesktop ? 10 : 16),
@@ -2444,14 +2458,31 @@ class OrderItemCard extends StatelessWidget {
               ),
               child: SizedBox(
                 height: 110,
-                child: imageUrl == null || imageUrl!.isEmpty
-                    ? Assets.svg.placeholder.svg(fit: BoxFit.cover)
-                    : Image.network(
+                child: hasImage
+                    ? Image.network(
                         imageUrl!,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            Assets.svg.placeholder.svg(fit: BoxFit.cover),
-                      ),
+                        errorBuilder: (_, __, ___) => tileColor != null
+                            ? ColoredBox(color: tileColor)
+                            : Assets.svg.placeholder.svg(fit: BoxFit.cover),
+                      )
+                    : tileColor != null
+                    ? ColoredBox(
+                        color: tileColor,
+                        child: Center(
+                          child: Text(
+                            itemName.isNotEmpty
+                                ? itemName.substring(0, 1).toUpperCase()
+                                : '?',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 36,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      )
+                    : Assets.svg.placeholder.svg(fit: BoxFit.cover),
               ),
             ),
             Padding(

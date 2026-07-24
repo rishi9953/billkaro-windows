@@ -27,7 +27,7 @@ class MenuProductsTemplateService {
 
     sheet.getRangeByIndex(2, 1).setText('Sample Item');
     sheet.getRangeByIndex(2, 2).setNumber(100);
-    sheet.getRangeByIndex(2, 3).setText('Beverages');
+    sheet.getRangeByIndex(2, 3).setText('beverages');
     sheet.getRangeByIndex(2, 4).setNumber(5);
     sheet
         .getRangeByIndex(2, 5)
@@ -89,8 +89,19 @@ class MenuProductsTemplateService {
       saveDir.createSync(recursive: true);
     }
 
-    final fullPath = '${saveDir.path}/$fileName';
-    await File(fullPath).writeAsBytes(bytes);
+    var fullPath = '${saveDir.path}/$fileName';
+    try {
+      await File(fullPath).writeAsBytes(bytes, flush: true);
+    } on FileSystemException {
+      // The file is locked (e.g. still open in Excel on Windows),
+      // so save it under a unique name instead of failing.
+      final dotIndex = fileName.lastIndexOf('.');
+      final base = dotIndex == -1 ? fileName : fileName.substring(0, dotIndex);
+      final ext = dotIndex == -1 ? '' : fileName.substring(dotIndex);
+      fullPath =
+          '${saveDir.path}/${base}_${DateTime.now().millisecondsSinceEpoch}$ext';
+      await File(fullPath).writeAsBytes(bytes, flush: true);
+    }
     return fullPath;
   }
 

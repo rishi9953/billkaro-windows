@@ -18,6 +18,14 @@ class ItemRequest {
   final String outletId;
   final String category;
   final String itemImage;
+  final String barcode;
+  final String sku;
+  final String soldBy;
+  final double costPrice;
+  final String posColor;
+  final bool trackStock;
+  final double stockQuantity;
+  final double minStock;
   final bool showItem;
   @JsonKey(includeIfNull: false)
   final bool? isRecommended;
@@ -36,6 +44,14 @@ class ItemRequest {
     required this.outletId,
     required this.showItem,
     this.itemImage = '',
+    this.barcode = '',
+    this.sku = '',
+    this.soldBy = 'Each',
+    this.costPrice = 0,
+    this.posColor = '',
+    this.trackStock = false,
+    this.stockQuantity = 0,
+    this.minStock = 0,
     this.isRecommended,
     this.prepTimeMinutes = 15,
     this.isCombo = false,

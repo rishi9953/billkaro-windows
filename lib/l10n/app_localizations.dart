@@ -3569,6 +3569,18 @@ abstract class AppLocalizations {
   /// **'Box (BOX)'**
   String get box_box;
 
+  /// No description provided for @dozen_doz.
+  ///
+  /// In en, this message translates to:
+  /// **'Dozen (Doz)'**
+  String get dozen_doz;
+
+  /// No description provided for @bottle_btl.
+  ///
+  /// In en, this message translates to:
+  /// **'Bottle (Btl)'**
+  String get bottle_btl;
+
   /// No description provided for @stock.
   ///
   /// In en, this message translates to:
@@ -5222,7 +5234,7 @@ abstract class AppLocalizations {
   /// No description provided for @inventory_subtitle.
   ///
   /// In en, this message translates to:
-  /// **'Stock · Suppliers · Recipes'**
+  /// **'Raw materials · Product stock · Recipes'**
   String get inventory_subtitle;
 
   /// No description provided for @tab_overview.
@@ -5416,6 +5428,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Supplier: {name} · {date}'**
   String purchase_order_supplier_date(String name, String date);
+
+  /// No description provided for @purchase_order_supplier_created_date.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier: {name} · Created: {date}'**
+  String purchase_order_supplier_created_date(String name, String date);
+
+  /// No description provided for @purchase_order_supplier_updated_date.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier: {name} · Updated: {date}'**
+  String purchase_order_supplier_updated_date(String name, String date);
 
   /// No description provided for @purchase_order_line_item.
   ///
@@ -6005,6 +6029,30 @@ abstract class AppLocalizations {
   /// **'Cancel PO'**
   String get cancel_po;
 
+  /// No description provided for @cancel_po_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel Purchase Order'**
+  String get cancel_po_title;
+
+  /// No description provided for @cancel_po_confirm_message.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to cancel this P.O ({name})?'**
+  String cancel_po_confirm_message(String name);
+
+  /// No description provided for @keep_po.
+  ///
+  /// In en, this message translates to:
+  /// **'No, Keep It'**
+  String get keep_po;
+
+  /// No description provided for @yes_cancel_po.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes, Cancel'**
+  String get yes_cancel_po;
+
   /// No description provided for @view_details.
   ///
   /// In en, this message translates to:
@@ -6526,6 +6574,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Date of Birth'**
   String get date_of_birth;
+
+  /// No description provided for @join_date.
+  ///
+  /// In en, this message translates to:
+  /// **'Join Date'**
+  String get join_date;
 
   /// No description provided for @gender_label.
   ///

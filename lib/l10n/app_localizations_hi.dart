@@ -1806,6 +1806,12 @@ class AppLocalizationsHi extends AppLocalizations {
   String get box_box => 'बॉक्स (BOX)';
 
   @override
+  String get dozen_doz => 'दर्जन (Doz)';
+
+  @override
+  String get bottle_btl => 'बोतल (Btl)';
+
+  @override
   String get stock => 'स्टॉक';
 
   @override
@@ -2808,6 +2814,16 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
+  String purchase_order_supplier_created_date(String name, String date) {
+    return 'आपूर्तिकर्ता: $name · निर्मित: $date';
+  }
+
+  @override
+  String purchase_order_supplier_updated_date(String name, String date) {
+    return 'आपूर्तिकर्ता: $name · अपडेटेड: $date';
+  }
+
+  @override
   String purchase_order_line_item(String name, String quantity, String unit, String price) {
     return '$name: $quantity $unit @ ₹$price';
   }
@@ -3122,6 +3138,20 @@ class AppLocalizationsHi extends AppLocalizations {
   String get cancel_po => 'PO रद्द करें';
 
   @override
+  String get cancel_po_title => 'खरीद ऑर्डर रद्द करें';
+
+  @override
+  String cancel_po_confirm_message(String name) {
+    return 'क्या आप वाकई इस P.O ($name) को रद्द करना चाहते हैं?';
+  }
+
+  @override
+  String get keep_po => 'नहीं, रखें';
+
+  @override
+  String get yes_cancel_po => 'हाँ, रद्द करें';
+
+  @override
   String get view_details => 'विवरण देखें';
 
   @override
@@ -3395,6 +3425,9 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get date_of_birth => 'जन्म तिथि';
+
+  @override
+  String get join_date => 'ज्वाइन तिथि';
 
   @override
   String get gender_label => 'लिंग';

@@ -86,7 +86,7 @@ class _HeaderExpanded extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           child: hasLogo
               ? CachedNetworkImage(
-                  imageUrl: outlet.logo as String,
+                  imageUrl: resolvedMediaUrl(outlet.logo as String),
                   width: 40,
                   height: 40,
                   fit: BoxFit.cover,

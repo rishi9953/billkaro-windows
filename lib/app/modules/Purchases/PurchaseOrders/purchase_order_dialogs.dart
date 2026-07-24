@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:billkaro/app/Widgets/app_date_picker.dart';
 import 'package:billkaro/app/Widgets/app_dropdowns.dart';
 import 'package:billkaro/app/Widgets/windows_desktop_title_bar.dart';
-import 'package:billkaro/app/modules/Inventory/inventory_controller.dart';
 import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_controller.dart';
 import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_drawer_scope.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
@@ -36,10 +35,7 @@ Future<bool> confirmDiscardPurchaseOrderForm(
               : 'You have unsaved purchase order details. Are you sure you want to discard them?',
         ),
         actions: [
-          TextButton(
-            onPressed: () => close(false),
-            child: Text(loc.stay),
-          ),
+          TextButton(onPressed: () => close(false), child: Text(loc.stay)),
           ElevatedButton(
             onPressed: () => close(true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -64,7 +60,7 @@ Widget _poDrawerNavigatorShell({
   builder,
   required VoidCallback closeDrawer,
 }) {
-  final width = math.min(960.0, MediaQuery.sizeOf(context).width * 0.62);
+  final width = math.min(1200.0, MediaQuery.sizeOf(context).width * 0.85);
   return SizedBox(
     width: width,
     child: Navigator(
@@ -386,7 +382,7 @@ Widget _poDrawerShell({
   required Widget footer,
   required BuildContext context,
 }) {
-  final width = math.min(960.0, MediaQuery.of(context).size.width * 0.62);
+  final width = math.min(1200.0, MediaQuery.of(context).size.width * 0.85);
   return Material(
     color: _poBg,
     elevation: 16,
@@ -443,7 +439,7 @@ Widget _poDrawerShell({
 }
 
 Widget _poDrawerFooter({
-  required String totalLabel,
+  required Widget totals,
   required List<Widget> actions,
 }) {
   return Container(
@@ -461,16 +457,7 @@ Widget _poDrawerFooter({
     ),
     child: Row(
       children: [
-        Expanded(
-          child: Text(
-            totalLabel,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: _poAccent,
-            ),
-          ),
-        ),
+        Expanded(child: totals),
         ...actions,
       ],
     ),
@@ -673,8 +660,7 @@ Future<void> showEditPurchaseOrderDialog(
   PurchaseOrderData order, {
   double drawerTopInset = 0,
   String? drawerTabId,
-}
-) async {
+}) async {
   final loc = AppLocalizations.of(Get.context!)!;
   final status = order.status.toUpperCase();
   if (status != 'PENDING' && status != 'DRAFT') {
@@ -815,7 +801,20 @@ Future<void> showCreatePurchaseOrderDialog(
     ownerTabId: drawerTabId,
     builder: (context, setState, closeDrawer) {
       final supplier = c.suppliers.firstWhereOrNull((s) => s.id == supplierId);
-      final total = lines.fold<double>(0, (sum, l) => sum + l.lineTotal);
+      double lineTaxRate(_PoLineDraft line) {
+        final material = c.rawMaterials.firstWhereOrNull(
+          (m) => m.id == line.rawMaterialId,
+        );
+        return material?.taxRate ?? 18;
+      }
+
+      var subTotal = 0.0;
+      var totalTax = 0.0;
+      for (final line in lines) {
+        subTotal += line.lineTotal;
+        totalTax += line.lineTotal * lineTaxRate(line) / 100;
+      }
+      final grandTotal = subTotal + totalTax;
 
       void closePoForm() {
         closeDrawer();
@@ -1227,11 +1226,8 @@ Future<void> showCreatePurchaseOrderDialog(
                             ),
                             onPressed: () {
                               setState(
-                                () => lines.add(
-                                  _PoLineDraft(
-                                    rawMaterialId: '',
-                                  ),
-                                ),
+                                () =>
+                                    lines.add(_PoLineDraft(rawMaterialId: '')),
                               );
                             },
                             icon: const Icon(
@@ -1344,6 +1340,28 @@ Future<void> showCreatePurchaseOrderDialog(
                                         ),
                                       ),
                                     ),
+                                    SizedBox(
+                                      width: 64,
+                                      child: Text(
+                                        'Tax',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 12,
+                                          color: Color(0xFF374151),
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: 76,
+                                      child: Text(
+                                        loc.total,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 12,
+                                          color: Color(0xFF374151),
+                                        ),
+                                      ),
+                                    ),
                                     const SizedBox(width: 36),
                                   ],
                                 ),
@@ -1355,6 +1373,10 @@ Future<void> showCreatePurchaseOrderDialog(
                                     .firstWhereOrNull(
                                       (m) => m.id == line.rawMaterialId,
                                     );
+                                final taxRate = material?.taxRate ?? 18;
+                                final taxAmount =
+                                    line.lineTotal * taxRate / 100;
+                                final grossAmount = line.lineTotal + taxAmount;
                                 return Container(
                                   color: i.isEven
                                       ? Colors.white
@@ -1634,6 +1656,51 @@ Future<void> showCreatePurchaseOrderDialog(
                                           ),
                                         ),
                                       ),
+                                      SizedBox(
+                                        width: 64,
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: 6,
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                '${taxRate.toStringAsFixed(0)}%',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.grey.shade700,
+                                                ),
+                                              ),
+                                              Text(
+                                                '₹${taxAmount.toStringAsFixed(2)}',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.grey.shade700,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width: 76,
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: 10,
+                                          ),
+                                          child: Text(
+                                            '₹${grossAmount.toStringAsFixed(2)}',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 12,
+                                              color: _poAccent,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                       IconButton(
                                         icon: Icon(
                                           Icons.delete_outline,
@@ -1666,7 +1733,29 @@ Future<void> showCreatePurchaseOrderDialog(
             ),
           ),
           footer: _poDrawerFooter(
-            totalLabel: loc.po_grand_total('₹${total.toStringAsFixed(2)}'),
+            totals: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Sub Total: ₹${subTotal.toStringAsFixed(2)}   |   Tax: ₹${totalTax.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  loc.po_grand_total('₹${grandTotal.toStringAsFixed(2)}'),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: _poAccent,
+                  ),
+                ),
+              ],
+            ),
             actions: [
               TextButton(
                 onPressed: () => requestClosePoForm(),
@@ -2096,7 +2185,7 @@ Widget _poHeaderLogo({required String? logoUrl, required String businessName}) {
     return ConstrainedBox(
       constraints: const BoxConstraints(maxHeight: 100, maxWidth: 140),
       child: CachedNetworkImage(
-        imageUrl: url,
+        imageUrl: resolvedMediaUrl(url),
         fit: BoxFit.contain,
         alignment: Alignment.centerLeft,
         placeholder: (_, __) => const SizedBox(

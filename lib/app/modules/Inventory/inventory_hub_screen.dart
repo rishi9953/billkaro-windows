@@ -1,7 +1,9 @@
 import 'package:billkaro/app/modules/Inventory/inventory_controller.dart';
 import 'package:billkaro/app/modules/Inventory/inventory_dialogs.dart';
+import 'package:billkaro/app/modules/Inventory/product_stock_dialogs.dart';
 import 'package:billkaro/app/services/Modals/inventory/inventory_models.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 
 class InventoryHubScreen extends StatefulWidget {
@@ -24,7 +26,7 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         controller.selectedTab.value = _tabController.index;
@@ -102,6 +104,7 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
               tabs: [
                 Tab(text: loc.tab_overview),
                 Tab(text: loc.tab_raw_materials),
+                const Tab(text: 'Product Stock'),
                 Tab(text: loc.tab_stock_log),
                 Tab(text: loc.tab_suppliers),
                 Tab(text: loc.tab_recipes),
@@ -123,6 +126,7 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
                 children: [
                   _overviewTab(isWide, loc),
                   _rawMaterialsTab(isWide, loc),
+                  _productStockTab(isWide, loc),
                   _stockLogTab(isWide, loc),
                   _suppliersTab(isWide, loc),
                   _recipesTab(isWide, loc),
@@ -140,7 +144,7 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
               icon: const Icon(Icons.add_box_outlined),
               label: Text(loc.add_material),
             )
-          : _tabController.index == 3
+          : _tabController.index == 4
           ? FloatingActionButton.extended(
               onPressed: () => showAddSupplierDialog(controller),
               backgroundColor: _accent,
@@ -293,9 +297,26 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
                     showAddRecipeDialog(controller);
                   }),
                   _actionChip(loc.view_stock_log, Icons.history, () {
+                    _tabController.animateTo(3);
+                  }),
+                  _actionChip('Product Stock', Icons.inventory, () {
                     _tabController.animateTo(2);
                   }),
                 ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                ),
+                child: const Text(
+                  'Two stock systems: Raw Materials (ingredients via Recipes) and Product Stock (finished goods with Track Stock on items). Sales deduct both automatically when configured.',
+                  style: TextStyle(fontSize: 13, height: 1.35),
+                ),
               ),
               const SizedBox(height: 24),
               Row(
@@ -321,11 +342,15 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _infoPanel(
-                      loc.tracked_menu_items,
-                      '${d?.trackedMenuItems ?? 0}',
-                      Icons.restaurant_menu,
-                      Colors.green,
+                    child: InkWell(
+                      onTap: () => _tabController.animateTo(2),
+                      borderRadius: BorderRadius.circular(12),
+                      child: _infoPanel(
+                        'Tracked Products',
+                        '${d?.trackedMenuItems ?? 0}',
+                        Icons.inventory_2,
+                        Colors.green,
+                      ),
                     ),
                   ),
                 ],
@@ -336,6 +361,354 @@ class _InventoryHubScreenState extends State<InventoryHubScreen>
       ),
     );
   }
+
+  Widget _productStockTab(bool isWide, AppLocalizations loc) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            _toolbar(
+              loc: loc,
+              hint: 'Search product stock',
+              searchWidth: MediaQuery.of(context).size.width * 0.467,
+              onSearch: (v) {
+                controller.productStockSearch.value = v;
+                controller.loadProductStock();
+              },
+              filter: Obx(() {
+                final selected = controller.showProductLowStockOnly.value;
+                return SizedBox(
+                  height: 44,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      controller.showProductLowStockOnly.toggle();
+                      controller.loadProductStock();
+                    },
+                    icon: Icon(
+                      Icons.filter_alt,
+                      size: 18,
+                      color: selected ? Colors.white : Colors.black87,
+                    ),
+                    label: Text(
+                      'Low stock',
+                      style: TextStyle(
+                        color: selected ? Colors.white : Colors.black87,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: selected ? Colors.red : Colors.white,
+                      foregroundColor:
+                          selected ? Colors.white : Colors.black87,
+                      side: BorderSide(
+                        color: selected ? Colors.red : Colors.grey.shade300,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: Obx(() {
+                final items = controller.productStock;
+                if (items.isEmpty) {
+                  return _emptyCard(
+                    'No tracked products yet. Open Add Item and turn on Track Stock.',
+                  );
+                }
+                if (isWide) {
+                  return _productStockTable(items);
+                }
+                return ListView.separated(
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    return _productStockCard(item);
+                  },
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _productStockTable(List<ProductStockData> items) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F4F6),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
+              border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+            ),
+            child: const Row(
+              children: [
+                Expanded(flex: 3, child: Text('Product Name', style: _headerStyle)),
+                Expanded(flex: 2, child: Text('SKU', style: _headerStyle)),
+                Expanded(flex: 2, child: Text('Barcode', style: _headerStyle)),
+                Expanded(child: Text('Stock', style: _headerStyle)),
+                Expanded(flex: 2, child: Text('Status', style: _headerStyle)),
+                Expanded(flex: 2, child: Text('Adjust Stock', style: _headerStyle)),
+                Expanded(
+                  flex: 2,
+                  child: Text('Stock Movements', style: _headerStyle),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.separated(
+              itemCount: items.length,
+              separatorBuilder: (_, __) =>
+                  Divider(height: 1, color: Colors.grey.shade200),
+              itemBuilder: (_, i) {
+                final item = items[i];
+                final thumb = parseHexColor(item.posColor);
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: SizedBox(
+                                width: 36,
+                                height: 36,
+                                child: item.itemImage.isNotEmpty
+                                    ? CachedNetworkImage(
+                                        imageUrl: item.itemImage,
+                                        fit: BoxFit.cover,
+                                        errorWidget: (_, __, ___) => ColoredBox(
+                                          color: thumb ?? Colors.grey.shade300,
+                                        ),
+                                      )
+                                    : ColoredBox(
+                                        color: thumb ?? Colors.grey.shade300,
+                                      ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                item.itemName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          item.sku.isEmpty ? '--' : item.sku,
+                          style: TextStyle(color: Colors.grey.shade700),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          item.barcode.isEmpty ? '--' : item.barcode,
+                          style: TextStyle(color: Colors.grey.shade700),
+                        ),
+                      ),
+                      Expanded(child: _stockBadge(item)),
+                      Expanded(flex: 2, child: _statusText(item)),
+                      Expanded(
+                        flex: 2,
+                        child: TextButton.icon(
+                          onPressed: () =>
+                              showAdjustProductStockDialog(controller, item),
+                          icon: Icon(
+                            Icons.tune,
+                            size: 16,
+                            color: AppColor.primary,
+                          ),
+                          label: Text(
+                            'Adjust',
+                            style: TextStyle(
+                              color: AppColor.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            alignment: Alignment.centerLeft,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: TextButton.icon(
+                          onPressed: () => showProductStockMovementsDialog(
+                            controller,
+                            item,
+                          ),
+                          icon: Icon(
+                            Icons.history,
+                            size: 16,
+                            color: AppColor.primary,
+                          ),
+                          label: Text(
+                            'Movements',
+                            style: TextStyle(
+                              color: AppColor.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            alignment: Alignment.centerLeft,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _productStockCard(ProductStockData item) {
+    final thumb = parseHexColor(item.posColor);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: item.itemImage.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: item.itemImage,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) =>
+                                ColoredBox(color: thumb ?? Colors.grey.shade300),
+                          )
+                        : ColoredBox(color: thumb ?? Colors.grey.shade300),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    item.itemName,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                _stockBadge(item),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'SKU: ${item.sku.isEmpty ? '--' : item.sku}  ·  Barcode: ${item.barcode.isEmpty ? '--' : item.barcode}',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+            ),
+            const SizedBox(height: 4),
+            _statusText(item),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: () =>
+                      showAdjustProductStockDialog(controller, item),
+                  icon: Icon(Icons.tune, size: 16, color: AppColor.primary),
+                  label: Text(
+                    'Adjust',
+                    style: TextStyle(color: AppColor.primary),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () =>
+                      showProductStockMovementsDialog(controller, item),
+                  icon: Icon(Icons.history, size: 16, color: AppColor.primary),
+                  label: Text(
+                    'Movements',
+                    style: TextStyle(color: AppColor.primary),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _stockBadge(ProductStockData item) {
+    final low = item.status == 'Low Stock' || item.status == 'Out of Stock';
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: low ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          item.stockQuantity == item.stockQuantity.roundToDouble()
+              ? item.stockQuantity.toInt().toString()
+              : item.stockQuantity.toStringAsFixed(2),
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: low ? const Color(0xFFDC2626) : const Color(0xFF166534),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _statusText(ProductStockData item) {
+    final color = item.status == 'In Stock'
+        ? const Color(0xFF166534)
+        : item.status == 'Low Stock'
+        ? const Color(0xFFD97706)
+        : const Color(0xFFDC2626);
+    return Text(
+      item.status,
+      style: TextStyle(color: color, fontWeight: FontWeight.w600),
+    );
+  }
+
+  static const _headerStyle = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+    color: Color(0xFF6B7280),
+  );
 
   Widget _rawMaterialsTab(bool isWide, AppLocalizations loc) {
     return Center(

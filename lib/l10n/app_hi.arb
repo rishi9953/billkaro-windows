@@ -789,6 +789,8 @@
   "piece_pcs": "पीस (Pcs)",
   "packet_pkt": "पैकेट (Pkt)",
   "box_box": "बॉक्स (BOX)",
+  "dozen_doz": "दर्जन (Doz)",
+  "bottle_btl": "बोतल (Btl)",
   "stock": "स्टॉक",
   "min": "न्यूनतम",
   "unit": "इकाई",
@@ -1365,6 +1367,28 @@
       }
     }
   },
+  "purchase_order_supplier_created_date": "आपूर्तिकर्ता: {name} · निर्मित: {date}",
+  "@purchase_order_supplier_created_date": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "purchase_order_supplier_updated_date": "आपूर्तिकर्ता: {name} · अपडेटेड: {date}",
+  "@purchase_order_supplier_updated_date": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "purchase_order_line_item": "{name}: {quantity} {unit} @ ₹{price}",
   "@purchase_order_line_item": {
     "placeholders": {
@@ -1563,6 +1587,17 @@
   "po_received_date": "प्राप्ति तिथि",
   "supplier_label": "आपूर्तिकर्ता",
   "cancel_po": "PO रद्द करें",
+  "cancel_po_title": "खरीद ऑर्डर रद्द करें",
+  "cancel_po_confirm_message": "क्या आप वाकई इस P.O ({name}) को रद्द करना चाहते हैं?",
+  "@cancel_po_confirm_message": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "keep_po": "नहीं, रखें",
+  "yes_cancel_po": "हाँ, रद्द करें",
   "view_details": "विवरण देखें",
   "print_po": "PO प्रिंट करें",
   "po_payment_terms": "भुगतान शर्तें",
@@ -1678,6 +1713,7 @@
   "district_label": "ज़िला",
   "pincode_label": "पिनकोड",
   "date_of_birth": "जन्म तिथि",
+  "join_date": "ज्वाइन तिथि",
   "gender_label": "लिंग",
   "male": "पुरुष",
   "female": "महिला",

@@ -371,7 +371,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: (selectedOutlet.logo?.isNotEmpty ?? false)
               ? CircleAvatar(
                   radius: 18,
-                  backgroundImage: NetworkImage(selectedOutlet.logo!),
+                  backgroundImage: NetworkImage(resolvedMediaUrl(selectedOutlet.logo!)),
                   backgroundColor: Colors.white,
                 )
               : Container(
@@ -2156,7 +2156,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           borderRadius: BorderRadius.circular(8),
                           child: item.imageUrl.isNotEmpty
                               ? m.Image.network(
-                                  item.imageUrl,
+                                  resolvedMediaUrl(item.imageUrl),
                                   width: 40,
                                   height: 40,
                                   fit: BoxFit.cover,

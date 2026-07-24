@@ -14,25 +14,43 @@ class ApiConstants {
 String get baseURL => ApiConfig.baseUrl;
 
 /// Stored logo/media paths from the API may be full URLs or relative paths.
+/// Returns a normalized absolute URL for network image widgets.
 String resolvedMediaUrl(String? stored) {
   if (stored == null) return '';
   final s = stored.trim();
-  if (s.isEmpty) return '';
+  if (s.isEmpty || s.toLowerCase() == 'null') return '';
+
   final lower = s.toLowerCase();
-  if (lower.startsWith('http://') || lower.startsWith('https://')) return s;
+  if (lower.startsWith('http://') || lower.startsWith('https://')) {
+    return _normalizeAbsoluteMediaUrl(s);
+  }
+  if (s.startsWith('//')) {
+    return _normalizeAbsoluteMediaUrl('https:$s');
+  }
+
   try {
-    final baseUri = Uri.parse(baseURL);
-    final origin = baseUri.hasPort
-        ? '${baseUri.scheme}://${baseUri.host}:${baseUri.port}'
-        : '${baseUri.scheme}://${baseUri.host}';
-    if (s.startsWith('/')) {
-      return '$origin$s';
-    }
-    final basePath = baseUri.path;
-    final joined = basePath.endsWith('/') ? '$basePath$s' : '$basePath/$s';
-    return baseUri.replace(path: joined).toString();
+    final origin = Uri.parse(baseURL)
+        .replace(path: '', query: '', fragment: '')
+        .toString();
+    final joined = s.startsWith('/') ? '$origin$s' : '$origin/$s';
+    return _normalizeAbsoluteMediaUrl(joined);
   } catch (_) {
     return s;
+  }
+}
+
+String _normalizeAbsoluteMediaUrl(String url) {
+  try {
+    final uri = Uri.parse(url);
+    if (uri.hasScheme) {
+      return uri.toString();
+    }
+  } catch (_) {}
+
+  try {
+    return Uri.encodeFull(url);
+  } catch (_) {
+    return url;
   }
 }
 

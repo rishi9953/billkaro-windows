@@ -17,6 +17,14 @@ ItemRequest _$ItemRequestFromJson(Map<String, dynamic> json) => ItemRequest(
   outletId: json['outletId'] as String,
   showItem: json['showItem'] as bool,
   itemImage: json['itemImage'] as String? ?? '',
+  barcode: json['barcode'] as String? ?? '',
+  sku: json['sku'] as String? ?? '',
+  soldBy: json['soldBy'] as String? ?? 'Each',
+  costPrice: (json['costPrice'] as num?)?.toDouble() ?? 0,
+  posColor: json['posColor'] as String? ?? '',
+  trackStock: json['trackStock'] as bool? ?? false,
+  stockQuantity: (json['stockQuantity'] as num?)?.toDouble() ?? 0,
+  minStock: (json['minStock'] as num?)?.toDouble() ?? 0,
   isRecommended: json['isRecommended'] as bool?,
   prepTimeMinutes: (json['prepTimeMinutes'] as num?)?.toInt() ?? 15,
   isCombo: json['isCombo'] as bool? ?? false,
@@ -27,21 +35,37 @@ ItemRequest _$ItemRequestFromJson(Map<String, dynamic> json) => ItemRequest(
       const [],
 );
 
-Map<String, dynamic> _$ItemRequestToJson(
-  ItemRequest instance,
-) => <String, dynamic>{
-  'itemName': instance.itemName,
-  'salePrice': instance.salePrice,
-  'withTax': instance.withTax,
-  'orderFrom': instance.orderFrom,
-  'gst': instance.gst,
-  'userId': instance.userId,
-  'outletId': instance.outletId,
-  'category': instance.category,
-  'itemImage': instance.itemImage,
-  'showItem': instance.showItem,
-  'isRecommended': ?instance.isRecommended,
-  'prepTimeMinutes': instance.prepTimeMinutes,
-  'isCombo': instance.isCombo,
-  'comboComponents': instance.comboComponents.map((e) => e.toJson()).toList(),
-};
+Map<String, dynamic> _$ItemRequestToJson(ItemRequest instance) {
+  final val = <String, dynamic>{
+    'itemName': instance.itemName,
+    'salePrice': instance.salePrice,
+    'withTax': instance.withTax,
+    'orderFrom': instance.orderFrom,
+    'gst': instance.gst,
+    'userId': instance.userId,
+    'outletId': instance.outletId,
+    'category': instance.category,
+    'itemImage': instance.itemImage,
+    'barcode': instance.barcode,
+    'sku': instance.sku,
+    'soldBy': instance.soldBy,
+    'costPrice': instance.costPrice,
+    'posColor': instance.posColor,
+    'trackStock': instance.trackStock,
+    'stockQuantity': instance.stockQuantity,
+    'minStock': instance.minStock,
+    'showItem': instance.showItem,
+    'prepTimeMinutes': instance.prepTimeMinutes,
+    'isCombo': instance.isCombo,
+    'comboComponents':
+        instance.comboComponents.map((e) => e.toJson()).toList(),
+  };
+  void writeNotNull(String key, dynamic value) {
+    if (value != null) {
+      val[key] = value;
+    }
+  }
+
+  writeNotNull('isRecommended', instance.isRecommended);
+  return val;
+}

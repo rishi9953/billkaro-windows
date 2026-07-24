@@ -5,6 +5,7 @@ import 'package:billkaro/app/modules/Staff/staff_details_controller.dart';
 import 'package:billkaro/app/modules/Staff/staff_view_dialog.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter_modular/flutter_modular.dart';
+import 'package:intl/intl.dart';
 
 class StaffListScreen extends StatelessWidget {
   const StaffListScreen({super.key});
@@ -204,6 +205,13 @@ class StaffListScreen extends StatelessWidget {
             flex: 3,
             child: Text(
               loc.email,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              loc.join_date,
               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
             ),
           ),
@@ -432,6 +440,50 @@ class _WindowsHeaderCard extends StatelessWidget {
   }
 }
 
+class _StaffAvatar extends StatelessWidget {
+  const _StaffAvatar({required this.member, required this.radius});
+
+  final StaffMember member;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = resolvedMediaUrl(member.profileImage);
+    final name = member.name.trim();
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    final fontSize = radius * 0.75;
+
+    Widget initialsAvatar() {
+      return CircleAvatar(
+        radius: radius,
+        backgroundColor: AppColor.primary.withValues(alpha: 0.12),
+        child: Text(
+          initial,
+          style: TextStyle(
+            color: AppColor.primary,
+            fontWeight: FontWeight.w700,
+            fontSize: fontSize,
+          ),
+        ),
+      );
+    }
+
+    if (url.isEmpty) return initialsAvatar();
+
+    final size = radius * 2;
+    return ClipOval(
+      child: CachedNetworkImage(
+        imageUrl: url,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        placeholder: (_, __) => initialsAvatar(),
+        errorWidget: (_, __, ___) => initialsAvatar(),
+      ),
+    );
+  }
+}
+
 class _StaffCard extends StatelessWidget {
   const _StaffCard({required this.member, required this.controller});
   final StaffMember member;
@@ -452,17 +504,7 @@ class _StaffCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: AppColor.primary.withValues(alpha: 0.12),
-            child: Text(
-              member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
-              style: TextStyle(
-                color: AppColor.primary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
+          _StaffAvatar(member: member, radius: 22),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -497,13 +539,11 @@ class _StaffCard extends StatelessWidget {
                   member.email.isEmpty ? '-' : member.email,
                   style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
                 ),
-                if (_isBillerRole(member.role)) ...[
-                  const SizedBox(height: 10),
-                  _BillerPermissionsSection(
-                    permissions: member.permissions,
-                    loc: loc,
-                  ),
-                ],
+                const SizedBox(height: 2),
+                Text(
+                  '${loc.join_date}: ${_formatStaffJoinDate(member.joinDate)}',
+                  style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                ),
               ],
             ),
           ),
@@ -524,7 +564,6 @@ class _WindowsStaffRow extends StatelessWidget {
     final loc = AppLocalizations.of(context)!;
     final roleTitle = _localizedRoleTitle(loc, member.role);
     final isSecondaryAdmin = _isSecondaryAdminRole(member.role);
-    final isBiller = _isBillerRole(member.role);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -543,20 +582,7 @@ class _WindowsStaffRow extends StatelessWidget {
                 flex: 3,
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundColor: AppColor.primary.withValues(alpha: 0.12),
-                      child: Text(
-                        member.name.isNotEmpty
-                            ? member.name[0].toUpperCase()
-                            : '?',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
-                          color: AppColor.primary,
-                        ),
-                      ),
-                    ),
+                    _StaffAvatar(member: member, radius: 16),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -596,6 +622,14 @@ class _WindowsStaffRow extends StatelessWidget {
                 ),
               ),
               Expanded(
+                flex: 2,
+                child: Text(
+                  _formatStaffJoinDate(member.joinDate),
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                ),
+              ),
+              Expanded(
                 child: Center(child: _StatusChip(isActive: member.isActive)),
               ),
               SizedBox(
@@ -610,12 +644,6 @@ class _WindowsStaffRow extends StatelessWidget {
               ),
             ],
           ),
-          if (isBiller) ...[
-            const SizedBox(height: 10),
-            Divider(height: 1, color: Colors.grey.shade200),
-            const SizedBox(height: 10),
-            _BillerPermissionsSection(permissions: member.permissions, loc: loc),
-          ],
         ],
       ),
     );
@@ -876,84 +904,8 @@ bool _isSecondaryAdminRole(String role) {
   return normalized == 'secondary admin';
 }
 
-bool _isBillerRole(String role) => !_isSecondaryAdminRole(role);
-
 String _localizedRoleTitle(AppLocalizations loc, String role) {
   return _isSecondaryAdminRole(role) ? loc.secondary_admin : loc.biller;
-}
-
-class _BillerPermissionsSection extends StatelessWidget {
-  const _BillerPermissionsSection({
-    required this.permissions,
-    required this.loc,
-  });
-
-  final List<String> permissions;
-  final AppLocalizations loc;
-
-  @override
-  Widget build(BuildContext context) {
-    final granted = permissions.map((item) => item.trim()).toSet();
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _PermissionReadOnlyRow(
-            label: loc.allow_biller_create_menu_items,
-            enabled: granted.contains('create_bill'),
-          ),
-          const SizedBox(height: 6),
-          _PermissionReadOnlyRow(
-            label: loc.allow_biller_edit_menu_items,
-            enabled: granted.contains('edit_menu'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PermissionReadOnlyRow extends StatelessWidget {
-  const _PermissionReadOnlyRow({
-    required this.label,
-    required this.enabled,
-  });
-
-  final String label;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          enabled ? Icons.check_circle : Icons.cancel_outlined,
-          size: 16,
-          color: enabled ? Colors.green.shade600 : Colors.grey.shade400,
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              height: 1.35,
-              color: enabled ? const Color(0xFF374151) : Colors.grey.shade500,
-              fontWeight: enabled ? FontWeight.w500 : FontWeight.w400,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 Widget _staffActionMenuItem({
@@ -973,4 +925,14 @@ Widget _staffActionMenuItem({
       ),
     ],
   );
+}
+
+String _formatStaffJoinDate(String raw) {
+  final text = raw.trim();
+  if (text.isEmpty) return '-';
+  try {
+    return DateFormat('dd/MM/yyyy').format(DateTime.parse(text));
+  } catch (_) {
+    return text;
+  }
 }

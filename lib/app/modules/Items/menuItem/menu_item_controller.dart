@@ -111,7 +111,7 @@ class MenuItemController extends BaseController {
         final categoryParam =
             (selectedCategoryId.value != null &&
                 selectedCategoryId.value != 'none')
-            ? selectedCategoryId.value
+            ? _categoryNameForApi(selectedCategoryId.value!)
             : null;
 
         debugPrint(
@@ -294,6 +294,14 @@ class MenuItemController extends BaseController {
   /// ===============================
   /// APPLY ALL FILTERS (CATEGORY + SEARCH)
   /// ===============================
+  /// Resolves chip id (lowercased) to the stored categoryName for API filters.
+  String _categoryNameForApi(String categoryId) {
+    final match = categories.firstWhereOrNull(
+      (c) => c.categoryName.toLowerCase() == categoryId.toLowerCase(),
+    );
+    return match?.categoryName ?? categoryId;
+  }
+
   void _applyFilters() {
     List<ItemData> filteredItems = allItems;
 
@@ -375,6 +383,43 @@ class MenuItemController extends BaseController {
     categories.addAll(loaded);
     dismissAllAppLoader();
     debugPrint('📂 Categories loaded (${loaded.length})');
+  }
+
+  /// Persists item categories that exist on items but not in the categories API
+  /// (combo meals previously saved without creating the "combo" category).
+  Future<void> ensureMissingItemCategories() async {
+    final outletId = appPref.selectedOutlet?.id;
+    final userId = appPref.user?.id;
+    if (outletId == null || userId == null || allItems.isEmpty) return;
+
+    final known = {
+      for (final c in categories) c.categoryName.trim().toLowerCase(),
+    };
+    final missing = <String>{};
+    for (final item in allItems) {
+      final name = item.category.trim();
+      final key = name.toLowerCase();
+      if (name.isEmpty || key == 'none' || known.contains(key)) continue;
+      missing.add(key);
+    }
+    if (missing.isEmpty) return;
+
+    var didCreate = false;
+    for (final name in missing) {
+      final response = await callApi(
+        apiClient.addCategory(outletId, {
+          'userId': userId,
+          'outletId': outletId,
+          'categoryName': name,
+        }),
+        showLoader: false,
+        apiErrorHandler: (_) async => true,
+      );
+      if (response is Map && response['status'] == 'success') {
+        didCreate = true;
+      }
+    }
+    if (didCreate) await getCategories();
   }
 
   /// ===============================
@@ -664,16 +709,22 @@ class MenuItemController extends BaseController {
         outletId: outletId,
         items: previewRows
             .map(
-              (row) => BulkItemEntry(
-                itemName: row.name,
-                salePrice: row.price,
-                withTax: row.withTax,
-                gst: row.gst,
-                orderFrom: 'None',
-                category: row.category,
-                showItem: row.isAvailable,
-                itemImage: row.imageUrl,
-              ),
+              (row) {
+                final cat = row.category.trim();
+                final normalizedCategory = cat.isEmpty || cat.toLowerCase() == 'none'
+                    ? 'none'
+                    : cat.toLowerCase();
+                return BulkItemEntry(
+                  itemName: row.name,
+                  salePrice: row.price,
+                  withTax: row.withTax,
+                  gst: row.gst,
+                  orderFrom: 'None',
+                  category: normalizedCategory,
+                  showItem: row.isAvailable,
+                  itemImage: row.imageUrl,
+                );
+              },
             )
             .toList(),
       );
@@ -839,6 +890,7 @@ class MenuItemController extends BaseController {
     super.onReady();
     await getCategories();
     await getItems(showLoader: false);
+    await ensureMissingItemCategories();
     initialLoadDone.value = true;
 
     // Listen to connectivity changes

@@ -89,10 +89,10 @@ class MenuScreen extends StatelessWidget {
                                   ? ClipRRect(
                                       borderRadius: BorderRadius.circular(12),
                                       child: CachedNetworkImage(
-                                        imageUrl: controller
+                                        imageUrl: resolvedMediaUrl(controller
                                             .appPref
                                             .selectedOutlet!
-                                            .logo!,
+                                            .logo!),
                                         fit: BoxFit.cover,
                                       ),
                                     )

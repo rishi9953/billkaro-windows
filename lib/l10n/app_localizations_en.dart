@@ -1806,6 +1806,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get box_box => 'Box (BOX)';
 
   @override
+  String get dozen_doz => 'Dozen (Doz)';
+
+  @override
+  String get bottle_btl => 'Bottle (Btl)';
+
+  @override
   String get stock => 'Stock';
 
   @override
@@ -2703,7 +2709,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inventory_management => 'Inventory Management';
 
   @override
-  String get inventory_subtitle => 'Stock · Suppliers · Recipes';
+  String get inventory_subtitle => 'Raw materials · Product stock · Recipes';
 
   @override
   String get tab_overview => 'Overview';
@@ -2805,6 +2811,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String purchase_order_supplier_date(String name, String date) {
     return 'Supplier: $name · $date';
+  }
+
+  @override
+  String purchase_order_supplier_created_date(String name, String date) {
+    return 'Supplier: $name · Created: $date';
+  }
+
+  @override
+  String purchase_order_supplier_updated_date(String name, String date) {
+    return 'Supplier: $name · Updated: $date';
   }
 
   @override
@@ -3122,6 +3138,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cancel_po => 'Cancel PO';
 
   @override
+  String get cancel_po_title => 'Cancel Purchase Order';
+
+  @override
+  String cancel_po_confirm_message(String name) {
+    return 'Are you sure you want to cancel this P.O ($name)?';
+  }
+
+  @override
+  String get keep_po => 'No, Keep It';
+
+  @override
+  String get yes_cancel_po => 'Yes, Cancel';
+
+  @override
   String get view_details => 'View Details';
 
   @override
@@ -3395,6 +3425,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get date_of_birth => 'Date of Birth';
+
+  @override
+  String get join_date => 'Join Date';
 
   @override
   String get gender_label => 'Gender';

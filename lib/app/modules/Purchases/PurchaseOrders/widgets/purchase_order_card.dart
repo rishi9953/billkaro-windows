@@ -60,10 +60,15 @@ class PurchaseOrderCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              loc.purchase_order_supplier_date(
-                po.supplierName,
-                controller.formatDate(po.createdAt),
-              ),
+              po.version > 0 && po.updatedAt.isNotEmpty
+                  ? loc.purchase_order_supplier_updated_date(
+                      po.supplierName,
+                      controller.formatDate(po.updatedAt),
+                    )
+                  : loc.purchase_order_supplier_created_date(
+                      po.supplierName,
+                      controller.formatDate(po.createdAt),
+                    ),
               style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
             if (po.expectedDate?.isNotEmpty == true) ...[
@@ -121,7 +126,7 @@ class PurchaseOrderCard extends StatelessWidget {
                 ),
                 if (canCancel)
                   TextButton(
-                    onPressed: () => controller.confirmDelete(
+                    onPressed: () => controller.confirmCancelPo(
                       po.orderNumber,
                       () => controller.cancelOrder(po.id),
                       loc,

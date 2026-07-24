@@ -6,6 +6,7 @@ class InventoryDashboardData {
   final int activeSuppliers;
   final int pendingPurchaseOrders;
   final int trackedMenuItems;
+  final int recipeLinkedItems;
   final int lowStockMenuItems;
   final List<LowStockMaterial> lowStockMaterials;
 
@@ -17,6 +18,7 @@ class InventoryDashboardData {
     required this.activeSuppliers,
     required this.pendingPurchaseOrders,
     required this.trackedMenuItems,
+    this.recipeLinkedItems = 0,
     required this.lowStockMenuItems,
     required this.lowStockMaterials,
   });
@@ -31,6 +33,7 @@ class InventoryDashboardData {
       pendingPurchaseOrders:
           (json['pendingPurchaseOrders'] as num?)?.toInt() ?? 0,
       trackedMenuItems: (json['trackedMenuItems'] as num?)?.toInt() ?? 0,
+      recipeLinkedItems: (json['recipeLinkedItems'] as num?)?.toInt() ?? 0,
       lowStockMenuItems: (json['lowStockMenuItems'] as num?)?.toInt() ?? 0,
       lowStockMaterials: (json['lowStockMaterials'] as List<dynamic>? ?? [])
           .map((e) => LowStockMaterial.fromJson(e as Map<String, dynamic>))
@@ -249,6 +252,7 @@ class PurchaseOrderData {
   final String? expectedDate;
   final String? receivedAt;
   final String createdAt;
+  final String updatedAt;
   final List<PurchaseOrderLineData> items;
   final int version;
   final String currency;
@@ -288,6 +292,7 @@ class PurchaseOrderData {
     this.expectedDate,
     this.receivedAt,
     required this.createdAt,
+    this.updatedAt = '',
     required this.items,
     this.version = 0,
     this.currency = 'INR',
@@ -349,6 +354,7 @@ class PurchaseOrderData {
       expectedDate: json['expectedDate']?.toString(),
       receivedAt: json['receivedAt']?.toString(),
       createdAt: json['createdAt']?.toString() ?? '',
+      updatedAt: json['updatedAt']?.toString() ?? '',
       items: items,
       version: (json['version'] as num?)?.toInt() ?? 0,
       currency: json['currency']?.toString() ?? 'INR',
@@ -532,3 +538,126 @@ class InventoryListResponse<T> {
 
   InventoryListResponse({required this.status, required this.data});
 }
+
+/// Finished-goods stock for a sellable menu item (not raw materials).
+class ProductStockData {
+  final String id;
+  final String itemName;
+  final String category;
+  final String sku;
+  final String barcode;
+  final String soldBy;
+  final double salePrice;
+  final double costPrice;
+  final bool trackStock;
+  final double stockQuantity;
+  final double minStock;
+  final String itemImage;
+  final String posColor;
+  final bool showItem;
+  final bool isLowStock;
+  final String status;
+
+  ProductStockData({
+    required this.id,
+    required this.itemName,
+    required this.category,
+    this.sku = '',
+    this.barcode = '',
+    this.soldBy = 'Each',
+    this.salePrice = 0,
+    this.costPrice = 0,
+    this.trackStock = false,
+    this.stockQuantity = 0,
+    this.minStock = 0,
+    this.itemImage = '',
+    this.posColor = '',
+    this.showItem = true,
+    this.isLowStock = false,
+    this.status = 'In Stock',
+  });
+
+  factory ProductStockData.fromJson(Map<String, dynamic> json) {
+    final stock = (json['stockQuantity'] as num?)?.toDouble() ?? 0;
+    final min = (json['minStock'] as num?)?.toDouble() ?? 0;
+    final low = json['isLowStock'] as bool? ?? (stock <= min && stock > 0);
+    final resolvedStatus = json['status']?.toString() ??
+        (stock <= 0
+            ? 'Out of Stock'
+            : low
+                ? 'Low Stock'
+                : 'In Stock');
+    return ProductStockData(
+      id: json['id']?.toString() ?? '',
+      itemName: json['itemName']?.toString() ?? '',
+      category: json['category']?.toString() ?? '',
+      sku: json['sku']?.toString() ?? '',
+      barcode: json['barcode']?.toString() ?? '',
+      soldBy: json['soldBy']?.toString() ?? 'Each',
+      salePrice: (json['salePrice'] as num?)?.toDouble() ?? 0,
+      costPrice: (json['costPrice'] as num?)?.toDouble() ?? 0,
+      trackStock: json['trackStock'] as bool? ?? false,
+      stockQuantity: stock,
+      minStock: min,
+      itemImage: json['itemImage']?.toString() ?? '',
+      posColor: json['posColor']?.toString() ?? '',
+      showItem: json['showItem'] as bool? ?? true,
+      isLowStock: low,
+      status: resolvedStatus,
+    );
+  }
+}
+
+class ProductStockMovementData {
+  final String id;
+  final String type;
+  final String reason;
+  final double quantity;
+  final double stockBefore;
+  final double stockAfter;
+  final String? notes;
+  final String? orderId;
+  final DateTime? createdAt;
+
+  ProductStockMovementData({
+    required this.id,
+    required this.type,
+    required this.reason,
+    required this.quantity,
+    required this.stockBefore,
+    required this.stockAfter,
+    this.notes,
+    this.orderId,
+    this.createdAt,
+  });
+
+  factory ProductStockMovementData.fromJson(Map<String, dynamic> json) {
+    return ProductStockMovementData(
+      id: json['id']?.toString() ?? '',
+      type: json['type']?.toString() ?? '',
+      reason: json['reason']?.toString() ?? 'Other',
+      quantity: (json['quantity'] as num?)?.toDouble() ?? 0,
+      stockBefore: (json['stockBefore'] as num?)?.toDouble() ?? 0,
+      stockAfter: (json['stockAfter'] as num?)?.toDouble() ?? 0,
+      notes: json['notes']?.toString(),
+      orderId: json['orderId']?.toString(),
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'].toString())
+          : null,
+    );
+  }
+
+  String get typeLabel {
+    switch (type) {
+      case 'STOCK_IN':
+        return 'Stock In';
+      case 'STOCK_OUT':
+        return 'Stock Out';
+      case 'ADJUSTMENT':
+        return 'Adjustment';
+      default:
+        return type;
+    }
+  }
+}
+

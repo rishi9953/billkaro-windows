@@ -6,6 +6,7 @@ import 'package:billkaro/app/modules/Staff/staff_details_controller.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/app/services/uploadFile.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_permission_keys.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:intl/intl.dart';
 
@@ -14,7 +15,6 @@ class AddStaffController extends BaseController {
 
   final formKey = GlobalKey<FormState>();
   final userNameController = TextEditingController();
-  final uniqueIdController = TextEditingController();
   final emailController = TextEditingController();
   final phoneNumberController = TextEditingController();
   final addressController = TextEditingController();
@@ -24,8 +24,7 @@ class AddStaffController extends BaseController {
   final selectedRole = 'Secondary Admin'.obs;
   final selectedGender = ''.obs;
   final selectedDateOfBirth = Rxn<DateTime>();
-  final canManageBills = false.obs;
-  final canEditMenuItems = false.obs;
+  final selectedPermissions = <String>{}.obs;
   final selectedImage = Rx<File?>(null);
   final imageUrl = ''.obs;
   final isUploadingImage = false.obs;
@@ -59,7 +58,6 @@ class AddStaffController extends BaseController {
   void onClose() {
     _emailCheckDebounce?.cancel();
     userNameController.dispose();
-    uniqueIdController.dispose();
     emailController.dispose();
     phoneNumberController.dispose();
     addressController.dispose();
@@ -69,12 +67,14 @@ class AddStaffController extends BaseController {
     super.onClose();
   }
 
+  String _uniqueId = '';
+
   static String generateUniqueId() =>
       (100000 + _random.nextInt(900000)).toString();
 
   void assignUniqueId([String? existing]) {
     final value = existing?.trim() ?? '';
-    uniqueIdController.text = value.isNotEmpty ? value : generateUniqueId();
+    _uniqueId = value.isNotEmpty ? value : generateUniqueId();
   }
 
   void prepareScreen(StaffMember? member) {
@@ -94,13 +94,42 @@ class AddStaffController extends BaseController {
     selectedDateOfBirth.value = _parseDateOfBirth(member.dateOfBirth);
     selectedRole.value = _normalizeRole(member.role);
     imageUrl.value = member.profileImage;
-    final permissions = member.permissions.map((item) => item.trim()).toSet();
-    canManageBills.value = permissions.contains('create_bill');
-    canEditMenuItems.value =
-        permissions.contains('edit_menu') ||
-        permissions.contains('view_reports');
+    selectedPermissions
+      ..clear()
+      ..addAll(expandStaffPermissions(member.permissions));
     isEmailAvailable.value = true;
     _lastCheckedEmail = member.email.trim().toLowerCase();
+  }
+
+  void onRoleChanged(String? role) {
+    final next = role ?? 'Secondary Admin';
+    selectedRole.value = next;
+    if (isEditMode) return;
+    selectedPermissions
+      ..clear()
+      ..addAll(
+        next == 'Secondary Admin'
+            ? StaffPermissionKeys.secondaryAdminDefaults
+            : StaffPermissionKeys.billerDefaults,
+      );
+  }
+
+  void togglePermission(String key, bool enabled) {
+    if (enabled) {
+      selectedPermissions.add(key);
+    } else {
+      selectedPermissions.remove(key);
+    }
+  }
+
+  void selectAllPermissions() {
+    selectedPermissions
+      ..clear()
+      ..addAll(StaffPermissionKeys.all);
+  }
+
+  void deselectAllPermissions() {
+    selectedPermissions.clear();
   }
 
   String? validateUserName(String? value) {
@@ -188,13 +217,6 @@ class AddStaffController extends BaseController {
     return null;
   }
 
-  String? validateStaffImage() {
-    if (isEditMode) return null;
-    final loc = AppLocalizations.of(Get.context!)!;
-    if (!hasStaffImage) return loc.please_select_staff_image;
-    return null;
-  }
-
   bool _validateForm() {
     showValidationErrors.value = true;
     final formValid = formKey.currentState?.validate() ?? false;
@@ -206,8 +228,7 @@ class AddStaffController extends BaseController {
         ) ==
         null;
     final dobValid = validateDateOfBirth() == null;
-    final imageValid = validateStaffImage() == null;
-    return formValid && genderValid && dobValid && imageValid;
+    return formValid && genderValid && dobValid;
   }
 
   Future<void> pickStaffImage() async {
@@ -287,7 +308,7 @@ class AddStaffController extends BaseController {
 
     if (!_validateForm()) return;
     if (!await _ensureEmailAvailable()) return;
-    if (!await _ensureStaffImageUploaded()) {
+    if (selectedImage.value != null && !await _ensureStaffImageUploaded()) {
       final loc = AppLocalizations.of(Get.context!)!;
       showError(description: loc.please_select_staff_image);
       return;
@@ -334,8 +355,9 @@ class AddStaffController extends BaseController {
     selectedDateOfBirth.value = null;
     selectedImage.value = null;
     imageUrl.value = '';
-    canManageBills.value = false;
-    canEditMenuItems.value = false;
+    selectedPermissions
+      ..clear()
+      ..addAll(StaffPermissionKeys.secondaryAdminDefaults);
     assignUniqueId();
     _resetEmailVerification();
     formKey.currentState?.reset();
@@ -551,20 +573,27 @@ class AddStaffController extends BaseController {
   }
 
   Map<String, dynamic> _buildStaffPayload({required String role}) {
+    if (_uniqueId.isEmpty) {
+      assignUniqueId();
+    }
     final payload = <String, dynamic>{
       'userName': userNameController.text.trim(),
       'email': emailController.text.trim(),
       'userPhoneNumber': '+91${phoneNumberController.text.trim()}',
       'userRole': role,
       'permissions': _buildPermissions(role),
-      'uniqueId': uniqueIdController.text.trim(),
+      'uniqueId': _uniqueId,
       'address': addressController.text.trim(),
       'state': stateController.text.trim(),
       'district': districtController.text.trim(),
       'pincode': pincodeController.text.trim(),
       'gender': selectedGender.value.trim().toLowerCase(),
-      'profileImage': imageUrl.value.trim(),
     };
+
+    final profileImage = imageUrl.value.trim();
+    if (profileImage.isNotEmpty || isEditMode) {
+      payload['profileImage'] = profileImage;
+    }
 
     final dateOfBirth = selectedDateOfBirth.value;
     if (dateOfBirth != null) {
@@ -633,17 +662,13 @@ class AddStaffController extends BaseController {
   }
 
   List<String> _buildPermissions(String role) {
-    if (role == 'secondary_admin') {
-      return <String>['create_bill', 'view_reports'];
-    }
-
-    final permissions = <String>[];
-    if (canManageBills.value) {
-      permissions.add('create_bill');
-    }
-    if (canEditMenuItems.value) {
-      permissions.add('edit_menu');
-    }
-    return permissions;
+    final selected = selectedPermissions
+        .where((key) => StaffPermissionKeys.all.contains(key))
+        .toList()
+      ..sort();
+    if (selected.isNotEmpty) return selected;
+    return role == 'secondary_admin'
+        ? List<String>.from(StaffPermissionKeys.secondaryAdminDefaults)
+        : List<String>.from(StaffPermissionKeys.billerDefaults);
   }
 }

@@ -1,7 +1,9 @@
-import 'package:billkaro/utils/staff_access.dart';
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 
 class SidebarNavIndices {
   const SidebarNavIndices({
+    required this.createOrder,
+    required this.tables,
     required this.items,
     required this.inventory,
     required this.purchases,
@@ -19,6 +21,8 @@ class SidebarNavIndices {
     required this.logout,
   });
 
+  final int createOrder;
+  final int tables;
   final int items;
   final int inventory;
   final int purchases;
@@ -39,52 +43,31 @@ class SidebarNavIndices {
     required bool kotEnabled,
     required bool hasSeating,
   }) {
-    final seatOffset = hasSeating ? 0 : -1;
-    final inventoryOffset = StaffAccess.canViewInventory ? 1 : 0;
-    final purchaseOffset = StaffAccess.canViewInventory ? 1 : 0;
+    final routes = HomeMainRoutes.navRouteOrder(
+      kotEnabled: kotEnabled,
+      hasSeating: hasSeating,
+    );
 
-    final items = 3 + seatOffset;
-    final orders = items + 1;
-    final inventory = StaffAccess.canViewInventory ? orders + 1 : -1;
-    final purchases = StaffAccess.canViewInventory ? inventory + 1 : -1;
-    final reports = 5 + seatOffset + inventoryOffset + purchaseOffset;
-    final kot = 6 + seatOffset + inventoryOffset + purchaseOffset;
-    final kds = kotEnabled
-        ? (7 + seatOffset + inventoryOffset + purchaseOffset)
-        : -1;
-    final customers =
-        (kotEnabled ? 8 : 6) + seatOffset + inventoryOffset + purchaseOffset;
-    final staff =
-        (kotEnabled ? 9 : 7) + seatOffset + inventoryOffset + purchaseOffset;
-    final subscriptions =
-        (kotEnabled ? 11 : 9) + seatOffset + inventoryOffset + purchaseOffset;
-    final whatsapp =
-        (kotEnabled ? 12 : 10) + seatOffset + inventoryOffset + purchaseOffset;
-    final printer =
-        (kotEnabled ? 13 : 11) + seatOffset + inventoryOffset + purchaseOffset;
-    final settings =
-        (kotEnabled ? 14 : 12) + seatOffset + inventoryOffset + purchaseOffset;
-    final profile =
-        (kotEnabled ? 15 : 13) + seatOffset + inventoryOffset + purchaseOffset;
-    final logout =
-        (kotEnabled ? 16 : 14) + seatOffset + inventoryOffset + purchaseOffset;
+    int idx(String route) => routes.indexOf(route);
 
     return SidebarNavIndices(
-      items: items,
-      inventory: inventory,
-      purchases: purchases,
-      orders: orders,
-      reports: reports,
-      kot: kot,
-      kds: kds,
-      customers: customers,
-      staff: staff,
-      subscriptions: subscriptions,
-      whatsapp: whatsapp,
-      printer: printer,
-      settings: settings,
-      profile: profile,
-      logout: logout,
+      createOrder: idx(HomeMainRoutes.createOrder),
+      tables: idx(HomeMainRoutes.tables),
+      items: idx(HomeMainRoutes.items),
+      inventory: idx(HomeMainRoutes.inventory),
+      purchases: idx(HomeMainRoutes.purchaseOrders),
+      orders: idx(HomeMainRoutes.closedOrders),
+      reports: idx(HomeMainRoutes.reports),
+      kot: idx(HomeMainRoutes.kotHistory),
+      kds: idx(HomeMainRoutes.kitchenDisplay),
+      customers: idx(HomeMainRoutes.customers),
+      staff: idx(HomeMainRoutes.staff),
+      subscriptions: idx(HomeMainRoutes.subscriptions),
+      whatsapp: idx(HomeMainRoutes.whatsaapMarketing),
+      printer: idx(HomeMainRoutes.printer),
+      settings: idx(HomeMainRoutes.settings),
+      profile: idx(HomeMainRoutes.profile),
+      logout: routes.length,
     );
   }
 }

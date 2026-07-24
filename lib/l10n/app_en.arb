@@ -789,6 +789,8 @@
   "piece_pcs": "Piece (Pcs)",
   "packet_pkt": "Packet (Pkt)",
   "box_box": "Box (BOX)",
+  "dozen_doz": "Dozen (Doz)",
+  "bottle_btl": "Bottle (Btl)",
   "stock": "Stock",
   "min": "Min",
   "unit": "Unit",
@@ -1332,7 +1334,7 @@
   "item_deleted_successfully": "Item deleted successfully",
   "failed_to_delete_item": "Failed to delete item",
   "inventory_management": "Inventory Management",
-  "inventory_subtitle": "Stock · Suppliers · Recipes",
+  "inventory_subtitle": "Raw materials · Product stock · Recipes",
   "tab_overview": "Overview",
   "tab_raw_materials": "Raw Materials",
   "tab_stock_log": "Stock Log",
@@ -1380,6 +1382,28 @@
   "no_purchase_orders_yet": "No purchase orders yet.",
   "purchase_order_supplier_date": "Supplier: {name} · {date}",
   "@purchase_order_supplier_date": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "purchase_order_supplier_created_date": "Supplier: {name} · Created: {date}",
+  "@purchase_order_supplier_created_date": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "purchase_order_supplier_updated_date": "Supplier: {name} · Updated: {date}",
+  "@purchase_order_supplier_updated_date": {
     "placeholders": {
       "name": {
         "type": "String"
@@ -1587,6 +1611,17 @@
   "po_received_date": "Received On",
   "supplier_label": "Supplier",
   "cancel_po": "Cancel PO",
+  "cancel_po_title": "Cancel Purchase Order",
+  "cancel_po_confirm_message": "Are you sure you want to cancel this P.O ({name})?",
+  "@cancel_po_confirm_message": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "keep_po": "No, Keep It",
+  "yes_cancel_po": "Yes, Cancel",
   "view_details": "View Details",
   "print_po": "Print PO",
   "po_payment_terms": "Payment Terms",
@@ -1702,6 +1737,7 @@
   "district_label": "District",
   "pincode_label": "Pincode",
   "date_of_birth": "Date of Birth",
+  "join_date": "Join Date",
   "gender_label": "Gender",
   "male": "Male",
   "female": "Female",

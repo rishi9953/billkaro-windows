@@ -1,4 +1,5 @@
 import 'package:billkaro/config/config.dart';
+import 'package:flutter/material.dart';
 
 String? _resolveImportImageUrl(String raw) {
   final trimmed = raw.trim();
@@ -299,10 +300,7 @@ class _MenuImportPreviewDialogState extends State<_MenuImportPreviewDialog> {
             ),
           ),
           if (_hasAnyImages) ...[
-            SizedBox(
-              width: 48,
-              child: _buildImageThumbnail(item.imageUrl),
-            ),
+            SizedBox(width: 48, child: _buildImageThumbnail(item.imageUrl)),
             const SizedBox(width: 12),
           ],
           Expanded(
@@ -377,6 +375,7 @@ class _MenuImportPreviewDialogState extends State<_MenuImportPreviewDialog> {
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(6),
+      // child:
       child: CachedNetworkImage(
         imageUrl: imageUrl,
         width: 36,
@@ -385,11 +384,8 @@ class _MenuImportPreviewDialogState extends State<_MenuImportPreviewDialog> {
         memCacheWidth: 72,
         memCacheHeight: 72,
         fadeInDuration: const Duration(milliseconds: 150),
-        placeholder: (_, __) => Container(
-          width: 36,
-          height: 36,
-          color: Colors.grey.shade200,
-        ),
+        placeholder: (_, __) =>
+            Container(width: 36, height: 36, color: Colors.grey.shade200),
         errorWidget: (_, __, ___) => Container(
           width: 36,
           height: 36,

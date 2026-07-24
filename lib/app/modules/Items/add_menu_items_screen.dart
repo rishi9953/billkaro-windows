@@ -1,6 +1,8 @@
 import 'package:billkaro/app/Widgets/app_dropdowns.dart';
 import 'package:billkaro/app/modules/Items/add_menu_items_controller.dart';
+import 'package:billkaro/app/modules/Items/product_form_extras.dart';
 import 'package:billkaro/app/modules/Inventory/menu_item_recipe_section.dart';
+import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
@@ -461,7 +463,7 @@ class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Availability',
+                        'Available for Sale',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: Colors.grey[800],
@@ -657,33 +659,51 @@ class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
                   ),
                   const SizedBox(height: 18),
 
-                  fieldLabel(loc.item_category),
-                  const SizedBox(height: 8),
-                  Obx(
-                    () => AppDropdownFormField2<String>(
-                      isExpanded: true,
-                      decoration: inputDecoration(),
-                      value: controller.selectedCategoryDropdownValue,
-                      items: controller.categories
-                          .map(
-                            (category) => DropdownItem<String>(
-                              value: category,
-                              child: Text(category.capitalize ?? ''),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        if (value != null) {
-                          controller.selectCategory(value);
-                        }
-                      },
-                      iconStyleData: IconStyleData(
-                        icon: Icon(
-                          Icons.keyboard_arrow_down,
-                          color: AppColor.primary,
+                  Row(
+                    children: [
+                      Expanded(child: fieldLabel(loc.item_category)),
+                      TextButton.icon(
+                        onPressed: controller.showQuickAddCategoryDialog,
+                        icon: const Icon(Icons.add, size: 18),
+                        label: Text(loc.add_category),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColor.primary,
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
                         ),
                       ),
-                    ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Obx(
+                    () {
+                      // Rebuild when category images load/update.
+                      final _ = controller.categoryDetails.length;
+                      return AppDropdownFormField2<String>(
+                        isExpanded: true,
+                        decoration: inputDecoration(),
+                        value: controller.selectedCategoryDropdownValue,
+                        items: controller.categories
+                            .map(
+                              (category) => DropdownItem<String>(
+                                value: category,
+                                child: _buildCategoryOption(category),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            controller.selectCategory(value);
+                          }
+                        },
+                        iconStyleData: IconStyleData(
+                          icon: Icon(
+                            Icons.keyboard_arrow_down,
+                            color: AppColor.primary,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 18),
 
@@ -824,6 +844,12 @@ class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
                     );
                   }),
 
+                  ProductFormExtras(
+                    controller: controller,
+                    showBarcodeScanner: true,
+                    onScanBarcode: controller.scanBarcode,
+                  ),
+
                   fieldLabel('Kitchen prep time (minutes)'),
                   const SizedBox(height: 8),
                   TextFormField(
@@ -918,6 +944,39 @@ class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
     );
   }
 
+  Widget _buildCategoryOption(String category) {
+    final categoryImage = controller.getCategoryImageUrl(category);
+    return Row(
+      children: [
+        _buildCategoryAvatar(categoryImage),
+        if (categoryImage.isNotEmpty) const SizedBox(width: 10),
+        Flexible(
+          child: Text(
+            category.capitalize ?? '',
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryAvatar(String imageUrl) {
+    if (imageUrl.isEmpty) return const SizedBox.shrink();
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: Image.network(
+        resolvedMediaUrl(imageUrl),
+        width: 26,
+        height: 26,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+      ),
+    );
+  }
+
   Future<bool> _confirmLeave(BuildContext context) async {
     final result = await showDialog<bool>(
       context: context,
@@ -970,10 +1029,10 @@ class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
                   ),
                 ),
                 TextButton.icon(
-                  onPressed: () async {
-                    await controller.loadComboComponentOptions();
-                    if (!mounted) return;
+                  onPressed: () {
+                    controller.seedComboComponentOptions();
                     _showComboComponentPicker();
+                    controller.loadComboComponentOptions();
                   },
                   icon: const Icon(Icons.playlist_add),
                   label: Text(selectedCount == 0 ? 'Add items' : 'Edit items'),
@@ -1019,12 +1078,14 @@ class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
   void _showComboComponentPicker() {
     Get.dialog(
       Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560, maxHeight: 600),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: SizedBox(
+          width: 560,
+          height: 600,
           child: Padding(
             padding: const EdgeInsets.all(18),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Row(
                   children: [
@@ -1046,7 +1107,12 @@ class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
                 const SizedBox(height: 8),
                 Expanded(
                   child: Obx(() {
-                    if (controller.isLoadingComboOptions.value) {
+                    // Track RxMap so checkbox / qty UI rebuilds on toggle.
+                    final selectedQty = controller.comboComponentQuantities;
+                    final _ = selectedQty.length;
+
+                    if (controller.isLoadingComboOptions.value &&
+                        controller.comboComponentOptions.isEmpty) {
                       return const Center(child: CircularProgressIndicator());
                     }
 
@@ -1062,86 +1128,13 @@ class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
                       separatorBuilder: (_, __) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final item = options[index];
-                        final selected = controller.comboComponentQuantities
-                            .containsKey(item.id);
-                        final qty =
-                            controller.comboComponentQuantities[item.id] ?? 1;
-                        return InkWell(
-                          onTap: () =>
-                              controller.setComboComponent(item, !selected),
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: selected
-                                  ? AppColor.primary.withValues(alpha: 0.06)
-                                  : Theme.of(context).colorScheme.surface,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: selected
-                                    ? AppColor.primary
-                                    : Colors.grey.shade300,
-                                width: selected ? 1.4 : 1,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Checkbox(
-                                  value: selected,
-                                  onChanged: (value) => controller
-                                      .setComboComponent(item, value == true),
-                                ),
-                                const SizedBox(width: 4),
-                                _buildMealItemImage(item.itemImage),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        item.itemName,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        '₹${item.salePrice}',
-                                        style: TextStyle(
-                                          color: Colors.grey.shade600,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                if (selected)
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        onPressed: () => controller
-                                            .decrementComboComponent(item.id),
-                                        icon: const Icon(
-                                          Icons.remove_circle_outline,
-                                        ),
-                                      ),
-                                      Text(qty.toStringAsFixed(0)),
-                                      IconButton(
-                                        onPressed: () => controller
-                                            .incrementComboComponent(item.id),
-                                        icon: const Icon(
-                                          Icons.add_circle_outline,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                              ],
-                            ),
-                          ),
+                        final selected = selectedQty.containsKey(item.id);
+                        final qty = selectedQty[item.id] ?? 1;
+                        return _buildComboOptionTile(
+                          context,
+                          item: item,
+                          selected: selected,
+                          qty: qty,
                         );
                       },
                     );
@@ -1157,6 +1150,95 @@ class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildComboOptionTile(
+    BuildContext context, {
+    required ItemData item,
+    required bool selected,
+    required double qty,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => controller.setComboComponent(item, !selected),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppColor.primary.withValues(alpha: 0.06)
+                : Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: selected ? AppColor.primary : Colors.grey.shade300,
+              width: selected ? 1.4 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Checkbox(
+                value: selected,
+                activeColor: AppColor.primary,
+                checkColor: Colors.white,
+                fillColor: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return AppColor.primary;
+                  }
+                  return Colors.white;
+                }),
+                side: BorderSide(color: Colors.grey.shade700, width: 1.6),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+                onChanged: (value) =>
+                    controller.setComboComponent(item, value == true),
+              ),
+              const SizedBox(width: 4),
+              _buildMealItemImage(item.itemImage),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.itemName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '₹${item.salePrice}',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (selected)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      onPressed: () =>
+                          controller.decrementComboComponent(item.id),
+                      icon: const Icon(Icons.remove_circle_outline),
+                    ),
+                    Text(qty.toStringAsFixed(0)),
+                    IconButton(
+                      onPressed: () =>
+                          controller.incrementComboComponent(item.id),
+                      icon: const Icon(Icons.add_circle_outline),
+                    ),
+                  ],
+                ),
+            ],
           ),
         ),
       ),

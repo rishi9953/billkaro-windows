@@ -250,6 +250,8 @@ Future<void> _showRawMaterialDialog(
               DropdownItem(value: 'PIECE', child: Text(loc.piece_pcs)),
               DropdownItem(value: 'PACKET', child: Text(loc.packet_pkt)),
               DropdownItem(value: 'BOX', child: Text(loc.box_box)),
+              DropdownItem(value: 'DOZEN', child: Text(loc.dozen_doz)),
+              DropdownItem(value: 'BOTTLE', child: Text(loc.bottle_btl)),
             ],
             onChanged: (v) => unit = v ?? 'PIECE',
           ),

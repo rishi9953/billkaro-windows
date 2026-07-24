@@ -15,6 +15,9 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
   late final AddCategoryController controller;
   final ScrollController _categoriesScrollController = ScrollController();
 
+  bool _isWindows(BuildContext context) =>
+      Theme.of(context).platform == TargetPlatform.windows;
+
   Future<void> _confirmDeleteCategory(int index, String categoryName) async {
     final loc = AppLocalizations.of(context)!;
     final safeName = categoryName.trim();
@@ -215,7 +218,11 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                             .toList(growable: false);
                         return Scrollbar(
                           controller: _categoriesScrollController,
-                          thumbVisibility: isDesktop,
+                          thumbVisibility: isDesktop || _isWindows(context),
+                          trackVisibility: _isWindows(context),
+                          interactive: true,
+                          thickness: 8,
+                          radius: const Radius.circular(8),
                           child: ListView.separated(
                             controller: _categoriesScrollController,
                             physics: const ClampingScrollPhysics(),

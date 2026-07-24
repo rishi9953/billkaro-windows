@@ -366,7 +366,7 @@ class _OutletLogoAvatar extends StatelessWidget {
         ),
         child: _hasLogo
             ? CachedNetworkImage(
-                imageUrl: logoUrl!.trim(),
+                imageUrl: resolvedMediaUrl(logoUrl!.trim()),
                 width: size,
                 height: size,
                 fit: BoxFit.cover,

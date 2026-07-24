@@ -1,6 +1,7 @@
 import 'package:billkaro/app/Widgets/app_dropdowns.dart';
 import 'package:billkaro/app/modules/Staff/add_staff_controller.dart';
 import 'package:billkaro/app/modules/Staff/staff_details_controller.dart';
+import 'package:billkaro/app/modules/Staff/widgets/staff_permissions_section.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart' show Image;
@@ -209,7 +210,7 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
             .toList(),
         onChanged: (value) {
           if (value != null) {
-            controller.selectedRole.value = value;
+            controller.onRoleChanged(value);
           }
         },
       ),
@@ -239,16 +240,20 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _labelRequired(loc, loc.staff_image),
+        Text(
+          loc.staff_image,
+          style: const TextStyle(
+            color: Color(0xFF6B7280),
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         const SizedBox(height: 8),
         Obx(() {
           final file = controller.selectedImage.value;
           final url = resolvedMediaUrl(controller.imageUrl.value);
           final uploading = controller.isUploadingImage.value;
           final hasImage = controller.hasStaffImage;
-          final showErrors = controller.showValidationErrors.value;
-          final imageError =
-              showErrors ? controller.validateStaffImage() : null;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -264,11 +269,7 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                             ? Theme.of(context).colorScheme.surface
                             : const Color(0xFFF9FAFB),
                         borderRadius: BorderRadius.circular(isWin ? 10 : 8),
-                        border: Border.all(
-                          color: imageError != null
-                              ? Colors.red.shade300
-                              : Colors.grey.shade300,
-                        ),
+                        border: Border.all(color: Colors.grey.shade300),
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(isWin ? 10 : 8),
@@ -328,13 +329,6 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                     label: Text(loc.remove_image),
                     style: TextButton.styleFrom(foregroundColor: Colors.red),
                   ),
-                ),
-              ],
-              if (imageError != null) ...[
-                const SizedBox(height: 6),
-                Text(
-                  imageError,
-                  style: TextStyle(color: Colors.red.shade700, fontSize: 12),
                 ),
               ],
             ],
@@ -632,60 +626,15 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _labelRequired(loc, loc.user_role),
-                  const SizedBox(height: 8),
-                  _roleDropdown(context, loc, isWin),
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            SizedBox(
-              width: isWin ? 160 : 120,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _labelRequired(loc, loc.unique_id),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: controller.uniqueIdController,
-                    readOnly: true,
-                    decoration: _fieldDecoration(
-                      context,
-                      hint: loc.tap_to_enter,
-                      isWin: isWin,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+        _labelRequired(loc, loc.user_role),
+        const SizedBox(height: 8),
+        _roleDropdown(context, loc, isWin),
         SizedBox(height: isWin ? 20 : 32),
-        Obx(
-          () => controller.selectedRole.value == 'Biller'
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    checkbox(
-                      loc.allow_biller_create_menu_items,
-                      controller.canManageBills.value,
-                      (val) => controller.canManageBills.value = val ?? false,
-                    ),
-                    checkbox(
-                      loc.allow_biller_edit_menu_items,
-                      controller.canEditMenuItems.value,
-                      (val) => controller.canEditMenuItems.value = val ?? false,
-                    ),
-                  ],
-                )
-              : const SizedBox.shrink(),
+        StaffPermissionsSection(
+          selected: controller.selectedPermissions,
+          onToggle: controller.togglePermission,
+          onSelectAll: controller.selectAllPermissions,
+          onDeselectAll: controller.deselectAllPermissions,
         ),
         SizedBox(height: isWin ? 12 : 16),
         Obx(

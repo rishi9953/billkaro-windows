@@ -55,6 +55,22 @@ class ItemData {
   final DateTime updatedAt;
   final String itemImage;
   final String? orderFrom; // optional field
+  @JsonKey(defaultValue: '')
+  final String barcode;
+  @JsonKey(defaultValue: '')
+  final String sku;
+  @JsonKey(defaultValue: 'Each')
+  final String soldBy;
+  @JsonKey(defaultValue: 0)
+  final double costPrice;
+  @JsonKey(defaultValue: '')
+  final String posColor;
+  @JsonKey(defaultValue: false)
+  final bool trackStock;
+  @JsonKey(defaultValue: 0)
+  final double stockQuantity;
+  @JsonKey(defaultValue: 0)
+  final double minStock;
   @JsonKey(defaultValue: true)
   final bool showItem;
   @JsonKey(defaultValue: false)
@@ -79,6 +95,14 @@ class ItemData {
     required this.outletId,
     this.orderFrom,
     this.itemImage = '',
+    this.barcode = '',
+    this.sku = '',
+    this.soldBy = 'Each',
+    this.costPrice = 0,
+    this.posColor = '',
+    this.trackStock = false,
+    this.stockQuantity = 0,
+    this.minStock = 0,
     this.showItem = true,
     this.isRecommended = false,
     this.prepTimeMinutes = 15,

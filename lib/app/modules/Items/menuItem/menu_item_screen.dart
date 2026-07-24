@@ -36,6 +36,23 @@ String? _resolveItemImageUrl(String raw) {
   }
 }
 
+int _menuItemGridColumns(double availableWidth) {
+  if (availableWidth < 1100) return 2;
+  return (availableWidth / 320).floor().clamp(3, 4);
+}
+
+bool _menuItemUseCompactCard(double tileWidth) => tileWidth < 340;
+
+double _menuItemGridAspectRatio({
+  required double tileWidth,
+  required bool compact,
+}) {
+  if (compact) {
+    return tileWidth / (tileWidth * 0.72 + 88);
+  }
+  return (tileWidth / 112).clamp(2.0, 4.5);
+}
+
 class MenuItemScreen extends StatefulWidget {
   MenuItemScreen({super.key});
 
@@ -46,6 +63,10 @@ class MenuItemScreen extends StatefulWidget {
 class _MenuItemScreenState extends State<MenuItemScreen> {
   final controller = Get.put(MenuItemController());
   final ScrollController scrollController = ScrollController();
+  final ScrollController categoriesScrollController = ScrollController();
+
+  bool _isWindows(BuildContext context) =>
+      Theme.of(context).platform == TargetPlatform.windows;
 
   @override
   void initState() {
@@ -75,6 +96,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
   void dispose() {
     scrollController.removeListener(_onScroll);
     scrollController.dispose();
+    categoriesScrollController.dispose();
     super.dispose();
   }
 
@@ -450,12 +472,14 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
   }
 
   Widget _buildDesktopContent(AppLocalizations loc, double screenWidth) {
+    final categoryWidth = screenWidth < 1200 ? 240.0 : 300.0;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 300, child: _buildDesktopCategories(loc)),
+          SizedBox(width: categoryWidth, child: _buildDesktopCategories(loc)),
           const SizedBox(width: 16),
           Expanded(child: _buildItemsGrid(loc, screenWidth)),
         ],
@@ -499,27 +523,23 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                 const Spacer(),
                 if (selectedCategory != null)
                   Tooltip(
-                    message: selectedCategory == null
-                        ? loc.select_category_to_edit
-                        : loc.edit_selected_category,
+                    message: loc.edit_selected_category,
                     child: IconButton(
-                      onPressed: selectedCategory == null
-                          ? null
-                          : () {
-                              final appPref = Get.find<AppPref>();
-                              if (!hasTrialOrSubscription(appPref)) {
-                                checkSubscription();
-                                return;
-                              }
-                              Modular.to.pushNamed(
-                                HomeMainRoutes.category,
-                                arguments: {
-                                  'screen': 'item',
-                                  'isEdit': true,
-                                  'category': selectedCategory,
-                                },
-                              );
-                            },
+                      onPressed: () {
+                        final appPref = Get.find<AppPref>();
+                        if (!hasTrialOrSubscription(appPref)) {
+                          checkSubscription();
+                          return;
+                        }
+                        Modular.to.pushNamed(
+                          HomeMainRoutes.category,
+                          arguments: {
+                            'screen': 'item',
+                            'isEdit': true,
+                            'category': selectedCategory,
+                          },
+                        );
+                      },
                       icon: const Icon(Icons.edit_outlined),
                       iconSize: 18,
                       visualDensity: VisualDensity.compact,
@@ -557,8 +577,14 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
             const SizedBox(height: 10),
             Expanded(
               child: Scrollbar(
-                thumbVisibility: true,
+                controller: categoriesScrollController,
+                thumbVisibility: _isWindows(context),
+                trackVisibility: _isWindows(context),
+                interactive: true,
+                thickness: 8,
+                radius: const Radius.circular(8),
                 child: ListView(
+                  controller: categoriesScrollController,
                   children: [
                     _DesktopCategoryTile(
                       title: loc.all,
@@ -616,8 +642,15 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final availableWidth = constraints.maxWidth;
-        // Keep tiles wide enough so row contents (image + text + switch) never overflow.
-        final int computedColumns = (availableWidth / 360).floor().clamp(1, 4);
+        final columns = _menuItemGridColumns(availableWidth);
+        const spacing = 12.0;
+        final tileWidth =
+            (availableWidth - (columns - 1) * spacing) / columns;
+        final compact = _menuItemUseCompactCard(tileWidth);
+        final childAspectRatio = _menuItemGridAspectRatio(
+          tileWidth: tileWidth,
+          compact: compact,
+        );
 
         return Obx(() {
           final displayItems = controller.items;
@@ -663,19 +696,24 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
             );
           }
 
+          final showScroller = _isWindows(context);
           return Scrollbar(
-            thumbVisibility: true,
+            controller: scrollController,
+            thumbVisibility: showScroller,
+            trackVisibility: showScroller,
+            interactive: true,
+            thickness: 8,
+            radius: const Radius.circular(8),
             child: RefreshIndicator(
               onRefresh: () => controller.getItems(forceApiRefresh: true),
               child: GridView.builder(
                 controller: scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: computedColumns,
+                  crossAxisCount: columns,
                   mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  // Slightly wider tiles than before to avoid any edge-case overflow.
-                  childAspectRatio: 3.0,
+                  crossAxisSpacing: spacing,
+                  childAspectRatio: childAspectRatio,
                 ),
                 itemCount: displayItems.length + 1,
                 itemBuilder: (context, index) {
@@ -683,7 +721,11 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                     return _buildBottomLoader(false);
                   }
                   final item = displayItems[index];
-                  return _ItemCard(item: item, isTablet: true);
+                  return _ItemCard(
+                    item: item,
+                    isTablet: true,
+                    compact: compact,
+                  );
                 },
               ),
             ),
@@ -1069,23 +1111,56 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
         );
       }
 
-      return RefreshIndicator(
-        onRefresh: () => controller.getItems(forceApiRefresh: true),
-        child: ListView.builder(
-          physics: BouncingScrollPhysics(),
-          controller: scrollController,
-          padding: EdgeInsets.all(isTablet ? 16 : 12),
-          itemCount: displayItems.length + 1, // +1 for bottom loader
-          itemBuilder: (context, index) {
-            if (index == displayItems.length) {
-              return _buildBottomLoader(isTablet);
-            }
-            final item = displayItems[index];
-            return Padding(
-              padding: EdgeInsets.only(bottom: isTablet ? 12 : 10),
-              child: _ItemCard(item: item, isTablet: isTablet),
-            );
-          },
+      final showScroller = _isWindows(context);
+      return Scrollbar(
+        controller: scrollController,
+        thumbVisibility: showScroller,
+        trackVisibility: showScroller,
+        interactive: true,
+        thickness: 8,
+        radius: const Radius.circular(8),
+        child: RefreshIndicator(
+          onRefresh: () => controller.getItems(forceApiRefresh: true),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final availableWidth = constraints.maxWidth;
+              const spacing = 12.0;
+              final columns = 2;
+              final safeWidth =
+                  availableWidth > 0 ? availableWidth : screenWidth;
+              final tileWidth =
+                  (safeWidth - (isTablet ? 32 : 24) - spacing) / columns;
+              final compact = true;
+              final childAspectRatio = _menuItemGridAspectRatio(
+                tileWidth: tileWidth,
+                compact: compact,
+              );
+
+              return GridView.builder(
+                physics: const BouncingScrollPhysics(),
+                controller: scrollController,
+                padding: EdgeInsets.all(isTablet ? 16 : 12),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  crossAxisSpacing: spacing,
+                  mainAxisSpacing: isTablet ? 12 : 10,
+                  childAspectRatio: childAspectRatio,
+                ),
+                itemCount: displayItems.length + 1, // +1 for bottom loader
+                itemBuilder: (context, index) {
+                  if (index == displayItems.length) {
+                    return _buildBottomLoader(isTablet);
+                  }
+                  final item = displayItems[index];
+                  return _ItemCard(
+                    item: item,
+                    isTablet: isTablet,
+                    compact: compact,
+                  );
+                },
+              );
+            },
+          ),
         ),
       );
     });
@@ -1383,8 +1458,13 @@ class _AddCategoryChip extends StatelessWidget {
 class _ItemCard extends StatelessWidget {
   final ItemData item;
   final bool isTablet;
+  final bool compact;
 
-  const _ItemCard({required this.item, required this.isTablet});
+  const _ItemCard({
+    required this.item,
+    required this.isTablet,
+    this.compact = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1429,192 +1509,339 @@ class _ItemCard extends StatelessWidget {
               ],
             ),
             child: Padding(
-              padding: EdgeInsets.all(isTablet ? 16 : 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (selectionMode) ...[
-                    Checkbox(
-                      value: isSelected,
-                      activeColor: AppColor.primary,
-                      onChanged: (_) => controller.toggleItemSelection(item.id),
+              padding: EdgeInsets.all(compact ? 10 : (isTablet ? 16 : 12)),
+              child: compact
+                  ? _buildCompactContent(
+                      context,
+                      loc,
+                      controller,
+                      imageUrl,
+                      selectionMode,
+                      isSelected,
+                    )
+                  : _buildWideContent(
+                      context,
+                      loc,
+                      controller,
+                      imageUrl,
+                      selectionMode,
+                      isSelected,
                     ),
-                    SizedBox(width: isTablet ? 4 : 2),
-                  ],
-                  // Item Image - Small square on left
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(isTablet ? 12 : 8),
-                    child: Container(
-                      width: isTablet ? 80 : 70,
-                      height: isTablet ? 80 : 70,
-                      color: Colors.grey[200],
-                      child: imageUrl != null
-                          ? CachedNetworkImage(
-                              imageUrl: imageUrl,
-                              fit: BoxFit.cover,
-                              memCacheWidth: (isTablet ? 160 : 140),
-                              memCacheHeight: (isTablet ? 160 : 140),
-                              fadeInDuration: const Duration(milliseconds: 150),
-                              placeholder: (context, url) => Shimmer.fromColors(
-                                baseColor: Colors.grey[300]!,
-                                highlightColor: Colors.grey[100]!,
-                                child: Container(color: Colors.grey[300]),
-                              ),
-                              errorWidget: (context, url, error) => Container(
-                                color: Colors.grey[200],
-                                alignment: Alignment.center,
-                                child: Icon(
-                                  Icons.image_not_supported_outlined,
-                                  size: isTablet ? 32 : 28,
-                                  color: Colors.grey[500],
-                                ),
-                              ),
-                            )
-                          : Container(
-                              color: Colors.grey[200],
-                              alignment: Alignment.center,
-                              child: Icon(
-                                Icons.image_outlined,
-                                size: isTablet ? 32 : 28,
-                                color: Colors.grey[500],
-                              ),
-                            ),
-                    ),
-                  ),
-
-                  SizedBox(width: isTablet ? 16 : 12),
-
-                  // Item Details - Name and Price
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        // Item Name
-                        Text(
-                          item.itemName,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: isTablet ? 18 : 16,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black87,
-                            height: 1.3,
-                          ),
-                        ),
-                        SizedBox(height: isTablet ? 6 : 4),
-                        // Price
-                        Text(
-                          '₹${item.salePrice.toStringAsFixed(0)}',
-                          style: TextStyle(
-                            fontSize: isTablet ? 16 : 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  SizedBox(width: isTablet ? 12 : 8),
-
-                  if (!selectionMode)
-                    // Actions (Edit menu) + Availability toggle
-                    SizedBox(
-                      width: isTablet ? 72 : 64,
-                      height: isTablet ? 80 : 70, // Match image height
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          SizedBox(
-                            height: isTablet ? 34 : 30,
-                            width: isTablet ? 40 : 36,
-                            child: AppActionDropdown2<String>(
-                              customButton: Icon(
-                                Icons.more_vert,
-                                size: isTablet ? 22 : 20,
-                                color: Colors.grey.shade700,
-                              ),
-                              width: 150,
-                              buttonStyleData: ButtonStyleData(
-                                height: isTablet ? 34 : 30,
-                                width: isTablet ? 40 : 36,
-                                padding: EdgeInsets.zero,
-                              ),
-                              items: [
-                                DropdownItem<String>(
-                                  value: 'edit',
-                                  height: 44,
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.edit_outlined, size: 18),
-                                      const SizedBox(width: 10),
-                                      Text(loc.edit),
-                                    ],
-                                  ),
-                                ),
-                                DropdownItem<String>(
-                                  value: 'delete',
-                                  height: 44,
-                                  child: Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.delete_outlined,
-                                        size: 18,
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Text(loc.delete),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                              onChanged: (value) {
-                                if (value == 'edit') {
-                                  Modular.to.pushNamed(
-                                    HomeMainRoutes.addItem,
-                                    arguments: {'item': item, 'isEdit': true},
-                                  );
-                                } else if (value == 'delete') {
-                                  controller.deleteItem(item);
-                                }
-                              },
-                            ),
-                          ),
-                          Tooltip(
-                            message: 'Availability',
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Obx(() {
-                                final isAvailable = controller.isItemAvailable(
-                                  item.id,
-                                );
-                                return Switch(
-                                  materialTapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                  value: isAvailable,
-                                  onChanged: (value) {
-                                    controller.toggleItemAvailability(item.id);
-                                  },
-                                  activeColor: AppColor.primary.withOpacity(
-                                    0.9,
-                                  ),
-                                  activeTrackColor: AppColor.primary
-                                      .withOpacity(0.2),
-                                );
-                              }),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
             ),
           ),
         ),
       );
     });
+  }
+
+  Widget _buildItemImage(String? imageUrl, {double? size}) {
+    final imageSize = size ?? (isTablet ? 80.0 : 70.0);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(isTablet ? 12 : 8),
+      child: SizedBox(
+        width: imageSize,
+        height: imageSize,
+        child: _buildImageContent(imageUrl),
+      ),
+    );
+  }
+
+  Widget _buildImageContent(String? imageUrl) {
+    final fallbackIconSize = compact ? 28.0 : (isTablet ? 32.0 : 28.0);
+
+    return ColoredBox(
+      color: Colors.grey[200]!,
+      child: imageUrl != null
+          ? CachedNetworkImage(
+              imageUrl: imageUrl,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              memCacheWidth: 240,
+              memCacheHeight: 240,
+              fadeInDuration: const Duration(milliseconds: 150),
+              placeholder: (context, url) => Shimmer.fromColors(
+                baseColor: Colors.grey[300]!,
+                highlightColor: Colors.grey[100]!,
+                child: const ColoredBox(color: Colors.white),
+              ),
+              errorWidget: (context, url, error) => Center(
+                child: Icon(
+                  Icons.image_not_supported_outlined,
+                  size: fallbackIconSize,
+                  color: Colors.grey[500],
+                ),
+              ),
+            )
+          : Center(
+              child: Icon(
+                Icons.image_outlined,
+                size: fallbackIconSize,
+                color: Colors.grey[500],
+              ),
+            ),
+    );
+  }
+
+  Widget _buildActions(
+    BuildContext context,
+    AppLocalizations loc,
+    MenuItemController controller, {
+    bool compact = false,
+  }) {
+    if (controller.isSelectionMode.value) {
+      return const SizedBox.shrink();
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        SizedBox(
+          height: compact ? 30 : (isTablet ? 34 : 30),
+          width: compact ? 32 : (isTablet ? 40 : 36),
+          child: AppActionDropdown2<String>(
+            customButton: Icon(
+              Icons.more_vert,
+              size: compact ? 18 : (isTablet ? 22 : 20),
+              color: Colors.grey.shade700,
+            ),
+            width: 150,
+            buttonStyleData: ButtonStyleData(
+              height: compact ? 30 : (isTablet ? 34 : 30),
+              width: compact ? 32 : (isTablet ? 40 : 36),
+              padding: EdgeInsets.zero,
+            ),
+            items: [
+              DropdownItem<String>(
+                value: 'edit',
+                height: 44,
+                child: Row(
+                  children: [
+                    const Icon(Icons.edit_outlined, size: 18),
+                    const SizedBox(width: 10),
+                    Text(loc.edit),
+                  ],
+                ),
+              ),
+              DropdownItem<String>(
+                value: 'delete',
+                height: 44,
+                child: Row(
+                  children: [
+                    const Icon(Icons.delete_outlined, size: 18),
+                    const SizedBox(width: 10),
+                    Text(loc.delete),
+                  ],
+                ),
+              ),
+            ],
+            onChanged: (value) {
+              if (value == 'edit') {
+                Modular.to.pushNamed(
+                  HomeMainRoutes.addItem,
+                  arguments: {'item': item, 'isEdit': true},
+                );
+              } else if (value == 'delete') {
+                controller.deleteItem(item);
+              }
+            },
+          ),
+        ),
+        const SizedBox(width: 4),
+        Obx(() {
+          final isAvailable = controller.isItemAvailable(item.id);
+          return Switch(
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            value: isAvailable,
+            onChanged: (_) => controller.toggleItemAvailability(item.id),
+            activeColor: AppColor.primary.withOpacity(0.9),
+            activeTrackColor: AppColor.primary.withOpacity(0.2),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildCompactContent(
+    BuildContext context,
+    AppLocalizations loc,
+    MenuItemController controller,
+    String? imageUrl,
+    bool selectionMode,
+    bool isSelected,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (selectionMode) ...[
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Checkbox(
+              value: isSelected,
+              activeColor: AppColor.primary,
+              onChanged: (_) => controller.toggleItemSelection(item.id),
+            ),
+          ),
+          const SizedBox(height: 4),
+        ],
+        AspectRatio(
+          aspectRatio: 1.15,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(isTablet ? 12 : 8),
+            child: _buildImageContent(imageUrl),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          item.itemName,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: isTablet ? 15 : 14,
+            fontWeight: FontWeight.w700,
+            color: Colors.black87,
+            height: 1.2,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '₹${item.salePrice.toStringAsFixed(0)}',
+          style: TextStyle(
+            fontSize: isTablet ? 14 : 13,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildActions(context, loc, controller, compact: true),
+      ],
+    );
+  }
+
+  Widget _buildWideContent(
+    BuildContext context,
+    AppLocalizations loc,
+    MenuItemController controller,
+    String? imageUrl,
+    bool selectionMode,
+    bool isSelected,
+  ) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (selectionMode) ...[
+          Checkbox(
+            value: isSelected,
+            activeColor: AppColor.primary,
+            onChanged: (_) => controller.toggleItemSelection(item.id),
+          ),
+          SizedBox(width: isTablet ? 4 : 2),
+        ],
+        _buildItemImage(imageUrl),
+        SizedBox(width: isTablet ? 16 : 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.itemName,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: isTablet ? 18 : 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                  height: 1.3,
+                ),
+              ),
+              SizedBox(height: isTablet ? 6 : 4),
+              Text(
+                '₹${item.salePrice.toStringAsFixed(0)}',
+                style: TextStyle(
+                  fontSize: isTablet ? 16 : 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(width: isTablet ? 12 : 8),
+        if (!selectionMode)
+          SizedBox(
+            width: isTablet ? 72 : 64,
+            height: isTablet ? 80 : 70,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                SizedBox(
+                  height: isTablet ? 34 : 30,
+                  width: isTablet ? 40 : 36,
+                  child: AppActionDropdown2<String>(
+                    customButton: Icon(
+                      Icons.more_vert,
+                      size: isTablet ? 22 : 20,
+                      color: Colors.grey.shade700,
+                    ),
+                    width: 150,
+                    buttonStyleData: ButtonStyleData(
+                      height: isTablet ? 34 : 30,
+                      width: isTablet ? 40 : 36,
+                      padding: EdgeInsets.zero,
+                    ),
+                    items: [
+                      DropdownItem<String>(
+                        value: 'edit',
+                        height: 44,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.edit_outlined, size: 18),
+                            const SizedBox(width: 10),
+                            Text(loc.edit),
+                          ],
+                        ),
+                      ),
+                      DropdownItem<String>(
+                        value: 'delete',
+                        height: 44,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.delete_outlined, size: 18),
+                            const SizedBox(width: 10),
+                            Text(loc.delete),
+                          ],
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value == 'edit') {
+                        Modular.to.pushNamed(
+                          HomeMainRoutes.addItem,
+                          arguments: {'item': item, 'isEdit': true},
+                        );
+                      } else if (value == 'delete') {
+                        controller.deleteItem(item);
+                      }
+                    },
+                  ),
+                ),
+                Obx(() {
+                  final isAvailable = controller.isItemAvailable(item.id);
+                  return Switch(
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    value: isAvailable,
+                    onChanged: (_) =>
+                        controller.toggleItemAvailability(item.id),
+                    activeColor: AppColor.primary.withOpacity(0.9),
+                    activeTrackColor: AppColor.primary.withOpacity(0.2),
+                  );
+                }),
+              ],
+            ),
+          ),
+      ],
+    );
   }
 }

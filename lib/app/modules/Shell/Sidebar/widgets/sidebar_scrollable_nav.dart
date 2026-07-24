@@ -87,27 +87,32 @@ class SidebarScrollableNav extends StatelessWidget {
                   ),
                 ),
               ),
-              _nav(
-                index: 1,
-                label: loc.create_order,
-                icon: Icon(
-                  Icons.add_circle_outline_rounded,
-                  size: SidebarLayout.navIconSize,
-                  color: selectedIndex == 1 ? _active : _inactive,
+              if (StaffAccess.canAccessSales)
+                _nav(
+                  index: indices.createOrder,
+                  label: loc.create_order,
+                  icon: Icon(
+                    Icons.add_circle_outline_rounded,
+                    size: SidebarLayout.navIconSize,
+                    color: selectedIndex == indices.createOrder
+                        ? _active
+                        : _inactive,
+                  ),
                 ),
-              ),
               if (hasSeating)
                 _nav(
-                  index: 2,
+                  index: indices.tables,
                   label: loc.tables,
                   icon: Icon(
                     Icons.table_restaurant,
                     size: SidebarLayout.navIconSize,
-                    color: selectedIndex == 2 ? _active : _inactive,
+                    color: selectedIndex == indices.tables
+                        ? _active
+                        : _inactive,
                   ),
                 ),
-              _buildItemsSection(context),
-              _buildOrdersSection(context),
+              if (StaffAccess.canAccessProducts) _buildItemsSection(context),
+              if (StaffAccess.canAccessSales) _buildOrdersSection(context),
               if (StaffAccess.canViewInventory)
                 _nav(
                   index: indices.inventory,
@@ -163,18 +168,21 @@ class SidebarScrollableNav extends StatelessWidget {
                         )
                       : null,
                 ),
-              _nav(
-                index: indices.customers,
-                label: loc.customers,
-                icon: Assets.svg.group.svg(
-                  width: SidebarLayout.navIconSize,
-                  height: SidebarLayout.navIconSize,
-                  colorFilter: ColorFilter.mode(
-                    selectedIndex == indices.customers ? _active : _inactive,
-                    BlendMode.srcIn,
+              if (StaffAccess.canAccessCustomers)
+                _nav(
+                  index: indices.customers,
+                  label: loc.customers,
+                  icon: Assets.svg.group.svg(
+                    width: SidebarLayout.navIconSize,
+                    height: SidebarLayout.navIconSize,
+                    colorFilter: ColorFilter.mode(
+                      selectedIndex == indices.customers
+                          ? _active
+                          : _inactive,
+                      BlendMode.srcIn,
+                    ),
                   ),
                 ),
-              ),
               if (StaffAccess.canManageStaff)
                 _nav(
                   index: indices.staff,
@@ -235,16 +243,18 @@ class SidebarScrollableNav extends StatelessWidget {
                       selectedIndex == indices.printer ? _active : _inactive,
                 ),
               ),
-              _nav(
-                index: indices.settings,
-                label: loc.settings,
-                icon: Icon(
-                  Icons.settings_outlined,
-                  size: SidebarLayout.navIconSize,
-                  color:
-                      selectedIndex == indices.settings ? _active : _inactive,
+              if (StaffAccess.canManageSettings)
+                _nav(
+                  index: indices.settings,
+                  label: loc.settings,
+                  icon: Icon(
+                    Icons.settings_outlined,
+                    size: SidebarLayout.navIconSize,
+                    color: selectedIndex == indices.settings
+                        ? _active
+                        : _inactive,
+                  ),
                 ),
-              ),
             ],
           ),
         ),

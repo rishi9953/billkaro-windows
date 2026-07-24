@@ -133,8 +133,9 @@ class ItemFileService {
           _firstPriceInRowSkippingCoreColumns(cells, columns);
       if (price == null || price <= 0) continue;
 
+      // Lowercase to match app category chips / API filters (case-sensitive match otherwise)
       final category = categoryRaw != null && categoryRaw.isNotEmpty
-          ? categoryRaw
+          ? (categoryRaw.toLowerCase() == 'none' ? 'none' : categoryRaw.toLowerCase())
           : 'none';
 
       final gstRaw = _cellAt(cells, columns.gstCol);

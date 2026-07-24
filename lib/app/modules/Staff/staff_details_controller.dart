@@ -19,6 +19,7 @@ class StaffMember {
     this.dateOfBirth = '',
     this.gender = '',
     this.profileImage = '',
+    this.joinDate = '',
   });
 
   final String id;
@@ -36,6 +37,7 @@ class StaffMember {
   final String dateOfBirth;
   final String gender;
   final String profileImage;
+  final String joinDate;
 
   /// API uses `role: staff` for account type; actual role is in `staffRole`.
   static String roleFromApiMap(
@@ -324,6 +326,14 @@ class StaffDetailsController extends BaseController {
         raw['profileImage'],
         raw['profile_image'],
         userMap?['profileImage'],
+      ]),
+      joinDate: _firstNonEmpty([
+        raw['createdAt'],
+        raw['created_at'],
+        raw['joinDate'],
+        raw['join_date'],
+        userMap?['createdAt'],
+        userMap?['created_at'],
       ]),
     );
   }

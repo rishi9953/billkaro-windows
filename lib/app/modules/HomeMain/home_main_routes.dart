@@ -107,30 +107,33 @@ abstract class HomeMainRoutes {
     return _normalizedSeatingValue(o.seatingCapacity) != '0';
   }
 
-  static int _inventoryNavOffset() =>
-      StaffAccess.canViewInventory ? 1 : 0;
-
-  static List<String> _navRouteOrder({required bool k, required bool s}) {
-    final inv = _inventoryNavOffset();
+  static List<String> navRouteOrder({
+    required bool kotEnabled,
+    required bool hasSeating,
+  }) {
     return [
       home,
-      createOrder,
-      if (s) tables,
-      items,
-      closedOrders,
-      if (inv > 0) inventory,
-      if (inv > 0) purchaseOrders,
-      reports,
-      if (k) ...[kotHistory, kitchenDisplay],
-      customers,
-      staff,
+      if (StaffAccess.canAccessSales) createOrder,
+      if (hasSeating) tables,
+      if (StaffAccess.canAccessProducts) items,
+      if (StaffAccess.canAccessSales) closedOrders,
+      if (StaffAccess.canViewInventory) inventory,
+      if (StaffAccess.canViewInventory) purchaseOrders,
+      if (StaffAccess.canViewReports) reports,
+      if (kotEnabled) ...[kotHistory, kitchenDisplay],
+      if (StaffAccess.canAccessCustomers) customers,
+      if (StaffAccess.canManageStaff) staff,
       menu,
-      subscriptions,
-      whatsaapMarketing,
+      if (StaffAccess.canManageSubscriptions) subscriptions,
+      if (StaffAccess.canUseWhatsAppMarketing) whatsaapMarketing,
       printer,
-      settings,
+      if (StaffAccess.canManageSettings) settings,
       profile,
     ];
+  }
+
+  static List<String> _navRouteOrder({required bool k, required bool s}) {
+    return navRouteOrder(kotEnabled: k, hasSeating: s);
   }
 
   static int _indexOfRoute(List<String> routes, String route) {

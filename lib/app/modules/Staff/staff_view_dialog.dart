@@ -1,5 +1,6 @@
 import 'package:billkaro/app/modules/Staff/staff_details_controller.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_permission_keys.dart';
 import 'package:intl/intl.dart';
 
 Future<void> showStaffViewDialog(BuildContext context, StaffMember member) {
@@ -81,10 +82,14 @@ class _StaffViewDialog extends StatelessWidget {
                       _formatDateOfBirth(member.dateOfBirth),
                     ),
                     _detailRow(
+                      loc.join_date,
+                      _formatDateOfBirth(member.joinDate),
+                    ),
+                    _detailRow(
                       loc.gender_label,
                       _genderLabel(loc, member.gender),
                     ),
-                    if (_isBillerRole(member.role)) ...[
+                    if (member.permissions.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       _BillerPermissionsSection(
                         permissions: member.permissions,
@@ -268,7 +273,32 @@ class _BillerPermissionsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final granted = permissions.map((item) => item.trim()).toSet();
+    final granted = expandStaffPermissions(permissions);
+    final labels = <String>[];
+    for (final group in kStaffPermissionGroups) {
+      for (final item in group.items) {
+        if (granted.contains(item.key)) {
+          labels.add(item.label);
+        }
+      }
+    }
+
+    if (labels.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF9FAFB),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Text(
+          'No permissions assigned',
+          style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+        ),
+      );
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -277,50 +307,46 @@ class _BillerPermissionsSection extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
         children: [
-          _PermissionReadOnlyRow(
-            label: loc.allow_biller_create_menu_items,
-            enabled: granted.contains('create_bill'),
-          ),
-          const SizedBox(height: 6),
-          _PermissionReadOnlyRow(
-            label: loc.allow_biller_edit_menu_items,
-            enabled: granted.contains('edit_menu'),
-          ),
+          for (final label in labels) _PermissionChip(label: label),
         ],
       ),
     );
   }
 }
 
-class _PermissionReadOnlyRow extends StatelessWidget {
-  const _PermissionReadOnlyRow({required this.label, required this.enabled});
+class _PermissionChip extends StatelessWidget {
+  const _PermissionChip({required this.label});
 
   final String label;
-  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(
-          enabled ? Icons.check_circle : Icons.cancel_outlined,
-          size: 18,
-          color: enabled ? Colors.green.shade600 : Colors.grey.shade500,
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColor.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColor.primary.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.check_circle, size: 14, color: AppColor.primary),
+          const SizedBox(width: 6),
+          Text(
             label,
             style: TextStyle(
-              fontSize: 13,
-              color: enabled ? Colors.grey.shade800 : Colors.grey.shade500,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: AppColor.primary,
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

@@ -19,6 +19,9 @@ class InventoryController extends BaseController {
   final transactions = <StockTransactionData>[].obs;
   final recipes = <RecipeData>[].obs;
   final menuItems = <ItemData>[].obs;
+  final productStock = <ProductStockData>[].obs;
+  final productStockSearch = ''.obs;
+  final showProductLowStockOnly = false.obs;
   final categories = <CategoryData>[].obs;
 
   String get outletId => appPref.selectedOutlet?.id ?? '';
@@ -41,6 +44,7 @@ class InventoryController extends BaseController {
         loadTransactions(),
         loadRecipes(),
         loadMenuItems(),
+        loadProductStock(),
       ]);
     } finally {
       isLoading.value = false;
@@ -140,6 +144,73 @@ class InventoryController extends BaseController {
     if (res != null) {
       menuItems.value = res.data;
     }
+  }
+
+  Future<void> loadProductStock() async {
+    final res = await callApi(
+      apiClient.getProductStock(
+        outletId,
+        productStockSearch.value.isEmpty ? null : productStockSearch.value,
+        true,
+        showProductLowStockOnly.value ? true : null,
+      ),
+      showLoader: false,
+    );
+    if (res is Map && res['data'] is List) {
+      productStock.value = (res['data'] as List)
+          .map((e) => ProductStockData.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+  }
+
+  Future<bool> adjustProductStock({
+    required String itemId,
+    required String adjustmentType,
+    required double quantity,
+    String reason = 'Other',
+    String? notes,
+  }) async {
+    final res = await callApi(
+      apiClient.adjustProductStock(outletId, itemId, {
+        'userId': userId,
+        'adjustmentType': adjustmentType,
+        'quantity': quantity,
+        'reason': reason,
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
+      }),
+    );
+    if (res is Map && res['status'] == 'success') {
+      await Future.wait([loadProductStock(), loadDashboard()]);
+      return true;
+    }
+    return false;
+  }
+
+  Future<List<ProductStockMovementData>> loadProductStockMovements({
+    required String itemId,
+    String? type,
+  }) async {
+    final res = await callApi(
+      apiClient.getProductStockMovements(
+        outletId,
+        itemId,
+        type == null || type == 'ALL' ? null : type,
+      ),
+      showLoader: false,
+    );
+    if (res is Map && res['data'] is Map) {
+      final movements = res['data']['movements'];
+      if (movements is List) {
+        return movements
+            .map(
+              (e) => ProductStockMovementData.fromJson(
+                Map<String, dynamic>.from(e as Map),
+              ),
+            )
+            .toList();
+      }
+    }
+    return [];
   }
 
   /// Loads only data needed for recipe management (menu item screen, dialogs).

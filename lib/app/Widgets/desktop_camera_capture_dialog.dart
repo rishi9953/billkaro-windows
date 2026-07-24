@@ -10,7 +10,7 @@ Future<String?> showDesktopCameraCaptureDialog() {
   return Get.dialog<String>(
     const DesktopCameraCaptureDialog(),
     barrierDismissible: false,
-  );
+);
 }
 
 class DesktopCameraCaptureDialog extends StatefulWidget {
@@ -21,8 +21,10 @@ class DesktopCameraCaptureDialog extends StatefulWidget {
       _DesktopCameraCaptureDialogState();
 }
 
-class _DesktopCameraCaptureDialogState extends State<DesktopCameraCaptureDialog> {
+class _DesktopCameraCaptureDialogState
+    extends State<DesktopCameraCaptureDialog> {
   List<CameraDescription> _cameras = [];
+  List<String> _cameraNames = [];
   CameraController? _controller;
   int _selectedIndex = 0;
   bool _initializing = true;
@@ -46,7 +48,12 @@ class _DesktopCameraCaptureDialogState extends State<DesktopCameraCaptureDialog>
         });
         return;
       }
-      setState(() => _cameras = list);
+      final names = await _resolveCameraNames(list);
+      if (!mounted) return;
+      setState(() {
+        _cameras = list;
+        _cameraNames = names;
+      });
       await _openCamera(0);
     } catch (e) {
       if (!mounted) return;
@@ -80,6 +87,11 @@ class _DesktopCameraCaptureDialogState extends State<DesktopCameraCaptureDialog>
         await next.dispose();
         return;
       }
+      final name = _formatCameraName(next.description.name, index);
+      while (_cameraNames.length <= index) {
+        _cameraNames.add('');
+      }
+      _cameraNames[index] = name;
       setState(() {
         _controller = next;
         _selectedIndex = index;
@@ -104,16 +116,62 @@ class _DesktopCameraCaptureDialogState extends State<DesktopCameraCaptureDialog>
       Get.back(result: shot.path);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Capture failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Capture failed: $e')));
     }
   }
 
+  Future<List<String>> _resolveCameraNames(
+    List<CameraDescription> cameras,
+  ) async {
+    final names = <String>[];
+    for (var i = 0; i < cameras.length; i++) {
+      var name = cameras[i].name.trim();
+      if (name.isEmpty) {
+        name = await _probeCameraName(cameras[i]);
+      }
+      names.add(_formatCameraName(name, i));
+    }
+    return names;
+  }
+
+  Future<String> _probeCameraName(CameraDescription description) async {
+    final probe = CameraController(
+      description,
+      ResolutionPreset.low,
+      enableAudio: false,
+    );
+    try {
+      await probe.initialize();
+      return probe.description.name.trim();
+    } catch (_) {
+      return '';
+    } finally {
+      await probe.dispose();
+    }
+  }
+
+  /// Windows returns names like `Integrated Webcam <\\?\usb#...>`.
+  String _formatCameraName(String raw, int index) {
+    var name = raw.trim();
+    if (name.contains('<')) {
+      name = name.split('<').first.trim();
+    }
+    if (name.isEmpty ||
+        name.startsWith(r'\\?\') ||
+        name.contains('usb#') ||
+        name.contains(r'#{')) {
+      return 'Camera ${index + 1}';
+    }
+    return name;
+  }
+
   String _cameraLabel(int i) {
-    final d = _cameras[i];
-    final name = d.name.trim();
-    if (name.isNotEmpty) return name;
+    if (i >= 0 && i < _cameraNames.length) {
+      final name = _cameraNames[i].trim();
+      if (name.isNotEmpty) return name;
+    }
     return 'Camera ${i + 1}';
   }
 
@@ -165,7 +223,10 @@ class _DesktopCameraCaptureDialogState extends State<DesktopCameraCaptureDialog>
               ),
               if (_cameras.length > 1)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                   child: AppDropdownFormField2<int>(
                     value: _selectedIndex.clamp(0, _cameras.length - 1),
                     decoration: const InputDecoration(
@@ -239,7 +300,9 @@ class _DesktopCameraCaptureDialogState extends State<DesktopCameraCaptureDialog>
         ),
       );
     }
-    if (_initializing || _controller == null || !_controller!.value.isInitialized) {
+    if (_initializing ||
+        _controller == null ||
+        !_controller!.value.isInitialized) {
       return const Center(
         child: CircularProgressIndicator(color: Colors.white),
       );
@@ -248,10 +311,7 @@ class _DesktopCameraCaptureDialogState extends State<DesktopCameraCaptureDialog>
     final ratio = c.value.aspectRatio;
     if (ratio > 0) {
       return Center(
-        child: AspectRatio(
-          aspectRatio: ratio,
-          child: CameraPreview(c),
-        ),
+        child: AspectRatio(aspectRatio: ratio, child: CameraPreview(c)),
       );
     }
     return Center(child: CameraPreview(c));

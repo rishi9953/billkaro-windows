@@ -566,6 +566,28 @@ abstract class ApiClient {
     @Path('id') String id,
   );
 
+  @GET('$outlets/{outletId}/$inventory/product-stock')
+  Future<dynamic> getProductStock(
+    @Path('outletId') String outletId,
+    @Query('search') String? search,
+    @Query('trackedOnly') bool? trackedOnly,
+    @Query('lowStockOnly') bool? lowStockOnly,
+  );
+
+  @PATCH('$outlets/{outletId}/$inventory/product-stock/{itemId}')
+  Future<dynamic> adjustProductStock(
+    @Path('outletId') String outletId,
+    @Path('itemId') String itemId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @GET('$outlets/{outletId}/$inventory/product-stock/{itemId}/movements')
+  Future<dynamic> getProductStockMovements(
+    @Path('outletId') String outletId,
+    @Path('itemId') String itemId,
+    @Query('type') String? type,
+  );
+
   // -------------------- STORE DAY SESSIONS --------------------
 
   @GET('$outlets/{outletId}/$daySessions/current')

@@ -330,7 +330,8 @@ class AddOrderController extends BaseController {
           ..['serviceCharge'] = orders!.serviceCharge ?? 0.0
           ..['paymentReceivedIn'] = orders!.paymentReceivedIn ?? ''
           ..['status'] = orders!.status;
-        if (orders!.splitPayments != null && orders!.splitPayments!.isNotEmpty) {
+        if (orders!.splitPayments != null &&
+            orders!.splitPayments!.isNotEmpty) {
           orderDetails['splitPayments'] = orders!.splitPayments!
               .map((payment) => payment.toJson())
               .toList();
@@ -361,6 +362,7 @@ class AddOrderController extends BaseController {
 
     await getCategories();
     await getItems();
+    await ensureMissingItemCategories();
     await loadRecommendedItems();
     if (HomeMainRoutes.outletShowsTables()) {
       await loadAvailableTables();
@@ -1647,6 +1649,43 @@ class AddOrderController extends BaseController {
     }
   }
 
+  /// Persists item categories that exist on items but not in the categories API
+  /// (combo meals previously saved without creating the "combo" category).
+  Future<void> ensureMissingItemCategories() async {
+    final outletId = appPref.selectedOutlet?.id;
+    final userId = appPref.user?.id;
+    if (outletId == null || userId == null || items.isEmpty) return;
+
+    final known = {
+      for (final c in categories) c.categoryName.trim().toLowerCase(),
+    };
+    final missing = <String>{};
+    for (final item in items) {
+      final name = item.category.trim();
+      final key = name.toLowerCase();
+      if (name.isEmpty || key == 'none' || known.contains(key)) continue;
+      missing.add(key);
+    }
+    if (missing.isEmpty) return;
+
+    var didCreate = false;
+    for (final name in missing) {
+      final response = await callApi(
+        apiClient.addCategory(outletId, {
+          'userId': userId,
+          'outletId': outletId,
+          'categoryName': name,
+        }),
+        showLoader: false,
+        apiErrorHandler: (_) async => true,
+      );
+      if (response is Map && response['status'] == 'success') {
+        didCreate = true;
+      }
+    }
+    if (didCreate) await getCategories();
+  }
+
   // KOT Bill //
 
   final TextEditingController remarkController = TextEditingController();
@@ -1860,7 +1899,10 @@ class AddOrderController extends BaseController {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: () => Get.back(result: ''),
+                      onPressed: () {
+                        // Only clear
+                        itemRemarkController.clear();
+                      },
                       child: const Text('Clear'),
                     ),
                     const SizedBox(width: 8),
