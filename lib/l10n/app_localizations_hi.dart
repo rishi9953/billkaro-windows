@@ -555,7 +555,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get biller => 'बिलर';
 
   @override
-  String get staff_access_info => 'स्टाफ सिंक सेटिंग्स और व्हाट्सऐप टेम्पलेट्स को छोड़कर बाकी सब कुछ एक्सेस कर सकता है।';
+  String get staff_access_info => 'सेकेंडरी एडमिन को आउटलेट की सभी सुविधाओं और अनुमतियों का पूरा एक्सेस है।';
 
   @override
   String get send_invite => 'इनवाइट भेजें';
@@ -2233,6 +2233,53 @@ class AppLocalizationsHi extends AppLocalizations {
   String get home_manage_outlets => 'आउटलेट प्रबंधित करें';
 
   @override
+  String get owner_panel_title => 'ओनर पैनल';
+
+  @override
+  String get owner_panel_menu => 'ओनर पैनल';
+
+  @override
+  String get owner_panel_heading => 'सभी आउटलेट';
+
+  @override
+  String owner_panel_subtitle(int count) {
+    return '$count आउटलेट एक जगह';
+  }
+
+  @override
+  String get owner_panel_search_hint => 'आउटलेट खोजें…';
+
+  @override
+  String get owner_panel_expand_all => 'सभी खोलें';
+
+  @override
+  String get owner_panel_collapse_all => 'सभी बंद करें';
+
+  @override
+  String get owner_panel_empty_subtitle => 'विवरण देखने के लिए आउटलेट बनाएँ।';
+
+  @override
+  String get owner_panel_no_results => 'कोई मिलान नहीं';
+
+  @override
+  String get owner_panel_no_results_subtitle => 'दूसरा नाम, पता या GSTIN आज़माएँ।';
+
+  @override
+  String get owner_panel_active => 'सक्रिय';
+
+  @override
+  String get owner_panel_no_type => 'प्रकार सेट नहीं';
+
+  @override
+  String get owner_panel_outlet_age => 'आउटलेट आयु';
+
+  @override
+  String get owner_panel_google_profile => 'गूगल प्रोफ़ाइल';
+
+  @override
+  String get owner_panel_switch_to => 'इस आउटलेट पर जाएँ';
+
+  @override
   String get home_unnamed_outlet => 'अनाम आउटलेट';
 
   @override
@@ -2400,6 +2447,28 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get section_already_exists => 'सेक्शन पहले से मौजूद है';
+
+  @override
+  String get delete_section => 'सेक्शन हटाएँ';
+
+  @override
+  String get delete_section_tooltip => 'सेक्शन हटाएँ';
+
+  @override
+  String delete_section_confirm(String name) {
+    return 'सेक्शन \"$name\" हटाएँ? टेबल नहीं हटेंगी।';
+  }
+
+  @override
+  String delete_section_has_tables(String name, int count) {
+    return '\"$name\" नहीं हटा सकते — $count टेबल असाइन हैं। पहले उन्हें दूसरी सेक्शन में ले जाएँ।';
+  }
+
+  @override
+  String get section_deleted_successfully => 'सेक्शन सफलतापूर्वक हटाया गया';
+
+  @override
+  String get failed_to_delete_section => 'सेक्शन हटाने में विफल';
 
   @override
   String get no_sections_yet => 'अभी कोई सेक्शन नहीं। पहले सेक्शन जोड़ें।';
@@ -3002,7 +3071,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get recipe_quantity_hint => 'प्रति सर्विंग मात्रा *';
 
   @override
-  String get recipe_quantity_helper => '1 यूनिट बिक्री पर स्टॉक से कटने वाली मात्रा';
+  String get recipe_quantity_helper => 'आइटम बिकने पर कच्चे माल के स्टॉक से कटती है';
 
   @override
   String get recipe_quantity_invalid => '0 से अधिक मान्य मात्रा दर्ज करें';
@@ -3038,6 +3107,12 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get create_po => 'PO बनाएं';
+
+  @override
+  String get save_as_draft => 'ड्राफ्ट';
+
+  @override
+  String get po_draft_saved => 'खरीद ऑर्डर ड्राफ्ट के रूप में सहेजा गया';
 
   @override
   String get edit_purchase_order => 'खरीद ऑर्डर संपादित करें';
@@ -3076,7 +3151,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get po_payment_terms_required => 'कृपया भुगतान की शर्तें दर्ज करें';
 
   @override
-  String get po_line_material_required => 'कृपया सामग्री चुनें';
+  String get po_line_material_required => 'कृपया इन्वेंटरी में मौजूद सामग्री का नाम दर्ज करें';
 
   @override
   String get po_line_qty_required => '0 से अधिक मात्रा दर्ज करें';
@@ -3294,10 +3369,79 @@ class AppLocalizationsHi extends AppLocalizations {
   String get modify_order_details_subtitle => 'ऑर्डर विवरण बदलें';
 
   @override
-  String get delete_order_permanently_subtitle => 'इस ऑर्डर को स्थायी रूप से हटाएँ';
+  String get delete_order_permanently_subtitle => 'इस ऑर्डर को हटाए गए ऑर्डर में भेजें';
 
   @override
-  String get delete_order_confirm_message => 'क्या आप वाकई इस ऑर्डर को हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।';
+  String get delete_order_confirm_message => 'क्या आप वाकई इस ऑर्डर को हटाना चाहते हैं? आप इसे बाद में हटाए गए ऑर्डर से पुनर्स्थापित कर सकते हैं।';
+
+  @override
+  String get deletedOrders => 'हटाए गए ऑर्डर';
+
+  @override
+  String get deleted_orders_title => 'हटाए गए ऑर्डर';
+
+  @override
+  String get no_deleted_orders => 'कोई हटाया गया ऑर्डर नहीं';
+
+  @override
+  String get deleted_orders_empty_hint => 'हटाए गए ऑर्डर यहाँ दिखेंगे';
+
+  @override
+  String get stockSummary => 'स्टॉक सारांश';
+
+  @override
+  String get stock_summary_title => 'स्टॉक सारांश';
+
+  @override
+  String get stock_summary_search_hint => 'नाम, श्रेणी, कोड से खोजें…';
+
+  @override
+  String get stock_summary_products => 'कच्चा माल';
+
+  @override
+  String get stock_summary_value => 'स्टॉक मूल्य';
+
+  @override
+  String get stock_summary_qty => 'मात्रा';
+
+  @override
+  String get stock_summary_min => 'न्यूनतम';
+
+  @override
+  String get stock_summary_rate => 'दर';
+
+  @override
+  String get stock_summary_empty => 'कोई कच्चा माल नहीं मिला';
+
+  @override
+  String get stock_summary_empty_hint => 'कच्चे माल का स्टॉक यहाँ दिखेगा। इन्वेंटरी से कच्चा माल जोड़ें।';
+
+  @override
+  String get stock_status_in_stock => 'स्टॉक में';
+
+  @override
+  String get stock_status_low_stock => 'कम स्टॉक';
+
+  @override
+  String get stock_status_out_of_stock => 'स्टॉक खत्म';
+
+  @override
+  String get deleted_badge => 'हटाया गया';
+
+  @override
+  String get restore_order => 'ऑर्डर पुनर्स्थापित करें';
+
+  @override
+  String get restore_order_confirm_message => 'इस ऑर्डर को पुनर्स्थापित करें? यह होल्ड ऑर्डर में वापस आ जाएगा।';
+
+  @override
+  String get restore => 'पुनर्स्थापित करें';
+
+  @override
+  String get order_moved_to_deleted => 'ऑर्डर हटाए गए ऑर्डर में भेज दिया गया';
+
+  @override
+  String get order_restored_successfully => 'ऑर्डर सफलतापूर्वक पुनर्स्थापित हुआ';
 
   @override
   String customers_count(int count) {

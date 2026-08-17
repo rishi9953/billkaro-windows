@@ -182,7 +182,7 @@
   "user_role": "User Role",
   "secondary_admin": "Secondary Admin",
   "biller": "Biller",
-  "staff_access_info": "Staff can access everything except sync settings and WhatsApp templates.",
+  "staff_access_info": "Secondary Admin has full access to all outlet features and permissions.",
   "send_invite": "Send Invite",
   "welcome_to_billkaro": "Welcome to BillKaro\n Chill Karo",
   "manage_business_ease": "Manage your business with ease",
@@ -1007,6 +1007,28 @@
   "home_switch_outlet": "Switch Outlet",
   "home_no_outlets_available": "No outlets available",
   "home_manage_outlets": "Manage outlets",
+  "owner_panel_title": "Owner Panel",
+  "owner_panel_menu": "Owner Panel",
+  "owner_panel_heading": "All Outlets",
+  "owner_panel_subtitle": "{count} outlets in one place",
+  "@owner_panel_subtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "owner_panel_search_hint": "Search outlets…",
+  "owner_panel_expand_all": "Expand all",
+  "owner_panel_collapse_all": "Collapse all",
+  "owner_panel_empty_subtitle": "Create an outlet to see its details here.",
+  "owner_panel_no_results": "No matching outlets",
+  "owner_panel_no_results_subtitle": "Try a different name, address, or GSTIN.",
+  "owner_panel_active": "Active",
+  "owner_panel_no_type": "Type not set",
+  "owner_panel_outlet_age": "Outlet age",
+  "owner_panel_google_profile": "Google profile",
+  "owner_panel_switch_to": "Switch to this outlet",
   "home_unnamed_outlet": "Unnamed Outlet",
   "home_logged_out": "Logged Out",
   "home_logged_out_message": "You have been successfully logged out",
@@ -1098,6 +1120,23 @@
   "section_added_successfully": "Section added successfully",
   "failed_to_add_section": "Failed to add section",
   "section_already_exists": "Section already exists",
+  "delete_section": "Delete section",
+  "delete_section_tooltip": "Delete section",
+  "delete_section_confirm": "Delete section \"{name}\"? Tables are not deleted.",
+  "@delete_section_confirm": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "delete_section_has_tables": "Cannot delete \"{name}\" while {count} tables are assigned. Move them first.",
+  "@delete_section_has_tables": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
+  "section_deleted_successfully": "Section deleted successfully",
+  "failed_to_delete_section": "Failed to delete section",
   "no_sections_yet": "No sections yet. Add a section first.",
   "table_section_count": "{count} tables",
   "@table_section_count": {
@@ -1553,7 +1592,7 @@
   "select_menu_item": "Menu Item *",
   "select_raw_material": "Raw Material *",
   "recipe_quantity_hint": "Quantity per serving *",
-  "recipe_quantity_helper": "Amount deducted from stock per 1 unit sold",
+  "recipe_quantity_helper": "Used to deduct raw material stock each time this item is sold",
   "recipe_quantity_invalid": "Enter a valid quantity greater than 0",
   "select_menu_item_required": "Please select a menu item",
   "select_raw_material_required": "Please select a raw material",
@@ -1572,6 +1611,8 @@
   },
   "create_purchase_order": "Create Purchase Order",
   "create_po": "Create PO",
+  "save_as_draft": "Draft",
+  "po_draft_saved": "Purchase order saved as draft",
   "edit_purchase_order": "Edit Purchase Order",
   "edit_po": "Edit PO",
   "save_po_changes": "Save Changes",
@@ -1584,7 +1625,7 @@
   "select_supplier_required": "Please select a supplier",
   "po_delivery_date_required": "Please select a delivery date",
   "po_payment_terms_required": "Please enter payment terms",
-  "po_line_material_required": "Please select a material",
+  "po_line_material_required": "Please enter a material name that exists in inventory",
   "po_line_qty_required": "Enter quantity greater than 0",
   "po_line_rate_required": "Enter a valid rate",
   "po_address_name_required": "Please enter name",
@@ -1680,8 +1721,31 @@
   "edit_order": "Edit Order",
   "update_order": "Update Order",
   "modify_order_details_subtitle": "Modify order details",
-  "delete_order_permanently_subtitle": "Remove this order permanently",
-  "delete_order_confirm_message": "Are you sure you want to delete this order? This action cannot be undone.",
+  "delete_order_permanently_subtitle": "Move this order to Deleted Orders",
+  "delete_order_confirm_message": "Are you sure you want to delete this order? You can restore it later from Deleted Orders.",
+  "deletedOrders": "Deleted Orders",
+  "deleted_orders_title": "Deleted Orders",
+  "no_deleted_orders": "No Deleted Orders",
+  "deleted_orders_empty_hint": "Deleted orders will appear here",
+  "stockSummary": "Stock Summary",
+  "stock_summary_title": "Stock Summary",
+  "stock_summary_search_hint": "Search by name, category, code…",
+  "stock_summary_products": "Raw Materials",
+  "stock_summary_value": "Stock Value",
+  "stock_summary_qty": "Qty",
+  "stock_summary_min": "Min",
+  "stock_summary_rate": "Rate",
+  "stock_summary_empty": "No raw materials found",
+  "stock_summary_empty_hint": "Raw material stock will appear here. Add materials from Inventory.",
+  "stock_status_in_stock": "In Stock",
+  "stock_status_low_stock": "Low Stock",
+  "stock_status_out_of_stock": "Out of Stock",
+  "deleted_badge": "DELETED",
+  "restore_order": "Restore Order",
+  "restore_order_confirm_message": "Restore this order? It will return to On Hold Orders.",
+  "restore": "Restore",
+  "order_moved_to_deleted": "Order moved to Deleted Orders",
+  "order_restored_successfully": "Order restored successfully",
   "customers_count": "{count} Customers",
   "@customers_count": {
     "placeholders": {

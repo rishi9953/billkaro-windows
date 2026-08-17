@@ -5,6 +5,7 @@ import 'package:billkaro/app/services/Modals/customer/customerResponse.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter_modular/flutter_modular.dart';
+import 'package:billkaro/utils/staff_access.dart';
 
 class CustomerListScreen extends StatelessWidget {
   CustomerListScreen({super.key});
@@ -183,7 +184,7 @@ class CustomerListScreen extends StatelessWidget {
             ),
           ),
         ),
-        floatingActionButton: isWideScreen
+        floatingActionButton: isWideScreen && StaffAccess.canCreateCustomers
             ? FloatingActionButton.extended(
                 onPressed: () {
                   Modular.to.pushNamed(HomeMainRoutes.addRegularCustomer);
@@ -196,7 +197,9 @@ class CustomerListScreen extends StatelessWidget {
                 ),
               )
             : null,
-        bottomNavigationBar: isWideScreen ? null : _buildBottomButton(context),
+        bottomNavigationBar: isWideScreen || !StaffAccess.canCreateCustomers
+            ? null
+            : _buildBottomButton(context),
       );
     });
   }

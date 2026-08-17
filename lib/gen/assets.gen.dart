@@ -194,7 +194,7 @@ class Assets {
   static const AssetGenImage dineIn = AssetGenImage('assets/Dine In.png');
   static const AssetGenImage takeaway = AssetGenImage('assets/Takeaway.png');
   static const AssetGenImage delivery = AssetGenImage('assets/delivery.png');
-  static const AssetGenImage logo = AssetGenImage('assets/logo.jpeg');
+  static const AssetGenImage logo2 = AssetGenImage('assets/logo2.jpeg');
   static const $AssetsLottieGen lottie = $AssetsLottieGen();
   static const AssetGenImage pdf = AssetGenImage('assets/pdf.png');
   static const AssetGenImage plan = AssetGenImage('assets/plan.png');
@@ -207,7 +207,7 @@ class Assets {
     dineIn,
     takeaway,
     delivery,
-    logo,
+    logo2,
     pdf,
     plan,
     printer,

@@ -79,8 +79,10 @@ class RawMaterialData {
   final String? supplierId;
   final bool isActive;
   final String materialCode;
+  final String barcode;
   final String hsnSacCode;
   final double taxRate;
+  final DateTime? createdAt;
 
   RawMaterialData({
     required this.id,
@@ -93,8 +95,10 @@ class RawMaterialData {
     this.supplierId,
     required this.isActive,
     this.materialCode = '',
+    this.barcode = '',
     this.hsnSacCode = '',
     this.taxRate = 18,
+    this.createdAt,
   });
 
   factory RawMaterialData.fromJson(Map<String, dynamic> json) {
@@ -109,49 +113,141 @@ class RawMaterialData {
       supplierId: json['supplierId']?.toString(),
       isActive: json['isActive'] as bool? ?? true,
       materialCode: json['materialCode']?.toString() ?? '',
+      barcode: json['barcode']?.toString() ?? '',
       hsnSacCode: json['hsnSacCode']?.toString() ?? '',
       taxRate: (json['taxRate'] as num?)?.toDouble() ?? 18,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'].toString())?.toLocal()
+          : null,
     );
   }
 
   bool get isLowStock => currentStock <= minStock;
   double get stockValue => currentStock * purchasePrice;
+  double get amount => stockValue;
+  double get total => amount + (amount * taxRate / 100);
+
+  String get status {
+    if (currentStock <= 0) return 'Out of Stock';
+    if (isLowStock) return 'Low Stock';
+    return 'In Stock';
+  }
 }
 
 class SupplierData {
   final String id;
   final String name;
+  final String? company;
   final String? phone;
   final String? email;
   final String? address;
+  final String? addressLine1;
+  final String? addressLine2;
+  final String? city;
+  final String? state;
+  final String? pinCode;
+  final String? shippingAddress;
+  final bool registeredUnderGst;
   final String? gstNumber;
   final String? vendorNo;
   final String? contactPerson;
+  final String? fssaiLicNo;
+  final String? pan;
+  final String? msmeNumber;
+  final String? tan;
+  final String? cin;
+  final double? tcsPercent;
+  final String supplierType;
+  final String? documentUrl;
   final bool isActive;
+  final DateTime? createdAt;
 
   SupplierData({
     required this.id,
     required this.name,
+    this.company,
     this.phone,
     this.email,
     this.address,
+    this.addressLine1,
+    this.addressLine2,
+    this.city,
+    this.state,
+    this.pinCode,
+    this.shippingAddress,
+    this.registeredUnderGst = false,
     this.gstNumber,
     this.vendorNo,
     this.contactPerson,
+    this.fssaiLicNo,
+    this.pan,
+    this.msmeNumber,
+    this.tan,
+    this.cin,
+    this.tcsPercent,
+    this.supplierType = 'both',
+    this.documentUrl,
     required this.isActive,
+    this.createdAt,
   });
 
+  String get displayCompany {
+    final companyName = (company ?? '').trim();
+    if (companyName.isNotEmpty) return companyName;
+    return (contactPerson ?? '').trim();
+  }
+
+  String get displayAddress {
+    final parts = <String>[
+      if ((addressLine1 ?? '').trim().isNotEmpty) addressLine1!.trim(),
+      if ((addressLine2 ?? '').trim().isNotEmpty) addressLine2!.trim(),
+      if ((city ?? '').trim().isNotEmpty) city!.trim(),
+      if ((state ?? '').trim().isNotEmpty) state!.trim(),
+      if ((pinCode ?? '').trim().isNotEmpty) pinCode!.trim(),
+    ];
+    if (parts.isNotEmpty) return parts.join(', ');
+    return (address ?? '').trim();
+  }
+
   factory SupplierData.fromJson(Map<String, dynamic> json) {
+    final gst = json['gstNumber']?.toString();
+    final registered =
+        json['registeredUnderGst'] as bool? ??
+        ((gst ?? '').trim().isNotEmpty);
+    final tcsRaw = json['tcsPercent'];
     return SupplierData(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
+      company: json['company']?.toString(),
       phone: json['phone']?.toString(),
       email: json['email']?.toString(),
       address: json['address']?.toString(),
-      gstNumber: json['gstNumber']?.toString(),
+      addressLine1: json['addressLine1']?.toString(),
+      addressLine2: json['addressLine2']?.toString(),
+      city: json['city']?.toString(),
+      state: json['state']?.toString(),
+      pinCode: json['pinCode']?.toString(),
+      shippingAddress: json['shippingAddress']?.toString(),
+      registeredUnderGst: registered,
+      gstNumber: gst,
       vendorNo: json['vendorNo']?.toString(),
       contactPerson: json['contactPerson']?.toString(),
+      fssaiLicNo: json['fssaiLicNo']?.toString(),
+      pan: json['pan']?.toString(),
+      msmeNumber: json['msmeNumber']?.toString(),
+      tan: json['tan']?.toString(),
+      cin: json['cin']?.toString(),
+      tcsPercent: tcsRaw == null
+          ? null
+          : double.tryParse(tcsRaw.toString()),
+      supplierType: (json['supplierType']?.toString().trim().isNotEmpty == true)
+          ? json['supplierType'].toString()
+          : 'both',
+      documentUrl: json['documentUrl']?.toString(),
       isActive: json['isActive'] as bool? ?? true,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'].toString())?.toLocal()
+          : null,
     );
   }
 }
@@ -483,7 +579,10 @@ class RecipeData {
   final String rawMaterialId;
   final String rawMaterialName;
   final String rawMaterialUnit;
+  /// Unit used for [quantity] (may differ from stock unit, e.g. GRAM vs KG).
+  final String unit;
   final double quantity;
+  final DateTime? createdAt;
 
   RecipeData({
     required this.id,
@@ -492,18 +591,29 @@ class RecipeData {
     required this.rawMaterialId,
     required this.rawMaterialName,
     required this.rawMaterialUnit,
+    required this.unit,
     required this.quantity,
+    this.createdAt,
   });
 
+  String get displayUnit =>
+      unit.trim().isNotEmpty ? unit : rawMaterialUnit;
+
   factory RecipeData.fromJson(Map<String, dynamic> json) {
+    final stockUnit = json['rawMaterialUnit']?.toString() ?? '';
+    final recipeUnit = json['unit']?.toString() ?? '';
     return RecipeData(
       id: json['id']?.toString() ?? '',
       itemId: json['itemId']?.toString() ?? '',
       itemName: json['itemName']?.toString() ?? '',
       rawMaterialId: json['rawMaterialId']?.toString() ?? '',
       rawMaterialName: json['rawMaterialName']?.toString() ?? '',
-      rawMaterialUnit: json['rawMaterialUnit']?.toString() ?? '',
+      rawMaterialUnit: stockUnit,
+      unit: recipeUnit.isNotEmpty ? recipeUnit : stockUnit,
       quantity: (json['quantity'] as num?)?.toDouble() ?? 0,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'].toString())?.toLocal()
+          : null,
     );
   }
 }
@@ -513,11 +623,13 @@ class RecipeLineInput {
     this.id,
     required this.rawMaterialId,
     required this.quantity,
+    required this.unit,
   });
 
   final String? id;
   final String rawMaterialId;
   final double quantity;
+  final String unit;
 }
 
 class PoLineSuggestion {
@@ -549,6 +661,7 @@ class ProductStockData {
   final String soldBy;
   final double salePrice;
   final double costPrice;
+  final double taxPercent;
   final bool trackStock;
   final double stockQuantity;
   final double minStock;
@@ -557,6 +670,10 @@ class ProductStockData {
   final bool showItem;
   final bool isLowStock;
   final String status;
+  final String supplierName;
+  final String? itemId;
+  final String? variantId;
+  final String? variantName;
 
   ProductStockData({
     required this.id,
@@ -567,6 +684,7 @@ class ProductStockData {
     this.soldBy = 'Each',
     this.salePrice = 0,
     this.costPrice = 0,
+    this.taxPercent = 0,
     this.trackStock = false,
     this.stockQuantity = 0,
     this.minStock = 0,
@@ -575,7 +693,19 @@ class ProductStockData {
     this.showItem = true,
     this.isLowStock = false,
     this.status = 'In Stock',
+    this.supplierName = '',
+    this.itemId,
+    this.variantId,
+    this.variantName,
   });
+
+  double get rate => costPrice > 0 ? costPrice : salePrice;
+
+  double get amount => stockQuantity * rate;
+
+  double get taxAmount => amount * taxPercent / 100;
+
+  double get total => amount + taxAmount;
 
   factory ProductStockData.fromJson(Map<String, dynamic> json) {
     final stock = (json['stockQuantity'] as num?)?.toDouble() ?? 0;
@@ -596,6 +726,9 @@ class ProductStockData {
       soldBy: json['soldBy']?.toString() ?? 'Each',
       salePrice: (json['salePrice'] as num?)?.toDouble() ?? 0,
       costPrice: (json['costPrice'] as num?)?.toDouble() ?? 0,
+      taxPercent: (json['gst'] as num?)?.toDouble() ??
+          (json['taxPercent'] as num?)?.toDouble() ??
+          0,
       trackStock: json['trackStock'] as bool? ?? false,
       stockQuantity: stock,
       minStock: min,
@@ -604,6 +737,10 @@ class ProductStockData {
       showItem: json['showItem'] as bool? ?? true,
       isLowStock: low,
       status: resolvedStatus,
+      supplierName: json['supplierName']?.toString() ?? '',
+      itemId: json['itemId']?.toString(),
+      variantId: json['variantId']?.toString(),
+      variantName: json['variantName']?.toString(),
     );
   }
 }
@@ -658,6 +795,29 @@ class ProductStockMovementData {
       default:
         return type;
     }
+  }
+}
+
+class RawMaterialCategoryData {
+  final String id;
+  final String categoryName;
+  final String userId;
+  final String outletId;
+
+  RawMaterialCategoryData({
+    required this.id,
+    required this.categoryName,
+    this.userId = '',
+    this.outletId = '',
+  });
+
+  factory RawMaterialCategoryData.fromJson(Map<String, dynamic> json) {
+    return RawMaterialCategoryData(
+      id: (json['id'] ?? '').toString(),
+      categoryName: (json['categoryName'] ?? '').toString().trim(),
+      userId: (json['userId'] ?? '').toString(),
+      outletId: (json['outletId'] ?? '').toString(),
+    );
   }
 }
 

@@ -1,5 +1,6 @@
 import 'package:billkaro/app/modules/Regular%20customer/AddRegularCustomer/addregular_customer_controller.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_access.dart';
 
 class AddRegularCustomerScreen extends StatelessWidget {
   final controller = Get.put(AddCustomerController());
@@ -176,7 +177,8 @@ class AddRegularCustomerScreen extends StatelessWidget {
                         runSpacing: 10,
                         children: controller.isEdit.isTrue
                             ? [
-                                SizedBox(
+                                if (StaffAccess.canDeleteCustomers)
+                                  SizedBox(
                                   width: compact ? double.infinity : 180,
                                   child: OutlinedButton(
                                     onPressed: controller.deleteRegularCustomer,
@@ -189,7 +191,8 @@ class AddRegularCustomerScreen extends StatelessWidget {
                                     child: const Text('Delete'),
                                   ),
                                 ),
-                                SizedBox(
+                                if (StaffAccess.canUpdateCustomers)
+                                  SizedBox(
                                   width: compact ? double.infinity : 220,
                                   child: ElevatedButton(
                                     onPressed: controller.updateRegularCustomer,
@@ -202,7 +205,8 @@ class AddRegularCustomerScreen extends StatelessWidget {
                                 ),
                               ]
                             : [
-                                SizedBox(
+                                if (StaffAccess.canCreateCustomers)
+                                  SizedBox(
                                   width: compact ? double.infinity : 180,
                                   child: OutlinedButton(
                                     onPressed: controller.saveAndNew,
@@ -215,7 +219,8 @@ class AddRegularCustomerScreen extends StatelessWidget {
                                     child: Text(loc.save_and_new),
                                   ),
                                 ),
-                                SizedBox(
+                                if (StaffAccess.canCreateCustomers)
+                                  SizedBox(
                                   width: compact ? double.infinity : 220,
                                   child: ElevatedButton(
                                     onPressed: controller.addRegularCustomer,

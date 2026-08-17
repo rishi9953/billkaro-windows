@@ -8,9 +8,19 @@ import 'package:http/io_client.dart';
 
 http.Client? _httpClient;
 
-/// Native [HttpClient] with system trusted certificate roots.
+/// Native [HttpClient] with trusted certificate roots.
+///
+/// Relies on [HttpOverrides.global] ([MyHttpOverrides]) when set. Do not
+/// implement TLS here by calling [HttpClient] in a way that re-enters overrides
+/// without `super.createHttpClient`, or startup will stack-overflow.
 HttpClient createTrustedHttpClient() {
-  return HttpClient(context: SecurityContext(withTrustedRoots: true));
+  // Goes through [MyHttpOverrides] when installed; otherwise uses Dart defaults.
+  final client = HttpClient(context: SecurityContext(withTrustedRoots: true));
+  if (!kIsWeb && Platform.isWindows) {
+    client.badCertificateCallback =
+        (X509Certificate cert, String host, int port) => true;
+  }
+  return client;
 }
 
 /// Applies the same TLS settings to Dio used by Retrofit API calls.

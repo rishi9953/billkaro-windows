@@ -69,17 +69,71 @@ class OrderModel {
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
-    // Support both camelCase and snake_case from API
-    final normalized = Map<String, dynamic>.from(json);
-    if (normalized['paymentReceivedIn'] == null &&
-        normalized['payment_received_in'] != null) {
-      normalized['paymentReceivedIn'] = normalized['payment_received_in'];
+    String requiredString(String camelKey, [String? snakeKey]) {
+      final value =
+          json[camelKey] ?? (snakeKey != null ? json[snakeKey] : null);
+      return value?.toString() ?? '';
     }
-    if (normalized['orderFrom'] == null &&
-        normalized['order_from'] != null) {
-      normalized['orderFrom'] = normalized['order_from'];
+
+    String? optionalString(String camelKey, [String? snakeKey]) {
+      final value =
+          json[camelKey] ?? (snakeKey != null ? json[snakeKey] : null);
+      if (value == null) return null;
+      final text = value.toString();
+      return text.isEmpty ? null : text;
     }
-    return _$OrderModelFromJson(normalized);
+
+    double requiredDouble(String camelKey, [String? snakeKey]) {
+      final value =
+          json[camelKey] ?? (snakeKey != null ? json[snakeKey] : null);
+      if (value is num) return value.toDouble();
+      return double.tryParse(value?.toString() ?? '') ?? 0.0;
+    }
+
+    final rawItems = json['items'];
+    final items = rawItems is List
+        ? rawItems
+              .whereType<Map<String, dynamic>>()
+              .map(OrderItem.fromJson)
+              .toList()
+        : <OrderItem>[];
+
+    final rawSplitPayments = json['splitPayments'] ?? json['split_payments'];
+    final splitPayments = rawSplitPayments is List
+        ? rawSplitPayments
+              .whereType<Map<String, dynamic>>()
+              .map(SplitPayment.fromJson)
+              .toList()
+        : null;
+
+    return OrderModel(
+      id: requiredString('id'),
+      createdAt: requiredString('createdAt', 'created_at'),
+      updatedAt: requiredString('updatedAt', 'updated_at'),
+      billNumber: requiredString('billNumber', 'bill_number'),
+      userId: requiredString('userId', 'user_id'),
+      tableNumber: optionalString('tableNumber', 'table_number'),
+      outletId: requiredString('outletId', 'outlet_id'),
+      customerName: optionalString('customerName', 'customer_name'),
+      phoneNumber: optionalString('phoneNumber', 'phone_number'),
+      subtotal: requiredDouble('subtotal'),
+      totalTax: requiredDouble('totalTax', 'total_tax'),
+      discount: requiredDouble('discount'),
+      serviceCharge: requiredDouble('serviceCharge', 'service_charge'),
+      totalAmount: requiredDouble('totalAmount', 'total_amount'),
+      paymentReceivedIn: optionalString(
+        'paymentReceivedIn',
+        'payment_received_in',
+      ),
+      splitPayments: splitPayments,
+      status: requiredString('status'),
+      orderFrom: requiredString('orderFrom', 'order_from'),
+      items: items,
+      specialInstructions: optionalString(
+        'specialInstructions',
+        'special_instructions',
+      ),
+    );
   }
 
   Map<String, dynamic> toJson() => _$OrderModelToJson(this);
@@ -96,6 +150,9 @@ class OrderItem {
   @JsonKey(defaultValue: 0)
   final int kotSentQuantity;
   final String? itemRemark;
+  final String? variantId;
+  final String? variantName;
+  final String? variantSku;
 
   OrderItem({
     required this.itemId,
@@ -106,10 +163,60 @@ class OrderItem {
     required this.gst,
     this.kotSentQuantity = 0,
     this.itemRemark,
+    this.variantId,
+    this.variantName,
+    this.variantSku,
   });
 
-  factory OrderItem.fromJson(Map<String, dynamic> json) =>
-      _$OrderItemFromJson(json);
+  String get displayName {
+    final variant = variantName?.trim();
+    if (variant == null || variant.isEmpty) return itemName;
+    return '$itemName - $variant';
+  }
+
+  factory OrderItem.fromJson(Map<String, dynamic> json) {
+    String requiredString(String camelKey, [String? snakeKey]) {
+      final value =
+          json[camelKey] ?? (snakeKey != null ? json[snakeKey] : null);
+      return value?.toString() ?? '';
+    }
+
+    double requiredDouble(String camelKey, [String? snakeKey]) {
+      final value =
+          json[camelKey] ?? (snakeKey != null ? json[snakeKey] : null);
+      if (value is num) return value.toDouble();
+      return double.tryParse(value?.toString() ?? '') ?? 0.0;
+    }
+
+    int requiredInt(String camelKey, [String? snakeKey]) {
+      final value =
+          json[camelKey] ?? (snakeKey != null ? json[snakeKey] : null);
+      if (value is num) return value.toInt();
+      return int.tryParse(value?.toString() ?? '') ?? 0;
+    }
+
+    String? optionalString(String camelKey, [String? snakeKey]) {
+      final value =
+          json[camelKey] ?? (snakeKey != null ? json[snakeKey] : null);
+      if (value == null) return null;
+      final text = value.toString();
+      return text.isEmpty ? null : text;
+    }
+
+    return OrderItem(
+      itemId: requiredString('itemId', 'item_id'),
+      itemName: requiredString('itemName', 'item_name'),
+      category: requiredString('category'),
+      quantity: requiredInt('quantity'),
+      salePrice: requiredDouble('salePrice', 'sale_price'),
+      gst: requiredDouble('gst'),
+      kotSentQuantity: requiredInt('kotSentQuantity', 'kot_sent_quantity'),
+      itemRemark: optionalString('itemRemark', 'item_remark'),
+      variantId: optionalString('variantId', 'variant_id'),
+      variantName: optionalString('variantName', 'variant_name'),
+      variantSku: optionalString('variantSku', 'variant_sku'),
+    );
+  }
 
   Map<String, dynamic> toJson() => _$OrderItemToJson(this);
 }

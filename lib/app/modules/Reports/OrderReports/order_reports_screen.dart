@@ -7,6 +7,7 @@ import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/date_util.dart' as date_util;
 import 'package:flutter_modular/flutter_modular.dart';
+import 'package:billkaro/utils/staff_access.dart';
 
 class OrderReportsScreen extends StatefulWidget {
   const OrderReportsScreen({super.key});
@@ -86,8 +87,14 @@ class _OrderReportsScreenState extends State<OrderReportsScreen> {
           ),
         ),
         actions: [
-          IconButton(
+          if (StaffAccess.canGenerateReports || StaffAccess.canExportSales)
+            IconButton(
             onPressed: () {
+              if (!StaffAccess.ensure(
+                StaffAccess.canGenerateReports || StaffAccess.canExportSales,
+              )) {
+                return;
+              }
               final appPref = Get.find<AppPref>();
               if (!hasTrialOrSubscription(appPref)) {
                 checkSubscription();
@@ -98,8 +105,14 @@ class _OrderReportsScreenState extends State<OrderReportsScreen> {
             icon: Assets.svg.excel.svg(height: 24, width: 24),
             tooltip: 'Export to Excel',
           ),
-          IconButton(
+          if (StaffAccess.canGenerateReports || StaffAccess.canExportSales)
+            IconButton(
             onPressed: () {
+              if (!StaffAccess.ensure(
+                StaffAccess.canGenerateReports || StaffAccess.canExportSales,
+              )) {
+                return;
+              }
               final appPref = Get.find<AppPref>();
               if (!hasTrialOrSubscription(appPref)) {
                 checkSubscription();

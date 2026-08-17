@@ -6,34 +6,14 @@ import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/responsive.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:shimmer/shimmer.dart';
 
 String? _resolveItemImageUrl(String raw) {
-  final trimmed = raw.trim();
-  if (trimmed.isEmpty || trimmed.toLowerCase() == 'null') return null;
-
-  // If already absolute, just ensure it's safely encoded.
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-    try {
-      return Uri.encodeFull(trimmed);
-    } catch (_) {
-      return trimmed;
-    }
-  }
-
-  // Build an absolute URL from the API base origin.
-  // baseURL example: https://65.2.81.212/api/
-  final origin = Uri.parse(baseURL).replace(path: '').toString();
-  final joined = trimmed.startsWith('/')
-      ? '$origin$trimmed'
-      : '$origin/$trimmed';
-  try {
-    return Uri.encodeFull(joined);
-  } catch (_) {
-    return joined;
-  }
+  final url = resolvedMediaUrl(raw);
+  return url.isEmpty ? null : url;
 }
 
 int _menuItemGridColumns(double availableWidth) {
@@ -341,37 +321,38 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          Obx(
-            () => SizedBox(
-              height: 44,
-              child: OutlinedButton.icon(
-                onPressed: controller.toggleSelectionMode,
-                icon: Icon(
-                  controller.isSelectionMode.value
-                      ? Icons.close
-                      : Icons.checklist,
-                ),
-                label: Text(
-                  controller.isSelectionMode.value
-                      ? loc.cancel
-                      : loc.select_items,
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: controller.isSelectionMode.value
-                      ? Colors.red.shade700
-                      : AppColor.primary,
-                  side: BorderSide(
-                    color: controller.isSelectionMode.value
+          if (StaffAccess.canDeleteProducts)
+            Obx(
+              () => SizedBox(
+                height: 44,
+                child: OutlinedButton.icon(
+                  onPressed: controller.toggleSelectionMode,
+                  icon: Icon(
+                    controller.isSelectionMode.value
+                        ? Icons.close
+                        : Icons.checklist,
+                  ),
+                  label: Text(
+                    controller.isSelectionMode.value
+                        ? loc.cancel
+                        : loc.select_items,
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: controller.isSelectionMode.value
                         ? Colors.red.shade700
                         : AppColor.primary,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: controller.isSelectionMode.value
+                          ? Colors.red.shade700
+                          : AppColor.primary,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
           Obx(
             () =>
                 controller.isSelectionMode.value &&
@@ -417,55 +398,61 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
           //     ),
           //   ),
           // ),
-          SizedBox(
-            height: 44,
-            child: ElevatedButton.icon(
-              onPressed: () => Modular.to.pushNamed(
-                HomeMainRoutes.addItem,
-                arguments: controller.buildAddItemArgs(),
-              ),
-              icon: const Icon(Icons.add),
-              label: Text(loc.add_item),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColor.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          if (StaffAccess.canCreateProducts)
+            SizedBox(
+              height: 44,
+              child: ElevatedButton.icon(
+                onPressed: () => Modular.to.pushNamed(
+                  HomeMainRoutes.addItem,
+                  arguments: controller.buildAddItemArgs(),
+                ),
+                icon: const Icon(Icons.add),
+                label: Text(loc.add_item),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColor.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          PopupMenuButton(
-            itemBuilder: (context) {
-              return [
-                PopupMenuItem(
-                  onTap: controller.importFromFile,
-                  child: Row(
-                    spacing: 10,
-                    children: [Assets.svg.download.svg(), Text('Import Items')],
+          if (StaffAccess.canImportExportProducts) ...[
+            const SizedBox(width: 8),
+            PopupMenuButton(
+              itemBuilder: (context) {
+                return [
+                  PopupMenuItem(
+                    onTap: controller.importFromFile,
+                    child: Row(
+                      spacing: 10,
+                      children: [
+                        Assets.svg.download.svg(),
+                        Text('Import Items'),
+                      ],
+                    ),
                   ),
-                ),
-                PopupMenuItem(
-                  onTap: controller.exportToFile,
-                  child: Row(
-                    spacing: 10,
-                    children: [Assets.svg.export.svg(), Text('Export Items')],
+                  PopupMenuItem(
+                    onTap: controller.exportToFile,
+                    child: Row(
+                      spacing: 10,
+                      children: [Assets.svg.export.svg(), Text('Export Items')],
+                    ),
                   ),
-                ),
-                PopupMenuItem(
-                  onTap: controller.downloadProductsTemplate,
-                  child: Row(
-                    spacing: 10,
-                    children: [
-                      Assets.svg.file.svg(),
-                      Text('Download Template'),
-                    ],
+                  PopupMenuItem(
+                    onTap: controller.downloadProductsTemplate,
+                    child: Row(
+                      spacing: 10,
+                      children: [
+                        Assets.svg.file.svg(),
+                        Text('Download Template'),
+                      ],
+                    ),
                   ),
-                ),
-              ];
-            },
-          ),
+                ];
+              },
+            ),
+          ],
         ],
       ),
     );
@@ -521,7 +508,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                   ),
                 ),
                 const Spacer(),
-                if (selectedCategory != null)
+                if (selectedCategory != null && StaffAccess.canUpdateCategories)
                   Tooltip(
                     message: loc.edit_selected_category,
                     child: IconButton(
@@ -550,30 +537,31 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
               ],
             ),
             const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  // if (!hasTrialOrSubscription(appPref)) {
-                  //   checkSubscription();
-                  //   return;
-                  // }
-                  Modular.to.pushNamed(
-                    HomeMainRoutes.category,
-                    arguments: {'screen': 'item', 'isEdit': false},
-                  );
-                },
-                icon: const Icon(Icons.add),
-                label: Text(loc.add_category),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColor.primary,
-                  side: BorderSide(color: AppColor.primary),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            if (StaffAccess.canCreateCategories)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    // if (!hasTrialOrSubscription(appPref)) {
+                    //   checkSubscription();
+                    //   return;
+                    // }
+                    Modular.to.pushNamed(
+                      HomeMainRoutes.category,
+                      arguments: {'screen': 'item', 'isEdit': false},
+                    );
+                  },
+                  icon: const Icon(Icons.add),
+                  label: Text(loc.add_category),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColor.primary,
+                    side: BorderSide(color: AppColor.primary),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
-            ),
             const SizedBox(height: 10),
             Expanded(
               child: Scrollbar(
@@ -605,21 +593,23 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                           selected: isSelected,
                           onTap: () => controller.selectCategory(id),
                           image: category.imageURL,
-                          onLongPress: () {
-                            final appPref = Get.find<AppPref>();
-                            if (!hasTrialOrSubscription(appPref)) {
-                              checkSubscription();
-                              return;
-                            }
-                            Modular.to.pushNamed(
-                              HomeMainRoutes.category,
-                              arguments: {
-                                'screen': 'item',
-                                'isEdit': true,
-                                'category': category,
-                              },
-                            );
-                          },
+                          onLongPress: StaffAccess.canUpdateCategories
+                              ? () {
+                                  final appPref = Get.find<AppPref>();
+                                  if (!hasTrialOrSubscription(appPref)) {
+                                    checkSubscription();
+                                    return;
+                                  }
+                                  Modular.to.pushNamed(
+                                    HomeMainRoutes.category,
+                                    arguments: {
+                                      'screen': 'item',
+                                      'isEdit': true,
+                                      'category': category,
+                                    },
+                                  );
+                                }
+                              : null,
                         ),
                       );
                     }),
@@ -644,8 +634,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
         final availableWidth = constraints.maxWidth;
         final columns = _menuItemGridColumns(availableWidth);
         const spacing = 12.0;
-        final tileWidth =
-            (availableWidth - (columns - 1) * spacing) / columns;
+        final tileWidth = (availableWidth - (columns - 1) * spacing) / columns;
         final compact = _menuItemUseCompactCard(tileWidth);
         final childAspectRatio = _menuItemGridAspectRatio(
           tileWidth: tileWidth,
@@ -821,25 +810,26 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
 
         return Row(
           children: [
-            _AddCategoryChip(
-              onTap: () {
-                final appPref = Get.find<AppPref>();
-                if (!hasTrialOrSubscription(appPref)) {
-                  checkSubscription();
-                  return;
-                }
-                Modular.to.pushNamed(
-                  HomeMainRoutes.category,
-                  arguments: {'screen': 'item', 'isEdit': false},
-                );
-                // Get.toNamed(
-                //   AppRoute.addCategory,
-                //   arguments: {'screen': 'item'},
-                // );
-              },
-              isTablet: isTablet,
-              loc: loc,
-            ),
+            if (StaffAccess.canCreateCategories)
+              _AddCategoryChip(
+                onTap: () {
+                  final appPref = Get.find<AppPref>();
+                  if (!hasTrialOrSubscription(appPref)) {
+                    checkSubscription();
+                    return;
+                  }
+                  Modular.to.pushNamed(
+                    HomeMainRoutes.category,
+                    arguments: {'screen': 'item', 'isEdit': false},
+                  );
+                  // Get.toNamed(
+                  //   AppRoute.addCategory,
+                  //   arguments: {'screen': 'item'},
+                  // );
+                },
+                isTablet: isTablet,
+                loc: loc,
+              ),
             const SizedBox(width: 8),
             Expanded(
               child: HorizontalScrollWithArrows(
@@ -869,21 +859,23 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                               onTap: () => controller.selectCategory(
                                 category.categoryName.toLowerCase(),
                               ),
-                              onLongPress: () {
-                                final appPref = Get.find<AppPref>();
-                                if (!hasTrialOrSubscription(appPref)) {
-                                  checkSubscription();
-                                  return;
-                                }
-                                Get.toNamed(
-                                  AppRoute.addCategory,
-                                  arguments: {
-                                    'screen': 'item',
-                                    'isEdit': true,
-                                    'category': category,
-                                  },
-                                );
-                              },
+                              onLongPress: StaffAccess.canUpdateCategories
+                                  ? () {
+                                      final appPref = Get.find<AppPref>();
+                                      if (!hasTrialOrSubscription(appPref)) {
+                                        checkSubscription();
+                                        return;
+                                      }
+                                      Get.toNamed(
+                                        AppRoute.addCategory,
+                                        arguments: {
+                                          'screen': 'item',
+                                          'isEdit': true,
+                                          'category': category,
+                                        },
+                                      );
+                                    }
+                                  : null,
                               isTablet: isTablet,
                               loc: loc,
                             ),
@@ -927,22 +919,25 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
               padding: EdgeInsets.only(bottom: isTablet ? 10 : 8),
               child: Row(
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: controller.items.isEmpty
-                          ? null
-                          : allSelected
-                          ? controller.clearItemSelection
-                          : controller.selectAllVisibleItems,
-                      icon: const Icon(Icons.select_all),
-                      label: Text(allSelected ? loc.clear_all : loc.select_all),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColor.primary,
-                        side: BorderSide(color: AppColor.primary),
-                        shape: RoundedRectangleBorder(borderRadius: radius),
+                  if (StaffAccess.canDeleteProducts)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: controller.items.isEmpty
+                            ? null
+                            : allSelected
+                            ? controller.clearItemSelection
+                            : controller.selectAllVisibleItems,
+                        icon: const Icon(Icons.select_all),
+                        label: Text(
+                          allSelected ? loc.clear_all : loc.select_all,
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColor.primary,
+                          side: BorderSide(color: AppColor.primary),
+                          shape: RoundedRectangleBorder(borderRadius: radius),
+                        ),
                       ),
                     ),
-                  ),
                   SizedBox(width: isTablet ? 12 : 10),
                   Expanded(
                     child: ElevatedButton.icon(
@@ -968,89 +963,100 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
           }),
           Row(
             children: [
-              Expanded(
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: controller.importFromFile,
-                    borderRadius: radius,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: horizontalPad,
-                        vertical: verticalPad,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: radius,
-                        border: Border.all(color: AppColor.primary, width: 1.5),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.upload_file_outlined,
+              if (StaffAccess.canImportExportProducts)
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: controller.importFromFile,
+                      borderRadius: radius,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: horizontalPad,
+                          vertical: verticalPad,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: radius,
+                          border: Border.all(
                             color: AppColor.primary,
-                            size: iconSize,
+                            width: 1.5,
                           ),
-                          SizedBox(width: isTablet ? 10 : 8),
-                          Flexible(
-                            child: Text(
-                              loc.import_from_file,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: fontSize,
-                                fontWeight: FontWeight.w600,
-                                color: AppColor.primary,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.upload_file_outlined,
+                              color: AppColor.primary,
+                              size: iconSize,
+                            ),
+                            SizedBox(width: isTablet ? 10 : 8),
+                            Flexible(
+                              child: Text(
+                                loc.import_from_file,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: fontSize,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColor.primary,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              SizedBox(width: isTablet ? 12 : 10),
-              Expanded(
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => Modular.to.pushNamed(
-                      HomeMainRoutes.addItem,
-                      arguments: controller.buildAddItemArgs(),
-                    ),
-                    borderRadius: radius,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: horizontalPad,
-                        vertical: verticalPad,
+              if (StaffAccess.canImportExportProducts &&
+                  StaffAccess.canCreateProducts)
+                SizedBox(width: isTablet ? 12 : 10),
+              if (StaffAccess.canCreateProducts)
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => Modular.to.pushNamed(
+                        HomeMainRoutes.addItem,
+                        arguments: controller.buildAddItemArgs(),
                       ),
-                      decoration: BoxDecoration(
-                        color: AppColor.primary,
-                        borderRadius: radius,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.add, color: Colors.white, size: iconSize),
-                          SizedBox(width: isTablet ? 10 : 8),
-                          Flexible(
-                            child: Text(
-                              loc.add_new_item,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: fontSize,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                      borderRadius: radius,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: horizontalPad,
+                          vertical: verticalPad,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColor.primary,
+                          borderRadius: radius,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.add,
+                              color: Colors.white,
+                              size: iconSize,
+                            ),
+                            SizedBox(width: isTablet ? 10 : 8),
+                            Flexible(
+                              child: Text(
+                                loc.add_new_item,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: fontSize,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
             ],
           ),
         ],
@@ -1126,8 +1132,9 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
               final availableWidth = constraints.maxWidth;
               const spacing = 12.0;
               final columns = 2;
-              final safeWidth =
-                  availableWidth > 0 ? availableWidth : screenWidth;
+              final safeWidth = availableWidth > 0
+                  ? availableWidth
+                  : screenWidth;
               final tileWidth =
                   (safeWidth - (isTablet ? 32 : 24) - spacing) / columns;
               final compact = true;
@@ -1280,7 +1287,7 @@ class _DesktopCategoryTile extends StatelessWidget {
                   children: [
                     if (title != AppLocalizations.of(context)!.all &&
                         image.isNotEmpty)
-                      CachedNetworkImage(
+                      AppCachedNetworkImage(
                         imageUrl: image,
 
                         width: 32,
@@ -1484,6 +1491,7 @@ class _ItemCard extends StatelessWidget {
               controller.toggleItemSelection(item.id);
               return;
             }
+            if (!StaffAccess.ensure(StaffAccess.canUpdateProducts)) return;
             Modular.to.pushNamed(
               HomeMainRoutes.addItem,
               arguments: {'item': item, 'isEdit': true},
@@ -1553,7 +1561,7 @@ class _ItemCard extends StatelessWidget {
     return ColoredBox(
       color: Colors.grey[200]!,
       child: imageUrl != null
-          ? CachedNetworkImage(
+          ? AppCachedNetworkImage(
               imageUrl: imageUrl,
               fit: BoxFit.cover,
               width: double.infinity,
@@ -1613,31 +1621,34 @@ class _ItemCard extends StatelessWidget {
               padding: EdgeInsets.zero,
             ),
             items: [
-              DropdownItem<String>(
-                value: 'edit',
-                height: 44,
-                child: Row(
-                  children: [
-                    const Icon(Icons.edit_outlined, size: 18),
-                    const SizedBox(width: 10),
-                    Text(loc.edit),
-                  ],
+              if (StaffAccess.canUpdateProducts)
+                DropdownItem<String>(
+                  value: 'edit',
+                  height: 44,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.edit_outlined, size: 18),
+                      const SizedBox(width: 10),
+                      Text(loc.edit),
+                    ],
+                  ),
                 ),
-              ),
-              DropdownItem<String>(
-                value: 'delete',
-                height: 44,
-                child: Row(
-                  children: [
-                    const Icon(Icons.delete_outlined, size: 18),
-                    const SizedBox(width: 10),
-                    Text(loc.delete),
-                  ],
+              if (StaffAccess.canDeleteProducts)
+                DropdownItem<String>(
+                  value: 'delete',
+                  height: 44,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.delete_outlined, size: 18),
+                      const SizedBox(width: 10),
+                      Text(loc.delete),
+                    ],
+                  ),
                 ),
-              ),
             ],
             onChanged: (value) {
-              if (value == 'edit') {
+              if (value == 'edit' &&
+                  StaffAccess.ensure(StaffAccess.canUpdateProducts)) {
                 Modular.to.pushNamed(
                   HomeMainRoutes.addItem,
                   arguments: {'item': item, 'isEdit': true},
@@ -1792,31 +1803,34 @@ class _ItemCard extends StatelessWidget {
                       padding: EdgeInsets.zero,
                     ),
                     items: [
-                      DropdownItem<String>(
-                        value: 'edit',
-                        height: 44,
-                        child: Row(
-                          children: [
-                            const Icon(Icons.edit_outlined, size: 18),
-                            const SizedBox(width: 10),
-                            Text(loc.edit),
-                          ],
+                      if (StaffAccess.canUpdateProducts)
+                        DropdownItem<String>(
+                          value: 'edit',
+                          height: 44,
+                          child: Row(
+                            children: [
+                              const Icon(Icons.edit_outlined, size: 18),
+                              const SizedBox(width: 10),
+                              Text(loc.edit),
+                            ],
+                          ),
                         ),
-                      ),
-                      DropdownItem<String>(
-                        value: 'delete',
-                        height: 44,
-                        child: Row(
-                          children: [
-                            const Icon(Icons.delete_outlined, size: 18),
-                            const SizedBox(width: 10),
-                            Text(loc.delete),
-                          ],
+                      if (StaffAccess.canDeleteProducts)
+                        DropdownItem<String>(
+                          value: 'delete',
+                          height: 44,
+                          child: Row(
+                            children: [
+                              const Icon(Icons.delete_outlined, size: 18),
+                              const SizedBox(width: 10),
+                              Text(loc.delete),
+                            ],
+                          ),
                         ),
-                      ),
                     ],
                     onChanged: (value) {
-                      if (value == 'edit') {
+                      if (value == 'edit' &&
+                          StaffAccess.ensure(StaffAccess.canUpdateProducts)) {
                         Modular.to.pushNamed(
                           HomeMainRoutes.addItem,
                           arguments: {'item': item, 'isEdit': true},

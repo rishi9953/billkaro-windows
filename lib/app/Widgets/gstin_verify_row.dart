@@ -1,3 +1,4 @@
+import 'package:billkaro/config/app_colors.dart';
 import 'package:billkaro/utils/gstin_verify_helper.dart';
 import 'package:billkaro/utils/staff_access.dart';
 import 'package:flutter/material.dart';
@@ -25,23 +26,36 @@ class GstinVerifyRow extends StatelessWidget {
 
     return Obx(() {
       final message = helper.gstinVerificationMessage.value;
+      final isVerified = helper.isGstinVerified.value;
+      final isVerifying = helper.isVerifyingGstin.value;
       final messageStyle = TextStyle(
-        color: helper.isGstinVerified.value ? Colors.green : Colors.red,
+        color: isVerified ? Colors.green.shade700 : Colors.red,
         fontSize: 12,
         fontWeight: FontWeight.w500,
       );
 
+      final buttonBg = isVerified
+          ? Colors.green.shade600
+          : AppColor.primary;
+      final buttonLabel = isVerified ? 'Verified' : 'Verify';
+
       final verifyButton = SizedBox(
         height: 38,
         child: ElevatedButton(
-          onPressed: helper.isVerifyingGstin.value ? null : onVerify,
+          onPressed: isVerifying || isVerified ? null : onVerify,
           style: ElevatedButton.styleFrom(
+            backgroundColor: buttonBg,
+            disabledBackgroundColor: isVerified
+                ? Colors.green.shade600
+                : Colors.grey.shade400,
+            foregroundColor: Colors.white,
+            disabledForegroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
           ),
-          child: helper.isVerifyingGstin.value
+          child: isVerifying
               ? const SizedBox(
                   height: 18,
                   width: 18,
@@ -50,7 +64,13 @@ class GstinVerifyRow extends StatelessWidget {
                     color: Colors.white,
                   ),
                 )
-              : const Text('Verify'),
+              : Text(
+                  buttonLabel,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
         ),
       );
 

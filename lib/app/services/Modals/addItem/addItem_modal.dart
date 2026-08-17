@@ -4,6 +4,7 @@ library add_item_modal;
 
 import 'package:json_annotation/json_annotation.dart';
 import 'combo_component.dart';
+import 'menu_item_variant.dart';
 
 part 'addItem_modal.g.dart';
 
@@ -32,6 +33,10 @@ class ItemRequest {
   final int prepTimeMinutes;
   final bool isCombo;
   final List<ComboComponent> comboComponents;
+  /// Menu item id whose recipe is used on sale (link only — no copy).
+  final String linkedRecipeItemId;
+  final bool? hasVariants;
+  final List<MenuItemVariantInput> variants;
 
   ItemRequest({
     required this.itemName,
@@ -56,6 +61,9 @@ class ItemRequest {
     this.prepTimeMinutes = 15,
     this.isCombo = false,
     this.comboComponents = const [],
+    this.linkedRecipeItemId = '',
+    this.hasVariants,
+    this.variants = const [],
   });
 
   factory ItemRequest.fromJson(Map<String, dynamic> json) =>

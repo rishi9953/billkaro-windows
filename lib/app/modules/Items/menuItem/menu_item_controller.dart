@@ -12,6 +12,7 @@ import 'package:billkaro/app/modules/Items/menuItem/menu_import_preview_dialog.d
 import 'package:billkaro/app/modules/Items/menuItem/menu_products_template_service.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:billkaro/utils/offline/offline_category_loader.dart';
+import 'package:billkaro/utils/staff_access.dart';
 
 class MenuItemController extends BaseController {
   final RxList<ItemData> items = <ItemData>[].obs;
@@ -433,6 +434,7 @@ class MenuItemController extends BaseController {
   /// TOGGLE ITEM AVAILABILITY (showItem) + API updateItem
   /// ===============================
   Future<void> toggleItemAvailability(String itemId) async {
+    if (!StaffAccess.ensure(StaffAccess.canUpdateProducts)) return;
     final item = allItems.where((e) => e.id == itemId).firstOrNull;
     if (item == null) return;
 
@@ -526,6 +528,7 @@ class MenuItemController extends BaseController {
   void clearItemSelection() => selectedItemIds.clear();
 
   Future<void> deleteItem(ItemData item) async {
+    if (!StaffAccess.ensure(StaffAccess.canDeleteProducts)) return;
     final loc = AppLocalizations.of(Get.context!)!;
     final name = item.itemName.trim();
     final displayName = name.isEmpty ? loc.this_item : name;
@@ -554,6 +557,7 @@ class MenuItemController extends BaseController {
   }
 
   Future<void> deleteSelectedItems() async {
+    if (!StaffAccess.ensure(StaffAccess.canDeleteProducts)) return;
     final loc = AppLocalizations.of(Get.context!)!;
     if (selectedItemIds.isEmpty) {
       showError(description: loc.select_at_least_one_item_to_delete);
@@ -640,6 +644,7 @@ class MenuItemController extends BaseController {
   /// IMPORT FROM FILE (Excel .xlsx)
   /// ===============================
   Future<void> importFromFile() async {
+    if (!StaffAccess.ensure(StaffAccess.canImportExportProducts)) return;
     final loc = AppLocalizations.of(Get.context!)!;
     if (!hasTrialOrSubscription(appPref)) {
       checkSubscription();
@@ -809,6 +814,7 @@ class MenuItemController extends BaseController {
   }
 
   Future<void> exportToFile() async {
+    if (!StaffAccess.ensure(StaffAccess.canImportExportProducts)) return;
     final loc = AppLocalizations.of(Get.context!)!;
     if (!hasTrialOrSubscription(appPref)) {
       checkSubscription();

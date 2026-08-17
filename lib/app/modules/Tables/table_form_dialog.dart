@@ -312,13 +312,37 @@ class _TableFormDialogState extends State<TableFormDialog> {
                           ...suggestions.map((name) {
                             final selected =
                                 current.toLowerCase() == name.toLowerCase();
-                            return ChoiceChip(
+                            final canDelete =
+                                managed.any(
+                                  (s) =>
+                                      s.toLowerCase() == name.toLowerCase(),
+                                ) &&
+                                widget.controller.canDeleteManagedSection(
+                                  name,
+                                );
+                            return InputChip(
                               label: Text(name),
                               selected: selected,
                               showCheckmark: false,
                               onSelected: (_) {
                                 setState(() => _sectionController.text = name);
                               },
+                              onDeleted: canDelete
+                                  ? () async {
+                                      final wasSelected = selected;
+                                      await widget.controller
+                                          .promptDeleteSection(name);
+                                      if (!wasSelected || !mounted) return;
+                                      if (widget.controller
+                                              .managedSectionFor(name) ==
+                                          null) {
+                                        setState(
+                                          () => _sectionController.text = '',
+                                        );
+                                      }
+                                    }
+                                  : null,
+                              deleteIconColor: colorScheme.error,
                               selectedColor: AppColor.primary.withValues(
                                 alpha: 0.2,
                               ),

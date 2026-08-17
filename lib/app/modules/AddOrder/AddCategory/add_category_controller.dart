@@ -14,6 +14,7 @@ import 'package:flutter_modular/flutter_modular.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:billkaro/utils/offline/offline_category_loader.dart';
+import 'package:billkaro/utils/staff_access.dart';
 
 class AddCategoryController extends BaseController {
   RxList<CategoryData> categories = <CategoryData>[].obs;
@@ -259,6 +260,7 @@ class AddCategoryController extends BaseController {
   }
 
   void startEditCategory(CategoryData category) {
+    if (!StaffAccess.ensure(StaffAccess.canUpdateCategories)) return;
     isEdit.value = true;
     categoryId.value = category.id;
     categoryNameController.text = category.categoryName;
@@ -268,6 +270,7 @@ class AddCategoryController extends BaseController {
   }
 
   Future<void> addCategory() async {
+    if (!StaffAccess.ensure(StaffAccess.canCreateCategories)) return;
     final loc = AppLocalizations.of(Get.context!)!;
     if (categoryNameController.text.trim().isEmpty) {
       showError(description: loc.category_name_cannot_be_empty);
@@ -375,6 +378,7 @@ class AddCategoryController extends BaseController {
   }
 
   Future<void> deleteCategory(int index) async {
+    if (!StaffAccess.ensure(StaffAccess.canDeleteCategories)) return;
     final loc = AppLocalizations.of(Get.context!)!;
     if (index < 0 || index >= categories.length) {
       showError(description: loc.invalid_category_selection);
@@ -389,6 +393,7 @@ class AddCategoryController extends BaseController {
   }
 
   Future<void> deleteSelectedCategories() async {
+    if (!StaffAccess.ensure(StaffAccess.canDeleteCategories)) return;
     final loc = AppLocalizations.of(Get.context!)!;
     if (selectedCategoryIds.isEmpty) {
       showError(description: loc.select_at_least_one_item_to_delete);
@@ -491,6 +496,7 @@ class AddCategoryController extends BaseController {
   }
 
   void updateCategory() async {
+    if (!StaffAccess.ensure(StaffAccess.canUpdateCategories)) return;
     final loc = AppLocalizations.of(Get.context!)!;
     final id = categoryId.value;
     final name = categoryNameController.text.trim().toLowerCase();

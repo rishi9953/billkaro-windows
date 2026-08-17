@@ -2,6 +2,7 @@ import 'package:billkaro/app/modules/StoreSession/store_close_dialog.dart';
 import 'package:billkaro/app/modules/StoreSession/store_open_dialog.dart';
 import 'package:billkaro/app/modules/StoreSession/store_session_controller.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:intl/intl.dart';
 
 enum StoreSessionChipStyle { compact, expanded, sidebar }
@@ -120,8 +121,10 @@ class StoreSessionChip extends StatelessWidget {
 
   void _onTap(BuildContext context, StoreSessionController c, bool open) {
     if (open) {
+      if (!StaffAccess.ensure(StaffAccess.canCloseStore)) return;
       showStoreCloseDialog(context);
     } else {
+      if (!StaffAccess.ensure(StaffAccess.canOpenStore)) return;
       showStoreOpenDialog(context);
     }
   }
@@ -363,24 +366,25 @@ class StoreClosedBanner extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            TextButton(
-              onPressed: () => showStoreOpenDialog(context),
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFFB71C1C),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
+            if (StaffAccess.canOpenStore)
+              TextButton(
+                onPressed: () => showStoreOpenDialog(context),
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFFB71C1C),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                child: Text(
+                  loc.open_store,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
-              child: Text(
-                loc.open_store,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-            ),
           ],
         ),
       );
@@ -446,6 +450,7 @@ class StoreSessionSidebarInfo extends StatelessWidget {
 }
 
 void showStoreOpenDialog(BuildContext context) {
+  if (!StaffAccess.ensure(StaffAccess.canOpenStore)) return;
   showDialog(
     context: context,
     barrierDismissible: false,
@@ -454,6 +459,7 @@ void showStoreOpenDialog(BuildContext context) {
 }
 
 void showStoreCloseDialog(BuildContext context) {
+  if (!StaffAccess.ensure(StaffAccess.canCloseStore)) return;
   showDialog(
     context: context,
     barrierDismissible: false,

@@ -63,6 +63,9 @@ class OrderItem {
   @JsonKey(defaultValue: 0)
   final int kotSentQuantity;
   final String? itemRemark;
+  final String? variantId;
+  final String? variantName;
+  final String? variantSku;
 
   OrderItem({
     required this.itemId,
@@ -73,7 +76,16 @@ class OrderItem {
     required this.gst,
     this.kotSentQuantity = 0,
     this.itemRemark,
+    this.variantId,
+    this.variantName,
+    this.variantSku,
   });
+
+  String get displayName {
+    final variant = variantName?.trim();
+    if (variant == null || variant.isEmpty) return itemName;
+    return '$itemName - $variant';
+  }
 
   factory OrderItem.fromJson(Map<String, dynamic> json) =>
       _$OrderItemFromJson(json);

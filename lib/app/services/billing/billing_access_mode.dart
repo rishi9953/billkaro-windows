@@ -14,15 +14,15 @@ extension BillingAccessModeX on BillingAccessMode {
 
   bool get isWallet => this == BillingAccessMode.wallet;
 
-  /// Parses prefs / API values. Unknown or empty → [BillingAccessMode.subscription].
+  /// Parses prefs / API values. Unknown or empty → [BillingAccessMode.wallet].
   static BillingAccessMode fromStorage(String? raw) {
     final value = raw?.trim().toLowerCase();
     if (value == null || value.isEmpty) {
-      return BillingAccessMode.subscription;
+      return BillingAccessMode.wallet;
     }
     for (final mode in BillingAccessMode.values) {
       if (mode.name == value) return mode;
     }
-    return BillingAccessMode.subscription;
+    return BillingAccessMode.wallet;
   }
 }

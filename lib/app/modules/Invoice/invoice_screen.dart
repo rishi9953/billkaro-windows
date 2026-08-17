@@ -1,4 +1,5 @@
 import 'package:billkaro/app/modules/Invoice/invoice_controller.dart';
+import 'package:billkaro/app/utils/pos_cart_line.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -42,6 +43,19 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
             icon: const Icon(Icons.download_outlined, color: AppColor.white),
             onPressed: () => controller.downloadPdf(),
             tooltip: 'Download PDF',
+          ),
+          InkWell(
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: const Color(0xFF25D366).withOpacity(0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Assets.svg.whatsapp.svg(width: 20, height: 20),
+            ),
+            onTap: () =>
+                controller.openWhatsApp(controller.customerPhone.value),
           ),
           IconButton(
             icon: const Icon(Icons.share_outlined, color: AppColor.white),
@@ -133,7 +147,16 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-
+                                    if (controller
+                                        .customerPhone
+                                        .value
+                                        .isNotEmpty)
+                                      Text(
+                                        'Phone : ${controller.customerPhone.value}',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                     Text(
                                       'Payment In : ${controller.paymentMode} ',
                                       style: TextStyle(
@@ -241,7 +264,10 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                                     Expanded(
                                       flex: 3,
                                       child: Text(
-                                        item.itemName,
+                                        PosCartLine.invoiceLineName(
+                                          itemName: item.itemName,
+                                          variantName: item.variantName,
+                                        ),
                                         style: const TextStyle(
                                           fontWeight: FontWeight.w600,
                                         ),

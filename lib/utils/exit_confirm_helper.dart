@@ -78,7 +78,7 @@ class ExitConfirmHelper {
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      Assets.logo.image(width: 36, height: 36),
+                      Assets.logo2.image(width: 36, height: 36),
                       const SizedBox(width: 10),
                       const Expanded(
                         child: Text(

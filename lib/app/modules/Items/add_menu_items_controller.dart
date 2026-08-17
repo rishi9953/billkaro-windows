@@ -1,4 +1,5 @@
 // Controller
+import 'dart:async';
 import 'dart:io';
 import 'package:billkaro/app/Widgets/desktop_camera_capture_dialog.dart';
 import 'package:billkaro/app/Widgets/item_image_ai_chat_dialog.dart';
@@ -7,6 +8,7 @@ import 'package:billkaro/app/modules/AddOrder/add_order_controller.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_item_controller.dart';
 import 'package:billkaro/app/services/Modals/addItem/addItem_modal.dart';
 import 'package:billkaro/app/services/Modals/addItem/combo_component.dart';
+import 'package:billkaro/app/services/Modals/addItem/menu_item_variant.dart';
 import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/app/services/open_food_facts_service.dart';
@@ -17,6 +19,7 @@ import 'package:billkaro/config/config.dart';
 import '../../services/Modals/Categories/categories_response.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:billkaro/utils/offline/offline_category_loader.dart';
+import 'package:billkaro/utils/staff_access.dart';
 
 class AddMenuItemController extends BaseController {
   static const String comboCategoryName = 'combo';
@@ -40,13 +43,20 @@ class AddMenuItemController extends BaseController {
   var isComboItem = false.obs;
   final RxMap<String, double> comboComponentQuantities = <String, double>{}.obs;
   final RxList<ItemData> comboOptionItems = <ItemData>[].obs;
+  final Map<String, ItemData> _comboKnownItems = <String, ItemData>{};
+  final comboSearchController = TextEditingController();
+  final RxString comboSearchQuery = ''.obs;
   final isLoadingComboOptions = false.obs;
+  Timer? _comboSearchDebounce;
+  static const _comboSearchDebounceDuration = Duration(milliseconds: 400);
+  int _comboOptionsRequestId = 0;
   var itemId = ''.obs;
   var imageUrl = ''.obs;
   var isAvailable = true.obs;
   var trackStock = false.obs;
   var selectedSoldBy = 'Each'.obs;
   var selectedPosColor = ''.obs;
+  final linkedRecipeItemId = ''.obs;
 
   static const soldByOptions = ['Each', 'Weight', 'Open'];
   static const posColorOptions = <String>[
@@ -81,6 +91,8 @@ class AddMenuItemController extends BaseController {
 
   final taxOptions = ['None', '5', '12', '18', '28'];
   var isEdit = false.obs;
+  final hasVariantsEnabled = false.obs;
+  final RxList<VariantDraft> variantDrafts = <VariantDraft>[].obs;
 
   // Default category list
   RxList<String> categories = <String>['none'].obs;
@@ -697,7 +709,132 @@ class AddMenuItemController extends BaseController {
       showError(description: 'Please add at least one item to this meal');
       return false;
     }
+    if (hasVariantsEnabled.value) {
+      if (variantDrafts.isEmpty) {
+        showError(description: 'Add at least one variant');
+        return false;
+      }
+      final names = <String>{};
+      for (final draft in variantDrafts) {
+        final name = draft.nameController.text.trim().toLowerCase();
+        if (name.isEmpty) {
+          showError(description: 'Every variant needs a name');
+          return false;
+        }
+        if (names.contains(name)) {
+          showError(description: 'Duplicate variant names are not allowed');
+          return false;
+        }
+        names.add(name);
+        final price = double.tryParse(draft.priceController.text.trim());
+        if (price == null || price < 0) {
+          showError(description: 'Enter a valid price for each variant');
+          return false;
+        }
+      }
+      if (!variantDrafts.any((draft) => draft.isDefault)) {
+        variantDrafts.first.isDefault = true;
+      }
+    }
     return true;
+  }
+
+  void setVariantsEnabled(bool enabled) {
+    hasVariantsEnabled.value = enabled;
+    if (enabled && variantDrafts.isEmpty) {
+      addVariantDraft(makeDefault: true);
+    }
+    if (!enabled) {
+      clearVariantDrafts();
+    }
+  }
+
+  void addVariantDraft({bool makeDefault = false}) {
+    final draft = VariantDraft(
+      nameController: TextEditingController(),
+      priceController: TextEditingController(
+        text: salePriceController.text.trim().isEmpty
+            ? ''
+            : salePriceController.text.trim(),
+      ),
+      isDefault: makeDefault || variantDrafts.isEmpty,
+      sortOrder: variantDrafts.length,
+    );
+    if (draft.isDefault) {
+      for (final existing in variantDrafts) {
+        existing.isDefault = false;
+      }
+    }
+    variantDrafts.add(draft);
+    variantDrafts.refresh();
+  }
+
+  void removeVariantDraft(int index) {
+    if (index < 0 || index >= variantDrafts.length) return;
+    final removed = variantDrafts.removeAt(index);
+    removed.dispose();
+    if (variantDrafts.isNotEmpty && !variantDrafts.any((d) => d.isDefault)) {
+      variantDrafts.first.isDefault = true;
+      syncDefaultVariantPriceToBase();
+    }
+    variantDrafts.refresh();
+  }
+
+  void setDefaultVariantDraft(int index) {
+    if (index < 0 || index >= variantDrafts.length) return;
+    for (var i = 0; i < variantDrafts.length; i++) {
+      variantDrafts[i].isDefault = i == index;
+    }
+    syncDefaultVariantPriceToBase();
+    variantDrafts.refresh();
+  }
+
+  void syncDefaultVariantPriceToBase() {
+    final defaultDraft = variantDrafts.firstWhereOrNull((d) => d.isDefault);
+    if (defaultDraft == null) return;
+    salePriceController.text = defaultDraft.priceController.text.trim();
+  }
+
+  void clearVariantDrafts() {
+    for (final draft in variantDrafts) {
+      draft.dispose();
+    }
+    variantDrafts.clear();
+  }
+
+  List<MenuItemVariantInput> buildVariantInputs() {
+    if (!hasVariantsEnabled.value) return const [];
+    return variantDrafts.asMap().entries.map((entry) {
+      final draft = entry.value.toInput();
+      return MenuItemVariantInput(
+        id: draft.id,
+        name: draft.name,
+        sku: draft.sku,
+        barcode: draft.barcode,
+        salePrice: draft.salePrice,
+        costPrice: draft.costPrice,
+        trackStock: draft.trackStock,
+        stockQuantity: draft.stockQuantity,
+        minStock: draft.minStock,
+        isDefault: draft.isDefault,
+        isActive: draft.isActive,
+        sortOrder: entry.key,
+      );
+    }).toList();
+  }
+
+  void loadVariantsFromItem(ItemData item) {
+    clearVariantDrafts();
+    final activeVariants = item.variants.where((v) => v.isActive).toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    hasVariantsEnabled.value = item.hasVariants || activeVariants.isNotEmpty;
+    if (!hasVariantsEnabled.value) return;
+    for (final variant in activeVariants) {
+      variantDrafts.add(VariantDraft.fromVariant(variant));
+    }
+    if (variantDrafts.isEmpty) {
+      addVariantDraft(makeDefault: true);
+    }
   }
 
   void selectCategory(String category) {
@@ -707,6 +844,9 @@ class AddMenuItemController extends BaseController {
     );
     selectedCategory.value = match ?? category.trim();
     isComboItem.value = normalized == comboCategoryName;
+    if (!isComboItem.value) {
+      costPriceController.clear();
+    }
   }
 
   /// Quick-add a category from the add-item form and select it.
@@ -1016,10 +1156,12 @@ class AddMenuItemController extends BaseController {
         _setCategoryNames([...categories, comboCategoryName]);
       }
       selectedCategory.value = existing ?? comboCategoryName;
-    } else if (selectedCategory.value.trim().toLowerCase() ==
-        comboCategoryName) {
-      selectedCategory.value = 'none';
-      comboComponentQuantities.clear();
+    } else {
+      costPriceController.clear();
+      if (selectedCategory.value.trim().toLowerCase() == comboCategoryName) {
+        selectedCategory.value = 'none';
+        comboComponentQuantities.clear();
+      }
     }
   }
 
@@ -1093,6 +1235,30 @@ class AddMenuItemController extends BaseController {
     }
   }
 
+  void _rememberComboOptions(Iterable<ItemData> items) {
+    for (final item in items) {
+      if (item.id.isNotEmpty) {
+        _comboKnownItems[item.id] = item;
+      }
+    }
+  }
+
+  ItemData? _findKnownComboItem(String id) {
+    if (id.isEmpty) return null;
+    final known = _comboKnownItems[id];
+    if (known != null) return known;
+    _ensureMenuItemController();
+    final menu = menuItemController;
+    if (menu == null) return null;
+    for (final item in menu.allItems) {
+      if (item.id == id) return item;
+    }
+    for (final item in menu.items) {
+      if (item.id == id) return item;
+    }
+    return null;
+  }
+
   List<ItemData> get comboComponentOptions {
     final currentId = itemId.value;
     return _comboOptionSource()
@@ -1104,39 +1270,85 @@ class AddMenuItemController extends BaseController {
   }
 
   /// Instantly fills picker options from in-memory menu items (no network).
-  void seedComboComponentOptions() {
-    if (comboOptionItems.isNotEmpty) return;
-    final cached = _comboOptionSource();
+  void seedComboComponentOptions({bool force = false}) {
+    if (!force && comboOptionItems.isNotEmpty) return;
+    final cached = <ItemData>[];
+    _ensureMenuItemController();
+    final menu = menuItemController;
+    if (menu != null) {
+      if (menu.allItems.isNotEmpty) {
+        cached.addAll(menu.allItems);
+      } else {
+        cached.addAll(menu.items);
+      }
+    }
     if (cached.isNotEmpty) {
+      _rememberComboOptions(cached);
       comboOptionItems.assignAll(cached);
     }
   }
 
-  Future<void> loadComboComponentOptions() async {
-    if (isLoadingComboOptions.value) return;
-
-    seedComboComponentOptions();
-
+  Future<void> loadComboComponentOptions({String? search}) async {
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) return;
 
-    final hadCachedOptions = comboOptionItems.isNotEmpty;
-    // Only show the spinner when there is nothing to display yet.
+    final query = (search ?? comboSearchQuery.value).trim();
+    if (query.isEmpty) {
+      seedComboComponentOptions();
+    }
+
+    final requestId = ++_comboOptionsRequestId;
+    final hadCachedOptions = comboOptionItems.isNotEmpty && query.isEmpty;
     if (!hadCachedOptions) {
       isLoadingComboOptions.value = true;
     }
     try {
       final response = await callApi(
-        apiClient.getItems(outletId, 1, 500, null, null, null, null),
+        apiClient.getItems(
+          outletId,
+          1,
+          500,
+          null,
+          query.isEmpty ? null : query,
+          null,
+          null,
+        ),
         showLoader: false,
       );
+      if (requestId != _comboOptionsRequestId) return;
       if (response?.status == 'success') {
-        comboOptionItems.assignAll(response!.data);
+        _rememberComboOptions(response!.data);
+        comboOptionItems.assignAll(response.data);
       }
     } finally {
-      if (!hadCachedOptions) {
+      if (requestId == _comboOptionsRequestId) {
         isLoadingComboOptions.value = false;
       }
+    }
+  }
+
+  void filterComboComponentOptions(String query) {
+    final trimmed = query.trim();
+    comboSearchQuery.value = trimmed;
+    _comboSearchDebounce?.cancel();
+    if (trimmed.isEmpty) {
+      seedComboComponentOptions(force: true);
+      loadComboComponentOptions(search: '');
+      return;
+    }
+    _comboSearchDebounce = Timer(_comboSearchDebounceDuration, () {
+      loadComboComponentOptions(search: trimmed);
+    });
+  }
+
+  void clearComboComponentSearch({bool reload = true}) {
+    _comboSearchDebounce?.cancel();
+    _comboSearchDebounce = null;
+    comboSearchController.clear();
+    comboSearchQuery.value = '';
+    if (reload) {
+      seedComboComponentOptions(force: true);
+      loadComboComponentOptions(search: '');
     }
   }
 
@@ -1146,12 +1358,60 @@ class AddMenuItemController extends BaseController {
       .map((entry) => ComboComponent(itemId: entry.key, quantity: entry.value))
       .toList();
 
-  List<ItemData> get selectedComboItems => comboComponentOptions
-      .where((item) => comboComponentQuantities.containsKey(item.id))
-      .toList();
+  List<ItemData> get selectedComboItems {
+    final items = <ItemData>[];
+    for (final entry in comboComponentQuantities.entries) {
+      final item = _findKnownComboItem(entry.key);
+      if (item != null) items.add(item);
+    }
+    return items;
+  }
+
+  /// Sets cost price from Σ(component price with tax × qty). Sale price stays editable.
+  void _recalculateComboPrices() {
+    if (!isComboItem.value) return;
+
+    final totals = comboCostBreakdown;
+    if (totals.total > 0) {
+      costPriceController.text = _formatComboAmount(totals.total);
+    } else {
+      costPriceController.clear();
+    }
+  }
+
+  /// Tax added on top of sale price when the item is marked with tax.
+  double comboItemTaxAmount(ItemData item) {
+    if (!item.withTax || item.gst <= 0 || item.salePrice <= 0) return 0;
+    return item.salePrice * item.gst / 100.0;
+  }
+
+  double comboItemPriceWithTax(ItemData item) {
+    return item.salePrice + comboItemTaxAmount(item);
+  }
+
+  /// Base + tax totals for selected meal items (qty applied).
+  ({double base, double tax, double total}) get comboCostBreakdown {
+    double base = 0;
+    double tax = 0;
+    for (final entry in comboComponentQuantities.entries) {
+      if (entry.value <= 0) continue;
+      final item = _findKnownComboItem(entry.key);
+      if (item == null) continue;
+      base += item.salePrice * entry.value;
+      tax += comboItemTaxAmount(item) * entry.value;
+    }
+    return (base: base, tax: tax, total: base + tax);
+  }
+
+  String _formatComboAmount(double value) {
+    return value.toStringAsFixed(
+      value.truncateToDouble() == value ? 0 : 2,
+    );
+  }
 
   void setComboComponent(ItemData item, bool selected) {
     if (item.id.isEmpty) return;
+    _rememberComboOptions([item]);
     if (selected) {
       comboComponentQuantities[item.id] =
           comboComponentQuantities[item.id] ?? 1;
@@ -1159,12 +1419,14 @@ class AddMenuItemController extends BaseController {
       comboComponentQuantities.remove(item.id);
     }
     comboComponentQuantities.refresh();
+    _recalculateComboPrices();
   }
 
   void incrementComboComponent(String itemId) {
     comboComponentQuantities[itemId] =
         (comboComponentQuantities[itemId] ?? 0) + 1;
     comboComponentQuantities.refresh();
+    _recalculateComboPrices();
   }
 
   void decrementComboComponent(String itemId) {
@@ -1175,9 +1437,11 @@ class AddMenuItemController extends BaseController {
       comboComponentQuantities[itemId] = current - 1;
     }
     comboComponentQuantities.refresh();
+    _recalculateComboPrices();
   }
 
   void saveAndNew() {
+    if (!StaffAccess.ensure(StaffAccess.canCreateProducts)) return;
     // Save and keep screen open; reset only after SUCCESS.
     if (!_validateForm()) return;
     final appPref = Get.find<AppPref>();
@@ -1189,6 +1453,7 @@ class AddMenuItemController extends BaseController {
   }
 
   void showDeleteConfirmationDialog() {
+    if (!StaffAccess.ensure(StaffAccess.canDeleteProducts)) return;
     Get.dialog(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -1213,6 +1478,7 @@ class AddMenuItemController extends BaseController {
   }
 
   void onDeleteItem() async {
+    if (!StaffAccess.ensure(StaffAccess.canDeleteProducts)) return;
     final response = await callApi(apiClient.deleteItem(itemId.value.trim()));
     if (response['status'] == 'success') {
       if (Get.isDialogOpen == true) {
@@ -1229,6 +1495,7 @@ class AddMenuItemController extends BaseController {
   }
 
   void saveItem() {
+    if (!StaffAccess.ensure(StaffAccess.canCreateProducts)) return;
     debugPrint('Save item called. isEdit: ${isEdit.value}');
     if (!_validateForm()) return;
     final appPref = Get.find<AppPref>();
@@ -1240,6 +1507,7 @@ class AddMenuItemController extends BaseController {
   }
 
   void onUpdateItem() async {
+    if (!StaffAccess.ensure(StaffAccess.canUpdateProducts)) return;
     if (!_validateForm()) return;
     if (selectedImage.value != null) {
       await uploadItemImage();
@@ -1272,6 +1540,9 @@ class AddMenuItemController extends BaseController {
       prepTimeMinutes: _parsedPrepTimeMinutes(),
       isCombo: isComboItem.value,
       comboComponents: selectedComboComponents,
+      linkedRecipeItemId: linkedRecipeItemId.value.trim(),
+      hasVariants: hasVariantsEnabled.value,
+      variants: buildVariantInputs(),
     );
     final response = await callApi(
       apiClient.updateItem(request, itemId.value.trim()),
@@ -1329,6 +1600,9 @@ class AddMenuItemController extends BaseController {
     selectedImage.value = null;
     imagePath.value = '';
     aiScanResult.value = null;
+    linkedRecipeItemId.value = '';
+    clearVariantDrafts();
+    hasVariantsEnabled.value = false;
 
     if (args == null) return;
 
@@ -1377,9 +1651,11 @@ class AddMenuItemController extends BaseController {
     imageUrl.value = item.itemImage;
     isAvailable.value = item.showItem;
     markAsFavorite.value = item.isRecommended;
+    linkedRecipeItemId.value = item.linkedRecipeItemId;
     selectedTaxPercentage.value = double.parse(item.gst.toString()).round() == 0
         ? 'None'
         : '${double.parse(item.gst.toString()).toInt()}';
+    loadVariantsFromItem(item);
   }
 
   void _applyCategoryFromArgs(dynamic categoryArg) {
@@ -1462,6 +1738,9 @@ class AddMenuItemController extends BaseController {
     markAsFavorite.value = false;
     isComboItem.value = false;
     comboComponentQuantities.clear();
+    linkedRecipeItemId.value = '';
+    clearVariantDrafts();
+    hasVariantsEnabled.value = false;
   }
 
   // Save API Call
@@ -1503,6 +1782,9 @@ class AddMenuItemController extends BaseController {
       prepTimeMinutes: _parsedPrepTimeMinutes(),
       isCombo: isComboItem.value,
       comboComponents: selectedComboComponents,
+      linkedRecipeItemId: linkedRecipeItemId.value.trim(),
+      hasVariants: hasVariantsEnabled.value,
+      variants: buildVariantInputs(),
     );
 
     final response = await callApi(apiClient.addItem(request));
@@ -1891,6 +2173,8 @@ class AddMenuItemController extends BaseController {
 
   @override
   void onClose() {
+    _comboSearchDebounce?.cancel();
+    comboSearchController.dispose();
     itemNameController.dispose();
     salePriceController.dispose();
     costPriceController.dispose();

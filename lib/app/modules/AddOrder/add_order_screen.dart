@@ -6,6 +6,7 @@ import 'package:billkaro/app/modules/AddOrder/add_order_list_screen.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
 import 'package:billkaro/app/services/Modals/orders/split_payment.dart';
+import 'package:billkaro/app/utils/pos_cart_line.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
@@ -82,7 +83,12 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
     scrollController.removeListener(_onScroll);
     scrollController.dispose();
     controller.clearOrderDraft();
-    if (Get.isRegistered<AddOrderController>()) {
+    // Only delete if this screen still owns the registered instance.
+    // Navigating Create Order → Invoice (push) → Create Order (sidebar) can
+    // dispose the old screen after a new controller was already put, which
+    // would otherwise unregister the active one and break ConfirmOrderDialog.
+    if (Get.isRegistered<AddOrderController>() &&
+        identical(Get.find<AddOrderController>(), controller)) {
       Get.delete<AddOrderController>(force: true);
     }
     super.dispose();
@@ -379,7 +385,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                                             ) ??
                                                             0.0,
                                                         quantity: controller
-                                                            .getItemQuantity(
+                                                            .getParentItemQuantity(
                                                               item.id,
                                                             ),
                                                         onDelete: () {
@@ -390,9 +396,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                                         },
                                                         onIncrement: () {
                                                           controller
-                                                              .incrementItemQuantity(
-                                                                item.id,
-                                                              );
+                                                              .handlePosItemTap(item);
                                                         },
                                                         onDecrement: () {
                                                           controller
@@ -466,7 +470,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                                             ) ??
                                                             0.0,
                                                         quantity: controller
-                                                            .getItemQuantity(
+                                                            .getParentItemQuantity(
                                                               item.id,
                                                             ),
                                                         onDelete: () {
@@ -477,9 +481,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                                         },
                                                         onIncrement: () {
                                                           controller
-                                                              .incrementItemQuantity(
-                                                                item.id,
-                                                              );
+                                                              .handlePosItemTap(item);
                                                         },
                                                         onDecrement: () {
                                                           controller
@@ -571,7 +573,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                                           ) ??
                                                           0.0,
                                                       quantity: controller
-                                                          .getItemQuantity(
+                                                          .getParentItemQuantity(
                                                             item.id,
                                                           ),
                                                       onDelete: () {
@@ -582,8 +584,8 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                                       },
                                                       onIncrement: () {
                                                         controller
-                                                            .incrementItemQuantity(
-                                                              item.id,
+                                                            .handlePosItemTap(
+                                                              item,
                                                             );
                                                       },
                                                       onDecrement: () {
@@ -692,7 +694,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                                     ) ??
                                                     0.0,
                                                 quantity: controller
-                                                    .getItemQuantity(item.id),
+                                                    .getParentItemQuantity(item.id),
                                                 onDelete: () {
                                                   controller
                                                       .removeItemCompletely(
@@ -861,7 +863,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                   }).toList(),
                   onChanged: (value) {
                     if (value != null) {
-                      controller.selectedOrderSource.value = value;
+                      controller.setOrderSource(value);
                     }
                   },
                 ),
@@ -1051,7 +1053,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                   ],
                   OutlinedButton(
                     onPressed: controller.hasSelectedItems
-                        ? () => controller.showConfirmOrderBottomSheet(
+                        ? () => controller.showConfirmOrderDialog(
                             PosOrderAction.hold,
                           )
                         : null,
@@ -1078,7 +1080,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                   const SizedBox(width: 12),
                   FilledButton(
                     onPressed: controller.hasSelectedItems
-                        ? () => controller.showConfirmOrderBottomSheet(
+                        ? () => controller.showConfirmOrderDialog(
                             PosOrderAction.bill,
                           )
                         : null,
@@ -1182,7 +1184,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                 ],
                 ElevatedButton(
                   onPressed: controller.hasSelectedItems
-                      ? () => controller.showConfirmOrderBottomSheet(
+                      ? () => controller.showConfirmOrderDialog(
                           PosOrderAction.hold,
                         )
                       : null,
@@ -1213,7 +1215,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                 const SizedBox(width: 12),
                 ElevatedButton(
                   onPressed: controller.hasSelectedItems
-                      ? () => controller.showConfirmOrderBottomSheet(
+                      ? () => controller.showConfirmOrderDialog(
                           PosOrderAction.bill,
                         )
                       : null,
@@ -1406,20 +1408,20 @@ class _CartPanel extends StatelessWidget {
 
       final cartItems = <Map<String, dynamic>>[];
       for (final entry in entries) {
-        final item = controller.allItemsMap[entry.key];
-        if (item == null) continue;
-        final price = double.tryParse(item.salePrice.toString()) ?? 0.0;
+        final parsed = PosCartLine.fromKey(entry.key);
+        if (!controller.allItemsMap.containsKey(parsed.itemId)) continue;
+        final price = controller.cartLineUnitPrice(entry.key);
         final sent = controller.kotPrintedQuantities[entry.key] ?? 0;
         final pending = entry.value - sent;
         cartItems.add({
-          'id': item.id,
-          'name': item.itemName,
+          'id': entry.key,
+          'name': controller.cartLineLabel(entry.key),
           'qty': entry.value,
           'pendingKot': pending,
           'price': price,
           'total': price * entry.value,
-          'image': item.itemImage,
-          'remark': controller.itemRemarks[item.id] ?? '',
+          'image': controller.allItemsMap[parsed.itemId]?.itemImage ?? '',
+          'remark': controller.itemRemarks[entry.key] ?? '',
         });
       }
 

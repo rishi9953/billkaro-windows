@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:typed_data';
-import 'dart:ui' as ui;
 
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 
@@ -16,7 +15,6 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:printing/printing.dart' hide Printer;
-import 'package:qr_flutter/qr_flutter.dart';
 import 'helpers/cash_drawer_helper.dart';
 import 'helpers/storage_helper.dart';
 import 'helpers/thermal_paper_size.dart';
@@ -1327,7 +1325,7 @@ class ThermalPrinterService extends GetxController {
 
     for (var item in items) {
       for (final line in TextHelper.kotNameQtyLines(
-        item.itemName,
+        item.displayName,
         item.quantity,
         receiptW,
       )) {
@@ -1371,19 +1369,25 @@ class ThermalPrinterService extends GetxController {
     required double amount,
     required String payeeName,
     required String note,
+    ThermalPaperSize? paperSize,
   }) async {
-    final upiUri = 'upi://pay?pa=$upiId&pn=Payment&am=$amount&cu=INR&tn=$note';
-
-    final qrPainter = QrPainter(
-      data: upiUri,
-      version: QrVersions.auto,
-      gapless: true,
+    final size = paperSize ?? selectedPaperSize.value;
+    final encodedName = Uri.encodeComponent(
+      payeeName.trim().isEmpty ? 'Payment' : payeeName.trim(),
     );
+    final encodedNote = Uri.encodeComponent(note);
+    final upiUri =
+        'upi://pay?pa=$upiId&pn=$encodedName&am=${amount.toStringAsFixed(2)}&cu=INR&tn=$encodedNote';
 
-    final ui.Image image = await qrPainter.toImage(200);
-    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-
-    return byteData!.buffer.asUint8List();
+    final png = await QRGenerator.generatePngBytes(
+      upiUri,
+      size: size.qrMaxDots,
+      moduleDots: size.qrModuleDots,
+    );
+    if (png == null || png.isEmpty) {
+      throw Exception('Failed to generate UPI QR image');
+    }
+    return png;
   }
 
   Future<void> printInvoice({
@@ -1494,9 +1498,9 @@ class ThermalPrinterService extends GetxController {
 
     // Items
     for (var item in items) {
-      String itemName = item.itemName.length > cols.item
-          ? item.itemName.substring(0, cols.item)
-          : item.itemName;
+      String itemName = item.displayName.length > cols.item
+          ? item.displayName.substring(0, cols.item)
+          : item.displayName;
       String qty = 'x${item.quantity}';
       String price = item.salePrice.toStringAsFixed(0);
       String amount = (item.quantity * item.salePrice).toStringAsFixed(2);
@@ -1553,13 +1557,13 @@ class ThermalPrinterService extends GetxController {
         ..text('\n');
 
       String transactionNote = 'Invoice: $invoiceNo';
-      // Use bitmap QR for broad printer compatibility.
-      // Native ESC/POS QR commands can print stray characters (e.g. "2") on some printers.
-      List<int> qrCode = await QRGenerator.generateBitmap(
+      // GS v 0 solid-module raster — sharp on 2"/3"/4" without ESC * band gaps.
+      final qrCode = await QRGenerator.generateBitmap(
         upiId!.trim(),
         totalAmount,
         businessName,
         transactionNote,
+        paperSize: selectedPaperSize.value,
       );
 
       if (qrCode.isNotEmpty) {
@@ -1657,7 +1661,10 @@ class ThermalPrinterService extends GetxController {
       ..bold('Scan to Order & Pay\n')
       ..text('\n');
 
-    final qrBytes = await QRGenerator.generateUrlBitmap(menuUrl.trim());
+    final qrBytes = await QRGenerator.generateUrlBitmap(
+      menuUrl.trim(),
+      paperSize: selectedPaperSize.value,
+    );
     if (qrBytes.isNotEmpty) {
       builder.bytes.addAll(qrBytes);
       builder.text('\n');
@@ -1702,19 +1709,26 @@ class ThermalPrinterService extends GetxController {
     required String tableDisplayName,
     required String menuUrl,
   }) async {
-    final qrPainter = QrPainter(
-      data: menuUrl,
-      version: QrVersions.auto,
-      gapless: true,
+    final paper = selectedPaperSize.value;
+    final pngBytes = await QRGenerator.generatePngBytes(
+      menuUrl,
+      size: paper.qrMaxDots,
+      moduleDots: paper.qrModuleDots,
     );
-    final image = await qrPainter.toImage(240);
-    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    final pngBytes = byteData!.buffer.asUint8List();
+    if (pngBytes == null || pngBytes.isEmpty) {
+      throw Exception('Failed to generate table QR image');
+    }
 
+    final qrDisplay = paper.pdfQrDisplayMm * PdfPageFormat.mm;
+    final pageWidth = paper.pdfPageWidthMm * PdfPageFormat.mm;
     final doc = pw.Document();
     doc.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat.a6,
+        pageFormat: PdfPageFormat(
+          pageWidth,
+          150 * PdfPageFormat.mm,
+          marginAll: 4 * PdfPageFormat.mm,
+        ),
         build: (context) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
@@ -1733,8 +1747,8 @@ class ThermalPrinterService extends GetxController {
             pw.Center(
               child: pw.Image(
                 pw.MemoryImage(pngBytes),
-                width: 180,
-                height: 180,
+                width: qrDisplay,
+                height: qrDisplay,
               ),
             ),
             pw.SizedBox(height: 12),
@@ -1779,16 +1793,17 @@ class ThermalPrinterService extends GetxController {
     String? upiId,
   }) async {
     final doc = pw.Document();
+    final paper = selectedPaperSize.value;
+    final qrDisplay = paper.pdfQrDisplayMm * PdfPageFormat.mm;
 
     // IMPORTANT:
     // `pdf` requires a finite page height for `pw.MultiPage`.
     // Use a receipt-like width with a standard finite height; MultiPage will
     // paginate automatically for longer receipts.
     // Many Windows thermal printer drivers have non‑printable margins.
-    // If we render at full 80mm width, right-aligned text can get clipped.
     // Use a slightly narrower effective page width + smaller margins.
     final pageFormat = PdfPageFormat(
-      76 * PdfPageFormat.mm,
+      paper.pdfPageWidthMm * PdfPageFormat.mm,
       297 * PdfPageFormat.mm, // finite height; MultiPage paginates
       marginAll: 4 * PdfPageFormat.mm,
     );
@@ -1892,7 +1907,7 @@ class ThermalPrinterService extends GetxController {
                   children: [
                     pw.Padding(
                       padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                      child: pw.Text(it.itemName, style: t()),
+                      child: pw.Text(it.displayName, style: t()),
                     ),
                     pw.Padding(
                       padding: const pw.EdgeInsets.symmetric(vertical: 3),
@@ -1953,6 +1968,7 @@ class ThermalPrinterService extends GetxController {
           amount: totalAmount,
           payeeName: businessName.isNotEmpty ? businessName : 'Payment',
           note: 'Invoice: $invoiceNo',
+          paperSize: paper,
         );
 
         final withQr = pw.Document();
@@ -2051,7 +2067,7 @@ class ThermalPrinterService extends GetxController {
                       children: [
                         pw.Padding(
                           padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                          child: pw.Text(it.itemName, style: t()),
+                          child: pw.Text(it.displayName, style: t()),
                         ),
                         pw.Padding(
                           padding: const pw.EdgeInsets.symmetric(vertical: 3),
@@ -2111,7 +2127,11 @@ class ThermalPrinterService extends GetxController {
               pw.Center(child: pw.Text('Scan to Pay', style: t(b: true))),
               pw.SizedBox(height: 6),
               pw.Center(
-                child: pw.Image(pw.MemoryImage(qrBytes), width: 90, height: 90),
+                child: pw.Image(
+                  pw.MemoryImage(qrBytes),
+                  width: qrDisplay,
+                  height: qrDisplay,
+                ),
               ),
               pw.SizedBox(height: 6),
               pw.Center(child: pw.Text('UPI: ${upiId.trim()}', style: t(s: 8))),
@@ -2210,7 +2230,7 @@ class ThermalPrinterService extends GetxController {
                   pw.Row(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Expanded(child: pw.Text(it.itemName, style: t())),
+                      pw.Expanded(child: pw.Text(it.displayName, style: t())),
                       pw.Text('x${it.quantity}', style: t(b: true)),
                     ],
                   ),

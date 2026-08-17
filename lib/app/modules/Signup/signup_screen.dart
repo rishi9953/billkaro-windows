@@ -249,24 +249,41 @@ class SignupScreen extends GetView<SignupController> {
                       ),
                       const SizedBox(height: 20),
 
-                      SizedBox(
-                        height: 48,
-                        child: ElevatedButton(
-                          onPressed: controller.submitRegistration,
-                          style: ElevatedButton.styleFrom(
-                            elevation: 0,
-                            backgroundColor: AppColor.primary,
-                            foregroundColor: AppColor.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                      Obx(
+                        () => SizedBox(
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed: controller.isSubmitting.value
+                                ? null
+                                : controller.submitRegistration,
+                            style: ElevatedButton.styleFrom(
+                              elevation: 0,
+                              backgroundColor: AppColor.primary,
+                              disabledBackgroundColor: AppColor.primary
+                                  .withOpacity(0.6),
+                              foregroundColor: AppColor.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
-                          ),
-                          child: Text(
-                            loc.submit,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
+                            child: controller.isSubmitting.value
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.4,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                : Text(
+                                    loc.submit,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                           ),
                         ),
                       ),

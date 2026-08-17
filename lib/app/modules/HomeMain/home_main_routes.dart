@@ -8,6 +8,8 @@ abstract class HomeMainRoutes {
   static const home = '/home';
   static const closedOrders = '/closed-orders';
   static const holdOrders = '/hold-orders';
+  static const deletedOrders = '/deleted-orders';
+  static const stockSummary = '/stock-summary';
   static const items = '/items';
   static const addItem = '/add-menu-item';
   static const inventory = '/inventory';
@@ -113,7 +115,7 @@ abstract class HomeMainRoutes {
   }) {
     return [
       home,
-      if (StaffAccess.canAccessSales) createOrder,
+      if (StaffAccess.canCreateSales) createOrder,
       if (hasSeating) tables,
       if (StaffAccess.canAccessProducts) items,
       if (StaffAccess.canAccessSales) closedOrders,
@@ -183,7 +185,10 @@ abstract class HomeMainRoutes {
           ? _indexOfRoute(routes, purchaseOrders)
           : _indexOfRoute(routes, items);
     }
-    if (path.startsWith(closedOrders) || path.startsWith(holdOrders)) {
+    if (path.startsWith(closedOrders) ||
+        path.startsWith(holdOrders) ||
+        path.startsWith(deletedOrders) ||
+        path.startsWith(stockSummary)) {
       return _indexOfRoute(routes, closedOrders);
     }
     if (path.startsWith(reports) ||

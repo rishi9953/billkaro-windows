@@ -26,6 +26,50 @@ class SignupController extends BaseController {
   final isEmailAvailable = Rxn<bool>();
   final emailVerificationError = RxnString();
   String? _lastCheckedEmail;
+  final isSubmitting = false.obs;
+
+  String _normalizeContactTitle(String? title) {
+    final normalized = title?.toString().trim() ?? '';
+    if (normalized.toLowerCase() == 'other') return 'other';
+    return normalized;
+  }
+
+  Future<void> _showAccountActivationDialog(String registeredEmail) async {
+    await Get.dialog<void>(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Row(
+          children: [
+            Icon(Icons.mark_email_read_rounded, color: AppColor.primary),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'Account activation required',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Your account has been registered successfully.\n\n'
+          'Please activate your account using the email sent to:\n'
+          '$registeredEmail',
+          style: const TextStyle(fontSize: 14, height: 1.4),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Get.back(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColor.primary,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
+  }
 
   static const List<String> _fallbackBusinessTypes = [
     'retail',
@@ -43,6 +87,18 @@ class SignupController extends BaseController {
     return _fallbackBusinessTypes
         .map((e) => (display: e.capitalizeFirst!, value: e))
         .toList();
+  }
+
+  String get selectedBusinessTypeLabel {
+    final selectedValue = selectedBusinessType.value.trim().toLowerCase();
+    for (final option in businessTypeOptions) {
+      if (option.value.trim().toLowerCase() == selectedValue) {
+        return option.display;
+      }
+    }
+    return selectedValue.isEmpty
+        ? _fallbackBusinessTypes.first.capitalizeFirst!
+        : selectedValue.capitalizeFirst ?? selectedValue;
   }
 
   @override
@@ -446,7 +502,10 @@ class SignupController extends BaseController {
       return;
     }
 
-    onSubmit();
+    final confirmed = await showRegistrationConfirmationDialog();
+    if (!confirmed) return;
+
+    await onSubmit();
   }
 
   Future<bool> checkMobileAvailability(String mobile) async {
@@ -510,8 +569,116 @@ class SignupController extends BaseController {
 
   //clear Form
 
-  void onSubmit() async {
+  Future<bool> showRegistrationConfirmationDialog() async {
+    final businessName = businessNameController.text.trim();
+    final brandName = brandNameController.text.trim();
+    final email = emailController.text.trim().toLowerCase();
+    final businessType = selectedBusinessTypeLabel;
+    final address = businessAddress.value ?? {};
+    final contact = primaryContact.value ?? {};
+    final addressLine =
+        '${address['address'] ?? ''}, ${address['city'] ?? ''}, ${address['state'] ?? ''}'
+            .trim();
+    final contactName =
+        '${contact['firstName'] ?? ''} ${contact['lastName'] ?? ''}'.trim();
+    final contactMobile = contact['mobile']?.toString().trim() ?? '';
+
+    final result = await Get.dialog<bool>(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+        contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+        actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        title: Row(
+          children: [
+            Icon(Icons.verified_user_rounded, color: AppColor.primary),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Confirm registration',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Please review your details before creating the account.',
+                style: TextStyle(fontSize: 13.5, color: Colors.black54),
+              ),
+              const SizedBox(height: 14),
+              _confirmationRow('Business', businessName),
+              _confirmationRow('Brand', brandName),
+              _confirmationRow('Email', email),
+              _confirmationRow('Type', businessType),
+              _confirmationRow('Address', addressLine),
+              _confirmationRow(
+                'Primary contact',
+                '$contactName${contactMobile.isNotEmpty ? ' - $contactMobile' : ''}',
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Edit details'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Get.back(result: true),
+            icon: const Icon(Icons.check_rounded, size: 18),
+            label: const Text('Confirm & Submit'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColor.primary,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+      barrierDismissible: true,
+    );
+
+    return result == true;
+  }
+
+  Widget _confirmationRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value.isEmpty ? '-' : value,
+              style: const TextStyle(fontSize: 13, color: Colors.black54),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> onSubmit() async {
+    if (isSubmitting.value) return;
+
     try {
+      isSubmitting.value = true;
       HttpOverrides.global = MyHttpOverrides();
 
       // Trim all text inputs before submission
@@ -528,23 +695,23 @@ class SignupController extends BaseController {
         country: businessAddress.value!['country']?.toString().trim() ?? '',
         firstName: primaryContact.value!['firstName']?.toString().trim() ?? '',
         lastName: primaryContact.value!['lastName']?.toString().trim() ?? '',
-        title: primaryContact.value!['title']?.toString().trim() ?? '',
+        title: _normalizeContactTitle(primaryContact.value!['title']),
         mobile: '+91${primaryContact.value!['mobile']?.toString().trim()}',
       );
       debugPrint(request.toJson().toString());
       final response = await callApi(apiClient.registration(request));
       debugPrint('Api Response is : $response');
       if (response != null) {
+        final registeredEmail = emailController.text.trim().toLowerCase();
+        await _showAccountActivationDialog(registeredEmail);
         clearForm();
-        showSuccess(
-          description:
-              'Registration successful. Please check your email to activate your account.',
-        );
         Get.offAllNamed(AppRoute.login);
       }
     } catch (e) {
       print('Error during registration: $e');
       showError(description: 'Registration failed. Please try again.');
+    } finally {
+      isSubmitting.value = false;
     }
   }
 

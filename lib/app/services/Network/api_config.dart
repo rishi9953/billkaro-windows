@@ -49,6 +49,9 @@ class ApiConfig {
     debugPrint(
       '🔌 [API] Session WebSocket: ${sessionWebSocketUri('token')} (sample)',
     );
+    debugPrint(
+      '🔌 [API] Wallet WebSocket: ${walletWebSocketUri('outlet')} (sample)',
+    );
   }
 
   /// WebSocket for KDS — on Windows dev, prefer local backend (tunnel REST + local WS).
@@ -132,6 +135,46 @@ class ApiConfig {
       port: api.hasPort ? api.port : null,
       path: sessionPath,
       queryParameters: {'token': token},
+    );
+  }
+
+  /// WebSocket for live wallet balance updates.
+  static Uri walletWebSocketUri(String outletId, {bool forceRemote = false}) {
+    if (!forceRemote &&
+        !kIsWeb &&
+        Platform.isWindows &&
+        _useLocalKdsWebSocket) {
+      final port =
+          int.tryParse(dotenv.env['KDS_WS_LOCAL_PORT']?.trim() ?? '3000') ??
+          3000;
+      return Uri(
+        scheme: 'ws',
+        host: '127.0.0.1',
+        port: port,
+        path: '/api/wallet',
+        queryParameters: {'outletId': outletId},
+      );
+    }
+
+    return _remoteWalletWebSocketUri(outletId);
+  }
+
+  static Uri _remoteWalletWebSocketUri(String outletId) {
+    final api = Uri.parse(_baseUrl);
+    final wsScheme = api.scheme == 'https' ? 'wss' : 'ws';
+    var path = api.path;
+    if (!path.endsWith('/')) path = '$path/';
+    if (!path.contains('/api')) {
+      path = '${path}api/';
+    }
+    final walletPath = '${path}wallet';
+
+    return Uri(
+      scheme: wsScheme,
+      host: api.host,
+      port: api.hasPort ? api.port : null,
+      path: walletPath,
+      queryParameters: {'outletId': outletId},
     );
   }
 

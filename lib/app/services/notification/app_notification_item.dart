@@ -2,6 +2,7 @@ enum AppNotificationType {
   kitchenReady,
   newOrder,
   sync,
+  download,
 }
 
 class AppNotificationItem {

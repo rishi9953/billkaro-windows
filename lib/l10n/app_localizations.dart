@@ -1190,7 +1190,7 @@ abstract class AppLocalizations {
   /// No description provided for @staff_access_info.
   ///
   /// In en, this message translates to:
-  /// **'Staff can access everything except sync settings and WhatsApp templates.'**
+  /// **'Secondary Admin has full access to all outlet features and permissions.'**
   String get staff_access_info;
 
   /// No description provided for @send_invite.
@@ -4379,6 +4379,96 @@ abstract class AppLocalizations {
   /// **'Manage outlets'**
   String get home_manage_outlets;
 
+  /// No description provided for @owner_panel_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Owner Panel'**
+  String get owner_panel_title;
+
+  /// No description provided for @owner_panel_menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Owner Panel'**
+  String get owner_panel_menu;
+
+  /// No description provided for @owner_panel_heading.
+  ///
+  /// In en, this message translates to:
+  /// **'All Outlets'**
+  String get owner_panel_heading;
+
+  /// No description provided for @owner_panel_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} outlets in one place'**
+  String owner_panel_subtitle(int count);
+
+  /// No description provided for @owner_panel_search_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search outlets…'**
+  String get owner_panel_search_hint;
+
+  /// No description provided for @owner_panel_expand_all.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand all'**
+  String get owner_panel_expand_all;
+
+  /// No description provided for @owner_panel_collapse_all.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse all'**
+  String get owner_panel_collapse_all;
+
+  /// No description provided for @owner_panel_empty_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create an outlet to see its details here.'**
+  String get owner_panel_empty_subtitle;
+
+  /// No description provided for @owner_panel_no_results.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching outlets'**
+  String get owner_panel_no_results;
+
+  /// No description provided for @owner_panel_no_results_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Try a different name, address, or GSTIN.'**
+  String get owner_panel_no_results_subtitle;
+
+  /// No description provided for @owner_panel_active.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get owner_panel_active;
+
+  /// No description provided for @owner_panel_no_type.
+  ///
+  /// In en, this message translates to:
+  /// **'Type not set'**
+  String get owner_panel_no_type;
+
+  /// No description provided for @owner_panel_outlet_age.
+  ///
+  /// In en, this message translates to:
+  /// **'Outlet age'**
+  String get owner_panel_outlet_age;
+
+  /// No description provided for @owner_panel_google_profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Google profile'**
+  String get owner_panel_google_profile;
+
+  /// No description provided for @owner_panel_switch_to.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to this outlet'**
+  String get owner_panel_switch_to;
+
   /// No description provided for @home_unnamed_outlet.
   ///
   /// In en, this message translates to:
@@ -4696,6 +4786,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Section already exists'**
   String get section_already_exists;
+
+  /// No description provided for @delete_section.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete section'**
+  String get delete_section;
+
+  /// No description provided for @delete_section_tooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete section'**
+  String get delete_section_tooltip;
+
+  /// No description provided for @delete_section_confirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete section \"{name}\"? Tables are not deleted.'**
+  String delete_section_confirm(String name);
+
+  /// No description provided for @delete_section_has_tables.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot delete \"{name}\" while {count} tables are assigned. Move them first.'**
+  String delete_section_has_tables(String name, int count);
+
+  /// No description provided for @section_deleted_successfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Section deleted successfully'**
+  String get section_deleted_successfully;
+
+  /// No description provided for @failed_to_delete_section.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete section'**
+  String get failed_to_delete_section;
 
   /// No description provided for @no_sections_yet.
   ///
@@ -5768,7 +5894,7 @@ abstract class AppLocalizations {
   /// No description provided for @recipe_quantity_helper.
   ///
   /// In en, this message translates to:
-  /// **'Amount deducted from stock per 1 unit sold'**
+  /// **'Used to deduct raw material stock each time this item is sold'**
   String get recipe_quantity_helper;
 
   /// No description provided for @recipe_quantity_invalid.
@@ -5836,6 +5962,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create PO'**
   String get create_po;
+
+  /// No description provided for @save_as_draft.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft'**
+  String get save_as_draft;
+
+  /// No description provided for @po_draft_saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase order saved as draft'**
+  String get po_draft_saved;
 
   /// No description provided for @edit_purchase_order.
   ///
@@ -5912,7 +6050,7 @@ abstract class AppLocalizations {
   /// No description provided for @po_line_material_required.
   ///
   /// In en, this message translates to:
-  /// **'Please select a material'**
+  /// **'Please enter a material name that exists in inventory'**
   String get po_line_material_required;
 
   /// No description provided for @po_line_qty_required.
@@ -6320,14 +6458,152 @@ abstract class AppLocalizations {
   /// No description provided for @delete_order_permanently_subtitle.
   ///
   /// In en, this message translates to:
-  /// **'Remove this order permanently'**
+  /// **'Move this order to Deleted Orders'**
   String get delete_order_permanently_subtitle;
 
   /// No description provided for @delete_order_confirm_message.
   ///
   /// In en, this message translates to:
-  /// **'Are you sure you want to delete this order? This action cannot be undone.'**
+  /// **'Are you sure you want to delete this order? You can restore it later from Deleted Orders.'**
   String get delete_order_confirm_message;
+
+  /// No description provided for @deletedOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted Orders'**
+  String get deletedOrders;
+
+  /// No description provided for @deleted_orders_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted Orders'**
+  String get deleted_orders_title;
+
+  /// No description provided for @no_deleted_orders.
+  ///
+  /// In en, this message translates to:
+  /// **'No Deleted Orders'**
+  String get no_deleted_orders;
+
+  /// No description provided for @deleted_orders_empty_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted orders will appear here'**
+  String get deleted_orders_empty_hint;
+
+  /// No description provided for @stockSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Stock Summary'**
+  String get stockSummary;
+
+  /// No description provided for @stock_summary_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Stock Summary'**
+  String get stock_summary_title;
+
+  /// No description provided for @stock_summary_search_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name, category, code…'**
+  String get stock_summary_search_hint;
+
+  /// No description provided for @stock_summary_products.
+  ///
+  /// In en, this message translates to:
+  /// **'Raw Materials'**
+  String get stock_summary_products;
+
+  /// No description provided for @stock_summary_value.
+  ///
+  /// In en, this message translates to:
+  /// **'Stock Value'**
+  String get stock_summary_value;
+
+  /// No description provided for @stock_summary_qty.
+  ///
+  /// In en, this message translates to:
+  /// **'Qty'**
+  String get stock_summary_qty;
+
+  /// No description provided for @stock_summary_min.
+  ///
+  /// In en, this message translates to:
+  /// **'Min'**
+  String get stock_summary_min;
+
+  /// No description provided for @stock_summary_rate.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate'**
+  String get stock_summary_rate;
+
+  /// No description provided for @stock_summary_empty.
+  ///
+  /// In en, this message translates to:
+  /// **'No raw materials found'**
+  String get stock_summary_empty;
+
+  /// No description provided for @stock_summary_empty_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Raw material stock will appear here. Add materials from Inventory.'**
+  String get stock_summary_empty_hint;
+
+  /// No description provided for @stock_status_in_stock.
+  ///
+  /// In en, this message translates to:
+  /// **'In Stock'**
+  String get stock_status_in_stock;
+
+  /// No description provided for @stock_status_low_stock.
+  ///
+  /// In en, this message translates to:
+  /// **'Low Stock'**
+  String get stock_status_low_stock;
+
+  /// No description provided for @stock_status_out_of_stock.
+  ///
+  /// In en, this message translates to:
+  /// **'Out of Stock'**
+  String get stock_status_out_of_stock;
+
+  /// No description provided for @deleted_badge.
+  ///
+  /// In en, this message translates to:
+  /// **'DELETED'**
+  String get deleted_badge;
+
+  /// No description provided for @restore_order.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore Order'**
+  String get restore_order;
+
+  /// No description provided for @restore_order_confirm_message.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore this order? It will return to On Hold Orders.'**
+  String get restore_order_confirm_message;
+
+  /// No description provided for @restore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get restore;
+
+  /// No description provided for @order_moved_to_deleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Order moved to Deleted Orders'**
+  String get order_moved_to_deleted;
+
+  /// No description provided for @order_restored_successfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Order restored successfully'**
+  String get order_restored_successfully;
 
   /// No description provided for @customers_count.
   ///

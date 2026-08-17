@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of add_item_modal;
+part of 'addItem_modal.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
@@ -33,39 +33,40 @@ ItemRequest _$ItemRequestFromJson(Map<String, dynamic> json) => ItemRequest(
           ?.map((e) => ComboComponent.fromJson(e as Map<String, dynamic>))
           .toList() ??
       const [],
+  linkedRecipeItemId: json['linkedRecipeItemId'] as String? ?? '',
+  hasVariants: json['hasVariants'] as bool?,
+  variants:
+      (json['variants'] as List<dynamic>?)
+          ?.map((e) => MenuItemVariantInput.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
 );
 
-Map<String, dynamic> _$ItemRequestToJson(ItemRequest instance) {
-  final val = <String, dynamic>{
-    'itemName': instance.itemName,
-    'salePrice': instance.salePrice,
-    'withTax': instance.withTax,
-    'orderFrom': instance.orderFrom,
-    'gst': instance.gst,
-    'userId': instance.userId,
-    'outletId': instance.outletId,
-    'category': instance.category,
-    'itemImage': instance.itemImage,
-    'barcode': instance.barcode,
-    'sku': instance.sku,
-    'soldBy': instance.soldBy,
-    'costPrice': instance.costPrice,
-    'posColor': instance.posColor,
-    'trackStock': instance.trackStock,
-    'stockQuantity': instance.stockQuantity,
-    'minStock': instance.minStock,
-    'showItem': instance.showItem,
-    'prepTimeMinutes': instance.prepTimeMinutes,
-    'isCombo': instance.isCombo,
-    'comboComponents':
-        instance.comboComponents.map((e) => e.toJson()).toList(),
-  };
-  void writeNotNull(String key, dynamic value) {
-    if (value != null) {
-      val[key] = value;
-    }
-  }
-
-  writeNotNull('isRecommended', instance.isRecommended);
-  return val;
-}
+Map<String, dynamic> _$ItemRequestToJson(ItemRequest instance) =>
+    <String, dynamic>{
+      'itemName': instance.itemName,
+      'salePrice': instance.salePrice,
+      'withTax': instance.withTax,
+      'orderFrom': instance.orderFrom,
+      'gst': instance.gst,
+      'userId': instance.userId,
+      'outletId': instance.outletId,
+      'category': instance.category,
+      'itemImage': instance.itemImage,
+      'barcode': instance.barcode,
+      'sku': instance.sku,
+      'soldBy': instance.soldBy,
+      'costPrice': instance.costPrice,
+      'posColor': instance.posColor,
+      'trackStock': instance.trackStock,
+      'stockQuantity': instance.stockQuantity,
+      'minStock': instance.minStock,
+      'showItem': instance.showItem,
+      'isRecommended': ?instance.isRecommended,
+      'prepTimeMinutes': instance.prepTimeMinutes,
+      'isCombo': instance.isCombo,
+      'comboComponents': instance.comboComponents,
+      'linkedRecipeItemId': instance.linkedRecipeItemId,
+      'hasVariants': ?instance.hasVariants,
+      'variants': instance.variants,
+    };

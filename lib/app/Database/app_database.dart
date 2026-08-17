@@ -6,6 +6,7 @@ import 'package:billkaro/app/Database/menu_item_table.dart';
 import 'package:billkaro/app/Database/order_tables.dart';
 import 'package:billkaro/app/services/Modals/Categories/categories_response.dart';
 import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
+import 'package:billkaro/app/services/Modals/addItem/menu_item_variant.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/Modals/orders/split_payment.dart';
 import 'package:drift/drift.dart';
@@ -26,7 +27,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// 🔹 SCHEMA VERSION
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   /// 🔹 MIGRATION STRATEGY (CRITICAL FIX)
   @override
@@ -42,6 +43,9 @@ class AppDatabase extends _$AppDatabase {
       if (from < 6) {
         // Add imageURL column for categories cache (fixes missing image_u_r_l)
         await m.addColumn(categoriesTable, categoriesTable.imageURL);
+      }
+      if (from < 7) {
+        await m.addColumn(items, items.variantsJson);
       }
     },
     beforeOpen: (details) async {
@@ -64,6 +68,23 @@ class AppDatabase extends _$AppDatabase {
     } catch (e) {
       debugPrint('Error deserializing split payments: $e');
       return null;
+    }
+  }
+
+  List<MenuItemVariant> _decodeVariants(String? jsonString) {
+    if (jsonString == null || jsonString.isEmpty || jsonString == '[]') {
+      return const [];
+    }
+    try {
+      final decoded = jsonDecode(jsonString);
+      if (decoded is! List) return const [];
+      return decoded
+          .whereType<Map<String, dynamic>>()
+          .map(MenuItemVariant.fromJson)
+          .toList();
+    } catch (e) {
+      debugPrint('Error deserializing item variants: $e');
+      return const [];
     }
   }
 
@@ -386,6 +407,9 @@ class AppDatabase extends _$AppDatabase {
             userId: Value(item.userId),
             withTax: Value(item.withTax),
             updatedAt: Value(item.updatedAt),
+            variantsJson: Value(
+              jsonEncode(item.variants.map((v) => v.toJson()).toList()),
+            ),
           ),
           mode: InsertMode.insertOrReplace,
         );
@@ -417,7 +441,9 @@ class AppDatabase extends _$AppDatabase {
             userId: item.userId,
             withTax: item.withTax,
             updatedAt: item.updatedAt,
-            showItem: true, // DB may not have column; default visible
+            showItem: true,
+            hasVariants: _decodeVariants(item.variantsJson).isNotEmpty,
+            variants: _decodeVariants(item.variantsJson),
           ),
         )
         .toList();

@@ -7,6 +7,7 @@ import 'package:billkaro/app/modules/Tables/table_controller.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/qr_menu_url_config.dart';
 import 'package:billkaro/utils/qr_menu_url_editor.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 
 class TableScreen extends StatefulWidget {
@@ -54,31 +55,40 @@ class _TableScreenState extends State<TableScreen> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          FloatingActionButton.extended(
-            heroTag: 'add_section_fab',
-            onPressed: controller.promptAddSection,
-            backgroundColor: AppColor.white,
-            foregroundColor: AppColor.primary,
-            elevation: 3,
-            icon: const Icon(Icons.meeting_room_outlined, size: 22),
-            label: Text(
-              loc.add_section,
-              style: const TextStyle(fontWeight: FontWeight.w700),
+          if (StaffAccess.canCreateTables)
+            FloatingActionButton.extended(
+              heroTag: 'add_section_fab',
+              onPressed: () {
+                if (!StaffAccess.ensure(StaffAccess.canCreateTables)) return;
+                controller.promptAddSection();
+              },
+              backgroundColor: AppColor.white,
+              foregroundColor: AppColor.primary,
+              elevation: 3,
+              icon: const Icon(Icons.meeting_room_outlined, size: 22),
+              label: Text(
+                loc.add_section,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          FloatingActionButton.extended(
-            heroTag: 'add_table_fab',
-            onPressed: controller.promptAddTable,
-            backgroundColor: AppColor.secondaryPrimary,
-            foregroundColor: AppColor.white,
-            elevation: 4,
-            icon: const Icon(Icons.add, size: 24),
-            label: Text(
-              loc.add_new_table,
-              style: const TextStyle(fontWeight: FontWeight.w700),
+          if (StaffAccess.canCreateTables) ...[
+            const SizedBox(height: 12),
+            FloatingActionButton.extended(
+              heroTag: 'add_table_fab',
+              onPressed: () {
+                if (!StaffAccess.ensure(StaffAccess.canCreateTables)) return;
+                controller.promptAddTable();
+              },
+              backgroundColor: AppColor.secondaryPrimary,
+              foregroundColor: AppColor.white,
+              elevation: 4,
+              icon: const Icon(Icons.add, size: 24),
+              label: Text(
+                loc.add_new_table,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
             ),
-          ),
+          ],
         ],
       ),
       appBar: AppBar(
@@ -105,11 +115,15 @@ class _TableScreenState extends State<TableScreen> {
           );
         }),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.merge_type),
-            onPressed: controller.openMergeTablesDialog,
-            tooltip: loc.merge_tables,
-          ),
+          if (StaffAccess.canUpdateTables)
+            IconButton(
+              icon: const Icon(Icons.merge_type),
+              onPressed: () {
+                if (!StaffAccess.ensure(StaffAccess.canUpdateTables)) return;
+                controller.openMergeTablesDialog();
+              },
+              tooltip: loc.merge_tables,
+            ),
           IconButton(
             icon: const Icon(Icons.event_seat),
             onPressed: () => _showReservationsDialog(context),
@@ -120,11 +134,15 @@ class _TableScreenState extends State<TableScreen> {
             onPressed: () => _showQrMenuOptions(context),
             tooltip: loc.qr_menu,
           ),
-          IconButton(
-            icon: const Icon(Icons.restart_alt),
-            onPressed: () => _showResetAllTablesDialog(context),
-            tooltip: loc.reset_all_tables,
-          ),
+          if (StaffAccess.canUpdateTables)
+            IconButton(
+              icon: const Icon(Icons.restart_alt),
+              onPressed: () {
+                if (!StaffAccess.ensure(StaffAccess.canUpdateTables)) return;
+                _showResetAllTablesDialog(context);
+              },
+              tooltip: loc.reset_all_tables,
+            ),
           IconButton(
             tooltip: loc.refresh,
             icon: const Icon(Icons.refresh),
@@ -216,6 +234,17 @@ class _TableScreenState extends State<TableScreen> {
                                               count: sectionEntries[i]
                                                   .value
                                                   .length,
+                                              onDelete:
+                                                  controller
+                                                      .canDeleteManagedSection(
+                                                        sectionEntries[i].key,
+                                                      )
+                                                  ? () => controller
+                                                        .promptDeleteSection(
+                                                          sectionEntries[i]
+                                                              .key,
+                                                        )
+                                                  : null,
                                             ),
                                           ),
                                         SliverPadding(
@@ -262,7 +291,9 @@ class _TableScreenState extends State<TableScreen> {
                                                             )
                                                       : null,
                                                   onUnmerge:
-                                                      tws.table.hasMergedTables
+                                                      StaffAccess
+                                                              .canUpdateTables &&
+                                                          tws.table.hasMergedTables
                                                       ? () =>
                                                             _showUnmergeDialog(
                                                               context,
@@ -282,7 +313,9 @@ class _TableScreenState extends State<TableScreen> {
                                                             )
                                                       : null,
                                                   onEdit:
-                                                      tws.currentOrder ==
+                                                      StaffAccess
+                                                              .canUpdateTables &&
+                                                          tws.currentOrder ==
                                                               null &&
                                                           (tws.isAvailable ||
                                                               tws.isReserved ||
@@ -290,6 +323,13 @@ class _TableScreenState extends State<TableScreen> {
                                                                   .table
                                                                   .hasMergedTables)
                                                       ? () {
+                                                          if (!StaffAccess
+                                                              .ensure(
+                                                            StaffAccess
+                                                                .canUpdateTables,
+                                                          )) {
+                                                            return;
+                                                          }
                                                           if (tws
                                                               .table
                                                               .hasMergedTables) {
@@ -310,15 +350,25 @@ class _TableScreenState extends State<TableScreen> {
                                                   onQr: () => controller
                                                       .showTableQr(tws.table),
                                                   onDelete:
-                                                      tws.isAvailable &&
+                                                      StaffAccess
+                                                              .canDeleteTables &&
+                                                          tws.isAvailable &&
                                                           !tws
                                                               .table
                                                               .hasMergedTables
-                                                      ? () =>
-                                                            _showDeleteTableDialog(
-                                                              context,
-                                                              tws,
-                                                            )
+                                                      ? () {
+                                                          if (!StaffAccess
+                                                              .ensure(
+                                                            StaffAccess
+                                                                .canDeleteTables,
+                                                          )) {
+                                                            return;
+                                                          }
+                                                          _showDeleteTableDialog(
+                                                            context,
+                                                            tws,
+                                                          );
+                                                        }
                                                       : null,
                                                 );
                                               },
@@ -545,11 +595,11 @@ class _TableScreenState extends State<TableScreen> {
                             ),
                           ),
                           Obx(() {
-                            final count = controller.reservations.length;
+                            final count = controller.upcomingReservations.length;
                             return Text(
                               count == 0
                                   ? loc.no_reservations_today
-                                  : '$count ${count == 1 ? 'reservation' : 'reservations'} today',
+                                  : '$count ${count == 1 ? 'reservation' : 'reservations'} upcoming',
                               style: textTheme.bodySmall?.copyWith(
                                 color: colorScheme.onSurface.withOpacity(0.55),
                               ),
@@ -579,7 +629,7 @@ class _TableScreenState extends State<TableScreen> {
 
               Flexible(
                 child: Obx(() {
-                  final items = controller.reservations;
+                  final items = controller.upcomingReservations;
 
                   if (items.isEmpty) {
                     return Padding(
@@ -1041,8 +1091,13 @@ class _FilterChip extends StatelessWidget {
 class _SectionHeader extends StatelessWidget {
   final String title;
   final int count;
+  final VoidCallback? onDelete;
 
-  const _SectionHeader({required this.title, required this.count});
+  const _SectionHeader({
+    required this.title,
+    required this.count,
+    this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1072,6 +1127,19 @@ class _SectionHeader extends StatelessWidget {
               color: colorScheme.onSurfaceVariant,
             ),
           ),
+          if (onDelete != null)
+            IconButton(
+              tooltip: loc.delete_section_tooltip,
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              onPressed: onDelete,
+              icon: Icon(
+                Icons.delete_outline_rounded,
+                size: 20,
+                color: colorScheme.error,
+              ),
+            ),
         ],
       ),
     );
@@ -1654,7 +1722,15 @@ class _TableCardState extends State<_TableCard> {
                         : isMerged
                         ? loc.merged_tables_hint
                         : widget.tableWithStatus.isAvailable
-                        ? loc.reservation_tap_hint
+                        ? (widget.tableWithStatus.upcomingReservation != null
+                              ? loc.reserved_by(
+                                  widget
+                                      .tableWithStatus
+                                      .upcomingReservation!
+                                      .customerName,
+                                  '${widget.tableWithStatus.upcomingReservation!.reservationDate} ${widget.tableWithStatus.upcomingReservation!.reservationTime}',
+                                )
+                              : loc.reservation_tap_hint)
                         : widget.tableWithStatus.isReserved
                         ? loc.reserved_by(
                             widget

@@ -1,6 +1,7 @@
 import 'package:billkaro/app/services/Modals/store_session/store_session_model.dart';
 import 'package:billkaro/app/modules/StoreSession/store_session_widget.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_access.dart';
 
 class StoreSessionController extends BaseController {
   final RxBool isOpen = false.obs;
@@ -73,6 +74,7 @@ class StoreSessionController extends BaseController {
     required double openingCash,
     String? notes,
   }) async {
+    if (!StaffAccess.ensure(StaffAccess.canOpenStore)) return false;
     final outletId = _outletId;
     if (outletId == null || outletId.isEmpty) return false;
 
@@ -104,6 +106,7 @@ class StoreSessionController extends BaseController {
     String? notes,
     bool resetTables = true,
   }) async {
+    if (!StaffAccess.ensure(StaffAccess.canCloseStore)) return false;
     final outletId = _outletId;
     if (outletId == null || outletId.isEmpty) return false;
 
@@ -132,6 +135,10 @@ class StoreSessionController extends BaseController {
 
   void ensureStoreOpenOrPrompt() {
     if (isOpen.value) return;
+    if (!StaffAccess.canOpenStore) {
+      StaffAccess.ensure(false, message: 'Store is closed. Ask a manager to open it.');
+      return;
+    }
     final context = Get.context;
     if (context == null) return;
     showStoreOpenDialog(context);

@@ -1,19 +1,20 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:billkaro/app/Widgets/app_date_picker.dart';
 import 'package:billkaro/app/services/Modals/Categories/categories_response.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/common_function.dart';
+import 'package:billkaro/app/services/download/download_notification_service.dart';
+import 'package:billkaro/app/services/download/file_download_service.dart';
+import 'package:billkaro/app/utils/pos_cart_line.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:open_file/open_file.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:printing/printing.dart';
 import 'package:syncfusion_flutter_xlsio/xlsio.dart' hide Column, Row, Border;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:billkaro/utils/date_util.dart';
-import 'package:billkaro/utils/download_path_util.dart';
 import 'package:intl/intl.dart';
 import 'package:billkaro/utils/offline/offline_category_loader.dart';
 
@@ -684,6 +685,8 @@ class ItemReportsController extends BaseController {
     List<OrderItem> itemsToExport,
     DateTimeRange? exportDateRange,
   ) async {
+    const notificationId =
+        DownloadNotificationService.itemExcelDownloadNotificationId;
     try {
       final loc = AppLocalizations.of(Get.context!)!;
       if (itemsToExport.isEmpty) {
@@ -701,22 +704,27 @@ class ItemReportsController extends BaseController {
         }
       }
 
-      Get.dialog(
-        const Center(child: CircularProgressIndicator()),
-        barrierDismissible: false,
+      await DownloadNotificationService.instance.notifyProgress(
+        notificationId: notificationId,
+        title: 'Excel downloading',
+        body: 'Preparing item report…',
       );
 
       final exportRangeLabel = formatExportDateRange(exportDateRange, loc);
 
       Map<String, Map<String, dynamic>> groupedItems = {};
       for (var item in itemsToExport) {
-        String itemName = item.itemName ?? 'Unknown Item';
-        if (groupedItems.containsKey(itemName)) {
-          groupedItems[itemName]!['quantity'] += item.quantity ?? 0;
-          groupedItems[itemName]!['totalAmount'] +=
+        final groupKey = PosCartLine.reportGroupKey(
+          itemName: item.itemName ?? 'Unknown Item',
+          variantName: item.variantName,
+          variantId: item.variantId,
+        );
+        if (groupedItems.containsKey(groupKey)) {
+          groupedItems[groupKey]!['quantity'] += item.quantity ?? 0;
+          groupedItems[groupKey]!['totalAmount'] +=
               (item.quantity ?? 0) * (item.salePrice ?? 0);
         } else {
-          groupedItems[itemName] = {
+          groupedItems[groupKey] = {
             'quantity': item.quantity ?? 0,
             'totalAmount': (item.quantity ?? 0) * (item.salePrice ?? 0),
           };
@@ -797,28 +805,31 @@ class ItemReportsController extends BaseController {
       final bytes = workbook.saveAsStream();
       workbook.dispose();
 
-      final saveDir = Directory(
-        await DownloadPathUtil.resolveSaveDirectory(
-          preferredPath: appPref.downloadPath,
-        ),
-      );
-      if (!saveDir.existsSync()) saveDir.createSync(recursive: true);
       final fileName =
           'BillKaro_Item_Reports_${DateTime.now().millisecondsSinceEpoch}.xlsx';
-      final fullPath = '${saveDir.path}/$fileName';
-      await File(fullPath).writeAsBytes(bytes);
+      final file = await FileDownloadService.instance.saveBytes(
+        bytes: Uint8List.fromList(bytes),
+        fileName: fileName,
+        preferredDirectory: appPref.downloadPath,
+        notificationId: notificationId,
+        notificationTitle: 'Excel downloaded',
+        notificationBody: loc.excel_saved_to_downloads,
+      );
 
-      if (Get.isDialogOpen ?? false) Get.back();
-      showSuccess(description: loc.excel_saved_to_downloads);
-
-      final openResult = await OpenFile.open(fullPath);
-      if (openResult.type != ResultType.done) {
-        debugPrint(
-          '⚠️ Excel saved but could not auto-open: ${openResult.message}',
+      if (file == null) {
+        await DownloadNotificationService.instance.notifyFailed(
+          notificationId: notificationId,
+          title: 'Download failed',
+          body: loc.failed_to_export,
         );
+        showError(description: loc.failed_to_export);
       }
     } catch (e) {
-      if (Get.isDialogOpen ?? false) Get.back();
+      await DownloadNotificationService.instance.notifyFailed(
+        notificationId: notificationId,
+        title: 'Download failed',
+        body: 'Failed to export Excel',
+      );
       final loc = AppLocalizations.of(Get.context!)!;
       showError(description: '${loc.failed_to_export}: $e');
       debugPrint("❌ EXPORT ERROR: $e");
@@ -876,6 +887,8 @@ class ItemReportsController extends BaseController {
     List<OrderItem> itemsToExport,
     DateTimeRange? exportDateRange,
   ) async {
+    const notificationId =
+        DownloadNotificationService.itemPdfDownloadNotificationId;
     try {
       final loc = AppLocalizations.of(Get.context!)!;
       if (itemsToExport.isEmpty) {
@@ -885,22 +898,27 @@ class ItemReportsController extends BaseController {
 
       final exportRangeLabel = formatExportDateRange(exportDateRange, loc);
 
-      Get.dialog(
-        const Center(child: CircularProgressIndicator()),
-        barrierDismissible: false,
+      await DownloadNotificationService.instance.notifyProgress(
+        notificationId: notificationId,
+        title: 'PDF downloading',
+        body: 'Preparing item report…',
       );
 
       Map<String, Map<String, dynamic>> groupedItems = {};
       double totalQuantity = 0;
       double totalAmount = 0;
       for (var item in itemsToExport) {
-        String itemName = item.itemName ?? 'Unknown Item';
-        if (groupedItems.containsKey(itemName)) {
-          groupedItems[itemName]!['quantity'] += item.quantity ?? 0;
-          groupedItems[itemName]!['totalAmount'] +=
+        final groupKey = PosCartLine.reportGroupKey(
+          itemName: item.itemName ?? 'Unknown Item',
+          variantName: item.variantName,
+          variantId: item.variantId,
+        );
+        if (groupedItems.containsKey(groupKey)) {
+          groupedItems[groupKey]!['quantity'] += item.quantity ?? 0;
+          groupedItems[groupKey]!['totalAmount'] +=
               (item.quantity ?? 0) * (item.salePrice ?? 0);
         } else {
-          groupedItems[itemName] = {
+          groupedItems[groupKey] = {
             'quantity': item.quantity ?? 0,
             'totalAmount': (item.quantity ?? 0) * (item.salePrice ?? 0),
           };
@@ -1121,99 +1139,37 @@ class ItemReportsController extends BaseController {
         ),
       );
 
-      Get.back();
-      await _showPdfOptionsDialog(pdf, loc);
+      // Download only — no options dialog, open, or share
+      final bytes = await pdf.save();
+      final fileName =
+          'item_reports_${DateTime.now().millisecondsSinceEpoch}.pdf';
+
+      final file = await FileDownloadService.instance.saveBytes(
+        bytes: bytes,
+        fileName: fileName,
+        preferredDirectory: appPref.downloadPath,
+        notificationId: notificationId,
+        notificationTitle: 'PDF downloaded',
+        notificationBody: loc.pdf_saved_to_downloads,
+      );
+
+      if (file == null) {
+        await DownloadNotificationService.instance.notifyFailed(
+          notificationId: notificationId,
+          title: 'Download failed',
+          body: loc.failed_to_save_pdf,
+        );
+        showError(description: loc.failed_to_save_pdf);
+      }
     } catch (e) {
-      if (Get.isDialogOpen ?? false) Get.back();
+      await DownloadNotificationService.instance.notifyFailed(
+        notificationId: notificationId,
+        title: 'Download failed',
+        body: 'Failed to export PDF',
+      );
       final loc = AppLocalizations.of(Get.context!)!;
       showError(description: '${loc.failed_to_generate_pdf}: $e');
       debugPrint('❌ PDF Generation Error: $e');
-    }
-  }
-
-  /// Show PDF options dialog
-  Future<void> _showPdfOptionsDialog(
-    pw.Document pdf,
-    AppLocalizations loc,
-  ) async {
-    await Get.dialog(
-      AlertDialog(
-        title: Text(loc.item_reports_pdf),
-        content: Text(loc.choose_an_option),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Get.back();
-              _printPdf(pdf);
-            },
-            child: Text(loc.print),
-          ),
-          TextButton(
-            onPressed: () {
-              Get.back();
-              _savePdf(pdf);
-            },
-            child: Text(loc.save),
-          ),
-          TextButton(
-            onPressed: () {
-              Get.back();
-              _sharePdf(pdf);
-            },
-            child: Text(loc.share),
-          ),
-          TextButton(onPressed: () => Get.back(), child: Text(loc.cancel)),
-        ],
-      ),
-    );
-  }
-
-  /// Print PDF
-  Future<void> _printPdf(pw.Document pdf) async {
-    try {
-      await Printing.layoutPdf(
-        onLayout: (PdfPageFormat format) async => pdf.save(),
-      );
-    } catch (e) {
-      final loc = AppLocalizations.of(Get.context!)!;
-      showError(description: '${loc.failed_to_print_pdf}: $e');
-      debugPrint('❌ Print Error: $e');
-    }
-  }
-
-  /// Save PDF to Downloads folder
-  Future<void> _savePdf(pw.Document pdf) async {
-    try {
-      final savePath = await DownloadPathUtil.resolveSaveDirectory(
-        preferredPath: appPref.downloadPath,
-      );
-      await Directory(savePath).create(recursive: true);
-
-      final filePath =
-          '$savePath/item_reports_${DateTime.now().millisecondsSinceEpoch}.pdf';
-
-      final file = File(filePath);
-      await file.writeAsBytes(await pdf.save());
-      final loc = AppLocalizations.of(Get.context!)!;
-      showSuccess(description: loc.pdf_saved_to_downloads);
-    } catch (e) {
-      final loc = AppLocalizations.of(Get.context!)!;
-      showError(description: '${loc.failed_to_save_pdf}: $e');
-      debugPrint('❌ Save Error: $e');
-    }
-  }
-
-  /// Share PDF
-  Future<void> _sharePdf(pw.Document pdf) async {
-    try {
-      await Printing.sharePdf(
-        bytes: await pdf.save(),
-        filename: 'item_reports_${DateTime.now().millisecondsSinceEpoch}.pdf',
-      );
-    } catch (e) {
-      final loc = AppLocalizations.of(Get.context!)!;
-      showError(description: '${loc.failed_to_share_pdf}: $e');
-      debugPrint('❌ Share Error: $e');
     }
   }
 

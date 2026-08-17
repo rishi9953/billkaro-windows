@@ -6,7 +6,9 @@ import 'package:billkaro/app/modules/Staff/staff_details_controller.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/app/services/uploadFile.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:billkaro/utils/staff_permission_keys.dart';
+import 'package:billkaro/utils/state_city_picker_helper.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:intl/intl.dart';
 
@@ -18,10 +20,9 @@ class AddStaffController extends BaseController {
   final emailController = TextEditingController();
   final phoneNumberController = TextEditingController();
   final addressController = TextEditingController();
-  final stateController = TextEditingController();
-  final districtController = TextEditingController();
   final pincodeController = TextEditingController();
-  final selectedRole = 'Secondary Admin'.obs;
+  final locationPicker = StateCityPickerHelper();
+  final selectedRole = _defaultRoleLabel().obs;
   final selectedGender = ''.obs;
   final selectedDateOfBirth = Rxn<DateTime>();
   final selectedPermissions = <String>{}.obs;
@@ -45,6 +46,22 @@ class AddStaffController extends BaseController {
 
   bool get isEditMode => editingStaff != null;
 
+  /// Roles the current session may assign. Secondary Admin is owner-only.
+  List<String> get availableRoleOptions {
+    if (StaffAccess.canAssignSecondaryAdmin) return roleOptions;
+    if (isEditMode && selectedRole.value == 'Secondary Admin') {
+      return const ['Secondary Admin'];
+    }
+    return const ['Biller'];
+  }
+
+  bool get canChangeStaffRole =>
+      StaffAccess.canAssignSecondaryAdmin ||
+      !(isEditMode && selectedRole.value == 'Secondary Admin');
+
+  static String _defaultRoleLabel() =>
+      StaffAccess.canAssignSecondaryAdmin ? 'Secondary Admin' : 'Biller';
+
   bool get hasStaffImage =>
       selectedImage.value != null || imageUrl.value.trim().isNotEmpty;
 
@@ -55,14 +72,18 @@ class AddStaffController extends BaseController {
   }
 
   @override
+  void onInit() {
+    super.onInit();
+    locationPicker.initInBackground();
+  }
+
+  @override
   void onClose() {
     _emailCheckDebounce?.cancel();
     userNameController.dispose();
     emailController.dispose();
     phoneNumberController.dispose();
     addressController.dispose();
-    stateController.dispose();
-    districtController.dispose();
     pincodeController.dispose();
     super.onClose();
   }
@@ -87,8 +108,10 @@ class AddStaffController extends BaseController {
     emailController.text = member.email;
     phoneNumberController.text = _normalizePhone(member.phone);
     addressController.text = member.address;
-    stateController.text = member.state;
-    districtController.text = member.district;
+    locationPicker.applyInitial(
+      stateName: member.state,
+      cityName: member.district,
+    );
     pincodeController.text = member.pincode;
     selectedGender.value = _normalizeGender(member.gender);
     selectedDateOfBirth.value = _parseDateOfBirth(member.dateOfBirth);
@@ -102,7 +125,13 @@ class AddStaffController extends BaseController {
   }
 
   void onRoleChanged(String? role) {
-    final next = role ?? 'Secondary Admin';
+    final next = role ?? _defaultRoleLabel();
+    if (next == 'Secondary Admin' && !StaffAccess.canAssignSecondaryAdmin) {
+      return;
+    }
+    if (!canChangeStaffRole && next != selectedRole.value) {
+      return;
+    }
     selectedRole.value = next;
     if (isEditMode) return;
     selectedPermissions
@@ -114,11 +143,24 @@ class AddStaffController extends BaseController {
       );
   }
 
-  void togglePermission(String key, bool enabled) {
+  bool _ensureCanAssignSelectedRole() {
+    if (selectedRole.value != 'Secondary Admin') return true;
+    if (StaffAccess.canAssignSecondaryAdmin) return true;
+    if (isEditMode &&
+        _normalizeRole(editingStaff?.role ?? '') == 'Secondary Admin') {
+      return true;
+    }
+    showError(
+      description: 'Only the outlet owner can add a secondary admin.',
+    );
+    return false;
+  }
+
+  void togglePermission(List<String> keys, bool enabled) {
     if (enabled) {
-      selectedPermissions.add(key);
+      selectedPermissions.addAll(keys);
     } else {
-      selectedPermissions.remove(key);
+      selectedPermissions.removeAll(keys);
     }
   }
 
@@ -321,6 +363,8 @@ class AddStaffController extends BaseController {
       return;
     }
 
+    if (!_ensureCanAssignSelectedRole()) return;
+
     final role = selectedRole.value == 'Secondary Admin'
         ? 'secondary_admin'
         : 'biller';
@@ -347,17 +391,20 @@ class AddStaffController extends BaseController {
     emailController.clear();
     phoneNumberController.clear();
     addressController.clear();
-    stateController.clear();
-    districtController.clear();
     pincodeController.clear();
-    selectedRole.value = 'Secondary Admin';
+    locationPicker.applyInitial();
+    selectedRole.value = _defaultRoleLabel();
     selectedGender.value = '';
     selectedDateOfBirth.value = null;
     selectedImage.value = null;
     imageUrl.value = '';
     selectedPermissions
       ..clear()
-      ..addAll(StaffPermissionKeys.secondaryAdminDefaults);
+      ..addAll(
+        selectedRole.value == 'Secondary Admin'
+            ? StaffPermissionKeys.secondaryAdminDefaults
+            : StaffPermissionKeys.billerDefaults,
+      );
     assignUniqueId();
     _resetEmailVerification();
     formKey.currentState?.reset();
@@ -551,6 +598,8 @@ class AddStaffController extends BaseController {
       return;
     }
 
+    if (!_ensureCanAssignSelectedRole()) return;
+
     final role = selectedRole.value == 'Secondary Admin'
         ? 'secondary_admin'
         : 'biller';
@@ -584,8 +633,8 @@ class AddStaffController extends BaseController {
       'permissions': _buildPermissions(role),
       'uniqueId': _uniqueId,
       'address': addressController.text.trim(),
-      'state': stateController.text.trim(),
-      'district': districtController.text.trim(),
+      'state': locationPicker.selectedStateName.value?.trim() ?? '',
+      'district': locationPicker.selectedCityName.value?.trim() ?? '',
       'pincode': pincodeController.text.trim(),
       'gender': selectedGender.value.trim().toLowerCase(),
     };

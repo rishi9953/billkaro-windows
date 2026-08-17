@@ -85,7 +85,7 @@ class _HeaderExpanded extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(10),
           child: hasLogo
-              ? CachedNetworkImage(
+              ? AppCachedNetworkImage(
                   imageUrl: resolvedMediaUrl(outlet.logo as String),
                   width: 40,
                   height: 40,

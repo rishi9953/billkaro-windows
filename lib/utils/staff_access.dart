@@ -54,14 +54,16 @@ class StaffAccess {
   static bool get canDeleteCategories =>
       hasPermission(StaffPermissionKeys.deleteCategories);
 
+  static bool get canImportExportCategories =>
+      hasPermission(StaffPermissionKeys.importExportCategories);
+
   static bool get canAccessCategories =>
       canViewCategories ||
       canCreateCategories ||
       canUpdateCategories ||
       canDeleteCategories;
 
-  static bool get canViewSales =>
-      hasPermission(StaffPermissionKeys.viewSales);
+  static bool get canViewSales => hasPermission(StaffPermissionKeys.viewSales);
 
   static bool get canCreateSales =>
       hasPermission(StaffPermissionKeys.createSales);
@@ -90,8 +92,7 @@ class StaffAccess {
       hasPermission(StaffPermissionKeys.generateReports);
 
   /// Business overview, payment summary, and sales trends on the home dashboard.
-  static bool get canViewDashboardInsights =>
-      isOwnerSession || canViewReports;
+  static bool get canViewDashboardInsights => isOwnerSession || canViewReports;
 
   static bool get canViewInventory =>
       hasPermission(StaffPermissionKeys.viewInventory);
@@ -111,14 +112,35 @@ class StaffAccess {
   static bool get canDeleteCustomers =>
       hasPermission(StaffPermissionKeys.deleteCustomers);
 
+  static bool get canImportExportCustomers =>
+      hasPermission(StaffPermissionKeys.importExportCustomers);
+
   static bool get canAccessCustomers =>
       canViewCustomers ||
       canCreateCustomers ||
       canUpdateCustomers ||
       canDeleteCustomers;
 
-  static bool get canViewStaff =>
-      hasPermission(StaffPermissionKeys.viewStaff);
+  /// Returns true when allowed; otherwise shows a snackbar and returns false.
+  static bool ensure(
+    bool allowed, {
+    String message = 'You do not have permission to perform this action.',
+  }) {
+    if (allowed) return true;
+    if (Get.isRegistered<AppPref>() || Get.context != null) {
+      try {
+        Get.snackbar(
+          'Access denied',
+          message,
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 2),
+        );
+      } catch (_) {}
+    }
+    return false;
+  }
+
+  static bool get canViewStaff => hasPermission(StaffPermissionKeys.viewStaff);
 
   static bool get canCreateStaff =>
       hasPermission(StaffPermissionKeys.createStaff);
@@ -128,6 +150,9 @@ class StaffAccess {
 
   static bool get canDeleteStaff =>
       hasPermission(StaffPermissionKeys.deleteStaff);
+
+  /// Only the outlet owner may invite or promote a Secondary Admin.
+  static bool get canAssignSecondaryAdmin => isOwnerSession;
 
   static bool get canManageStaff =>
       isOwnerSession ||
@@ -139,10 +164,33 @@ class StaffAccess {
   static bool get canManageSettings =>
       hasPermission(StaffPermissionKeys.manageSettings);
 
+  static bool get canOpenStore =>
+      hasPermission(StaffPermissionKeys.openStore);
+
+  static bool get canCloseStore =>
+      hasPermission(StaffPermissionKeys.closeStore);
+
+  static bool get canViewTables =>
+      hasPermission(StaffPermissionKeys.viewTables);
+
+  static bool get canCreateTables =>
+      hasPermission(StaffPermissionKeys.createTables);
+
+  static bool get canUpdateTables =>
+      hasPermission(StaffPermissionKeys.updateTables);
+
+  static bool get canDeleteTables =>
+      hasPermission(StaffPermissionKeys.deleteTables);
+
+  static bool get canAccessTables =>
+      canViewTables ||
+      canCreateTables ||
+      canUpdateTables ||
+      canDeleteTables;
+
   static bool get canManageSubscriptions => isOwnerSession;
 
-  static bool get canUseWhatsAppMarketing =>
-      isOwnerSession || canViewReports;
+  static bool get canUseWhatsAppMarketing => isOwnerSession || canViewReports;
 
   /// Day open/close history — owner only (not visible to staff).
   static bool get canViewStoreHistory => isOwnerSession;
@@ -157,8 +205,7 @@ class StaffAccess {
         path.startsWith('/item-report')) {
       return canViewReports;
     }
-    if (path.startsWith('/inventory') ||
-        path.startsWith('/purchase-orders')) {
+    if (path.startsWith('/inventory') || path.startsWith('/purchase-orders')) {
       return canViewInventory;
     }
     if (path.startsWith('/store-session-history')) return canViewStoreHistory;
@@ -166,10 +213,12 @@ class StaffAccess {
       return canAccessProducts;
     }
     if (path.startsWith('/category')) return canAccessCategories;
-    if (path.startsWith('/create-order') ||
-        path.startsWith('/order-details') ||
+    if (path.startsWith('/create-order')) return canCreateSales;
+    if (path.startsWith('/order-details') ||
         path.startsWith('/closed-orders') ||
-        path.startsWith('/hold-orders')) {
+        path.startsWith('/hold-orders') ||
+        path.startsWith('/deleted-orders') ||
+        path.startsWith('/stock-summary')) {
       return canAccessSales;
     }
     if (path.startsWith('/customers') ||
@@ -178,6 +227,7 @@ class StaffAccess {
       return canAccessCustomers;
     }
     if (path.startsWith('/app-settings')) return canManageSettings;
+    if (path.startsWith('/tables')) return canAccessTables;
     return true;
   }
 }

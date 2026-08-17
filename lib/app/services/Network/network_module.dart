@@ -121,9 +121,30 @@ class NetworkModule {
                 type: DioExceptionType.badResponse,
               ),
             );
+          } else if ((response.statusCode ?? 0) >= 500) {
+            if (!_isErrorBeingHandled) {
+              _isErrorBeingHandled = true;
+              safelyDismissLoader();
+              final errorMessage = response.data is Map
+                  ? response.data['message']
+                  : null;
+              showError(
+                description:
+                    (errorMessage is String && errorMessage.trim().isNotEmpty)
+                    ? errorMessage
+                    : 'Something went wrong. Please try again later.',
+              );
+            }
+            return handler.reject(
+              DioException(
+                requestOptions: response.requestOptions,
+                response: response,
+                type: DioExceptionType.badResponse,
+              ),
+            );
           }
 
-          // Pass other responses through
+          // Pass other successful responses through (e.g. 201 Created)
           handler.next(response);
         },
         onError: (DioException error, handler) async {

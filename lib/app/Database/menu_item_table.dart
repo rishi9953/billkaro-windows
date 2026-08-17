@@ -14,6 +14,7 @@ class Items extends Table {
   DateTimeColumn get updatedAt => dateTime()();
   TextColumn get itemImage => text().withDefault(const Constant(''))();
   TextColumn get orderFrom => text().nullable()();
+  TextColumn get variantsJson => text().withDefault(const Constant('[]'))();
 
   @override
   Set<Column> get primaryKey => {id};

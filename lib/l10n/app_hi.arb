@@ -182,7 +182,7 @@
   "user_role": "उपयोगकर्ता भूमिका",
   "secondary_admin": "सेकेंडरी एडमिन",
   "biller": "बिलर",
-  "staff_access_info": "स्टाफ सिंक सेटिंग्स और व्हाट्सऐप टेम्पलेट्स को छोड़कर बाकी सब कुछ एक्सेस कर सकता है।",
+  "staff_access_info": "सेकेंडरी एडमिन को आउटलेट की सभी सुविधाओं और अनुमतियों का पूरा एक्सेस है।",
   "send_invite": "इनवाइट भेजें",
   "welcome_to_billkaro": "बिल करो चिल करो में आपका स्वागत है",
   "manage_business_ease": "अपने व्यवसाय को आसानी से प्रबंधित करें",
@@ -1007,6 +1007,28 @@
   "home_switch_outlet": "आउटलेट बदलें",
   "home_no_outlets_available": "कोई आउटलेट उपलब्ध नहीं",
   "home_manage_outlets": "आउटलेट प्रबंधित करें",
+  "owner_panel_title": "ओनर पैनल",
+  "owner_panel_menu": "ओनर पैनल",
+  "owner_panel_heading": "सभी आउटलेट",
+  "owner_panel_subtitle": "{count} आउटलेट एक जगह",
+  "@owner_panel_subtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "owner_panel_search_hint": "आउटलेट खोजें…",
+  "owner_panel_expand_all": "सभी खोलें",
+  "owner_panel_collapse_all": "सभी बंद करें",
+  "owner_panel_empty_subtitle": "विवरण देखने के लिए आउटलेट बनाएँ।",
+  "owner_panel_no_results": "कोई मिलान नहीं",
+  "owner_panel_no_results_subtitle": "दूसरा नाम, पता या GSTIN आज़माएँ।",
+  "owner_panel_active": "सक्रिय",
+  "owner_panel_no_type": "प्रकार सेट नहीं",
+  "owner_panel_outlet_age": "आउटलेट आयु",
+  "owner_panel_google_profile": "गूगल प्रोफ़ाइल",
+  "owner_panel_switch_to": "इस आउटलेट पर जाएँ",
   "home_unnamed_outlet": "अनाम आउटलेट",
   "home_logged_out": "लॉग आउट हो गया",
   "home_logged_out_message": "आप सफलतापूर्वक लॉग आउट हो गए हैं",
@@ -1098,6 +1120,23 @@
   "section_added_successfully": "सेक्शन सफलतापूर्वक जोड़ा गया",
   "failed_to_add_section": "सेक्शन जोड़ने में विफल",
   "section_already_exists": "सेक्शन पहले से मौजूद है",
+  "delete_section": "सेक्शन हटाएँ",
+  "delete_section_tooltip": "सेक्शन हटाएँ",
+  "delete_section_confirm": "सेक्शन \"{name}\" हटाएँ? टेबल नहीं हटेंगी।",
+  "@delete_section_confirm": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "delete_section_has_tables": "\"{name}\" नहीं हटा सकते — {count} टेबल असाइन हैं। पहले उन्हें दूसरी सेक्शन में ले जाएँ।",
+  "@delete_section_has_tables": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
+  "section_deleted_successfully": "सेक्शन सफलतापूर्वक हटाया गया",
+  "failed_to_delete_section": "सेक्शन हटाने में विफल",
   "no_sections_yet": "अभी कोई सेक्शन नहीं। पहले सेक्शन जोड़ें।",
   "table_section_count": "{count} टेबल",
   "@table_section_count": {
@@ -1529,7 +1568,7 @@
   "select_menu_item": "मेनू आइटम *",
   "select_raw_material": "कच्चा माल *",
   "recipe_quantity_hint": "प्रति सर्विंग मात्रा *",
-  "recipe_quantity_helper": "1 यूनिट बिक्री पर स्टॉक से कटने वाली मात्रा",
+  "recipe_quantity_helper": "आइटम बिकने पर कच्चे माल के स्टॉक से कटती है",
   "recipe_quantity_invalid": "0 से अधिक मान्य मात्रा दर्ज करें",
   "select_menu_item_required": "कृपया मेनू आइटम चुनें",
   "select_raw_material_required": "कृपया कच्चा माल चुनें",
@@ -1548,6 +1587,8 @@
   },
   "create_purchase_order": "खरीद ऑर्डर बनाएं",
   "create_po": "PO बनाएं",
+  "save_as_draft": "ड्राफ्ट",
+  "po_draft_saved": "खरीद ऑर्डर ड्राफ्ट के रूप में सहेजा गया",
   "edit_purchase_order": "खरीद ऑर्डर संपादित करें",
   "edit_po": "PO संपादित करें",
   "save_po_changes": "परिवर्तन सहेजें",
@@ -1560,7 +1601,7 @@
   "select_supplier_required": "कृपया आपूर्तिकर्ता चुनें",
   "po_delivery_date_required": "कृपया डिलीवरी की तारीख चुनें",
   "po_payment_terms_required": "कृपया भुगतान की शर्तें दर्ज करें",
-  "po_line_material_required": "कृपया सामग्री चुनें",
+  "po_line_material_required": "कृपया इन्वेंटरी में मौजूद सामग्री का नाम दर्ज करें",
   "po_line_qty_required": "0 से अधिक मात्रा दर्ज करें",
   "po_line_rate_required": "मान्य दर दर्ज करें",
   "po_address_name_required": "कृपया नाम दर्ज करें",
@@ -1656,8 +1697,31 @@
   "edit_order": "ऑर्डर संपादित करें",
   "update_order": "ऑर्डर अपडेट करें",
   "modify_order_details_subtitle": "ऑर्डर विवरण बदलें",
-  "delete_order_permanently_subtitle": "इस ऑर्डर को स्थायी रूप से हटाएँ",
-  "delete_order_confirm_message": "क्या आप वाकई इस ऑर्डर को हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।",
+  "delete_order_permanently_subtitle": "इस ऑर्डर को हटाए गए ऑर्डर में भेजें",
+  "delete_order_confirm_message": "क्या आप वाकई इस ऑर्डर को हटाना चाहते हैं? आप इसे बाद में हटाए गए ऑर्डर से पुनर्स्थापित कर सकते हैं।",
+  "deletedOrders": "हटाए गए ऑर्डर",
+  "deleted_orders_title": "हटाए गए ऑर्डर",
+  "no_deleted_orders": "कोई हटाया गया ऑर्डर नहीं",
+  "deleted_orders_empty_hint": "हटाए गए ऑर्डर यहाँ दिखेंगे",
+  "stockSummary": "स्टॉक सारांश",
+  "stock_summary_title": "स्टॉक सारांश",
+  "stock_summary_search_hint": "नाम, श्रेणी, कोड से खोजें…",
+  "stock_summary_products": "कच्चा माल",
+  "stock_summary_value": "स्टॉक मूल्य",
+  "stock_summary_qty": "मात्रा",
+  "stock_summary_min": "न्यूनतम",
+  "stock_summary_rate": "दर",
+  "stock_summary_empty": "कोई कच्चा माल नहीं मिला",
+  "stock_summary_empty_hint": "कच्चे माल का स्टॉक यहाँ दिखेगा। इन्वेंटरी से कच्चा माल जोड़ें।",
+  "stock_status_in_stock": "स्टॉक में",
+  "stock_status_low_stock": "कम स्टॉक",
+  "stock_status_out_of_stock": "स्टॉक खत्म",
+  "deleted_badge": "हटाया गया",
+  "restore_order": "ऑर्डर पुनर्स्थापित करें",
+  "restore_order_confirm_message": "इस ऑर्डर को पुनर्स्थापित करें? यह होल्ड ऑर्डर में वापस आ जाएगा।",
+  "restore": "पुनर्स्थापित करें",
+  "order_moved_to_deleted": "ऑर्डर हटाए गए ऑर्डर में भेज दिया गया",
+  "order_restored_successfully": "ऑर्डर सफलतापूर्वक पुनर्स्थापित हुआ",
   "customers_count": "{count} ग्राहक",
   "@customers_count": {
     "placeholders": {

@@ -2,26 +2,8 @@ import 'package:billkaro/config/config.dart';
 import 'package:flutter/material.dart';
 
 String? _resolveImportImageUrl(String raw) {
-  final trimmed = raw.trim();
-  if (trimmed.isEmpty || trimmed.toLowerCase() == 'null') return null;
-
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-    try {
-      return Uri.encodeFull(trimmed);
-    } catch (_) {
-      return trimmed;
-    }
-  }
-
-  final origin = Uri.parse(baseURL).replace(path: '').toString();
-  final joined = trimmed.startsWith('/')
-      ? '$origin$trimmed'
-      : '$origin/$trimmed';
-  try {
-    return Uri.encodeFull(joined);
-  } catch (_) {
-    return joined;
-  }
+  final url = resolvedMediaUrl(raw);
+  return url.isEmpty ? null : url;
 }
 
 class MenuImportPreviewRow {
@@ -375,8 +357,7 @@ class _MenuImportPreviewDialogState extends State<_MenuImportPreviewDialog> {
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(6),
-      // child:
-      child: CachedNetworkImage(
+      child: AppCachedNetworkImage(
         imageUrl: imageUrl,
         width: 36,
         height: 36,

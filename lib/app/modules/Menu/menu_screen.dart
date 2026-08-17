@@ -88,7 +88,7 @@ class MenuScreen extends StatelessWidget {
                                       .isNotEmpty
                                   ? ClipRRect(
                                       borderRadius: BorderRadius.circular(12),
-                                      child: CachedNetworkImage(
+                                      child: AppCachedNetworkImage(
                                         imageUrl: resolvedMediaUrl(controller
                                             .appPref
                                             .selectedOutlet!
@@ -228,43 +228,42 @@ class MenuScreen extends StatelessWidget {
                             ),
                             _buildDivider(),
                           ],
-                          _buildMenuItem(
-                            icon: Icons.people_outline,
-                            title: loc.regular_customers,
-                            subtitle: loc.manage_your_loyal_customers,
-                            iconColor: const Color(0xff083c6b),
-                            onTap: () =>
-                                Modular.to.pushNamed(HomeMainRoutes.customers),
-                          ),
-                          _buildDivider(),
-                          _buildMenuItem(
-                            icon: Icons.phone_android_outlined,
-                            title: loc.whatsapp_marketing,
-                            subtitle: loc.send_bulk_messages,
-                            iconColor: const Color(0xff25D366),
-                            onTap: () => Modular.to.pushNamed(
-                              HomeMainRoutes.whatsaapMarketing,
+                          if (StaffAccess.canAccessCustomers) ...[
+                            _buildMenuItem(
+                              icon: Icons.people_outline,
+                              title: loc.regular_customers,
+                              subtitle: loc.manage_your_loyal_customers,
+                              iconColor: const Color(0xff083c6b),
+                              onTap: () => Modular.to.pushNamed(
+                                HomeMainRoutes.customers,
+                              ),
                             ),
-                          ),
-                          // _buildDivider(),
-                          // _buildSwitchMenuItem(
-                          //   icon: Icons.sync_outlined,
-                          //   title: loc.sync_devices,
-                          //   subtitle: loc.sync_across_multiple_devices,
-                          //   controller: controller,
-                          // ),
-                          _buildDivider(),
-                          _buildMenuItem(
-                            icon: Icons.people_alt_outlined,
-                            title: loc.manage_staff,
-                            subtitle: loc.add_and_manage_staff_members,
-                            iconColor: const Color(0xffFF6B6B),
-                            onTap: () {
-                              // Navigate to manage staff
-                              Modular.to.pushNamed(HomeMainRoutes.staff);
-                            },
-                          ),
-                          _buildDivider(),
+                            _buildDivider(),
+                          ],
+                          if (StaffAccess.canUseWhatsAppMarketing) ...[
+                            _buildMenuItem(
+                              icon: Icons.phone_android_outlined,
+                              title: loc.whatsapp_marketing,
+                              subtitle: loc.send_bulk_messages,
+                              iconColor: const Color(0xff25D366),
+                              onTap: () => Modular.to.pushNamed(
+                                HomeMainRoutes.whatsaapMarketing,
+                              ),
+                            ),
+                            _buildDivider(),
+                          ],
+                          if (StaffAccess.canManageStaff) ...[
+                            _buildMenuItem(
+                              icon: Icons.people_alt_outlined,
+                              title: loc.manage_staff,
+                              subtitle: loc.add_and_manage_staff_members,
+                              iconColor: const Color(0xffFF6B6B),
+                              onTap: () {
+                                Modular.to.pushNamed(HomeMainRoutes.staff);
+                              },
+                            ),
+                            _buildDivider(),
+                          ],
                           _buildMenuItem(
                             icon: Icons.print_outlined,
                             title: loc.printer,
@@ -274,17 +273,7 @@ class MenuScreen extends StatelessWidget {
                             onTap: () {
                               Modular.to.pushNamed(HomeMainRoutes.printer);
                             },
-                            // onTap: () => Get.to(() => PrinterPage()),
-                            // onTap: () => Get.toNamed(AppRoute.printerScreen),
                           ),
-                          // _buildDivider(),
-                          // _buildMenuItem(
-                          //   icon: Icons.language,
-                          //   title: loc.language,
-                          //   subtitle: loc.change_app_language,
-                          //   iconColor: const Color(0xff9B59B6),
-                          //   onTap: () => Get.toNamed(AppRoute.changeLanguage),
-                          // ),
                           _buildDivider(),
                           _buildMenuItem(
                             icon: Icons.notifications_outlined,
@@ -307,15 +296,18 @@ class MenuScreen extends StatelessWidget {
                             ),
                             _buildDivider(),
                           ],
-                          _buildMenuItem(
-                            icon: Icons.settings_outlined,
-                            title: loc.settings,
-                            subtitle: 'Change App Settings',
-                            iconColor: const Color(0xff9B59B6),
-                            onTap: () =>
-                                Modular.to.pushNamed(HomeMainRoutes.settings),
-                          ),
-                          _buildDivider(),
+                          if (StaffAccess.canManageSettings) ...[
+                            _buildMenuItem(
+                              icon: Icons.settings_outlined,
+                              title: loc.settings,
+                              subtitle: 'Change App Settings',
+                              iconColor: const Color(0xff9B59B6),
+                              onTap: () => Modular.to.pushNamed(
+                                HomeMainRoutes.settings,
+                              ),
+                            ),
+                            _buildDivider(),
+                          ],
                         ],
                       ),
                     ),
@@ -383,7 +375,8 @@ class MenuScreen extends StatelessWidget {
           ),
 
           // Buy Table Gold Button - Enhanced
-          Container(
+          if (StaffAccess.canManageSubscriptions)
+            Container(
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
@@ -505,7 +498,9 @@ class MenuScreen extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: InkWell(
-        onTap: () => Modular.to.pushNamed(HomeMainRoutes.subscriptions),
+        onTap: StaffAccess.canManageSubscriptions
+            ? () => Modular.to.pushNamed(HomeMainRoutes.subscriptions)
+            : null,
         borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.all(16),

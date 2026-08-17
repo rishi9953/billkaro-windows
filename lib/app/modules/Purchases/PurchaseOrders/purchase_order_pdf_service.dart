@@ -1,12 +1,11 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_display.dart';
 import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_terms.dart';
 import 'package:billkaro/app/services/Modals/inventory/inventory_models.dart';
 import 'package:billkaro/app/services/Modals/login_response.dart';
+import 'package:billkaro/app/services/download/file_download_service.dart';
 import 'package:billkaro/config/config.dart';
-import 'package:billkaro/utils/download_path_util.dart';
 import 'package:billkaro/utils/po_print_orientation.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -166,16 +165,21 @@ class PurchaseOrderPdfService {
     AppLocalizations loc,
   ) async {
     try {
-      final savePath = await DownloadPathUtil.resolveSaveDirectory(
-        preferredPath: Get.find<AppPref>().downloadPath,
-      );
-      await Directory(savePath).create(recursive: true);
       final safeName = orderNumber.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
-      final filePath =
-          '$savePath/PO_${safeName}_${DateTime.now().millisecondsSinceEpoch}.pdf';
-      final file = File(filePath);
-      await file.writeAsBytes(bytes, flush: true);
-      showSuccess(description: loc.pdf_saved_to_downloads);
+      final fileName =
+          'PO_${safeName}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+
+      final file = await FileDownloadService.instance.saveBytes(
+        bytes: bytes,
+        fileName: fileName,
+        preferredDirectory: Get.find<AppPref>().downloadPath,
+        notificationTitle: 'PDF downloaded',
+        notificationBody: loc.pdf_saved_to_downloads,
+      );
+
+      if (file == null) {
+        showError(description: loc.failed_to_save_pdf);
+      }
     } catch (e) {
       showError(description: '${loc.failed_to_save_pdf}: $e');
     }

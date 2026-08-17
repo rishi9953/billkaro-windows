@@ -418,6 +418,45 @@ class ClosedOrdersController extends BaseController {
     ever<List<OrderModel>>(ordersL, (_) => applyCategoryFilter());
   }
 
+  /// Soft-delete an order (moves it to Deleted Orders).
+  Future<bool> softDeleteOrder(OrderModel order) async {
+    final orderId = order.id;
+    if (orderId.isEmpty) {
+      showError(description: 'Order id is missing.');
+      return false;
+    }
+
+    try {
+      final db = AppDatabase();
+      final isOnline = await NetworkUtils.hasInternetConnection();
+
+      if (isOnline) {
+        final response = await callApi(
+          apiClient.softDeleteOrder(orderId),
+          showLoader: true,
+        );
+        final status = response is Map ? response['status'] : null;
+        if (status != null && status != 'success') {
+          showError(description: 'Failed to delete order.');
+          return false;
+        }
+      }
+
+      await db.updateOrderStatus(orderId: orderId, status: 'deleted');
+      allOrders.removeWhere((e) => e.id == orderId);
+      ordersL.removeWhere((e) => e.id == orderId);
+      categoryOrdersL.removeWhere((e) => e.id == orderId);
+
+      final loc = AppLocalizations.of(Get.context!)!;
+      showSuccess(description: loc.order_moved_to_deleted);
+      return true;
+    } catch (e) {
+      debugPrint('❌ Error soft-deleting order: $e');
+      showError(description: 'Failed to delete order.');
+      return false;
+    }
+  }
+
   @override
   void onReady() {
     super.onReady();

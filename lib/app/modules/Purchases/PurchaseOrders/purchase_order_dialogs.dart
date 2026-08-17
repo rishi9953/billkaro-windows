@@ -15,7 +15,11 @@ import 'package:intl/intl.dart';
 import 'dart:math' as math;
 
 const _poAccent = Color(0xFFEF8819);
-const _poBg = Color(0xFFF0F4FA);
+const _poBg = Color(0xFFF3F5F9);
+const _poInk = Color(0xFF111827);
+const _poMuted = Color(0xFF6B7280);
+const _poLine = Color(0xFFE5E7EB);
+const _poSoft = Color(0xFFFFF8F1);
 
 Future<bool> confirmDiscardPurchaseOrderForm(
   BuildContext context,
@@ -92,22 +96,30 @@ InputDecoration _poInputDecoration({
   int maxLines = 1,
   bool readOnly = false,
   bool required = false,
+  Widget? prefixIcon,
+  String? suffixText,
 }) {
   return InputDecoration(
     label: required ? _poRequiredLabel(label) : null,
     labelText: required ? null : label,
     hintText: hint,
+    prefixIcon: prefixIcon,
+    suffixText: suffixText,
     filled: true,
-    fillColor: readOnly ? Colors.grey.shade100 : Colors.white,
+    fillColor: readOnly ? const Color(0xFFF3F4F6) : Colors.white,
     alignLabelWithHint: maxLines > 1,
-    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: BorderSide(color: Colors.grey.shade300),
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: _poLine),
     ),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: _poAccent, width: 1.5),
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: _poAccent, width: 1.6),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: Colors.red.shade400),
     ),
     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
   );
@@ -145,7 +157,8 @@ double? _poParseNonNegativeNumber(String text) {
 }
 
 bool _poLineIsActive(_PoLineDraft line) {
-  return line.rawMaterialId.isNotEmpty ||
+  return line.materialNameCtrl.text.trim().isNotEmpty ||
+      line.rawMaterialId.isNotEmpty ||
       line.qtyCtrl.text.trim().isNotEmpty ||
       line.priceCtrl.text.trim().isNotEmpty ||
       line.hsnSacCtrl.text.trim().isNotEmpty;
@@ -153,28 +166,54 @@ bool _poLineIsActive(_PoLineDraft line) {
 
 bool _poHasCompleteLine(List<_PoLineDraft> lines) {
   return lines.any((line) {
-    if (line.rawMaterialId.isEmpty) return false;
+    if (line.materialNameCtrl.text.trim().isEmpty &&
+        line.rawMaterialId.isEmpty) {
+      return false;
+    }
     final qty = _poParsePositiveNumber(line.qtyCtrl.text);
     final price = _poParseNonNegativeNumber(line.priceCtrl.text);
     return qty != null && price != null;
   });
 }
 
-Widget _poSectionTitle(String title, IconData icon) {
+Widget _poSectionTitle(String title, IconData icon, {String? step}) {
   return Row(
     children: [
       Container(
-        padding: const EdgeInsets.all(7),
+        width: 34,
+        height: 34,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: _poAccent.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(8),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFFFF1E3), Color(0xFFFFE0C2)],
+          ),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFFFD7AE)),
         ),
-        child: Icon(icon, size: 18, color: _poAccent),
+        child: step != null
+            ? Text(
+                step,
+                style: const TextStyle(
+                  color: _poAccent,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
+              )
+            : Icon(icon, size: 18, color: _poAccent),
       ),
-      const SizedBox(width: 10),
-      Text(
-        title,
-        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 15,
+            color: _poInk,
+            letterSpacing: -0.2,
+          ),
+        ),
       ),
     ],
   );
@@ -183,17 +222,17 @@ Widget _poSectionTitle(String title, IconData icon) {
 Widget _poSectionCard({required Widget child}) {
   return Container(
     width: double.infinity,
-    margin: const EdgeInsets.only(bottom: 16),
-    padding: const EdgeInsets.all(16),
+    margin: const EdgeInsets.only(bottom: 18),
+    padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
     decoration: BoxDecoration(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: Colors.grey.shade200),
-      boxShadow: [
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: _poLine),
+      boxShadow: const [
         BoxShadow(
-          color: Colors.black.withOpacity(0.04),
-          blurRadius: 8,
-          offset: const Offset(0, 2),
+          color: Color(0x0A111827),
+          blurRadius: 18,
+          offset: Offset(0, 6),
         ),
       ],
     ),
@@ -206,14 +245,161 @@ Widget _poSupplierInfoCard(List<Widget> chips) {
     width: double.infinity,
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
-      color: const Color(0xFFF8FAFC),
+      color: _poSoft,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: const Color(0xFFFFE0C2)),
+    ),
+    child: Wrap(spacing: 8, runSpacing: 8, children: chips),
+  );
+}
+
+Widget _poDatePickerTile({
+  required String label,
+  required DateTime? value,
+  required VoidCallback onPick,
+  VoidCallback? onClear,
+}) {
+  final hasValue = value != null;
+  return Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: onPick,
+      borderRadius: BorderRadius.circular(12),
+      child: Ink(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: hasValue ? _poSoft : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: hasValue ? const Color(0xFFFFD7AE) : _poLine,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: hasValue
+                    ? _poAccent.withValues(alpha: 0.12)
+                    : const Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.event_outlined,
+                size: 18,
+                color: hasValue ? _poAccent : _poMuted,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: _poMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    hasValue
+                        ? DateFormat('dd MMM yyyy').format(value)
+                        : 'Optional — pick a date',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: hasValue ? _poInk : _poMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (hasValue && onClear != null)
+              IconButton(
+                tooltip: 'Clear',
+                onPressed: onClear,
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.close, size: 18, color: _poMuted),
+              )
+            else
+              const Icon(Icons.chevron_right, color: _poMuted),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+const _poLineInputStyle = TextStyle(
+  fontSize: 14,
+  height: 1.25,
+  fontWeight: FontWeight.w500,
+  color: _poInk,
+);
+
+InputDecoration _poLineFieldDecoration({
+  String? hint,
+  String? prefixText,
+  String? suffixText,
+  Color? fillColor,
+}) {
+  return InputDecoration(
+    isDense: true,
+    hintText: hint,
+    prefixText: prefixText,
+    suffixText: suffixText,
+    filled: true,
+    fillColor: fillColor ?? Colors.white,
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+    enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: Colors.grey.shade200),
+      borderSide: const BorderSide(color: _poLine),
     ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: chips,
+    disabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: const BorderSide(color: _poLine),
     ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: const BorderSide(color: _poAccent, width: 1.4),
+    ),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+    errorStyle: const TextStyle(fontSize: 10, height: 1),
+    errorMaxLines: 2,
+  );
+}
+
+Widget _poLineFieldLabel(String label) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text(
+      label,
+      style: const TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        color: _poMuted,
+        letterSpacing: 0.1,
+      ),
+    ),
+  );
+}
+
+Widget _poReadonlyAmount(String value) {
+  return TextFormField(
+    key: ValueKey(value),
+    initialValue: value,
+    readOnly: true,
+    enableInteractiveSelection: false,
+    canRequestFocus: false,
+    style: _poLineInputStyle.copyWith(
+      fontWeight: FontWeight.w700,
+      color: _poAccent,
+    ),
+    decoration: _poLineFieldDecoration(fillColor: const Color(0xFFF8FAFC)),
   );
 }
 
@@ -381,54 +567,113 @@ Widget _poDrawerShell({
   required Widget body,
   required Widget footer,
   required BuildContext context,
+  ScrollController? scrollController,
+  String? subtitle,
 }) {
-  final width = math.min(1200.0, MediaQuery.of(context).size.width * 0.85);
+  final width = math.min(1180.0, MediaQuery.of(context).size.width * 0.86);
   return Material(
     color: _poBg,
-    elevation: 16,
+    elevation: 24,
+    shadowColor: const Color(0x33000000),
     child: SizedBox(
       width: width,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: const EdgeInsets.fromLTRB(20, 16, 8, 16),
             decoration: const BoxDecoration(
               color: Colors.white,
-              border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
+              border: Border(bottom: BorderSide(color: _poLine)),
             ),
-            child: Row(
+            child: Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: _poAccent.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.receipt_long_outlined,
-                    color: _poAccent,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
+                  height: 3,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFFEF8819),
+                        Color(0xFFF5B56B),
+                        Color(0xFFEF8819),
+                      ],
                     ),
                   ),
                 ),
-                IconButton(onPressed: onClose, icon: const Icon(Icons.close)),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 8, 14),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFFFFF1E3), Color(0xFFFFD7AE)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFFFD7AE)),
+                        ),
+                        child: const Icon(
+                          Icons.shopping_cart_checkout_rounded,
+                          color: _poAccent,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: _poInk,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            if (subtitle != null) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                subtitle,
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  color: _poMuted,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: onClose,
+                        tooltip: 'Close',
+                        style: IconButton.styleFrom(
+                          backgroundColor: const Color(0xFFF3F4F6),
+                          foregroundColor: _poMuted,
+                        ),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: body,
+            child: Scrollbar(
+              controller: scrollController,
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                controller: scrollController,
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+                child: body,
+              ),
             ),
           ),
           footer,
@@ -444,20 +689,21 @@ Widget _poDrawerFooter({
 }) {
   return Container(
     padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
-    decoration: BoxDecoration(
+    decoration: const BoxDecoration(
       color: Colors.white,
-      border: Border(top: BorderSide(color: Colors.grey.shade300)),
+      border: Border(top: BorderSide(color: _poLine)),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.06),
-          blurRadius: 10,
-          offset: const Offset(0, -2),
+          color: Color(0x14000000),
+          blurRadius: 16,
+          offset: Offset(0, -4),
         ),
       ],
     ),
     child: Row(
       children: [
         Expanded(child: totals),
+        const SizedBox(width: 12),
         ...actions,
       ],
     ),
@@ -515,24 +761,37 @@ class _PoDrawerLifecycleState extends State<_PoDrawerLifecycle> {
 class _PoLineDraft {
   _PoLineDraft({
     required this.rawMaterialId,
+    String materialName = '',
     String hsnSac = '',
     String description = '',
     double qty = 0,
     double price = 0,
-  }) : hsnSacCtrl = TextEditingController(text: hsnSac),
+    double? taxRate,
+    double? stock,
+  }) : materialNameCtrl = TextEditingController(text: materialName),
+       hsnSacCtrl = TextEditingController(text: hsnSac),
        descriptionCtrl = TextEditingController(text: description),
        qtyCtrl = TextEditingController(
          text: qty > 0 ? _PoLineDraft._num(qty) : '',
        ),
        priceCtrl = TextEditingController(
          text: price > 0 ? _PoLineDraft._num(price) : '',
+       ),
+       taxRateCtrl = TextEditingController(
+         text: taxRate != null ? _PoLineDraft._num(taxRate) : '',
+       ),
+       stockCtrl = TextEditingController(
+         text: stock != null ? _PoLineDraft._num(stock) : '',
        );
 
   String rawMaterialId;
+  final TextEditingController materialNameCtrl;
   final TextEditingController hsnSacCtrl;
   final TextEditingController descriptionCtrl;
   final TextEditingController qtyCtrl;
   final TextEditingController priceCtrl;
+  final TextEditingController taxRateCtrl;
+  final TextEditingController stockCtrl;
 
   static String _num(double v) =>
       v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(2);
@@ -543,11 +802,18 @@ class _PoLineDraft {
     return q * p;
   }
 
+  double get taxRateValue {
+    return double.tryParse(taxRateCtrl.text.trim()) ?? 18;
+  }
+
   void dispose() {
+    materialNameCtrl.dispose();
     hsnSacCtrl.dispose();
     descriptionCtrl.dispose();
     qtyCtrl.dispose();
     priceCtrl.dispose();
+    taxRateCtrl.dispose();
+    stockCtrl.dispose();
   }
 }
 
@@ -678,7 +944,6 @@ Future<void> showEditPurchaseOrderDialog(
 Future<void> showCreatePurchaseOrderDialog(
   PurchaseOrderController po, {
   String? preselectedSupplierId,
-  bool fromLowStock = false,
   PurchaseOrderData? editPo,
   double drawerTopInset = 0,
   String? drawerTabId,
@@ -724,13 +989,19 @@ Future<void> showCreatePurchaseOrderDialog(
       } catch (_) {}
     }
     for (final item in po.items) {
+      final material = c.rawMaterials.firstWhereOrNull(
+        (x) => x.id == item.rawMaterialId,
+      );
       lines.add(
         _PoLineDraft(
           rawMaterialId: item.rawMaterialId,
+          materialName: material?.name ?? item.description,
           hsnSac: item.hsnSacCode,
           description: item.description,
           qty: item.quantity,
           price: item.unitPrice,
+          taxRate: item.taxRate,
+          stock: material?.currentStock,
         ),
       );
     }
@@ -740,51 +1011,15 @@ Future<void> showCreatePurchaseOrderDialog(
   } else {
     billingFields = _PoAddressFields.fromOutlet(outlet);
     shippingFields = _PoAddressFields.fromOutlet(outlet);
-  }
-
-  void fillFromLowStock(void Function(void Function()) setState) {
-    for (final line in lines) {
-      line.dispose();
-    }
-    lines.clear();
-    for (final draft in po.suggestedPoLines(supplierId: supplierId)) {
-      final m = c.rawMaterials.firstWhereOrNull(
-        (x) => x.id == draft.rawMaterialId,
-      );
-      lines.add(
-        _PoLineDraft(
-          rawMaterialId: draft.rawMaterialId,
-          hsnSac: m?.hsnSacCode ?? '',
-          qty: draft.quantity,
-          price: draft.unitPrice,
-        ),
-      );
-    }
-    setState(() {});
-  }
-
-  if (!isEdit && fromLowStock) {
-    for (final draft in po.suggestedPoLines(supplierId: supplierId)) {
-      final m = c.rawMaterials.firstWhereOrNull(
-        (x) => x.id == draft.rawMaterialId,
-      );
-      lines.add(
-        _PoLineDraft(
-          rawMaterialId: draft.rawMaterialId,
-          hsnSac: m?.hsnSacCode ?? '',
-          qty: draft.quantity,
-          price: draft.unitPrice,
-        ),
-      );
-    }
-  } else if (!isEdit) {
     lines.add(_PoLineDraft(rawMaterialId: ''));
   }
 
   var formDisposed = false;
+  final scrollController = ScrollController();
   void disposeFormIfNeeded() {
     if (formDisposed) return;
     formDisposed = true;
+    scrollController.dispose();
     _disposePoForm(
       lines: lines,
       notesCtrl: notesCtrl,
@@ -801,11 +1036,22 @@ Future<void> showCreatePurchaseOrderDialog(
     ownerTabId: drawerTabId,
     builder: (context, setState, closeDrawer) {
       final supplier = c.suppliers.firstWhereOrNull((s) => s.id == supplierId);
-      double lineTaxRate(_PoLineDraft line) {
-        final material = c.rawMaterials.firstWhereOrNull(
-          (m) => m.id == line.rawMaterialId,
+      RawMaterialData? resolveLineMaterial(_PoLineDraft line) {
+        if (line.rawMaterialId.isNotEmpty) {
+          final byId = c.rawMaterials.firstWhereOrNull(
+            (m) => m.id == line.rawMaterialId,
+          );
+          if (byId != null) return byId;
+        }
+        final name = line.materialNameCtrl.text.trim().toLowerCase();
+        if (name.isEmpty) return null;
+        return c.rawMaterials.firstWhereOrNull(
+          (m) => m.name.toLowerCase() == name,
         );
-        return material?.taxRate ?? 18;
+      }
+
+      double lineTaxRate(_PoLineDraft line) {
+        return line.taxRateValue;
       }
 
       var subTotal = 0.0;
@@ -831,37 +1077,65 @@ Future<void> showCreatePurchaseOrderDialog(
         }
       }
 
-      Future<void> savePo() async {
-        if (!(formKey.currentState?.validate() ?? false)) return;
-        if (!_poHasCompleteLine(lines)) {
-          showError(description: loc.po_items_required);
-          return;
+      Future<void> savePo({String status = 'PENDING'}) async {
+        // Draft: save with whatever is filled (even a single field / empty lines).
+        // Create PO / edit: enforce supplier, payment terms, addresses, and items.
+        final isDraftSave = status == 'DRAFT' && editPo == null;
+
+        if (!isDraftSave) {
+          if (!(formKey.currentState?.validate() ?? false)) return;
+          if (supplierId.isEmpty) {
+            showError(description: loc.select_supplier_required);
+            return;
+          }
+          if (!_poHasCompleteLine(lines)) {
+            showError(description: loc.po_items_required);
+            return;
+          }
         }
+
         final items = <Map<String, dynamic>>[];
         for (var i = 0; i < lines.length; i++) {
           final line = lines[i];
-          if (line.rawMaterialId.isEmpty) continue;
+          final materialName = line.materialNameCtrl.text.trim();
+          if (materialName.isEmpty && line.rawMaterialId.isEmpty) continue;
           final qty = _poParsePositiveNumber(line.qtyCtrl.text.trim());
           final price = _poParseNonNegativeNumber(line.priceCtrl.text.trim());
-          if (qty == null || price == null) continue;
-          final material = c.rawMaterials.firstWhereOrNull(
-            (m) => m.id == line.rawMaterialId,
-          );
+          final material = resolveLineMaterial(line);
+
+          if (isDraftSave) {
+            // Draft: keep only complete resolvable lines; ignore partial ones.
+            if (material == null || qty == null || price == null) continue;
+          } else {
+            if (qty == null || price == null) continue;
+            if (material == null) {
+              showError(description: loc.po_line_material_required);
+              return;
+            }
+          }
+
+          line.rawMaterialId = material.id;
           final hsn = line.hsnSacCtrl.text.trim();
           final desc = line.descriptionCtrl.text.trim();
           items.add({
-            'rawMaterialId': line.rawMaterialId,
+            'rawMaterialId': material.id,
             'quantity': qty,
             'unitPrice': price,
-            'taxRate': material?.taxRate ?? 18,
+            'taxRate': line.taxRateValue,
             'lineNumber': i + 1,
-            'description': desc,
+            'description': desc.isNotEmpty ? desc : material.name,
             if (hsn.isNotEmpty)
               'hsnSacCode': hsn
-            else if (material?.hsnSacCode.isNotEmpty == true)
-              'hsnSacCode': material!.hsnSacCode,
+            else if (material.hsnSacCode.isNotEmpty)
+              'hsnSacCode': material.hsnSacCode,
           });
         }
+
+        if (!isDraftSave && items.isEmpty) {
+          showError(description: loc.po_items_required);
+          return;
+        }
+
         if (shippingSameAsBilling) {
           shippingFields.copyFrom(billingFields);
         }
@@ -894,7 +1168,7 @@ Future<void> showCreatePurchaseOrderDialog(
                 termsAndConditions: termsCtrl.text.trim(),
               )
             : await po.createPurchaseOrder(
-                supplierId: supplierId,
+                supplierId: supplierId.isEmpty ? null : supplierId,
                 items: items,
                 notes: notesCtrl.text.trim(),
                 expectedDate: expectedDate,
@@ -916,10 +1190,13 @@ Future<void> showCreatePurchaseOrderDialog(
                 shippingContact: shipping['contact'],
                 shippingGstNo: shipping['gst'],
                 termsAndConditions: termsCtrl.text.trim(),
+                status: status,
               );
         if (ok) {
           if (editPo != null) {
             showSuccess(description: loc.po_updated);
+          } else if (status == 'DRAFT') {
+            showSuccess(description: loc.po_draft_saved);
           }
           closePoForm();
         }
@@ -931,10 +1208,15 @@ Future<void> showCreatePurchaseOrderDialog(
         child: _poDrawerShell(
           context: context,
           title: isEdit ? loc.edit_purchase_order : loc.create_purchase_order,
+          subtitle: isEdit
+              ? 'Update supplier, addresses, and line items'
+              : 'Supplier → addresses → line items → save',
           onClose: () => requestClosePoForm(),
+          scrollController: scrollController,
           body: Form(
             key: formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
+            // Only validate when Create PO / Save runs — Draft must not block.
+            autovalidateMode: AutovalidateMode.disabled,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -945,19 +1227,25 @@ Future<void> showCreatePurchaseOrderDialog(
                       _poSectionTitle(
                         loc.po_header_section,
                         Icons.info_outline,
+                        step: '1',
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 16),
                       AppDropdownFormField2<String>(
                         key: const ValueKey('po_supplier'),
                         value: supplierId.isEmpty ? null : supplierId,
                         decoration: _poInputDecoration(
                           label: loc.select_supplier,
+                          required: true,
+                          prefixIcon: const Icon(
+                            Icons.storefront_outlined,
+                            size: 20,
+                          ),
                         ),
                         items: c.suppliers
                             .map(
                               (s) => DropdownItem(
                                 value: s.id,
-                                child: Text(s.name),
+                                child: Text(s.name.capitalize ?? ''),
                               ),
                             )
                             .toList(),
@@ -983,135 +1271,64 @@ Future<void> showCreatePurchaseOrderDialog(
                         ]),
                       ],
                       const SizedBox(height: 14),
-                      FormField<DateTime?>(
-                        initialValue: expectedDate,
-                        validator: (v) {
-                          if (v == null) return loc.po_delivery_date_required;
-                          return null;
-                        },
-                        builder: (field) {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: expectedDate != null
-                                            ? _poAccent
-                                            : null,
-                                        side: BorderSide(
-                                          color: field.hasError
-                                              ? Theme.of(
-                                                  context,
-                                                ).colorScheme.error
-                                              : expectedDate != null
-                                              ? _poAccent
-                                              : Colors.grey.shade400,
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 14,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: _poDatePickerTile(
+                              label: loc.delivery_date,
+                              value: expectedDate,
+                              onPick: () async {
+                                final picked = await showAppDatePicker(
+                                  context: context,
+                                  useRootNavigator: false,
+                                  initialDate:
+                                      expectedDate ??
+                                      DateTime.now().add(
+                                        const Duration(days: 3),
                                       ),
-                                      onPressed: () async {
-                                        final picked = await showAppDatePicker(
-                                          context: context,
-                                          useRootNavigator: false,
-                                          initialDate:
-                                              expectedDate ??
-                                              DateTime.now().add(
-                                                const Duration(days: 3),
-                                              ),
-                                          firstDate: DateTime.now(),
-                                          lastDate: DateTime.now().add(
-                                            const Duration(days: 365),
-                                          ),
-                                        );
-                                        if (picked != null) {
-                                          setState(() => expectedDate = picked);
-                                          field.didChange(picked);
-                                        }
-                                      },
-                                      icon: const Icon(Icons.event, size: 18),
-                                      label: Text(
-                                        expectedDate == null
-                                            ? '${loc.delivery_date} *'
-                                            : DateFormat(
-                                                'dd MMM yyyy',
-                                              ).format(expectedDate!),
-                                      ),
-                                    ),
+                                  firstDate: DateTime.now(),
+                                  lastDate: DateTime.now().add(
+                                    const Duration(days: 365),
                                   ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      style: OutlinedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 14,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                        ),
-                                      ),
-                                      onPressed: isEdit
-                                          ? null
-                                          : () => fillFromLowStock(setState),
-                                      icon: const Icon(
-                                        Icons.auto_fix_high,
-                                        size: 18,
-                                      ),
-                                      label: Text(loc.fill_from_low_stock),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (field.hasError)
-                                Padding(
-                                  padding: const EdgeInsets.only(
-                                    top: 6,
-                                    left: 4,
-                                  ),
-                                  child: Text(
-                                    field.errorText!,
-                                    style: TextStyle(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.error,
-                                      fontSize: 12,
-                                    ),
-                                  ),
+                                );
+                                if (picked != null) {
+                                  setState(() => expectedDate = picked);
+                                }
+                              },
+                              onClear: expectedDate == null
+                                  ? null
+                                  : () => setState(() => expectedDate = null),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: paymentTermsCtrl,
+                              decoration: _poInputDecoration(
+                                label: loc.po_payment_terms,
+                                required: true,
+                                prefixIcon: const Icon(
+                                  Icons.payments_outlined,
+                                  size: 20,
                                 ),
-                            ],
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 14),
-                      TextFormField(
-                        controller: paymentTermsCtrl,
-                        decoration: _poInputDecoration(
-                          label: loc.po_payment_terms,
-                          required: true,
-                        ),
-                        validator: (value) {
-                          if ((value ?? '').trim().isEmpty) {
-                            return loc.po_payment_terms_required;
-                          }
-                          return null;
-                        },
+                              ),
+                              validator: (value) {
+                                if ((value ?? '').trim().isEmpty) {
+                                  return loc.po_payment_terms_required;
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: referenceCtrl,
                         decoration: _poInputDecoration(
                           label: loc.po_reference_no,
+                          prefixIcon: const Icon(Icons.tag_outlined, size: 20),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -1127,11 +1344,11 @@ Future<void> showCreatePurchaseOrderDialog(
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: termsCtrl,
-                        maxLines: 5,
+                        maxLines: 4,
                         decoration: _poInputDecoration(
                           label: loc.po_terms_and_conditions,
                           hint: loc.po_terms_and_conditions_hint,
-                          maxLines: 5,
+                          maxLines: 4,
                         ),
                       ),
                     ],
@@ -1144,6 +1361,7 @@ Future<void> showCreatePurchaseOrderDialog(
                       _poSectionTitle(
                         loc.po_billing_address_section,
                         Icons.receipt_outlined,
+                        step: '2',
                       ),
                       const SizedBox(height: 14),
                       _buildPoAddressForm(
@@ -1169,24 +1387,23 @@ Future<void> showCreatePurchaseOrderDialog(
                             child: _poSectionTitle(
                               loc.po_shipping_address_section,
                               Icons.local_shipping_outlined,
+                              step: '3',
                             ),
                           ),
                           FilterChip(
                             label: Text(loc.po_same_as_billing),
                             selected: shippingSameAsBilling,
-                            selectedColor: _poAccent.withOpacity(0.15),
+                            selectedColor: _poAccent.withValues(alpha: 0.15),
                             backgroundColor: Colors.white,
                             checkmarkColor: _poAccent,
                             labelStyle: TextStyle(
                               fontWeight: FontWeight.w600,
-                              color: shippingSameAsBilling
-                                  ? _poAccent
-                                  : Colors.black87,
+                              color: shippingSameAsBilling ? _poAccent : _poInk,
                             ),
                             side: BorderSide(
                               color: shippingSameAsBilling
                                   ? _poAccent
-                                  : Colors.grey.shade300,
+                                  : _poLine,
                             ),
                             onSelected: (v) {
                               setState(() {
@@ -1218,11 +1435,20 @@ Future<void> showCreatePurchaseOrderDialog(
                             child: _poSectionTitle(
                               loc.po_line_items_section,
                               Icons.list_alt_outlined,
+                              step: '4',
                             ),
                           ),
-                          TextButton.icon(
-                            style: TextButton.styleFrom(
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
                               foregroundColor: _poAccent,
+                              side: const BorderSide(color: _poAccent),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
                             onPressed: () {
                               setState(
@@ -1230,240 +1456,119 @@ Future<void> showCreatePurchaseOrderDialog(
                                     lines.add(_PoLineDraft(rawMaterialId: '')),
                               );
                             },
-                            icon: const Icon(
-                              Icons.add_circle_outline,
-                              size: 20,
-                            ),
+                            icon: const Icon(Icons.add_rounded, size: 18),
                             label: Text(loc.add_line),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
+                      const SizedBox(height: 14),
+                      ...lines.asMap().entries.map((entry) {
+                        final i = entry.key;
+                        final line = entry.value;
+                        final taxRate = line.taxRateValue;
+                        final taxAmount = line.lineTotal * taxRate / 100;
+                        final grossAmount = line.lineTotal + taxAmount;
+                        return Container(
+                          margin: EdgeInsets.only(
+                            bottom: i == lines.length - 1 ? 0 : 12,
+                          ),
+                          padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade200),
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: _poLine),
                           ),
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
-                                ),
-                                color: _poAccent.withOpacity(0.1),
-                                child: Row(
-                                  children: [
-                                    SizedBox(
-                                      width: 52,
-                                      child: Text(
-                                        loc.po_sl_no,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 12,
-                                          color: Color(0xFF374151),
-                                        ),
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 30,
+                                    height: 30,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: _poSoft,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: const Color(0xFFFFD7AE),
                                       ),
                                     ),
-                                    Expanded(
-                                      flex: 3,
-                                      child: Text(
-                                        loc.material_column,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 12,
-                                          color: Color(0xFF374151),
-                                        ),
+                                    child: Text(
+                                      '${i + 1}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 13,
+                                        color: _poAccent,
                                       ),
                                     ),
-                                    Expanded(
-                                      flex: 2,
-                                      child: Text(
-                                        loc.po_description,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 12,
-                                          color: Color(0xFF374151),
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: 72,
-                                      child: Text(
-                                        loc.po_hsn_sac,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 12,
-                                          color: Color(0xFF374151),
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Text(
-                                        loc.stock,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 12,
-                                          color: Color(0xFF374151),
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Text(
-                                        loc.po_order_qty,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 12,
-                                          color: Color(0xFF374151),
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Text(
-                                        loc.po_rate,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 12,
-                                          color: Color(0xFF374151),
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: 72,
-                                      child: Text(
-                                        loc.po_amount,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 12,
-                                          color: Color(0xFF374151),
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: 64,
-                                      child: Text(
-                                        'Tax',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 12,
-                                          color: Color(0xFF374151),
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: 76,
-                                      child: Text(
-                                        loc.total,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 12,
-                                          color: Color(0xFF374151),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 36),
-                                  ],
-                                ),
-                              ),
-                              ...lines.asMap().entries.map((entry) {
-                                final i = entry.key;
-                                final line = entry.value;
-                                final material = c.rawMaterials
-                                    .firstWhereOrNull(
-                                      (m) => m.id == line.rawMaterialId,
-                                    );
-                                final taxRate = material?.taxRate ?? 18;
-                                final taxAmount =
-                                    line.lineTotal * taxRate / 100;
-                                final grossAmount = line.lineTotal + taxAmount;
-                                return Container(
-                                  color: i.isEven
-                                      ? Colors.white
-                                      : const Color(0xFFFAFBFC),
-                                  padding: const EdgeInsets.fromLTRB(
-                                    8,
-                                    8,
-                                    4,
-                                    8,
                                   ),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      SizedBox(
-                                        width: 52,
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 8,
-                                          ),
-                                          child: Text(
-                                            '${i + 1}',
-                                            textAlign: TextAlign.center,
-                                            style: const TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w500,
-                                              color: Color(0xFF374151),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Expanded(
-                                        flex: 3,
-                                        child: AppDropdownFormField2<String>(
-                                          key: ObjectKey(line),
-                                          value: line.rawMaterialId.isEmpty
-                                              ? null
-                                              : line.rawMaterialId,
-                                          decoration: const InputDecoration(
-                                            isDense: true,
-                                            border: OutlineInputBorder(
-                                              borderRadius: BorderRadius.all(
-                                                Radius.circular(8),
-                                              ),
-                                            ),
-                                            contentPadding:
-                                                EdgeInsets.symmetric(
-                                                  horizontal: 8,
-                                                  vertical: 8,
-                                                ),
-                                            errorMaxLines: 2,
+                                  const SizedBox(width: 10),
+                                  const Text(
+                                    'Line item',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                      color: _poInk,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  IconButton(
+                                    tooltip: 'Remove line',
+                                    visualDensity: VisualDensity.compact,
+                                    icon: Icon(
+                                      Icons.delete_outline_rounded,
+                                      size: 20,
+                                      color: lines.length <= 1
+                                          ? Colors.grey.shade400
+                                          : Colors.red.shade400,
+                                    ),
+                                    onPressed: lines.length <= 1
+                                        ? null
+                                        : () {
+                                            setState(() {
+                                              line.dispose();
+                                              lines.removeAt(i);
+                                            });
+                                          },
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    flex: 3,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        _poLineFieldLabel(loc.material_column),
+                                        TextFormField(
+                                          controller: line.materialNameCtrl,
+                                          decoration: _poLineFieldDecoration(
+                                            hint: 'Material name',
                                           ),
                                           validator: (v) {
-                                            if (!_poLineIsActive(line))
+                                            if (!_poLineIsActive(line)) {
                                               return null;
-                                            if ((v ?? '').isEmpty) {
+                                            }
+                                            if ((v ?? '').trim().isEmpty) {
                                               return loc
                                                   .po_line_material_required;
                                             }
                                             return null;
                                           },
-                                          items: c.rawMaterials
-                                              .where((m) {
-                                                if (supplierId.isEmpty)
-                                                  return true;
-                                                return m.supplierId == null ||
-                                                    m.supplierId == supplierId;
-                                              })
-                                              .map(
-                                                (m) => DropdownItem(
-                                                  value: m.id,
-                                                  child: Text(
-                                                    '${m.name} (${m.unit})',
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                              )
-                                              .toList(),
                                           onChanged: (v) {
+                                            final m = c.rawMaterials
+                                                .firstWhereOrNull(
+                                                  (x) =>
+                                                      x.name.toLowerCase() ==
+                                                      v.trim().toLowerCase(),
+                                                );
                                             setState(() {
-                                              line.rawMaterialId = v ?? '';
-                                              final m = c.rawMaterials
-                                                  .firstWhereOrNull(
-                                                    (x) => x.id == v,
-                                                  );
+                                              line.rawMaterialId = m?.id ?? '';
                                               if (m != null) {
                                                 if (line
                                                     .priceCtrl
@@ -1488,102 +1593,115 @@ Future<void> showCreatePurchaseOrderDialog(
                                                   line.descriptionCtrl.text =
                                                       m.name;
                                                 }
+                                                if (line.taxRateCtrl.text
+                                                    .trim()
+                                                    .isEmpty) {
+                                                  line.taxRateCtrl.text =
+                                                      _PoLineDraft._num(
+                                                        m.taxRate,
+                                                      );
+                                                }
+                                                if (line.stockCtrl.text
+                                                    .trim()
+                                                    .isEmpty) {
+                                                  line.stockCtrl.text =
+                                                      _PoLineDraft._num(
+                                                        m.currentStock,
+                                                      );
+                                                }
                                               }
                                             });
                                           },
                                         ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Expanded(
-                                        flex: 2,
-                                        child: TextFormField(
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    flex: 3,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        _poLineFieldLabel(loc.po_description),
+                                        TextFormField(
                                           controller: line.descriptionCtrl,
-                                          decoration: const InputDecoration(
-                                            isDense: true,
-                                            border: OutlineInputBorder(
-                                              borderRadius: BorderRadius.all(
-                                                Radius.circular(8),
-                                              ),
-                                            ),
-                                            contentPadding:
-                                                EdgeInsets.symmetric(
-                                                  horizontal: 8,
-                                                  vertical: 8,
-                                                ),
-                                          ),
+                                          decoration: _poLineFieldDecoration(),
                                           onChanged: (_) => setState(() {}),
                                         ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      SizedBox(
-                                        width: 72,
-                                        child: TextFormField(
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        _poLineFieldLabel(loc.po_hsn_sac),
+                                        TextFormField(
                                           controller: line.hsnSacCtrl,
-                                          decoration: const InputDecoration(
-                                            isDense: true,
-                                            border: OutlineInputBorder(
-                                              borderRadius: BorderRadius.all(
-                                                Radius.circular(8),
-                                              ),
-                                            ),
-                                            contentPadding:
-                                                EdgeInsets.symmetric(
-                                                  horizontal: 8,
-                                                  vertical: 8,
-                                                ),
-                                          ),
+                                          decoration: _poLineFieldDecoration(),
                                           onChanged: (_) => setState(() {}),
                                         ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Expanded(
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(
-                                            top: 4,
-                                            left: 12,
-                                          ),
-                                          child: Text(
-                                            material != null
-                                                ? '${material.currentStock}'
-                                                : '0',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey.shade700,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: TextFormField(
-                                          controller: line.qtyCtrl,
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        _poLineFieldLabel(loc.stock),
+                                        TextFormField(
+                                          controller: line.stockCtrl,
+                                          style: _poLineInputStyle,
                                           keyboardType:
                                               const TextInputType.numberWithOptions(
                                                 decimal: true,
                                               ),
-                                          minLines: 1,
-                                          maxLines: 3,
                                           inputFormatters: [
                                             FilteringTextInputFormatter.allow(
                                               RegExp(r'^\d+\.?\d{0,2}'),
                                             ),
                                           ],
-                                          decoration: const InputDecoration(
-                                            isDense: true,
-                                            border: OutlineInputBorder(
-                                              borderRadius: BorderRadius.all(
-                                                Radius.circular(8),
+                                          decoration: _poLineFieldDecoration(),
+                                          onChanged: (_) => setState(() {}),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        _poLineFieldLabel(loc.po_order_qty),
+                                        TextFormField(
+                                          controller: line.qtyCtrl,
+                                          style: _poLineInputStyle,
+                                          keyboardType:
+                                              const TextInputType.numberWithOptions(
+                                                decimal: true,
                                               ),
+                                          inputFormatters: [
+                                            FilteringTextInputFormatter.allow(
+                                              RegExp(r'^\d+\.?\d{0,2}'),
                                             ),
-                                            contentPadding:
-                                                EdgeInsets.symmetric(
-                                                  horizontal: 8,
-                                                  vertical: 8,
-                                                ),
-                                            errorMaxLines: 2,
-                                          ),
+                                          ],
+                                          decoration: _poLineFieldDecoration(),
                                           validator: (v) {
-                                            if (!_poLineIsActive(line))
+                                            if (!_poLineIsActive(line)) {
                                               return null;
+                                            }
                                             if (_poParsePositiveNumber(
                                                   v ?? '',
                                                 ) ==
@@ -1594,40 +1712,35 @@ Future<void> showCreatePurchaseOrderDialog(
                                           },
                                           onChanged: (_) => setState(() {}),
                                         ),
-                                      ),
-                                      const Gap(6),
-                                      Expanded(
-                                        child: TextFormField(
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        _poLineFieldLabel(loc.po_rate),
+                                        TextFormField(
                                           controller: line.priceCtrl,
+                                          style: _poLineInputStyle,
                                           keyboardType:
                                               const TextInputType.numberWithOptions(
                                                 decimal: true,
                                               ),
-                                          minLines: 1,
-                                          maxLines: 3,
                                           inputFormatters: [
                                             FilteringTextInputFormatter.allow(
                                               RegExp(r'^\d+\.?\d{0,2}'),
                                             ),
                                           ],
-                                          decoration: const InputDecoration(
-                                            isDense: true,
+                                          decoration: _poLineFieldDecoration(
                                             prefixText: '₹',
-                                            border: OutlineInputBorder(
-                                              borderRadius: BorderRadius.all(
-                                                Radius.circular(8),
-                                              ),
-                                            ),
-                                            contentPadding:
-                                                EdgeInsets.symmetric(
-                                                  horizontal: 8,
-                                                  vertical: 8,
-                                                ),
-                                            errorMaxLines: 2,
                                           ),
                                           validator: (v) {
-                                            if (!_poLineIsActive(line))
+                                            if (!_poLineIsActive(line)) {
                                               return null;
+                                            }
                                             if (_poParseNonNegativeNumber(
                                                   v ?? '',
                                                 ) ==
@@ -1638,94 +1751,68 @@ Future<void> showCreatePurchaseOrderDialog(
                                           },
                                           onChanged: (_) => setState(() {}),
                                         ),
-                                      ),
-                                      const Gap(6),
-                                      SizedBox(
-                                        width: 72,
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(
-                                            top: 10,
-                                          ),
-                                          child: Text(
-                                            '₹${line.lineTotal.toStringAsFixed(2)}',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 12,
-                                              color: _poAccent,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      SizedBox(
-                                        width: 64,
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(
-                                            top: 6,
-                                          ),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                '${taxRate.toStringAsFixed(0)}%',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.grey.shade700,
-                                                ),
-                                              ),
-                                              Text(
-                                                '₹${taxAmount.toStringAsFixed(2)}',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: Colors.grey.shade700,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                      SizedBox(
-                                        width: 76,
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(
-                                            top: 10,
-                                          ),
-                                          child: Text(
-                                            '₹${grossAmount.toStringAsFixed(2)}',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 12,
-                                              color: _poAccent,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      IconButton(
-                                        icon: Icon(
-                                          Icons.delete_outline,
-                                          size: 20,
-                                          color: lines.length <= 1
-                                              ? Colors.grey.shade400
-                                              : Colors.red.shade400,
-                                        ),
-                                        onPressed: lines.length <= 1
-                                            ? null
-                                            : () {
-                                                setState(() {
-                                                  line.dispose();
-                                                  lines.removeAt(i);
-                                                });
-                                              },
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                );
-                              }),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        _poLineFieldLabel(loc.po_amount),
+                                        _poReadonlyAmount(
+                                          '₹${line.lineTotal.toStringAsFixed(2)}',
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        _poLineFieldLabel('Tax'),
+                                        TextFormField(
+                                          controller: line.taxRateCtrl,
+                                          style: _poLineInputStyle,
+                                          keyboardType:
+                                              const TextInputType.numberWithOptions(
+                                                decimal: true,
+                                              ),
+                                          inputFormatters: [
+                                            FilteringTextInputFormatter.allow(
+                                              RegExp(r'^\d+\.?\d{0,2}'),
+                                            ),
+                                          ],
+                                          decoration: _poLineFieldDecoration(
+                                            suffixText: '%',
+                                          ),
+                                          onChanged: (_) => setState(() {}),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        _poLineFieldLabel(loc.total),
+                                        _poReadonlyAmount(
+                                          '₹${grossAmount.toStringAsFixed(2)}',
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
-                        ),
-                      ),
+                        );
+                      }),
                     ],
                   ),
                 ),
@@ -1733,39 +1820,102 @@ Future<void> showCreatePurchaseOrderDialog(
             ),
           ),
           footer: _poDrawerFooter(
-            totals: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Sub Total: ₹${subTotal.toStringAsFixed(2)}   |   Tax: ₹${totalTax.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey.shade700,
+            totals: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: _poSoft,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFFD7AE)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Subtotal  ₹${subTotal.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: _poMuted,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Tax  ₹${totalTax.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: _poMuted,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  loc.po_grand_total('₹${grandTotal.toStringAsFixed(2)}'),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: _poAccent,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Grand total',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: _poMuted,
+                        ),
+                      ),
+                      Text(
+                        '₹${grandTotal.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: _poAccent,
+                          letterSpacing: -0.4,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             actions: [
               TextButton(
                 onPressed: () => requestClosePoForm(),
+                style: TextButton.styleFrom(
+                  foregroundColor: _poMuted,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                ),
                 child: Text(loc.cancel),
               ),
+              if (!isEdit) ...[
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _poAccent,
+                    side: const BorderSide(color: _poAccent),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () => savePo(status: 'DRAFT'),
+                  child: Text(loc.save_as_draft),
+                ),
+              ],
               const SizedBox(width: 8),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _poAccent,
                   foregroundColor: Colors.white,
+                  elevation: 0,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
                     vertical: 14,
@@ -1774,7 +1924,7 @@ Future<void> showCreatePurchaseOrderDialog(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                onPressed: savePo,
+                onPressed: () => savePo(),
                 child: Text(isEdit ? loc.save_po_changes : loc.create_po),
               ),
             ],
@@ -2184,7 +2334,7 @@ Widget _poHeaderLogo({required String? logoUrl, required String businessName}) {
   if (url != null && url.isNotEmpty) {
     return ConstrainedBox(
       constraints: const BoxConstraints(maxHeight: 100, maxWidth: 140),
-      child: CachedNetworkImage(
+      child: AppCachedNetworkImage(
         imageUrl: resolvedMediaUrl(url),
         fit: BoxFit.contain,
         alignment: Alignment.centerLeft,
@@ -2329,6 +2479,24 @@ Widget _poInfoBox(String title, List<List<String>> rows, {int minRows = 0}) {
   );
 }
 
+Widget _poHorizontallyScrollable({required Widget child}) {
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      final width = constraints.maxWidth.isFinite
+          ? constraints.maxWidth
+          : MediaQuery.of(context).size.width;
+      return SizedBox(
+        width: width,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          clipBehavior: Clip.hardEdge,
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
 Widget _poLineItemsTable(PurchaseOrderDisplay display, String effectiveDate) {
   const headers = [
     'Sl. No',
@@ -2344,6 +2512,20 @@ Widget _poLineItemsTable(PurchaseOrderDisplay display, String effectiveDate) {
     'Tax\nAmount',
     'Gross\nAmount',
   ];
+  const columnWidths = <int, TableColumnWidth>{
+    0: FixedColumnWidth(48),
+    1: FixedColumnWidth(100),
+    2: FixedColumnWidth(120),
+    3: FixedColumnWidth(64),
+    4: FixedColumnWidth(40),
+    5: FixedColumnWidth(40),
+    6: FixedColumnWidth(72),
+    7: FixedColumnWidth(72),
+    8: FixedColumnWidth(72),
+    9: FixedColumnWidth(44),
+    10: FixedColumnWidth(64),
+    11: FixedColumnWidth(72),
+  };
 
   Widget cell(
     String text, {
@@ -2363,9 +2545,7 @@ Widget _poLineItemsTable(PurchaseOrderDisplay display, String effectiveDate) {
     );
   }
 
-  return SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    clipBehavior: Clip.hardEdge,
+  return _poHorizontallyScrollable(
     child: DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
@@ -2373,55 +2553,40 @@ Widget _poLineItemsTable(PurchaseOrderDisplay display, String effectiveDate) {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(10),
-        child: IntrinsicWidth(
-          child: Table(
-            defaultColumnWidth: const FixedColumnWidth(48),
-            border: TableBorder.all(color: Colors.grey.shade200, width: 0.5),
-            columnWidths: const {
-              0: FixedColumnWidth(48),
-              1: FixedColumnWidth(100),
-              2: FixedColumnWidth(120),
-              3: FixedColumnWidth(64),
-              4: FixedColumnWidth(40),
-              5: FixedColumnWidth(40),
-              6: FixedColumnWidth(72),
-              7: FixedColumnWidth(72),
-              8: FixedColumnWidth(72),
-              9: FixedColumnWidth(44),
-              10: FixedColumnWidth(64),
-              11: FixedColumnWidth(72),
-            },
-            children: [
-              TableRow(
-                decoration: BoxDecoration(color: _poAccent.withOpacity(0.12)),
-                children: headers.map((h) => cell(h, header: true)).toList(),
-              ),
-              ...display.lines.map((line) {
-                final desc = line.description.isNotEmpty
-                    ? line.description
-                    : line.rawMaterialName;
-                final delivery = line.deliveryDate != null
-                    ? _poFmtShortDate(line.deliveryDate!)
-                    : effectiveDate;
-                return TableRow(
-                  children: [
-                    cell('${line.lineNumber}'),
-                    cell(line.rawMaterialName),
-                    cell(desc),
-                    cell(line.hsnSacCode.isEmpty ? '—' : line.hsnSacCode),
-                    cell(_poFmtNum(line.quantity), align: TextAlign.right),
-                    cell(line.unit),
-                    cell(delivery),
-                    cell(_poFmtMoney(line.unitPrice), align: TextAlign.right),
-                    cell(_poFmtMoney(line.basicAmount), align: TextAlign.right),
-                    cell('${line.taxRate.toStringAsFixed(0)}%'),
-                    cell(_poFmtMoney(line.taxAmount), align: TextAlign.right),
-                    cell(_poFmtMoney(line.grossAmount), align: TextAlign.right),
-                  ],
-                );
-              }),
-            ],
-          ),
+        child: Table(
+          defaultColumnWidth: const FixedColumnWidth(48),
+          border: TableBorder.all(color: Colors.grey.shade200, width: 0.5),
+          columnWidths: columnWidths,
+          children: [
+            TableRow(
+              decoration: BoxDecoration(color: _poAccent.withOpacity(0.12)),
+              children: headers.map((h) => cell(h, header: true)).toList(),
+            ),
+            ...display.lines.map((line) {
+              final desc = line.description.isNotEmpty
+                  ? line.description
+                  : line.rawMaterialName;
+              final delivery = line.deliveryDate != null
+                  ? _poFmtShortDate(line.deliveryDate!)
+                  : effectiveDate;
+              return TableRow(
+                children: [
+                  cell('${line.lineNumber}'),
+                  cell(line.rawMaterialName),
+                  cell(desc),
+                  cell(line.hsnSacCode.isEmpty ? '—' : line.hsnSacCode),
+                  cell(_poFmtNum(line.quantity), align: TextAlign.right),
+                  cell(line.unit),
+                  cell(delivery),
+                  cell(_poFmtMoney(line.unitPrice), align: TextAlign.right),
+                  cell(_poFmtMoney(line.basicAmount), align: TextAlign.right),
+                  cell('${line.taxRate.toStringAsFixed(0)}%'),
+                  cell(_poFmtMoney(line.taxAmount), align: TextAlign.right),
+                  cell(_poFmtMoney(line.grossAmount), align: TextAlign.right),
+                ],
+              );
+            }),
+          ],
         ),
       ),
     ),
@@ -2471,19 +2636,25 @@ Widget _buildPoAddressForm(
     String label, {
     int maxLines = 1,
     bool required = false,
+    TextInputType? keyboardType,
+    int? maxLength,
+    List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: ctrl,
       readOnly: readOnly,
       maxLines: maxLines,
+      keyboardType: keyboardType,
+      maxLength: maxLength,
+      inputFormatters: inputFormatters,
       onChanged: readOnly ? null : handleChanged,
       decoration: _poInputDecoration(
         label: label,
         readOnly: readOnly,
         maxLines: maxLines,
         required: required && validate && !readOnly,
-      ),
+      ).copyWith(counterText: maxLength != null ? '' : null),
       validator: readOnly || !validate ? null : validator,
     );
   }
@@ -2516,8 +2687,17 @@ Widget _buildPoAddressForm(
               fields.pinCtrl,
               loc.po_pin_code,
               required: true,
-              validator: (v) =>
-                  (v ?? '').trim().isEmpty ? loc.po_pin_code_required : null,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              validator: (v) {
+                final pin = (v ?? '').trim();
+                if (pin.isEmpty) return loc.po_pin_code_required;
+                if (pin.length != 6 || !RegExp(r'^\d{6}$').hasMatch(pin)) {
+                  return loc.please_enter_valid_pincode;
+                }
+                return null;
+              },
             ),
           ),
           const SizedBox(width: 10),
@@ -2555,17 +2735,28 @@ Widget _buildPoAddressForm(
 }
 
 Widget _infoChip(IconData icon, String text) {
-  return Padding(
-    padding: const EdgeInsets.only(bottom: 6),
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: const Color(0xFFFFD7AE)),
+    ),
     child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 15, color: _poAccent),
-        const SizedBox(width: 8),
-        Expanded(
+        Icon(icon, size: 14, color: _poAccent),
+        const SizedBox(width: 6),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 280),
           child: Text(
             text,
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade800),
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: _poInk,
+            ),
           ),
         ),
       ],

@@ -4,6 +4,7 @@ import 'package:billkaro/app/services/Modals/customer/customerResponse.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter_modular/flutter_modular.dart';
+import 'package:billkaro/utils/staff_access.dart';
 
 class CustomerDetailsScreen extends StatelessWidget {
   CustomerDetailsScreen({super.key});
@@ -18,13 +19,16 @@ class CustomerDetailsScreen extends StatelessWidget {
         elevation: 0,
         title: Text(loc.customer_details),
         actions: [
-          IconButton(
+          if (StaffAccess.canUpdateCustomers)
+            IconButton(
             icon: Assets.svg.whatsapp.svg(width: 24, height: 24),
             onPressed: () => openWhatsApp(controller.phoneNumber.value),
           ),
-          IconButton(
+          if (StaffAccess.canUpdateCustomers)
+            IconButton(
             icon: const Icon(Icons.edit_outlined),
             onPressed: () {
+              if (!StaffAccess.ensure(StaffAccess.canUpdateCustomers)) return;
               Modular.to.pushNamed(
                 HomeMainRoutes.addRegularCustomer,
                 arguments: {

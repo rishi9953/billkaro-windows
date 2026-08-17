@@ -67,7 +67,7 @@ class SupplierContactVerifier {
   }
 
   void onPhoneChanged(String value) {
-    final digits = value.replaceAll(RegExp(r'[^\d]'), '');
+    final digits = normalizePhoneDigits(value);
     phoneVerificationError.value = null;
 
     if (_phoneFormatError(digits) != null) {
@@ -176,7 +176,7 @@ class SupplierContactVerifier {
   }
 
   Future<bool> checkPhoneAvailability(String phone) async {
-    final digits = phone.replaceAll(RegExp(r'[^\d]'), '');
+    final digits = normalizePhoneDigits(phone);
     if (_phoneFormatError(digits) != null) {
       isPhoneAvailable.value = null;
       phoneVerificationError.value = null;
@@ -269,11 +269,10 @@ class SupplierContactVerifier {
   }
 
   String? validatePhone(String? value, {required String emptyMessage}) {
-    final digits = (value ?? '').trim().replaceAll(RegExp(r'[^\d]'), '');
+    final digits = normalizePhoneDigits(value);
     if (digits.isEmpty) return emptyMessage;
-    if (!RegExp(r'^\d{10}$').hasMatch(digits)) {
-      return 'Please enter a valid 10-digit phone number';
-    }
+    final formatError = _phoneFormatError(digits);
+    if (formatError != null) return formatError;
     if (isPhoneAvailable.value == false) {
       return 'This mobile number is already registered. Please use a different number.';
     }
@@ -317,7 +316,7 @@ class SupplierContactVerifier {
   }
 
   Future<bool> ensurePhoneAvailable(String currentPhone) async {
-    final digits = currentPhone.replaceAll(RegExp(r'[^\d]'), '');
+    final digits = normalizePhoneDigits(currentPhone);
     if (isPhoneChecking.value) {
       showError(
         description: 'Please wait while we verify your mobile number.',
@@ -325,7 +324,19 @@ class SupplierContactVerifier {
       return false;
     }
 
-    if (_isSameAsOriginalPhone(digits)) return true;
+    if (_phoneFormatError(digits) != null) {
+      showError(
+        description: 'Please enter a valid 10-digit phone number.',
+      );
+      return false;
+    }
+
+    if (_isSameAsOriginalPhone(digits)) {
+      isPhoneAvailable.value = true;
+      _lastCheckedPhone = digits;
+      phoneVerificationError.value = null;
+      return true;
+    }
 
     if (_lastCheckedPhone != digits || isPhoneAvailable.value != true) {
       await checkPhoneAvailability(digits);
@@ -339,15 +350,11 @@ class SupplierContactVerifier {
       return false;
     }
 
-    if (isPhoneAvailable.value != true) {
-      showError(
-        description:
-            phoneVerificationError.value ??
-            'Unable to verify mobile number availability. Please check your connection and try again.',
-      );
-      return false;
-    }
+    if (isPhoneAvailable.value == true) return true;
 
+    // Availability API failed (network / server). Allow save when the number
+    // itself is a valid 10-digit phone — create/update will re-check server-side.
+    phoneVerificationError.value = null;
     return true;
   }
 
@@ -447,8 +454,9 @@ class SupplierContactVerifier {
   }
 
   bool _isSameAsOriginalPhone(String digits) {
-    final original = originalPhone?.replaceAll(RegExp(r'[^\d]'), '');
-    return original != null && original.isNotEmpty && original == digits;
+    final original = normalizePhoneDigits(originalPhone);
+    final current = normalizePhoneDigits(digits);
+    return original.isNotEmpty && original == current;
   }
 
   String? _emailFormatError(String trimmed) {
@@ -463,10 +471,18 @@ class SupplierContactVerifier {
   }
 
   String? _phoneFormatError(String digits) {
-    if (digits.isEmpty) return 'Phone number is required';
-    if (digits.length != 10 || !RegExp(r'^[6-9]\d{9}$').hasMatch(digits)) {
+    final normalized = normalizePhoneDigits(digits);
+    if (normalized.isEmpty) return 'Phone number is required';
+    if (normalized.length != 10 || !RegExp(r'^\d{10}$').hasMatch(normalized)) {
       return 'Please enter a valid 10-digit phone number';
     }
     return null;
+  }
+
+  /// Strips non-digits and keeps the last 10 digits (handles +91 / 91 prefix).
+  static String normalizePhoneDigits(String? value) {
+    final digits = (value ?? '').replaceAll(RegExp(r'[^\d]'), '');
+    if (digits.length > 10) return digits.substring(digits.length - 10);
+    return digits;
   }
 }

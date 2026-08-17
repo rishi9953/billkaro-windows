@@ -1,5 +1,4 @@
 import 'package:billkaro/app/Widgets/logout_dialog.dart';
-import 'package:billkaro/app/modules/AddOrder/add_order_controller.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Shell/Sidebar/sidebar_navigation.dart';
 import 'package:billkaro/app/modules/Shell/Sidebar/sidebar_theme.dart';
@@ -35,7 +34,7 @@ class SidebarNavItem extends StatelessWidget {
     final isSelected =
         selectedOverride ?? (selectedIndex == index && !isSignOut);
 
-    return Padding(
+    final item = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2.5),
       child: Material(
         color: isSelected
@@ -91,6 +90,17 @@ class SidebarNavItem extends StatelessWidget {
         ),
       ),
     );
+
+    if (!collapsed || label.trim().isEmpty) return item;
+
+    return Tooltip(
+      message: label,
+      waitDuration: const Duration(milliseconds: 300),
+      preferBelow: false,
+      verticalOffset: 0,
+      margin: const EdgeInsets.only(left: 8),
+      child: item,
+    );
   }
 
   Future<void> _onTap(BuildContext context) async {
@@ -114,13 +124,9 @@ class SidebarNavItem extends StatelessWidget {
     await SidebarNavigation.navigateFromSidebar(
       context,
       targetRoute,
-      onBeforeNavigate: () async {
-        if (index == 1 && Get.isRegistered<AddOrderController>()) {
-          Get.delete<AddOrderController>();
-        }
-      },
       onAfterNavigate: () {
-        if (HomeMainRoutes.outletShowsTables() && index == 2) {
+        if (HomeMainRoutes.outletShowsTables() &&
+            targetRoute == HomeMainRoutes.tables) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (Get.isRegistered<TableController>()) {
               Get.find<TableController>().refresh();

@@ -555,7 +555,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get biller => 'Biller';
 
   @override
-  String get staff_access_info => 'Staff can access everything except sync settings and WhatsApp templates.';
+  String get staff_access_info => 'Secondary Admin has full access to all outlet features and permissions.';
 
   @override
   String get send_invite => 'Send Invite';
@@ -2233,6 +2233,53 @@ class AppLocalizationsEn extends AppLocalizations {
   String get home_manage_outlets => 'Manage outlets';
 
   @override
+  String get owner_panel_title => 'Owner Panel';
+
+  @override
+  String get owner_panel_menu => 'Owner Panel';
+
+  @override
+  String get owner_panel_heading => 'All Outlets';
+
+  @override
+  String owner_panel_subtitle(int count) {
+    return '$count outlets in one place';
+  }
+
+  @override
+  String get owner_panel_search_hint => 'Search outlets…';
+
+  @override
+  String get owner_panel_expand_all => 'Expand all';
+
+  @override
+  String get owner_panel_collapse_all => 'Collapse all';
+
+  @override
+  String get owner_panel_empty_subtitle => 'Create an outlet to see its details here.';
+
+  @override
+  String get owner_panel_no_results => 'No matching outlets';
+
+  @override
+  String get owner_panel_no_results_subtitle => 'Try a different name, address, or GSTIN.';
+
+  @override
+  String get owner_panel_active => 'Active';
+
+  @override
+  String get owner_panel_no_type => 'Type not set';
+
+  @override
+  String get owner_panel_outlet_age => 'Outlet age';
+
+  @override
+  String get owner_panel_google_profile => 'Google profile';
+
+  @override
+  String get owner_panel_switch_to => 'Switch to this outlet';
+
+  @override
   String get home_unnamed_outlet => 'Unnamed Outlet';
 
   @override
@@ -2400,6 +2447,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get section_already_exists => 'Section already exists';
+
+  @override
+  String get delete_section => 'Delete section';
+
+  @override
+  String get delete_section_tooltip => 'Delete section';
+
+  @override
+  String delete_section_confirm(String name) {
+    return 'Delete section \"$name\"? Tables are not deleted.';
+  }
+
+  @override
+  String delete_section_has_tables(String name, int count) {
+    return 'Cannot delete \"$name\" while $count tables are assigned. Move them first.';
+  }
+
+  @override
+  String get section_deleted_successfully => 'Section deleted successfully';
+
+  @override
+  String get failed_to_delete_section => 'Failed to delete section';
 
   @override
   String get no_sections_yet => 'No sections yet. Add a section first.';
@@ -3002,7 +3071,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recipe_quantity_hint => 'Quantity per serving *';
 
   @override
-  String get recipe_quantity_helper => 'Amount deducted from stock per 1 unit sold';
+  String get recipe_quantity_helper => 'Used to deduct raw material stock each time this item is sold';
 
   @override
   String get recipe_quantity_invalid => 'Enter a valid quantity greater than 0';
@@ -3038,6 +3107,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get create_po => 'Create PO';
+
+  @override
+  String get save_as_draft => 'Draft';
+
+  @override
+  String get po_draft_saved => 'Purchase order saved as draft';
 
   @override
   String get edit_purchase_order => 'Edit Purchase Order';
@@ -3076,7 +3151,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get po_payment_terms_required => 'Please enter payment terms';
 
   @override
-  String get po_line_material_required => 'Please select a material';
+  String get po_line_material_required => 'Please enter a material name that exists in inventory';
 
   @override
   String get po_line_qty_required => 'Enter quantity greater than 0';
@@ -3294,10 +3369,79 @@ class AppLocalizationsEn extends AppLocalizations {
   String get modify_order_details_subtitle => 'Modify order details';
 
   @override
-  String get delete_order_permanently_subtitle => 'Remove this order permanently';
+  String get delete_order_permanently_subtitle => 'Move this order to Deleted Orders';
 
   @override
-  String get delete_order_confirm_message => 'Are you sure you want to delete this order? This action cannot be undone.';
+  String get delete_order_confirm_message => 'Are you sure you want to delete this order? You can restore it later from Deleted Orders.';
+
+  @override
+  String get deletedOrders => 'Deleted Orders';
+
+  @override
+  String get deleted_orders_title => 'Deleted Orders';
+
+  @override
+  String get no_deleted_orders => 'No Deleted Orders';
+
+  @override
+  String get deleted_orders_empty_hint => 'Deleted orders will appear here';
+
+  @override
+  String get stockSummary => 'Stock Summary';
+
+  @override
+  String get stock_summary_title => 'Stock Summary';
+
+  @override
+  String get stock_summary_search_hint => 'Search by name, category, code…';
+
+  @override
+  String get stock_summary_products => 'Raw Materials';
+
+  @override
+  String get stock_summary_value => 'Stock Value';
+
+  @override
+  String get stock_summary_qty => 'Qty';
+
+  @override
+  String get stock_summary_min => 'Min';
+
+  @override
+  String get stock_summary_rate => 'Rate';
+
+  @override
+  String get stock_summary_empty => 'No raw materials found';
+
+  @override
+  String get stock_summary_empty_hint => 'Raw material stock will appear here. Add materials from Inventory.';
+
+  @override
+  String get stock_status_in_stock => 'In Stock';
+
+  @override
+  String get stock_status_low_stock => 'Low Stock';
+
+  @override
+  String get stock_status_out_of_stock => 'Out of Stock';
+
+  @override
+  String get deleted_badge => 'DELETED';
+
+  @override
+  String get restore_order => 'Restore Order';
+
+  @override
+  String get restore_order_confirm_message => 'Restore this order? It will return to On Hold Orders.';
+
+  @override
+  String get restore => 'Restore';
+
+  @override
+  String get order_moved_to_deleted => 'Order moved to Deleted Orders';
+
+  @override
+  String get order_restored_successfully => 'Order restored successfully';
 
   @override
   String customers_count(int count) {

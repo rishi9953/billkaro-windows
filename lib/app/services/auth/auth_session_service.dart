@@ -7,6 +7,7 @@ import 'package:billkaro/app/services/notification/app_notification_store.dart';
 import 'package:billkaro/app/services/notification/kitchen_bump_monitor.dart';
 import 'package:billkaro/app/services/notification/kitchen_new_order_monitor.dart';
 import 'package:billkaro/app/services/session/session_realtime_service.dart';
+import 'package:billkaro/app/services/wallet/wallet_realtime_service.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:dio/dio.dart';
 
@@ -26,6 +27,7 @@ class AuthSessionService {
       KitchenNewOrderMonitor.instance.stop();
       KdsRealtimeService.instance.disconnect();
       SessionRealtimeService.instance.disconnect();
+      WalletRealtimeService.instance.disconnect();
 
       if (Get.isRegistered<AppNotificationStore>()) {
         unawaited(AppNotificationStore.to.clearAll());

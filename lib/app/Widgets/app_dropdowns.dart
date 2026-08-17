@@ -207,9 +207,10 @@ class _AppFilterDropdown2State<T> extends State<AppFilterDropdown2<T>> {
 
   @override
   Widget build(BuildContext context) {
+    // Keep height/padding on [ButtonStyleData] only — nesting a fixed-height
+    // Container with padding caused a ~2px bottom RenderFlex overflow.
     return Container(
-      height: widget.height,
-      padding: widget.padding,
+      width: double.infinity,
       decoration: widget.decoration ?? appFilterDropdownDecoration(),
       child: DropdownButtonHideUnderline(
         child: DropdownButton2<T>(
@@ -224,6 +225,11 @@ class _AppFilterDropdown2State<T> extends State<AppFilterDropdown2<T>> {
                   _valueListenable.value = value;
                   widget.onChanged!(value);
                 },
+          buttonStyleData: ButtonStyleData(
+            height: widget.height,
+            width: double.infinity,
+            padding: widget.padding,
+          ),
           iconStyleData: widget.iconStyleData ?? appDropdownIconStyle(),
           dropdownStyleData:
               widget.dropdownStyleData ??

@@ -1726,6 +1726,18 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _variantsJsonMeta = const VerificationMeta(
+    'variantsJson',
+  );
+  @override
+  late final GeneratedColumn<String> variantsJson = GeneratedColumn<String>(
+    'variants_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1740,6 +1752,7 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
     updatedAt,
     itemImage,
     orderFrom,
+    variantsJson,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1842,6 +1855,15 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
         orderFrom.isAcceptableOrUnknown(data['order_from']!, _orderFromMeta),
       );
     }
+    if (data.containsKey('variants_json')) {
+      context.handle(
+        _variantsJsonMeta,
+        variantsJson.isAcceptableOrUnknown(
+          data['variants_json']!,
+          _variantsJsonMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1899,6 +1921,10 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
         DriftSqlType.string,
         data['${effectivePrefix}order_from'],
       ),
+      variantsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}variants_json'],
+      )!,
     );
   }
 
@@ -1921,6 +1947,7 @@ class Item extends DataClass implements Insertable<Item> {
   final DateTime updatedAt;
   final String itemImage;
   final String? orderFrom;
+  final String variantsJson;
   const Item({
     required this.id,
     required this.userId,
@@ -1934,6 +1961,7 @@ class Item extends DataClass implements Insertable<Item> {
     required this.updatedAt,
     required this.itemImage,
     this.orderFrom,
+    required this.variantsJson,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1952,6 +1980,7 @@ class Item extends DataClass implements Insertable<Item> {
     if (!nullToAbsent || orderFrom != null) {
       map['order_from'] = Variable<String>(orderFrom);
     }
+    map['variants_json'] = Variable<String>(variantsJson);
     return map;
   }
 
@@ -1971,6 +2000,7 @@ class Item extends DataClass implements Insertable<Item> {
       orderFrom: orderFrom == null && nullToAbsent
           ? const Value.absent()
           : Value(orderFrom),
+      variantsJson: Value(variantsJson),
     );
   }
 
@@ -1992,6 +2022,7 @@ class Item extends DataClass implements Insertable<Item> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       itemImage: serializer.fromJson<String>(json['itemImage']),
       orderFrom: serializer.fromJson<String?>(json['orderFrom']),
+      variantsJson: serializer.fromJson<String>(json['variantsJson']),
     );
   }
   @override
@@ -2010,6 +2041,7 @@ class Item extends DataClass implements Insertable<Item> {
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'itemImage': serializer.toJson<String>(itemImage),
       'orderFrom': serializer.toJson<String?>(orderFrom),
+      'variantsJson': serializer.toJson<String>(variantsJson),
     };
   }
 
@@ -2026,6 +2058,7 @@ class Item extends DataClass implements Insertable<Item> {
     DateTime? updatedAt,
     String? itemImage,
     Value<String?> orderFrom = const Value.absent(),
+    String? variantsJson,
   }) => Item(
     id: id ?? this.id,
     userId: userId ?? this.userId,
@@ -2039,6 +2072,7 @@ class Item extends DataClass implements Insertable<Item> {
     updatedAt: updatedAt ?? this.updatedAt,
     itemImage: itemImage ?? this.itemImage,
     orderFrom: orderFrom.present ? orderFrom.value : this.orderFrom,
+    variantsJson: variantsJson ?? this.variantsJson,
   );
   Item copyWithCompanion(ItemsCompanion data) {
     return Item(
@@ -2054,6 +2088,9 @@ class Item extends DataClass implements Insertable<Item> {
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       itemImage: data.itemImage.present ? data.itemImage.value : this.itemImage,
       orderFrom: data.orderFrom.present ? data.orderFrom.value : this.orderFrom,
+      variantsJson: data.variantsJson.present
+          ? data.variantsJson.value
+          : this.variantsJson,
     );
   }
 
@@ -2071,7 +2108,8 @@ class Item extends DataClass implements Insertable<Item> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('itemImage: $itemImage, ')
-          ..write('orderFrom: $orderFrom')
+          ..write('orderFrom: $orderFrom, ')
+          ..write('variantsJson: $variantsJson')
           ..write(')'))
         .toString();
   }
@@ -2090,6 +2128,7 @@ class Item extends DataClass implements Insertable<Item> {
     updatedAt,
     itemImage,
     orderFrom,
+    variantsJson,
   );
   @override
   bool operator ==(Object other) =>
@@ -2106,7 +2145,8 @@ class Item extends DataClass implements Insertable<Item> {
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.itemImage == this.itemImage &&
-          other.orderFrom == this.orderFrom);
+          other.orderFrom == this.orderFrom &&
+          other.variantsJson == this.variantsJson);
 }
 
 class ItemsCompanion extends UpdateCompanion<Item> {
@@ -2122,6 +2162,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
   final Value<DateTime> updatedAt;
   final Value<String> itemImage;
   final Value<String?> orderFrom;
+  final Value<String> variantsJson;
   final Value<int> rowid;
   const ItemsCompanion({
     this.id = const Value.absent(),
@@ -2136,6 +2177,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     this.updatedAt = const Value.absent(),
     this.itemImage = const Value.absent(),
     this.orderFrom = const Value.absent(),
+    this.variantsJson = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ItemsCompanion.insert({
@@ -2151,6 +2193,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     required DateTime updatedAt,
     this.itemImage = const Value.absent(),
     this.orderFrom = const Value.absent(),
+    this.variantsJson = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        userId = Value(userId),
@@ -2175,6 +2218,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     Expression<DateTime>? updatedAt,
     Expression<String>? itemImage,
     Expression<String>? orderFrom,
+    Expression<String>? variantsJson,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2190,6 +2234,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (itemImage != null) 'item_image': itemImage,
       if (orderFrom != null) 'order_from': orderFrom,
+      if (variantsJson != null) 'variants_json': variantsJson,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2207,6 +2252,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     Value<DateTime>? updatedAt,
     Value<String>? itemImage,
     Value<String?>? orderFrom,
+    Value<String>? variantsJson,
     Value<int>? rowid,
   }) {
     return ItemsCompanion(
@@ -2222,6 +2268,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
       updatedAt: updatedAt ?? this.updatedAt,
       itemImage: itemImage ?? this.itemImage,
       orderFrom: orderFrom ?? this.orderFrom,
+      variantsJson: variantsJson ?? this.variantsJson,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2265,6 +2312,9 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     if (orderFrom.present) {
       map['order_from'] = Variable<String>(orderFrom.value);
     }
+    if (variantsJson.present) {
+      map['variants_json'] = Variable<String>(variantsJson.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2286,6 +2336,7 @@ class ItemsCompanion extends UpdateCompanion<Item> {
           ..write('updatedAt: $updatedAt, ')
           ..write('itemImage: $itemImage, ')
           ..write('orderFrom: $orderFrom, ')
+          ..write('variantsJson: $variantsJson, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3758,6 +3809,7 @@ typedef $$ItemsTableCreateCompanionBuilder =
       required DateTime updatedAt,
       Value<String> itemImage,
       Value<String?> orderFrom,
+      Value<String> variantsJson,
       Value<int> rowid,
     });
 typedef $$ItemsTableUpdateCompanionBuilder =
@@ -3774,6 +3826,7 @@ typedef $$ItemsTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<String> itemImage,
       Value<String?> orderFrom,
+      Value<String> variantsJson,
       Value<int> rowid,
     });
 
@@ -3842,6 +3895,11 @@ class $$ItemsTableFilterComposer extends Composer<_$AppDatabase, $ItemsTable> {
 
   ColumnFilters<String> get orderFrom => $composableBuilder(
     column: $table.orderFrom,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get variantsJson => $composableBuilder(
+    column: $table.variantsJson,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3914,6 +3972,11 @@ class $$ItemsTableOrderingComposer
     column: $table.orderFrom,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get variantsJson => $composableBuilder(
+    column: $table.variantsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ItemsTableAnnotationComposer
@@ -3960,6 +4023,11 @@ class $$ItemsTableAnnotationComposer
 
   GeneratedColumn<String> get orderFrom =>
       $composableBuilder(column: $table.orderFrom, builder: (column) => column);
+
+  GeneratedColumn<String> get variantsJson => $composableBuilder(
+    column: $table.variantsJson,
+    builder: (column) => column,
+  );
 }
 
 class $$ItemsTableTableManager
@@ -4002,6 +4070,7 @@ class $$ItemsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String> itemImage = const Value.absent(),
                 Value<String?> orderFrom = const Value.absent(),
+                Value<String> variantsJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ItemsCompanion(
                 id: id,
@@ -4016,6 +4085,7 @@ class $$ItemsTableTableManager
                 updatedAt: updatedAt,
                 itemImage: itemImage,
                 orderFrom: orderFrom,
+                variantsJson: variantsJson,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -4032,6 +4102,7 @@ class $$ItemsTableTableManager
                 required DateTime updatedAt,
                 Value<String> itemImage = const Value.absent(),
                 Value<String?> orderFrom = const Value.absent(),
+                Value<String> variantsJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ItemsCompanion.insert(
                 id: id,
@@ -4046,6 +4117,7 @@ class $$ItemsTableTableManager
                 updatedAt: updatedAt,
                 itemImage: itemImage,
                 orderFrom: orderFrom,
+                variantsJson: variantsJson,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

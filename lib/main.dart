@@ -93,6 +93,14 @@ void main(List<String> args) async {
       });
     }
 
+    // Wire CachedNetworkImage to a Windows release–safe cache + HTTP client.
+    // After window show so a slow path_provider call cannot look like a hung app.
+    try {
+      await AppImageCacheManager.ensureInitialized();
+    } catch (e) {
+      debugPrint('⚠️ [INIT] AppImageCacheManager failed: $e');
+    }
+
     if (isKitchenDisplayWindow &&
         !kIsWeb &&
         Platform.isWindows &&

@@ -93,7 +93,7 @@ class SplashScreen extends StatelessWidget {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(20),
                         child: Image.asset(
-                          'assets/logo.jpeg',
+                          'assets/logo2.jpeg',
                           width: 120,
                           height: 120,
                           fit: BoxFit.cover,

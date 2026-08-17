@@ -87,7 +87,7 @@ class SidebarScrollableNav extends StatelessWidget {
                   ),
                 ),
               ),
-              if (StaffAccess.canAccessSales)
+              if (StaffAccess.canCreateSales)
                 _nav(
                   index: indices.createOrder,
                   label: loc.create_order,
@@ -99,7 +99,7 @@ class SidebarScrollableNav extends StatelessWidget {
                         : _inactive,
                   ),
                 ),
-              if (hasSeating)
+              if (hasSeating && StaffAccess.canAccessTables)
                 _nav(
                   index: indices.tables,
                   label: loc.tables,
@@ -319,11 +319,12 @@ class SidebarScrollableNav extends StatelessWidget {
           selected: routes.itemList,
           targetRoute: HomeMainRoutes.items,
         ),
-        SidebarChildNavItem(
-          label: loc.add_item,
-          selected: routes.addItem,
-          targetRoute: HomeMainRoutes.addItem,
-        ),
+        if (StaffAccess.canCreateProducts)
+          SidebarChildNavItem(
+            label: loc.add_item,
+            selected: routes.addItem,
+            targetRoute: HomeMainRoutes.addItem,
+          ),
       ],
     );
   }
@@ -393,7 +394,9 @@ class SidebarScrollableNav extends StatelessWidget {
         onStateChange();
         if (expanded &&
             !currentPath.startsWith(HomeMainRoutes.closedOrders) &&
-            !currentPath.startsWith(HomeMainRoutes.holdOrders)) {
+            !currentPath.startsWith(HomeMainRoutes.holdOrders) &&
+            !currentPath.startsWith(HomeMainRoutes.deletedOrders) &&
+            !currentPath.startsWith(HomeMainRoutes.stockSummary)) {
           Modular.to.navigate(HomeMainRoutes.closedOrders);
         }
       },
@@ -407,6 +410,16 @@ class SidebarScrollableNav extends StatelessWidget {
           label: loc.onHoldOrders,
           selected: routes.holdOrders,
           targetRoute: HomeMainRoutes.holdOrders,
+        ),
+        SidebarChildNavItem(
+          label: loc.deletedOrders,
+          selected: routes.deletedOrders,
+          targetRoute: HomeMainRoutes.deletedOrders,
+        ),
+        SidebarChildNavItem(
+          label: loc.stockSummary,
+          selected: routes.stockSummary,
+          targetRoute: HomeMainRoutes.stockSummary,
         ),
       ],
     );

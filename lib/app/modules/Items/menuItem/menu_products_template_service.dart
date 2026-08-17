@@ -1,9 +1,12 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
+import 'package:billkaro/app/services/download/download_notification_service.dart';
+import 'package:billkaro/app/services/download/file_download_service.dart';
 import 'package:billkaro/config/config.dart';
-import 'package:billkaro/utils/download_path_util.dart';
 import 'package:open_file/open_file.dart';
+import 'package:path/path.dart' as p;
 import 'package:syncfusion_flutter_xlsio/xlsio.dart' hide Column, Row, Border;
 
 /// Builds and saves the products Excel template / export files.
@@ -80,29 +83,46 @@ class MenuProductsTemplateService {
     }
   }
 
+  /// Saves workbook bytes via isolate. Retries with a unique name if the file is locked.
   static Future<String> _saveWorkbook(Workbook workbook, String fileName) async {
-    final bytes = workbook.saveAsStream();
+    final bytes = Uint8List.fromList(workbook.saveAsStream());
     workbook.dispose();
 
-    final saveDir = Directory(await DownloadPathUtil.resolveSaveDirectory());
-    if (!saveDir.existsSync()) {
-      saveDir.createSync(recursive: true);
+    try {
+      final file = await FileDownloadService.instance.saveBytes(
+        bytes: bytes,
+        fileName: fileName,
+        notify: false,
+      );
+      if (file != null) return file.path;
+    } on FileSystemException {
+      // Locked by Excel — fall through to unique name.
     }
 
-    var fullPath = '${saveDir.path}/$fileName';
-    try {
-      await File(fullPath).writeAsBytes(bytes, flush: true);
-    } on FileSystemException {
-      // The file is locked (e.g. still open in Excel on Windows),
-      // so save it under a unique name instead of failing.
-      final dotIndex = fileName.lastIndexOf('.');
-      final base = dotIndex == -1 ? fileName : fileName.substring(0, dotIndex);
-      final ext = dotIndex == -1 ? '' : fileName.substring(dotIndex);
-      fullPath =
-          '${saveDir.path}/${base}_${DateTime.now().millisecondsSinceEpoch}$ext';
-      await File(fullPath).writeAsBytes(bytes, flush: true);
+    final dotIndex = fileName.lastIndexOf('.');
+    final base = dotIndex == -1 ? fileName : fileName.substring(0, dotIndex);
+    final ext = dotIndex == -1 ? '' : fileName.substring(dotIndex);
+    final uniqueName =
+        '${base}_${DateTime.now().millisecondsSinceEpoch}$ext';
+
+    final file = await FileDownloadService.instance.saveBytes(
+      bytes: bytes,
+      fileName: uniqueName,
+      notify: false,
+    );
+    if (file == null) {
+      throw Exception('Failed to save workbook');
     }
-    return fullPath;
+    return file.path;
+  }
+
+  static Future<void> _notifyExcelSaved(String fullPath, String body) {
+    return DownloadNotificationService.instance.notifyComplete(
+      fileName: p.basename(fullPath),
+      filePath: fullPath,
+      title: 'Excel downloaded',
+      body: body,
+    );
   }
 
   static Future<void> downloadTemplate() async {
@@ -111,13 +131,8 @@ class MenuProductsTemplateService {
       showAppLoader();
       final workbook = buildTemplateWorkbook();
       final fullPath = await _saveWorkbook(workbook, templateFileName);
-
-      final openResult = await OpenFile.open(fullPath);
-      if (openResult.type == ResultType.done) {
-        showSuccess(description: loc.template_saved_opened);
-      } else {
-        showSuccess(description: loc.template_saved_to(fullPath));
-      }
+      await _notifyExcelSaved(fullPath, loc.excel_saved_to_downloads);
+      await OpenFile.open(fullPath);
     } catch (e) {
       showError(description: loc.failed_to_import_file_error(e.toString()));
     } finally {
@@ -136,12 +151,7 @@ class MenuProductsTemplateService {
     final fileName =
         'BillKaro_Products_${DateTime.now().millisecondsSinceEpoch}.xlsx';
     final fullPath = await _saveWorkbook(workbook, fileName);
-
-    showSuccess(description: loc.excel_saved_to_downloads);
-
-    final openResult = await OpenFile.open(fullPath);
-    if (openResult.type != ResultType.done) {
-      showSuccess(description: loc.template_saved_to(fullPath));
-    }
+    await _notifyExcelSaved(fullPath, loc.excel_saved_to_downloads);
+    await OpenFile.open(fullPath);
   }
 }

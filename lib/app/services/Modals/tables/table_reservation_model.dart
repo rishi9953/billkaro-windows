@@ -32,20 +32,69 @@ class TableReservationModel {
     return s == 'pending' || s == 'confirmed';
   }
 
+  static String _asString(dynamic value) {
+    if (value == null) return '';
+    return value.toString().trim();
+  }
+
+  /// Normalizes DATEONLY / ISO datetime values to `YYYY-MM-DD`.
+  static String asDateOnly(dynamic value) {
+    final raw = _asString(value);
+    if (raw.isEmpty) return '';
+    if (raw.length >= 10 && RegExp(r'^\d{4}-\d{2}-\d{2}').hasMatch(raw)) {
+      return raw.substring(0, 10);
+    }
+    final parsed = DateTime.tryParse(raw);
+    if (parsed == null) return raw;
+    return '${parsed.year.toString().padLeft(4, '0')}-'
+        '${parsed.month.toString().padLeft(2, '0')}-'
+        '${parsed.day.toString().padLeft(2, '0')}';
+  }
+
+  /// Normalizes times like `19:00:00` or `7:00 PM` to `HH:mm`.
+  static String asTimeHm(dynamic value) {
+    final raw = _asString(value);
+    if (raw.isEmpty) return '';
+    final match = RegExp(r'^(\d{1,2}):(\d{2})').firstMatch(raw);
+    if (match == null) return raw;
+    final hour = int.tryParse(match.group(1)!) ?? 0;
+    final minute = match.group(2)!;
+    return '${hour.toString().padLeft(2, '0')}:$minute';
+  }
+
   factory TableReservationModel.fromJson(Map<String, dynamic> json) {
+    final nestedTable = json['table'];
+    final nestedTableMap =
+        nestedTable is Map ? Map<String, dynamic>.from(nestedTable) : null;
+
     return TableReservationModel(
-      id: json['id'] as String,
-      outletId: json['outletId'] as String,
-      tableId: json['tableId'] as String,
-      tableNumber: json['tableNumber'] as String?,
-      customerName: json['customerName'] as String? ?? '',
-      customerPhone: json['customerPhone'] as String?,
+      id: _asString(json['id']),
+      outletId: _asString(json['outletId']),
+      tableId: _asString(json['tableId'] ?? nestedTableMap?['id']),
+      tableNumber: () {
+        final direct = _asString(json['tableNumber']);
+        if (direct.isNotEmpty) return direct;
+        final nested = _asString(nestedTableMap?['tableNumber']);
+        return nested.isEmpty ? null : nested;
+      }(),
+      customerName: _asString(json['customerName']),
+      customerPhone: () {
+        final phone = _asString(json['customerPhone']);
+        return phone.isEmpty ? null : phone;
+      }(),
       partySize: (json['partySize'] as num?)?.toInt() ?? 2,
-      reservationDate: json['reservationDate'] as String? ?? '',
-      reservationTime: json['reservationTime'] as String? ?? '',
-      status: json['status'] as String? ?? 'confirmed',
-      source: json['source'] as String? ?? 'pos',
-      notes: json['notes'] as String?,
+      reservationDate: asDateOnly(json['reservationDate']),
+      reservationTime: asTimeHm(json['reservationTime']),
+      status: _asString(json['status']).isEmpty
+          ? 'confirmed'
+          : _asString(json['status']),
+      source: _asString(json['source']).isEmpty
+          ? 'pos'
+          : _asString(json['source']),
+      notes: () {
+        final notes = _asString(json['notes']);
+        return notes.isEmpty ? null : notes;
+      }(),
     );
   }
 }

@@ -143,6 +143,32 @@ abstract class ApiClient {
     @Body() BulkDeleteCategoriesRequest request,
   );
 
+  // -------------------- RAW MATERIAL CATEGORIES --------------------
+
+  @GET('$outlets/{outletId}/raw-material-categories')
+  Future<dynamic> getRawMaterialCategories(
+    @Path('outletId') String outletId,
+  );
+
+  @POST('$outlets/{outletId}/raw-material-categories')
+  Future<dynamic> addRawMaterialCategory(
+    @Path('outletId') String outletId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @PATCH('$outlets/{outletId}/raw-material-categories/{id}')
+  Future<dynamic> updateRawMaterialCategory(
+    @Path('outletId') String outletId,
+    @Path('id') String id,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @DELETE('$outlets/{outletId}/raw-material-categories/{id}')
+  Future<dynamic> deleteRawMaterialCategory(
+    @Path('outletId') String outletId,
+    @Path('id') String id,
+  );
+
   // -------------------- REGULAR CUSTOMER --------------------
 
   @POST('$outlets/{outletId}/regular-customers')
@@ -222,6 +248,21 @@ abstract class ApiClient {
   Future<dynamic> updateOrder(
     @Path('id') String id,
     @Body() Map<String, dynamic> orderRequest,
+  );
+
+  @PATCH('$orders/{id}/soft-delete')
+  Future<dynamic> softDeleteOrder(@Path('id') String id);
+
+  @PATCH('$orders/{id}/restore')
+  Future<dynamic> restoreOrder(@Path('id') String id);
+
+  @GET(orders)
+  Future<OrderResponse> getOrdersByStatus(
+    @Query('userId') String userId,
+    @Query('outletId') String outletId,
+    @Query('page') int? page,
+    @Query('limit') int? limit,
+    @Query('status') String status,
   );
 
   @DELETE('$orders/{id}')

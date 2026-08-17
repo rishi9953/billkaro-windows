@@ -3,18 +3,20 @@ import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_dia
 import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_drawer_scope.dart';
 import 'package:billkaro/app/services/Modals/inventory/inventory_models.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_access.dart';
 
 extension PurchaseOrderUiActions on PurchaseOrderController {
-  void openCreateDrawer({bool fromLowStock = false}) {
+  void openCreateDrawer() {
+    if (!StaffAccess.ensure(StaffAccess.canAdjustStock)) return;
     showCreatePurchaseOrderDialog(
       this,
-      fromLowStock: fromLowStock,
       drawerTopInset: PurchaseOrderController.drawerTopInset,
       drawerTabId: currentTabId,
     );
   }
 
   void openEditDrawer(PurchaseOrderData order) {
+    if (!StaffAccess.ensure(StaffAccess.canAdjustStock)) return;
     showEditPurchaseOrderDialog(
       this,
       order,

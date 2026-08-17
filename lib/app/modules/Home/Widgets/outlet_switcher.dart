@@ -2,9 +2,6 @@ import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/services/Modals/login_response.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/staff_access.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
 /// App bar control that opens an outlet list as a dropdown menu.
 class OutletSwitcherButton extends StatefulWidget {
@@ -20,6 +17,7 @@ class _OutletSwitcherButtonState extends State<OutletSwitcherButton> {
   final GlobalKey _anchorKey = GlobalKey();
 
   static const String _manageOutletsValue = '__manage_outlets__';
+  static const String _ownerPanelValue = '__owner_panel__';
 
   AppLocalizations get _loc => AppLocalizations.of(context)!;
 
@@ -66,6 +64,12 @@ class _OutletSwitcherButtonState extends State<OutletSwitcherButton> {
     );
 
     if (!mounted || result == null) return;
+
+    if (result == _ownerPanelValue) {
+      if (StaffAccess.isStaffSession) return;
+      Get.toNamed(AppRoute.ownerPanel);
+      return;
+    }
 
     if (result == _manageOutletsValue) {
       if (StaffAccess.isStaffSession) return;
@@ -197,37 +201,23 @@ class _OutletSwitcherButtonState extends State<OutletSwitcherButton> {
     if (!StaffAccess.isStaffSession) {
       items.add(
         PopupMenuItem<String>(
+          value: _ownerPanelValue,
+          padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
+          height: 52,
+          child: _MenuActionTile(
+            icon: Icons.dashboard_customize_outlined,
+            label: _loc.owner_panel_menu,
+          ),
+        ),
+      );
+      items.add(
+        PopupMenuItem<String>(
           value: _manageOutletsValue,
           padding: const EdgeInsets.fromLTRB(10, 4, 10, 10),
           height: 52,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-            decoration: BoxDecoration(
-              color: AppColor.primary.withOpacity(0.06),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColor.primary.withOpacity(0.12)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.tune_rounded, size: 17, color: AppColor.primary),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    _loc.home_manage_outlets,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppColor.primary,
-                    ),
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 12,
-                  color: AppColor.primary.withOpacity(0.8),
-                ),
-              ],
-            ),
+          child: _MenuActionTile(
+            icon: Icons.tune_rounded,
+            label: _loc.home_manage_outlets,
           ),
         ),
       );
@@ -320,6 +310,46 @@ class _OutletSwitcherButtonState extends State<OutletSwitcherButton> {
   }
 }
 
+class _MenuActionTile extends StatelessWidget {
+  const _MenuActionTile({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: AppColor.primary.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColor.primary.withOpacity(0.12)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 17, color: AppColor.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColor.primary,
+              ),
+            ),
+          ),
+          Icon(
+            Icons.arrow_forward_ios_rounded,
+            size: 12,
+            color: AppColor.primary.withOpacity(0.8),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _OutletLogoAvatar extends StatelessWidget {
   const _OutletLogoAvatar({
     required this.logoUrl,
@@ -365,7 +395,7 @@ class _OutletLogoAvatar extends StatelessWidget {
           borderRadius: BorderRadius.circular(borderRadius),
         ),
         child: _hasLogo
-            ? CachedNetworkImage(
+            ? AppCachedNetworkImage(
                 imageUrl: resolvedMediaUrl(logoUrl!.trim()),
                 width: size,
                 height: size,

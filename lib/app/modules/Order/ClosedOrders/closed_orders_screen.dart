@@ -9,6 +9,7 @@ import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/date_util.dart';
 import 'package:flutter_modular/flutter_modular.dart';
+import 'package:billkaro/utils/staff_access.dart';
 
 class ClosedOrdersScreen extends StatelessWidget {
   const ClosedOrdersScreen({super.key});
@@ -55,7 +56,8 @@ class ClosedOrdersScreen extends StatelessWidget {
         ],
       ),
       body: const ClosedOrdersContent(),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: StaffAccess.canCreateSales
+          ? FloatingActionButton.extended(
         onPressed: () => Modular.to.navigate(HomeMainRoutes.createOrder),
         backgroundColor: AppColor.secondaryPrimary,
         foregroundColor: AppColor.white,
@@ -65,7 +67,8 @@ class ClosedOrdersScreen extends StatelessWidget {
           loc.add_Order,
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
-      ),
+      )
+          : null,
     );
   }
 
@@ -73,7 +76,9 @@ class ClosedOrdersScreen extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(right: 12),
       child: TextButton.icon(
-        onPressed: () => Modular.to.navigate(HomeMainRoutes.createOrder),
+        onPressed: StaffAccess.canCreateSales
+            ? () => Modular.to.navigate(HomeMainRoutes.createOrder)
+            : null,
         icon: const Icon(Icons.add, color: Colors.white),
         label: Text(
           loc.add_Order,
@@ -758,7 +763,7 @@ class _OrderCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    // Print Button
+                    // Print + Delete
                     Tooltip(
                       message: loc.print,
                       child: IconButton(
@@ -774,12 +779,66 @@ class _OrderCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (StaffAccess.canUpdateSales) ...[
+                      const SizedBox(width: 8),
+                      Tooltip(
+                        message: loc.delete_order,
+                        child: IconButton(
+                          onPressed: () => _confirmDelete(order, loc),
+                          icon: const Icon(Icons.delete_outline, size: 20),
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.red.withOpacity(0.10),
+                            foregroundColor: Colors.red,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding: const EdgeInsets.all(10),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _confirmDelete(OrderModel order, AppLocalizations loc) {
+    if (!StaffAccess.ensure(StaffAccess.canUpdateSales)) return;
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          loc.delete_order,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          loc.delete_order_confirm_message,
+          style: const TextStyle(fontSize: 15, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(loc.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              if (Get.isRegistered<ClosedOrdersController>()) {
+                Get.find<ClosedOrdersController>().softDeleteOrder(order);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(loc.delete),
+          ),
+        ],
       ),
     );
   }

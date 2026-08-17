@@ -1,10 +1,12 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
+import 'package:billkaro/app/utils/pos_cart_line.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/date_util.dart';
-import 'package:billkaro/utils/download_path_util.dart';
+import 'package:billkaro/app/services/download/download_notification_service.dart';
+import 'package:billkaro/app/services/download/file_download_service.dart';
 import 'package:billkaro/utils/extensions.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:path_provider/path_provider.dart';
@@ -13,6 +15,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class InvoicePreviewController extends BaseController {
   final phone = ''.obs;
@@ -21,6 +24,7 @@ class InvoicePreviewController extends BaseController {
   final invoiceNo = ''.obs;
   var orderFrom = ''.obs;
   var customerName = ''.obs;
+  var customerPhone = ''.obs;
   var paymentMode = ''.obs;
   pw.Document pdf = pw.Document();
 
@@ -177,7 +181,10 @@ class InvoicePreviewController extends BaseController {
                         pw.Expanded(
                           flex: 3,
                           child: pw.Text(
-                            item.itemName ?? '',
+                            PosCartLine.invoiceLineName(
+                              itemName: item.itemName,
+                              variantName: item.variantName,
+                            ),
                             style: const pw.TextStyle(fontSize: 12),
                           ),
                         ),
@@ -381,12 +388,23 @@ class InvoicePreviewController extends BaseController {
   }
 
   Future<void> downloadPdf() async {
+    const notificationId =
+        DownloadNotificationService.invoiceDownloadNotificationId;
     try {
-      await _withLoader(() async {
-        _buildPdfDocument();
-        await _savePdf(pdf);
-      });
+      await DownloadNotificationService.instance.notifyProgress(
+        notificationId: notificationId,
+        title: 'Invoice downloading',
+        body: 'Preparing your invoice PDF…',
+      );
+
+      _buildPdfDocument();
+      await _savePdf(pdf, notificationId: notificationId);
     } catch (e) {
+      await DownloadNotificationService.instance.notifyFailed(
+        notificationId: notificationId,
+        title: 'Download failed',
+        body: 'Failed to download invoice',
+      );
       showError(description: 'Failed to download PDF: $e');
     }
   }
@@ -421,6 +439,7 @@ class InvoicePreviewController extends BaseController {
       serviceCharge.value = 0.0;
       orderFrom.value = '';
       customerName.value = '';
+      customerPhone.value = '';
       paymentMode.value = '';
       _generateQRCode();
       return;
@@ -432,6 +451,7 @@ class InvoicePreviewController extends BaseController {
     serviceCharge.value = invoice.serviceCharge ?? 0.0;
     orderFrom.value = (map?['orderFrom'] ?? '').toString();
     customerName.value = invoice.customerName ?? '';
+    customerPhone.value = invoice.phoneNumber ?? '';
     paymentMode.value = invoice.paymentReceivedIn ?? '';
     _generateQRCode();
   }
@@ -571,29 +591,134 @@ class InvoicePreviewController extends BaseController {
     }
   }
 
-  Future<void> _savePdf(pw.Document pdf) async {
+  Future<File?> _savePdf(
+    pw.Document pdf, {
+    bool notify = true,
+    int? notificationId,
+  }) async {
     try {
       final bytes = await pdf.save();
       if (bytes.isEmpty) {
         showError(description: 'PDF generation failed - empty document');
-        return;
+        return null;
       }
-      final dir = await DownloadPathUtil.resolveSaveDirectory(
-        preferredPath: appPref.downloadPath,
-      );
-      await Directory(dir).create(recursive: true);
+
       final name = _sanitizeFileName(invoiceNo.value);
-      final filePath =
-          '$dir/invoice_${name}_${DateTime.now().millisecondsSinceEpoch}.pdf';
-      final file = File(filePath);
-      await file.writeAsBytes(bytes, flush: true);
-      if (await file.exists()) {
-        showSuccess(description: 'Invoice saved to Downloads folder');
-      } else {
+      final fileName =
+          'invoice_${name}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+
+      final file = await FileDownloadService.instance.saveBytes(
+        bytes: bytes,
+        fileName: fileName,
+        preferredDirectory: appPref.downloadPath,
+        notify: notify,
+        notificationId: notificationId,
+        notificationTitle: 'Invoice downloaded',
+        notificationBody: 'Invoice saved to Downloads folder',
+      );
+
+      if (file == null) {
         showError(description: 'Failed to save PDF file');
       }
+      return file;
     } catch (e) {
       showError(description: 'Failed to save PDF: $e');
+      return null;
+    }
+  }
+
+  Future<void> openWhatsApp(String phoneNumber, {String? message}) async {
+    try {
+      dismissAllAppLoader();
+      final digits = phoneNumber.replaceAll(RegExp(r'\D'), '');
+      final phone = digits.length >= 10
+          ? '91${digits.substring(digits.length - 10)}'
+          : '';
+      if (phone.isEmpty) {
+        showError(description: 'Customer phone number is missing in invoice');
+        return;
+      }
+
+      final invoiceMessage =
+          message ??
+          'Invoice ${invoiceNo.value}\n'
+              'Customer: ${customerName.value}\n'
+              'Total: Rs${totalAmount.toStringAsFixed(2)}\n'
+              'Date: ${date.value} ${time.value}';
+
+      File? pdfFile;
+      await _withLoader(() async {
+        _buildPdfDocument();
+        pdfFile = await _savePdf(pdf, notify: true);
+      });
+
+      if (pdfFile == null) return;
+
+      // Share the downloaded PDF (user can pick WhatsApp).
+      try {
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(pdfFile!.path, mimeType: 'application/pdf')],
+            text: invoiceMessage,
+            subject: 'Invoice ${invoiceNo.value}',
+            title: 'Invoice ${invoiceNo.value}',
+          ),
+        );
+      } on UnimplementedError {
+        await Printing.sharePdf(
+          bytes: await pdfFile!.readAsBytes(),
+          filename: pdfFile!.uri.pathSegments.last,
+        );
+      }
+
+      // Open WhatsApp chat for the invoice phone number.
+      final encodedMessage = Uri.encodeComponent(invoiceMessage);
+      final webUri = Uri.parse(
+        'https://web.whatsapp.com/send?phone=$phone&text=$encodedMessage',
+      );
+      final waMeUri = Uri.parse('https://wa.me/$phone?text=$encodedMessage');
+      final mobileUri = Uri.parse(
+        'whatsapp://send?phone=$phone&text=$encodedMessage',
+      );
+
+      bool launched = false;
+      if (Platform.isAndroid || Platform.isIOS) {
+        launched = await launchUrl(
+          mobileUri,
+          mode: LaunchMode.externalNonBrowserApplication,
+        );
+        if (!launched) {
+          launched = await launchUrl(
+            waMeUri,
+            mode: LaunchMode.externalApplication,
+          );
+        }
+      } else if (Platform.isWindows) {
+        launched = await launchUrl(
+          webUri,
+          mode: LaunchMode.externalApplication,
+        );
+        if (!launched) {
+          launched = await launchUrl(
+            waMeUri,
+            mode: LaunchMode.externalApplication,
+          );
+        }
+      } else {
+        launched = await launchUrl(
+          waMeUri,
+          mode: LaunchMode.externalApplication,
+        );
+      }
+
+      if (!launched) {
+        showError(description: 'Could not open WhatsApp');
+      }
+    } catch (e) {
+      showError(description: 'Failed to share invoice on WhatsApp: $e');
+    } finally {
+      dismissAllAppLoader();
+      if (Get.isDialogOpen == true) Get.back();
     }
   }
 

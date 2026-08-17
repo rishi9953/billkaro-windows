@@ -15,11 +15,14 @@ import 'package:billkaro/app/modules/KOTHistory/kot_history_screen.dart';
 import 'package:billkaro/app/modules/Main/main_screen.dart';
 import 'package:billkaro/app/modules/Menu/menu_screen.dart';
 import 'package:billkaro/app/modules/Order/ClosedOrders/closed_orders_screen.dart';
+import 'package:billkaro/app/modules/Order/DeletedOrders/deleted_orders_screen.dart';
+import 'package:billkaro/app/modules/Order/StockSummary/stock_summary_screen.dart';
 import 'package:billkaro/app/modules/Order/HoldOrders/hold_orders_screen.dart';
 import 'package:billkaro/app/modules/Tables/table_screen.dart';
 import 'package:billkaro/app/modules/OrderPrefrences/order_prefrences_screen.dart';
 import 'package:billkaro/app/modules/Outlets/outlet_controller.dart';
 import 'package:billkaro/app/modules/Outlets/outlet_screen.dart';
+import 'package:billkaro/app/modules/OwnerPanel/owner_panel_screen.dart';
 import 'package:billkaro/app/modules/Primary_contact/primary_contact_screen.dart';
 import 'package:billkaro/app/modules/Printer/printer_screen.dart';
 import 'package:billkaro/app/modules/Regular%20customer/AddRegularCustomer/addregular_customer_screen.dart';
@@ -75,6 +78,8 @@ abstract class AppRoute {
   static const addStaff = '/addStaff';
   static const holdOrders = '/holdOrders';
   static const closedOrders = '/closedOrders';
+  static const deletedOrders = '/deletedOrders';
+  static const stockSummary = '/stockSummary';
   static const pdfPreview = '/pdfPreview';
   static const addCategory = '/addCategory';
   static const regularCustomer = '/regularCustomer';
@@ -85,6 +90,7 @@ abstract class AppRoute {
   static const kotHistory = '/kotHistory';
   static const tables = '/tables';
   static const createOutlet = '/createOutlet';
+  static const ownerPanel = '/ownerPanel';
   static const subscriptionReview = '/subscriptionReview';
   static const subscriptionForm = '/subscriptionForm';
 
@@ -194,6 +200,16 @@ abstract class AppRoute {
       transition: transition,
     ),
     GetPage(
+      name: deletedOrders,
+      page: () => const DeletedOrdersScreen(),
+      transition: transition,
+    ),
+    GetPage(
+      name: stockSummary,
+      page: () => const StockSummaryScreen(),
+      transition: transition,
+    ),
+    GetPage(
       name: pdfPreview,
       page: InvoicePreviewScreen.new,
       transition: transition,
@@ -243,6 +259,11 @@ abstract class AppRoute {
       page: CreateOutletScreen.new,
       transition: transition,
       binding: BindingsBuilder(() => Get.lazyPut(() => CreateOutletController())),
+    ),
+    GetPage(
+      name: ownerPanel,
+      page: OwnerPanelScreen.new,
+      transition: transition,
     ),
     GetPage(
       name: subscriptionReview,

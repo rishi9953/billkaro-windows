@@ -3,6 +3,7 @@ import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/Home/payment_controller.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_item_controller.dart';
 import 'package:billkaro/app/modules/Order/ClosedOrders/closed_orders_controller.dart';
+import 'package:billkaro/app/modules/Order/DeletedOrders/deleted_orders_controller.dart';
 import 'package:billkaro/app/modules/Order/HoldOrders/hold_orders_controller.dart';
 import 'package:billkaro/app/modules/Reports/ItemReports/item_reports_controller.dart';
 import 'package:billkaro/app/modules/Reports/OrderReports/order_reports_controller.dart';
@@ -25,6 +26,11 @@ Future<void> refreshControllersAfterOnlineSync() async {
   if (Get.isRegistered<HoldOrdersController>()) {
     futures.add(
       Get.find<HoldOrdersController>().getOrderList(forceApiRefresh: true),
+    );
+  }
+  if (Get.isRegistered<DeletedOrdersController>()) {
+    futures.add(
+      Get.find<DeletedOrdersController>().getOrderList(forceApiRefresh: true),
     );
   }
   if (Get.isRegistered<ClosedOrdersController>()) {

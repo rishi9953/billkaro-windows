@@ -1,6 +1,7 @@
 import 'package:billkaro/app/services/Modals/login_response.dart';
 import 'package:billkaro/app/services/kds/kds_realtime_service.dart';
 import 'package:billkaro/app/services/session/session_realtime_service.dart';
+import 'package:billkaro/app/services/wallet/wallet_realtime_service.dart';
 import 'package:billkaro/app/services/notification/app_background_notification_service.dart';
 import 'package:billkaro/app/services/notification/app_notification_store.dart';
 import 'package:billkaro/app/services/notification/kitchen_bump_monitor.dart';
@@ -86,6 +87,7 @@ class HomeMainController extends BaseController {
     final outletId = appPref.selectedOutlet?.id;
     if (outletId != null) {
       KdsRealtimeService.instance.connect(outletId);
+      WalletRealtimeService.instance.connect(outletId);
     }
     final token = appPref.token;
     if (token.isNotEmpty) {

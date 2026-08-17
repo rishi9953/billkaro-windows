@@ -19,6 +19,8 @@ import 'package:billkaro/app/modules/Language/language_screen.dart';
 import 'package:billkaro/app/modules/Menu/menu_screen.dart';
 import 'package:billkaro/app/modules/Notifications/app_notifications_screen.dart';
 import 'package:billkaro/app/modules/Order/ClosedOrders/closed_orders_screen.dart';
+import 'package:billkaro/app/modules/Order/DeletedOrders/deleted_orders_screen.dart';
+import 'package:billkaro/app/modules/Order/StockSummary/stock_summary_screen.dart';
 import 'package:billkaro/app/modules/Order/HoldOrders/hold_orders_screen.dart';
 import 'package:billkaro/app/modules/OrderPrefrences/order_prefrences_screen.dart';
 import 'package:billkaro/app/modules/Regular%20customer/AddRegularCustomer/addregular_customer_screen.dart';
@@ -45,6 +47,11 @@ import 'package:flutter_modular/flutter_modular.dart';
 
 Widget _staffGatedRoute({required bool allowed, required Widget child}) {
   return _StaffGatedRoute(allowed: allowed, child: child);
+}
+
+bool _isEditRouteArgs() {
+  final args = Modular.args.data;
+  return args is Map && args['isEdit'] == true;
 }
 
 class _StaffGatedRoute extends StatefulWidget {
@@ -89,11 +96,48 @@ class HomeMainModule extends Module {
         ChildRoute(HomeMainRoutes.home, child: (_) => HomeScreen()),
         ChildRoute(
           HomeMainRoutes.closedOrders,
-          child: (_) => const ClosedOrdersScreen(),
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canAccessSales,
+            child: const ClosedOrdersScreen(),
+          ),
         ),
-        ChildRoute(HomeMainRoutes.holdOrders, child: (_) => HoldOrdersScreen()),
-        ChildRoute(HomeMainRoutes.items, child: (_) => MenuItemScreen()),
-        ChildRoute(HomeMainRoutes.createOrder, child: (_) => AddOrderScreen()),
+        ChildRoute(
+          HomeMainRoutes.holdOrders,
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canAccessSales,
+            child: HoldOrdersScreen(),
+          ),
+        ),
+        ChildRoute(
+          HomeMainRoutes.deletedOrders,
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canAccessSales,
+            child: const DeletedOrdersScreen(),
+          ),
+        ),
+        ChildRoute(
+          HomeMainRoutes.stockSummary,
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canAccessSales,
+            child: const StockSummaryScreen(),
+          ),
+        ),
+        ChildRoute(
+          HomeMainRoutes.items,
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canAccessProducts,
+            child: MenuItemScreen(),
+          ),
+        ),
+        ChildRoute(
+          HomeMainRoutes.createOrder,
+          child: (_) => _staffGatedRoute(
+            allowed: _isEditRouteArgs()
+                ? StaffAccess.canUpdateSales
+                : StaffAccess.canCreateSales,
+            child: AddOrderScreen(),
+          ),
+        ),
         ChildRoute(
           HomeMainRoutes.reports,
           child: (_) => _staffGatedRoute(
@@ -102,7 +146,15 @@ class HomeMainModule extends Module {
           ),
         ),
         ChildRoute(HomeMainRoutes.tables, child: (_) => TableScreen()),
-        ChildRoute(HomeMainRoutes.addItem, child: (_) => AddMenuItemScreen()),
+        ChildRoute(
+          HomeMainRoutes.addItem,
+          child: (_) => _staffGatedRoute(
+            allowed: _isEditRouteArgs()
+                ? StaffAccess.canUpdateProducts
+                : StaffAccess.canCreateProducts,
+            child: AddMenuItemScreen(),
+          ),
+        ),
         ChildRoute(
           HomeMainRoutes.inventory,
           child: (_) => _staffGatedRoute(
@@ -119,7 +171,10 @@ class HomeMainModule extends Module {
         ),
         ChildRoute(
           HomeMainRoutes.businessOverview,
-          child: (_) => BusinessOverviewScreen(),
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canViewDashboardInsights,
+            child: BusinessOverviewScreen(),
+          ),
         ),
         ChildRoute(HomeMainRoutes.kotHistory, child: (_) => KotHistoryScreen()),
         ChildRoute(
@@ -157,19 +212,33 @@ class HomeMainModule extends Module {
         ),
         ChildRoute(
           HomeMainRoutes.customers,
-          child: (_) => CustomerListScreen(),
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canAccessCustomers,
+            child: CustomerListScreen(),
+          ),
         ),
         ChildRoute(HomeMainRoutes.printer, child: (_) => PrinterScreen2()),
         ChildRoute(
           HomeMainRoutes.staff,
-          child: (_) => const StaffDetailsScreen(),
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canManageStaff,
+            child: const StaffDetailsScreen(),
+          ),
         ),
         ChildRoute(HomeMainRoutes.menu, child: (_) => MenuScreen()),
         ChildRoute(
           HomeMainRoutes.profile,
           child: (_) => BusinessDetailsScreen(),
         ),
-        ChildRoute(HomeMainRoutes.category, child: (_) => AddCategoryScreen()),
+        ChildRoute(
+          HomeMainRoutes.category,
+          child: (_) => _staffGatedRoute(
+            allowed: _isEditRouteArgs()
+                ? StaffAccess.canUpdateCategories
+                : StaffAccess.canCreateCategories,
+            child: AddCategoryScreen(),
+          ),
+        ),
         ChildRoute(
           HomeMainRoutes.orderSettings,
           child: (_) => OrderPreferencesScreen(),
@@ -180,25 +249,48 @@ class HomeMainModule extends Module {
         ),
         ChildRoute(
           HomeMainRoutes.customersDetails,
-          child: (_) => CustomerDetailsScreen(),
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canAccessCustomers,
+            child: CustomerDetailsScreen(),
+          ),
         ),
         ChildRoute(
           HomeMainRoutes.addRegularCustomer,
-          child: (_) => AddRegularCustomerScreen(),
+          child: (_) => _staffGatedRoute(
+            allowed: _isEditRouteArgs()
+                ? StaffAccess.canUpdateCustomers
+                : StaffAccess.canCreateCustomers,
+            child: AddRegularCustomerScreen(),
+          ),
         ),
         ChildRoute(
           HomeMainRoutes.addStaffScreen,
-          child: (_) => const AddStaffScreen(),
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canManageStaff,
+            child: const AddStaffScreen(),
+          ),
         ),
         ChildRoute(
           HomeMainRoutes.staffActivityScreen,
-          child: (_) => const StaffActivityScreen(),
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canManageStaff,
+            child: const StaffActivityScreen(),
+          ),
         ),
         ChildRoute(
           HomeMainRoutes.whatsaapMarketing,
-          child: (_) => WhatsappMarketingScreen(),
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canUseWhatsAppMarketing,
+            child: WhatsappMarketingScreen(),
+          ),
         ),
-        ChildRoute(HomeMainRoutes.settings, child: (_) => AppSettingsScreen()),
+        ChildRoute(
+          HomeMainRoutes.settings,
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canManageSettings,
+            child: AppSettingsScreen(),
+          ),
+        ),
         ChildRoute(
           HomeMainRoutes.notifications,
           child: (_) => AppNotificationsScreen(),
@@ -209,7 +301,10 @@ class HomeMainModule extends Module {
         ),
         ChildRoute(
           HomeMainRoutes.subscriptions,
-          child: (_) => SubscriptionScreen(),
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canManageSubscriptions,
+            child: SubscriptionScreen(),
+          ),
         ),
         ChildRoute(
           HomeMainRoutes.wallet,
@@ -221,11 +316,17 @@ class HomeMainModule extends Module {
 
         ChildRoute(
           HomeMainRoutes.subscriptionForm,
-          child: (_) => SubscriptionFormScreen(),
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canManageSubscriptions,
+            child: SubscriptionFormScreen(),
+          ),
         ),
         ChildRoute(
           HomeMainRoutes.subscriptionReview,
-          child: (_) => SubscriptionReviewScreen(),
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canManageSubscriptions,
+            child: SubscriptionReviewScreen(),
+          ),
         ),
       ],
     );

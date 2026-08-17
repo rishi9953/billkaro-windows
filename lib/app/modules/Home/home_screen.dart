@@ -15,7 +15,6 @@ import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/kitchen_display_browser.dart';
 import 'package:billkaro/utils/staff_access.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:flutter/material.dart' as m;
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:showcaseview/showcaseview.dart';
 
@@ -249,79 +248,84 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         },
       ),
-      floatingActionButton: Tooltip(
-        message: loc.home_ai_voice_add_items,
-        child: Material(
-          elevation: 8,
-          shadowColor: const Color(0xFF8B5CF6).withOpacity(0.5),
-          borderRadius: BorderRadius.circular(20),
-          child: InkWell(
-            onTap: () {
-              final appPref = Get.find<AppPref>();
-              if (!hasTrialOrSubscription(appPref)) {
-                checkSubscription();
-              } else {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.white,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(20),
-                    ),
-                  ),
-                  builder: (_) => const VoiceAddMenuItemsBottomSheet(),
-                );
-              }
-            },
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF22D3EE), // cyan
-                    Color(0xFF8B5CF6), // purple
-                    Color(0xFFEC4899), // pink
-                  ],
-                  stops: [0.0, 0.5, 1.0],
-                ),
+      floatingActionButton: StaffAccess.canCreateProducts
+          ? Tooltip(
+              message: loc.home_ai_voice_add_items,
+              child: Material(
+                elevation: 8,
+                shadowColor: const Color(0xFF8B5CF6).withOpacity(0.5),
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF22D3EE).withOpacity(0.4),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                  BoxShadow(
-                    color: const Color(0xFF8B5CF6).withOpacity(0.35),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: const Stack(
-                alignment: Alignment.center,
-                children: [
-                  Icon(Icons.mic, color: Colors.white, size: 28),
-                  Positioned(
-                    top: 8,
-                    right: 10,
-                    child: Icon(
-                      Icons.auto_awesome,
-                      color: Colors.white,
-                      size: 14,
+                child: InkWell(
+                  onTap: () {
+                    if (!StaffAccess.ensure(StaffAccess.canCreateProducts)) {
+                      return;
+                    }
+                    final appPref = Get.find<AppPref>();
+                    if (!hasTrialOrSubscription(appPref)) {
+                      checkSubscription();
+                    } else {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.white,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(20),
+                          ),
+                        ),
+                        builder: (_) => const VoiceAddMenuItemsBottomSheet(),
+                      );
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color(0xFF22D3EE), // cyan
+                          Color(0xFF8B5CF6), // purple
+                          Color(0xFFEC4899), // pink
+                        ],
+                        stops: [0.0, 0.5, 1.0],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF22D3EE).withOpacity(0.4),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                        BoxShadow(
+                          color: const Color(0xFF8B5CF6).withOpacity(0.35),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: const Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Icon(Icons.mic, color: Colors.white, size: 28),
+                        Positioned(
+                          top: 8,
+                          right: 10,
+                          child: Icon(
+                            Icons.auto_awesome,
+                            color: Colors.white,
+                            size: 14,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
-        ),
-      ),
+            )
+          : null,
     );
   }
 
@@ -607,34 +611,65 @@ class _HomeScreenState extends State<HomeScreen> {
             controller.selectedOutlet.value;
             final showTables = HomeMainRoutes.outletShowsTables();
             final actions = <Map<String, dynamic>>[
-              {
-                'icon': Icons.check_circle_outline,
-                'label': loc.closedOrders,
-                'onTap': () {
-                  Modular.to.pushNamed(HomeMainRoutes.closedOrders);
+              if (StaffAccess.canAccessSales)
+                {
+                  'icon': Icons.check_circle_outline,
+                  'label': loc.closedOrders,
+                  'onTap': () {
+                    Modular.to.pushNamed(HomeMainRoutes.closedOrders);
+                  },
                 },
-              },
-              {
-                'icon': Icons.schedule_outlined,
-                'label': loc.onHoldOrders,
-                'onTap': () => Modular.to.pushNamed(HomeMainRoutes.holdOrders),
-              },
-              if (showTables)
+              if (StaffAccess.canAccessSales)
+                {
+                  'icon': Icons.schedule_outlined,
+                  'label': loc.onHoldOrders,
+                  'onTap': () =>
+                      Modular.to.pushNamed(HomeMainRoutes.holdOrders),
+                },
+              if (StaffAccess.canCreateSales)
+                {
+                  'icon': Icons.point_of_sale_outlined,
+                  'label': loc.create_order,
+                  'onTap': () =>
+                      Modular.to.navigate(HomeMainRoutes.createOrder),
+                },
+              if (showTables && StaffAccess.canAccessTables)
                 {
                   'icon': Icons.table_restaurant_outlined,
                   'label': loc.tables,
                   'onTap': () => Modular.to.navigate(HomeMainRoutes.tables),
                 },
-              {
-                'icon': Icons.add_shopping_cart_outlined,
-                'label': loc.addItems,
-                'onTap': () => Modular.to.pushNamed(HomeMainRoutes.addItem),
-              },
+              if (StaffAccess.canCreateProducts)
+                {
+                  'icon': Icons.add_shopping_cart_outlined,
+                  'label': loc.addItems,
+                  'onTap': () => Modular.to.pushNamed(HomeMainRoutes.addItem),
+                },
               if (StaffAccess.canViewInventory)
                 {
                   'icon': Icons.inventory_2_outlined,
                   'label': loc.inventory,
-                  'onTap': () => Modular.to.pushNamed(HomeMainRoutes.inventory),
+                  'onTap': () =>
+                      Modular.to.pushNamed(HomeMainRoutes.inventory),
+                },
+              if (StaffAccess.canAccessCustomers)
+                {
+                  'icon': Icons.people_outline,
+                  'label': loc.customers,
+                  'onTap': () =>
+                      Modular.to.pushNamed(HomeMainRoutes.customers),
+                },
+              if (StaffAccess.canManageStaff)
+                {
+                  'icon': Icons.badge_outlined,
+                  'label': loc.manage_staff,
+                  'onTap': () => Modular.to.pushNamed(HomeMainRoutes.staff),
+                },
+              if (StaffAccess.canViewReports)
+                {
+                  'icon': Icons.assessment_outlined,
+                  'label': loc.reports,
+                  'onTap': () => Modular.to.pushNamed(HomeMainRoutes.reports),
                 },
               if (kotVisible)
                 {
@@ -790,6 +825,7 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(16),
           hoverColor: statusColor.withOpacity(0.10),
           onTap: () {
+            if (!StaffAccess.ensure(StaffAccess.canUpdateSales)) return;
             Modular.to.pushNamed(
               HomeMainRoutes.createOrder,
               arguments: {'order': order, 'isEdit': true},
@@ -2152,19 +2188,27 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     child: Row(
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: item.imageUrl.isNotEmpty
-                              ? m.Image.network(
-                                  resolvedMediaUrl(item.imageUrl),
-                                  width: 40,
-                                  height: 40,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) {
-                                    return _itemPlaceholder();
-                                  },
-                                )
-                              : _itemPlaceholder(),
+                        SizedBox(
+                          width: 40,
+                          height: 40,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: item.imageUrl.trim().isNotEmpty
+                                ? AppCachedNetworkImage(
+                                    imageUrl: item.imageUrl,
+                                    width: 40,
+                                    height: 40,
+                                    fit: BoxFit.cover,
+                                    memCacheWidth: 80,
+                                    memCacheHeight: 80,
+                                    fadeInDuration:
+                                        const Duration(milliseconds: 150),
+                                    placeholder: (_, __) => _itemPlaceholder(),
+                                    errorWidget: (_, __, ___) =>
+                                        _itemPlaceholder(),
+                                  )
+                                : _itemPlaceholder(),
+                          ),
                         ),
                         const SizedBox(width: 10),
                         Container(

@@ -72,7 +72,15 @@ ItemData _$ItemDataFromJson(Map<String, dynamic> json) => ItemData(
       (json['comboComponents'] as List<dynamic>?)
           ?.map((e) => ComboComponent.fromJson(e as Map<String, dynamic>))
           .toList() ??
-      const [],
+      [],
+  linkedRecipeItemId: json['linkedRecipeItemId'] as String? ?? '',
+  hasVariants: json['hasVariants'] as bool? ?? false,
+  variants:
+      (json['variants'] as List<dynamic>?)
+          ?.map((e) => MenuItemVariant.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      [],
+  matchedVariantId: json['matchedVariantId'] as String?,
 );
 
 Map<String, dynamic> _$ItemDataToJson(ItemData instance) => <String, dynamic>{
@@ -100,5 +108,9 @@ Map<String, dynamic> _$ItemDataToJson(ItemData instance) => <String, dynamic>{
   'isRecommended': instance.isRecommended,
   'prepTimeMinutes': instance.prepTimeMinutes,
   'isCombo': instance.isCombo,
-  'comboComponents': instance.comboComponents.map((e) => e.toJson()).toList(),
+  'comboComponents': instance.comboComponents,
+  'linkedRecipeItemId': instance.linkedRecipeItemId,
+  'hasVariants': instance.hasVariants,
+  'variants': instance.variants,
+  'matchedVariantId': instance.matchedVariantId,
 };

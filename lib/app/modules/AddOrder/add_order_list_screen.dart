@@ -184,7 +184,7 @@ class _AddOrderListScreenState extends State<AddOrderListScreen> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         category.imageURL.isNotEmpty
-                                            ? CachedNetworkImage(
+                                            ? AppCachedNetworkImage(
                                                 imageUrl: category.imageURL,
                                                 width: 40,
                                                 height: 40,
@@ -315,7 +315,7 @@ class _AddOrderListScreenState extends State<AddOrderListScreen> {
                                       item.salePrice.toString(),
                                     ) ??
                                     0.0,
-                                quantity: widget.controller.getItemQuantity(
+                                quantity: widget.controller.getParentItemQuantity(
                                   item.id,
                                 ),
                                 onDelete: () {
@@ -420,7 +420,7 @@ class OrderItemCard extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: imageUrl != null && imageUrl!.isNotEmpty
-                ? CachedNetworkImage(
+                ? AppCachedNetworkImage(
                     imageUrl: imageUrl!,
                     width: 60,
                     height: 60,

@@ -2,6 +2,7 @@ import 'package:billkaro/app/modules/AddOrder/add_order_controller.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/Home/showcase_controller.dart';
 import 'package:billkaro/app/modules/OrderPrefrences/order_prefrences_controller.dart';
+import 'package:billkaro/app/modules/Shell/Sidebar/app_shell_sidebar_controller.dart';
 import 'package:billkaro/app/services/billing/billing_access_mode.dart';
 import 'package:billkaro/app/services/billing/billing_access_service.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/helpers/cash_drawer_helper.dart';
@@ -170,6 +171,10 @@ class AppSettingsController extends BaseController {
 
     _billingAccess.setMode(next);
     billingAccessMode.value = next;
+    if (Get.isRegistered<AppShellSidebarController>()) {
+      Get.find<AppShellSidebarController>().refreshWalletBalance(force: true);
+      Get.find<AppShellSidebarController>().update(['subscription']);
+    }
     showSuccess(
       description: next.isWallet
           ? loc.billing_mode_switched_wallet

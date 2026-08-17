@@ -21,10 +21,12 @@ class LoginScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final showWindowsTitleBar = !kIsWeb && Platform.isWindows;
+    final showWindowsTitleBar = !kIsWeb && Platform.isWindows;  
     final appBar = AppBar(
       elevation: 0,
       centerTitle: true,
+      automaticallyImplyLeading: false,
+      leading: const BackButton(),
       backgroundColor: AppColor.backGroundColor,
       iconTheme: const IconThemeData(color: _textPrimary),
       title: Text(

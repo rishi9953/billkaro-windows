@@ -1,5 +1,6 @@
 import 'package:billkaro/app/services/Modals/wallet/wallet_api_models.dart';
 import 'package:billkaro/app/services/Modals/wallet/wallet_transaction.dart';
+import 'package:billkaro/app/modules/Shell/Sidebar/app_shell_sidebar_controller.dart';
 import 'package:billkaro/app/services/razorpay/razorpay_service.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:dio/dio.dart';
@@ -28,7 +29,11 @@ class WalletController extends BaseController {
   String formatAmount(double amount) => _currency.format(amount);
 
   void _applyWalletPayload(Map<String, dynamic> json) {
-    balance.value = (json['balance'] as num?)?.toDouble() ?? balance.value;
+    final nextBalance = (json['balance'] as num?)?.toDouble();
+    if (nextBalance != null) {
+      balance.value = nextBalance;
+      appPref.setWalletBalanceForOutlet(appPref.selectedOutlet?.id, nextBalance);
+    }
     _lowBalanceThreshold =
         (json['lowBalanceThreshold'] as num?)?.toDouble() ?? _lowBalanceThreshold;
 
@@ -40,6 +45,18 @@ class WalletController extends BaseController {
             .map((e) => WalletTransaction.fromJson(Map<String, dynamic>.from(e)))
             .toList(),
       );
+    }
+  }
+
+  /// Applied from wallet WebSocket (`walletUpdated`) — no REST poll.
+  void applyRealtimeBalance(
+    double nextBalance, {
+    double? lowBalanceThreshold,
+  }) {
+    balance.value = nextBalance;
+    appPref.setWalletBalanceForOutlet(appPref.selectedOutlet?.id, nextBalance);
+    if (lowBalanceThreshold != null) {
+      _lowBalanceThreshold = lowBalanceThreshold;
     }
   }
 
@@ -72,6 +89,12 @@ class WalletController extends BaseController {
         _fetchWalletCards(),
         _fetchWallet(outletId, userId),
       ]);
+      if (Get.isRegistered<AppShellSidebarController>()) {
+        final shell = Get.find<AppShellSidebarController>();
+        shell.walletBalance = balance.value;
+        shell.walletLowBalanceThreshold = _lowBalanceThreshold;
+        shell.update(['subscription']);
+      }
     } finally {
       isLoadingWallet.value = false;
     }

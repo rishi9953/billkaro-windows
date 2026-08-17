@@ -389,14 +389,14 @@ class _AddOrderImageViewScreenState extends State<AddOrderImageViewScreen> {
                                             ) ??
                                             0.0,
                                         quantity: widget.controller
-                                            .getItemQuantity(item.id),
+                                            .getParentItemQuantity(item.id),
                                         onDelete: () {
                                           widget.controller
                                               .removeItemCompletely(item.id);
                                         },
                                         onIncrement: () {
                                           widget.controller
-                                              .incrementItemQuantity(item.id);
+                                              .handlePosItemTap(item);
                                         },
                                         onDecrement: () {
                                           widget.controller
@@ -573,14 +573,14 @@ class _AddOrderImageViewScreenState extends State<AddOrderImageViewScreen> {
                                               ) ??
                                               0.0,
                                           quantity: widget.controller
-                                              .getItemQuantity(item.id),
+                                              .getParentItemQuantity(item.id),
                                           onDelete: () {
                                             widget.controller
                                                 .removeItemCompletely(item.id);
                                           },
                                           onIncrement: () {
                                             widget.controller
-                                                .incrementItemQuantity(item.id);
+                                                .handlePosItemTap(item);
                                           },
                                           onDecrement: () {
                                             widget.controller
@@ -650,7 +650,7 @@ class _AddOrderImageViewScreenState extends State<AddOrderImageViewScreen> {
                                         item.salePrice.toString(),
                                       ) ??
                                       0.0,
-                                  quantity: widget.controller.getItemQuantity(
+                                  quantity: widget.controller.getParentItemQuantity(
                                     item.id,
                                   ),
                                   onDelete: () {
@@ -762,7 +762,7 @@ class OrderItemCard extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: imageUrl != null && imageUrl!.isNotEmpty
-                    ? CachedNetworkImage(
+                    ? AppCachedNetworkImage(
                         imageUrl: imageUrl!,
                         width: 130,
                         height: 160,

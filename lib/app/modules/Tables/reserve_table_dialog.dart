@@ -1,5 +1,6 @@
 import 'package:billkaro/app/Widgets/app_date_picker.dart';
 import 'package:billkaro/app/modules/Tables/table_controller.dart';
+import 'package:billkaro/app/services/Modals/tables/table_reservation_model.dart';
 import 'package:billkaro/app/services/Modals/tables/tables_response.dart';
 import 'package:billkaro/config/config.dart';
 
@@ -159,7 +160,18 @@ class _ReserveTableDialogState extends State<ReserveTableDialog> {
   bool get _canSubmit =>
       !_submitting &&
       _nameController.text.trim().length >= 2 &&
-      _partySize <= _effectiveCapacity;
+      _partySize <= _effectiveCapacity &&
+      _slotConflict == null;
+
+  TableReservationModel? get _slotConflict =>
+      widget.controller.findReservationConflict(
+        table: _reservationTable,
+        reservationDate: _formatDate(_date),
+        reservationTime: _formatTime(_time),
+      );
+
+  List<TableReservationModel> get _existingBookings =>
+      widget.controller.reservationsForTable(_reservationTable);
 
   void _switchReservationTable(TableModel table) {
     setState(() {
@@ -244,6 +256,18 @@ class _ReserveTableDialogState extends State<ReserveTableDialog> {
           _partySize,
           _effectiveCapacity,
         ),
+      );
+      return;
+    }
+
+    final conflict = _slotConflict;
+    if (conflict != null) {
+      showError(
+        description:
+            'Table ${_reservationTable.displayName} is already reserved at '
+            '${conflict.reservationTime} on ${conflict.reservationDate}'
+            '${conflict.customerName.isNotEmpty ? ' by ${conflict.customerName}' : ''}. '
+            'Choose another time or cancel the existing reservation.',
       );
       return;
     }
@@ -469,6 +493,13 @@ class _ReserveTableDialogState extends State<ReserveTableDialog> {
                               ),
                             ],
                           ),
+                          if (_existingBookings.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            _ExistingBookingsBanner(
+                              bookings: _existingBookings,
+                              conflict: _slotConflict,
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -1183,6 +1214,75 @@ class _PreviewChip extends StatelessWidget {
               color: Colors.blue.shade800,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ExistingBookingsBanner extends StatelessWidget {
+  final List<TableReservationModel> bookings;
+  final TableReservationModel? conflict;
+
+  const _ExistingBookingsBanner({
+    required this.bookings,
+    required this.conflict,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasConflict = conflict != null;
+    final accent = hasConflict ? Colors.red : Colors.orange;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accent.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                hasConflict ? Icons.error_outline : Icons.info_outline,
+                size: 16,
+                color: accent.shade800,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  hasConflict
+                      ? 'Selected slot is already booked. Pick another time.'
+                      : 'Existing bookings for this table',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: accent.shade900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...bookings.take(4).map((booking) {
+            final isConflict = conflict?.id == booking.id;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                '• ${booking.reservationDate} · ${booking.reservationTime}'
+                '${booking.customerName.isNotEmpty ? ' · ${booking.customerName}' : ''}'
+                '${isConflict ? ' (selected)' : ''}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isConflict ? FontWeight.w700 : FontWeight.w500,
+                  color: isConflict ? accent.shade900 : accent.shade800,
+                ),
+              ),
+            );
+          }),
         ],
       ),
     );

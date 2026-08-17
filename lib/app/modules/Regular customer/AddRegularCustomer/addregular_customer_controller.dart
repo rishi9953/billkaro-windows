@@ -4,6 +4,7 @@ import 'package:billkaro/app/services/Modals/customer/customerRequest.dart';
 import 'package:billkaro/app/services/Modals/customer/customerResponse.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -198,6 +199,7 @@ class AddCustomerController extends BaseController {
   }
 
   void addRegularCustomer() async {
+    if (!StaffAccess.ensure(StaffAccess.canCreateCustomers)) return;
     final loc = AppLocalizations.of(Get.context!)!;
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) {
@@ -245,6 +247,7 @@ class AddCustomerController extends BaseController {
   }
 
   void updateRegularCustomer() async {
+    if (!StaffAccess.ensure(StaffAccess.canUpdateCustomers)) return;
     final loc = AppLocalizations.of(Get.context!)!;
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) {
@@ -276,6 +279,7 @@ class AddCustomerController extends BaseController {
   }
 
   void deleteRegularCustomer() async {
+    if (!StaffAccess.ensure(StaffAccess.canDeleteCustomers)) return;
     final loc = AppLocalizations.of(Get.context!)!;
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) {
@@ -328,6 +332,7 @@ class AddCustomerController extends BaseController {
   }
 
   Future<void> saveAndNew() async {
+    if (!StaffAccess.ensure(StaffAccess.canCreateCustomers)) return;
     final loc = AppLocalizations.of(Get.context!)!;
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) {

@@ -127,8 +127,14 @@ class _AppShellSidebarState extends State<AppShellSidebar> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color.alphaBlend(primary.withOpacity(0.24), const Color(0xFF0F172A)),
-            Color.alphaBlend(primary.withOpacity(0.12), const Color(0xFF070B17)),
+            Color.alphaBlend(
+              primary.withOpacity(0.24),
+              const Color(0xFF0F172A),
+            ),
+            Color.alphaBlend(
+              primary.withOpacity(0.12),
+              const Color(0xFF070B17),
+            ),
           ],
         ),
         boxShadow: const [

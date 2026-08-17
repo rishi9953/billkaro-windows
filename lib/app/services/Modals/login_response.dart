@@ -66,6 +66,7 @@ class User {
   final String? role;
   final String? staffRole;
   final List<String>? permissions;
+
   /// Business owner user id when [role] is `staff` ([id] is the staff record id).
   final String? userId;
 

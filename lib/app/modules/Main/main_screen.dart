@@ -51,7 +51,7 @@ class MainScreen extends StatelessWidget {
                                 ),
                               ),
                               child: Image.asset(
-                                'assets/logo.jpeg',
+                                'assets/logo2.jpeg',
                                 width: 110,
                                 height: 110,
                                 fit: BoxFit.cover,

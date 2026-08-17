@@ -1,11 +1,15 @@
 import 'dart:io';
+import 'package:billkaro/app/Database/app_database.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/Modals/businessType/businesst_type_response.dart';
 import 'package:billkaro/app/services/Modals/login_response.dart';
+import 'package:billkaro/app/services/outlet_scope_refresh.dart';
 import 'package:billkaro/app/services/uploadFile.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/gstin_verify_helper.dart';
 import 'package:billkaro/utils/staff_outlet_sync.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
 class BusinessDetailsController extends BaseController {
   // ---------------- TEXT CONTROLLERS ----------------
@@ -427,8 +431,9 @@ class BusinessDetailsController extends BaseController {
       final ownerId = appPref.ownerUserId;
       if (ownerId == null) return;
 
+      final deletedOutletId = outlet.id!;
       final res = await callApi(
-        apiClient.deleteOutlet(ownerId, outlet.id!),
+        apiClient.deleteOutlet(ownerId, deletedOutletId),
       );
 
       if (res['status'] != 'success') {
@@ -436,10 +441,43 @@ class BusinessDetailsController extends BaseController {
         return;
       }
 
+      // Clear local offline data for the deleted outlet
+      if (Get.isRegistered<AppDatabase>()) {
+        try {
+          await Get.find<AppDatabase>().clearOutletData(deletedOutletId);
+        } catch (e) {
+          debugPrint('⚠️ clearOutletData failed: $e');
+        }
+      }
+
       // ✅ Refresh from server to get clean state
       await getUserDetails();
 
-      Get.offAllNamed(AppRoute.homeMain);
+      final remainingOutlets = appPref.user?.outletData ?? [];
+      if (remainingOutlets.isEmpty) {
+        appPref.selectedOutlet = null;
+        // Leave the Modular shell entirely (safe — HomeMainScreen is disposed).
+        Get.offAllNamed(AppRoute.createOutlet);
+        return;
+      }
+
+      try {
+        while (Get.isDialogOpen == true) {
+          Get.back();
+        }
+      } catch (_) {}
+
+      // Do NOT remount HomeMainScreen via Get.offAllNamed(homeMain) —
+      // Modular throws "Module HomeMainModule is already started".
+      Modular.to.navigate(HomeMainRoutes.home);
+
+      if (Get.isRegistered<HomeScreenController>()) {
+        final home = Get.find<HomeScreenController>();
+        home.selectedOutlet.value = appPref.selectedOutlet;
+        home.onOutletChanged();
+      } else {
+        await refreshOutletScopedControllers();
+      }
     } catch (e) {
       debugPrint('❌ deleteOutlet error: $e');
       showError(description: 'Failed to delete outlet');

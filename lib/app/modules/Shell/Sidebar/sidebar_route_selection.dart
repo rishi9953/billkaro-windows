@@ -9,6 +9,8 @@ class SidebarRouteSelection {
     required this.storeHistory,
     required this.closedOrders,
     required this.holdOrders,
+    required this.deletedOrders,
+    required this.stockSummary,
     required this.inventory,
     required this.purchaseOrders,
     required this.notifications,
@@ -22,6 +24,8 @@ class SidebarRouteSelection {
   final bool storeHistory;
   final bool closedOrders;
   final bool holdOrders;
+  final bool deletedOrders;
+  final bool stockSummary;
   final bool inventory;
   final bool purchaseOrders;
   final bool notifications;
@@ -36,6 +40,8 @@ class SidebarRouteSelection {
       storeHistory: path.startsWith(HomeMainRoutes.storeSessionHistory),
       closedOrders: path.startsWith(HomeMainRoutes.closedOrders),
       holdOrders: path.startsWith(HomeMainRoutes.holdOrders),
+      deletedOrders: path.startsWith(HomeMainRoutes.deletedOrders),
+      stockSummary: path.startsWith(HomeMainRoutes.stockSummary),
       inventory: path.startsWith(HomeMainRoutes.inventory),
       purchaseOrders: path.startsWith(HomeMainRoutes.purchaseOrders),
       notifications: path.startsWith(HomeMainRoutes.notifications),

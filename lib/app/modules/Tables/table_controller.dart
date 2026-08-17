@@ -12,6 +12,7 @@ import 'package:billkaro/app/services/Modals/tables/table_reservation_model.dart
 import 'package:billkaro/app/services/Modals/tables/tables_response.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter_modular/flutter_modular.dart';
+import 'package:billkaro/utils/staff_access.dart';
 
 enum TableStatus { available, reserved, occupied, billing }
 
@@ -246,8 +247,10 @@ class TableController extends BaseController {
     return _tableKeys(table).contains(orderKey);
   }
 
-  bool _isActiveOrder(OrderModel order) =>
-      order.status.trim().toLowerCase() != 'closed';
+  bool _isActiveOrder(OrderModel order) {
+    final status = order.status.trim().toLowerCase();
+    return status != 'closed' && status != 'deleted';
+  }
 
   DateTime _parseSafeDate(String? value) {
     if (value == null || value.isEmpty)
@@ -271,41 +274,95 @@ class TableController extends BaseController {
     return matches.first;
   }
 
-  TableReservationModel? _findUpcomingReservationForTable(TableModel table) {
+  bool _reservationMatchesTable(
+    TableReservationModel reservation,
+    TableModel table,
+  ) {
+    if (reservation.tableId.isNotEmpty && reservation.tableId == table.id) {
+      return true;
+    }
+    final reservationTable = reservation.tableNumber?.trim() ?? '';
+    if (reservationTable.isEmpty) return false;
+    return _tableKeys(table).contains(_normalizeTableNumber(reservationTable));
+  }
+
+  List<TableReservationModel> _activeReservationsForTable(TableModel table) {
     final today = _todayDateString();
     final matches = reservations
-        .where((r) => r.isActive && r.tableId == table.id)
+        .where((r) => r.isActive && _reservationMatchesTable(r, table))
         .where((r) => r.reservationDate.compareTo(today) >= 0)
-        .toList(growable: false);
-    if (matches.isEmpty) return null;
+        .toList(growable: true);
     matches.sort((a, b) {
       final dateCmp = a.reservationDate.compareTo(b.reservationDate);
       if (dateCmp != 0) return dateCmp;
       return a.reservationTime.compareTo(b.reservationTime);
     });
-    return matches.first;
+    return matches;
+  }
+
+  /// Next active booking for this table (today or later) — used for UI details.
+  TableReservationModel? _findUpcomingReservationForTable(TableModel table) {
+    final items = _activeReservationsForTable(table);
+    return items.isEmpty ? null : items.first;
+  }
+
+  /// Used by reserve dialog to avoid double-booking the same slot.
+  TableReservationModel? findReservationConflict({
+    required TableModel table,
+    required String reservationDate,
+    required String reservationTime,
+  }) {
+    final date = TableReservationModel.asDateOnly(reservationDate);
+    final time = TableReservationModel.asTimeHm(reservationTime);
+    return _activeReservationsForTable(table).firstWhereOrNull(
+      (r) => r.reservationDate == date && r.reservationTime == time,
+    );
+  }
+
+  List<TableReservationModel> reservationsForTable(TableModel table) =>
+      _activeReservationsForTable(table);
+
+  /// Upcoming active reservations for the reservations list dialog.
+  List<TableReservationModel> get upcomingReservations {
+    final today = _todayDateString();
+    final items = reservations
+        .where((r) => r.isActive && r.reservationDate.compareTo(today) >= 0)
+        .toList(growable: true);
+    items.sort((a, b) {
+      final dateCmp = a.reservationDate.compareTo(b.reservationDate);
+      if (dateCmp != 0) return dateCmp;
+      return a.reservationTime.compareTo(b.reservationTime);
+    });
+    return items;
   }
 
   Future<void> _loadReservations(String outletId) async {
     try {
+      // Load all outlet reservations (no date filter). Filtering only by today
+      // hid future bookings and made reserved tables look available.
       final response = await callApi(
-        apiClient.getTableReservations(
-          outletId,
-          date: reservationFilterDate.value.isEmpty
-              ? null
-              : reservationFilterDate.value,
-        ),
+        apiClient.getTableReservations(outletId),
         showLoader: false,
       );
       if (response?['status'] == 'success') {
         final data = (response['data'] as List?) ?? const [];
-        reservations.value = data
-            .whereType<Map>()
-            .map(
-              (e) =>
-                  TableReservationModel.fromJson(Map<String, dynamic>.from(e)),
-            )
-            .toList();
+        final today = _todayDateString();
+        final parsed = <TableReservationModel>[];
+        for (final item in data) {
+          if (item is! Map) continue;
+          try {
+            final reservation = TableReservationModel.fromJson(
+              Map<String, dynamic>.from(item),
+            );
+            if (reservation.id.isEmpty || reservation.tableId.isEmpty) continue;
+            if (!reservation.isActive) continue;
+            if (reservation.reservationDate.compareTo(today) < 0) continue;
+            parsed.add(reservation);
+          } catch (e) {
+            debugPrint('Skip invalid reservation payload: $e');
+          }
+        }
+        reservations.value = parsed;
       }
     } catch (_) {
       reservations.clear();
@@ -324,7 +381,12 @@ class TableController extends BaseController {
       return TableStatus.occupied;
     }
 
-    if (reservation != null) return TableStatus.reserved;
+    // Only mark reserved on the floor for today's bookings.
+    // Future bookings stay orderable today, but still appear in reserve UI.
+    if (reservation != null &&
+        reservation.reservationDate == _todayDateString()) {
+      return TableStatus.reserved;
+    }
 
     return TableStatus.available;
   }
@@ -387,11 +449,25 @@ class TableController extends BaseController {
 
   /// Groups [filteredTables] by section key for the grid UI.
   Map<String, List<TableWithStatus>> get filteredTablesBySection {
+    // Always read sections so Obx rebuilds when a section is added/removed.
+    final managedSections = sections.toList(growable: false);
     final map = <String, List<TableWithStatus>>{};
     for (final tws in filteredTables) {
       final key = tws.table.section.trim();
       map.putIfAbsent(key, () => []).add(tws);
     }
+
+    // Show managed sections with no tables when browsing all sections.
+    final sectionFilter = selectedSection.value;
+    if (sectionFilter == null) {
+      for (final s in managedSections) {
+        final key = s.name.trim();
+        if (key.isNotEmpty) map.putIfAbsent(key, () => []);
+      }
+    } else if (sectionFilter.trim().isNotEmpty) {
+      map.putIfAbsent(sectionFilter.trim(), () => []);
+    }
+
     final orderedKeys = map.keys.toList()
       ..sort((a, b) {
         if (a.isEmpty && b.isNotEmpty) return -1;
@@ -448,6 +524,7 @@ class TableController extends BaseController {
   }
 
   void promptAddSection() {
+    if (!StaffAccess.ensure(StaffAccess.canCreateTables)) return;
     final loc = AppLocalizations.of(Get.context!)!;
     final nameController = TextEditingController();
     Get.dialog(
@@ -520,8 +597,119 @@ class TableController extends BaseController {
     return false;
   }
 
+  TableSectionModel? managedSectionFor(String name) {
+    final key = _normalizeSectionKey(name);
+    if (key.isEmpty) return null;
+    for (final section in sections.toList(growable: false)) {
+      if (_normalizeSectionKey(section.name) != key) continue;
+      if (section.id.trim().isEmpty) continue;
+      return section;
+    }
+    return null;
+  }
+
+  int tableCountInSection(String name) {
+    final key = _normalizeSectionKey(name);
+    return tables
+        .where((tws) => _normalizeSectionKey(tws.table.section) == key)
+        .length;
+  }
+
+  bool canDeleteManagedSection(String name) =>
+      StaffAccess.canDeleteTables && managedSectionFor(name) != null;
+
+  Future<void> promptDeleteSection(String name) async {
+    if (!StaffAccess.ensure(StaffAccess.canDeleteTables)) return;
+
+    final loc = AppLocalizations.of(Get.context!)!;
+    final section = managedSectionFor(name);
+    if (section == null) {
+      showError(description: loc.failed_to_delete_section);
+      return;
+    }
+
+    final assigned = tableCountInSection(section.name);
+    if (assigned > 0) {
+      showError(
+        description: loc.delete_section_has_tables(section.name, assigned),
+      );
+      return;
+    }
+
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(loc.delete_section),
+        content: Text(loc.delete_section_confirm(section.name)),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: Text(loc.cancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(Get.context!).colorScheme.error,
+            ),
+            onPressed: () => Get.back(result: true),
+            child: Text(loc.delete),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
+
+    if (confirmed == true) {
+      await deleteSection(section);
+    }
+  }
+
+  Future<bool> deleteSection(TableSectionModel section) async {
+    if (!StaffAccess.ensure(StaffAccess.canDeleteTables)) return false;
+
+    final loc = AppLocalizations.of(Get.context!)!;
+    final id = section.id.trim();
+    if (id.isEmpty) {
+      showError(description: loc.failed_to_delete_section);
+      return false;
+    }
+
+    final assigned = tableCountInSection(section.name);
+    if (assigned > 0) {
+      showError(
+        description: loc.delete_section_has_tables(section.name, assigned),
+      );
+      return false;
+    }
+
+    final response = await callApi(apiClient.deleteOutletTableSection(id));
+    final ok =
+        response is Map && response['status']?.toString() == 'success';
+
+    if (ok) {
+      final key = _normalizeSectionKey(section.name);
+      sections.removeWhere((s) => _normalizeSectionKey(s.name) == key);
+      sections.refresh();
+
+      final selected = selectedSection.value;
+      if (selected != null && _normalizeSectionKey(selected) == key) {
+        selectedSection.value = null;
+      }
+
+      showSuccess(description: loc.section_deleted_successfully);
+      return true;
+    }
+
+    showError(
+      description: response is Map
+          ? (response['message']?.toString() ?? loc.failed_to_delete_section)
+          : loc.failed_to_delete_section,
+    );
+    return false;
+  }
+
   /// Shows an alert when outlet seating is full; otherwise opens the add-table dialog.
   void promptAddTable() {
+    if (!StaffAccess.ensure(StaffAccess.canCreateTables)) return;
     final loc = AppLocalizations.of(Get.context!)!;
     if (seatingCapacityLimit <= 0) {
       showError(description: loc.set_outlet_seating_capacity_first);
@@ -593,6 +781,7 @@ class TableController extends BaseController {
     required int seatingCapacity,
     String section = '',
   }) async {
+    if (!StaffAccess.ensure(StaffAccess.canCreateTables)) return false;
     final loc = AppLocalizations.of(Get.context!)!;
     final input = tableNumber.trim();
     if (input.isEmpty) {
@@ -662,6 +851,7 @@ class TableController extends BaseController {
     required int seatingCapacity,
     String? section,
   }) async {
+    if (!StaffAccess.ensure(StaffAccess.canUpdateTables)) return false;
     final loc = AppLocalizations.of(Get.context!)!;
     final input = tableNumber.trim();
     if (input.isEmpty) {
@@ -712,6 +902,7 @@ class TableController extends BaseController {
   }
 
   Future<bool> deleteTable(TableWithStatus tws) async {
+    if (!StaffAccess.ensure(StaffAccess.canDeleteTables)) return false;
     final loc = AppLocalizations.of(Get.context!)!;
     if (!tws.isAvailable) {
       showError(description: loc.only_available_tables_can_be_deleted);
@@ -735,6 +926,7 @@ class TableController extends BaseController {
   }
 
   Future<bool> resetAllTables() async {
+    if (!StaffAccess.ensure(StaffAccess.canUpdateTables)) return false;
     final loc = AppLocalizations.of(Get.context!)!;
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) {
@@ -923,6 +1115,7 @@ class TableController extends BaseController {
   }
 
   Future<bool> executeMerge(String primaryId, List<String> secondaryIds) async {
+    if (!StaffAccess.ensure(StaffAccess.canUpdateTables)) return false;
     return _executeMerge(primaryId, secondaryIds);
   }
 
@@ -959,6 +1152,7 @@ class TableController extends BaseController {
   }
 
   Future<bool> unmergeTable(TableModel table, {bool notify = true}) async {
+    if (!StaffAccess.ensure(StaffAccess.canUpdateTables)) return false;
     final loc = AppLocalizations.of(Get.context!)!;
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) {
@@ -1073,18 +1267,49 @@ class TableController extends BaseController {
       return false;
     }
 
+    final cleanName = customerName.trim();
+    final cleanPhone = customerPhone?.trim() ?? '';
+    final cleanNotes = notes?.trim() ?? '';
+    final cleanDate = TableReservationModel.asDateOnly(reservationDate);
+    final cleanTime = TableReservationModel.asTimeHm(reservationTime);
+
+    if (cleanName.isEmpty) {
+      showError(description: loc.reservation_name_required);
+      return false;
+    }
+
+    final conflict = findReservationConflict(
+      table: table,
+      reservationDate: cleanDate,
+      reservationTime: cleanTime,
+    );
+    if (conflict != null) {
+      showError(
+        description:
+            'Table ${table.displayName} is already reserved at $cleanTime on $cleanDate'
+            '${conflict.customerName.isNotEmpty ? ' by ${conflict.customerName}' : ''}',
+      );
+      return false;
+    }
+
+    final payload = <String, dynamic>{
+      'outletId': outletId,
+      'tableId': table.id,
+      'customerName': cleanName,
+      'partySize': partySize,
+      'reservationDate': cleanDate,
+      'reservationTime': cleanTime,
+      'source': 'pos',
+    };
+    if (cleanPhone.isNotEmpty) {
+      payload['customerPhone'] = cleanPhone;
+    }
+    if (cleanNotes.isNotEmpty) {
+      payload['notes'] = cleanNotes;
+    }
+
     final response = await callApi(
-      apiClient.createTableReservation({
-        'outletId': outletId,
-        'tableId': table.id,
-        'customerName': customerName.trim(),
-        'customerPhone': customerPhone?.trim(),
-        'partySize': partySize,
-        'reservationDate': reservationDate,
-        'reservationTime': reservationTime,
-        'notes': notes?.trim(),
-        'source': 'pos',
-      }),
+      apiClient.createTableReservation(payload),
     );
 
     if (response != null && response['status'] == 'success') {

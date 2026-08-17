@@ -1,13 +1,17 @@
 import 'package:billkaro/app/modules/Inventory/inventory_controller.dart';
 import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_drawer_scope.dart';
+import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_status_filter.dart';
 import 'package:billkaro/app/services/Modals/inventory/inventory_models.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:intl/intl.dart';
 
 class PurchaseOrderController extends BaseController {
   late final InventoryController inventory;
 
   final purchaseOrders = <PurchaseOrderData>[].obs;
+  final searchQuery = ''.obs;
+  final statusFilter = PurchaseOrderStatusFilter.all.obs;
   final tabIds = <int>[1].obs;
   final activeTabIndex = 0.obs;
   int _nextTabId = 2;
@@ -21,6 +25,31 @@ class PurchaseOrderController extends BaseController {
   String get userId => appPref.user?.id ?? '';
 
   List<SupplierData> get suppliers => inventory.suppliers;
+
+  bool get hasActiveFilters =>
+      searchQuery.value.trim().isNotEmpty ||
+      statusFilter.value != PurchaseOrderStatusFilter.all;
+
+  List<PurchaseOrderData> get filteredPurchaseOrders {
+    // Touch observables so Obx rebuilds on any change.
+    final source = List<PurchaseOrderData>.from(purchaseOrders);
+    final query = searchQuery.value;
+    final status = statusFilter.value;
+    return PurchaseOrderStatusFilter.apply(
+      source: source,
+      query: query,
+      status: status,
+    );
+  }
+
+  void setSearchQuery(String value) => searchQuery.value = value;
+
+  void setStatusFilter(String status) => statusFilter.value = status;
+
+  void clearFilters() {
+    searchQuery.value = '';
+    statusFilter.value = PurchaseOrderStatusFilter.all;
+  }
 
   @override
   void onInit() {
@@ -47,6 +76,7 @@ class PurchaseOrderController extends BaseController {
   }
 
   Future<bool> receivePurchaseOrder(String poId) async {
+    if (!StaffAccess.ensure(StaffAccess.canAdjustStock)) return false;
     final res = await callApi(
       apiClient.receivePurchaseOrder(outletId, poId, {'userId': userId}),
     );
@@ -60,8 +90,8 @@ class PurchaseOrderController extends BaseController {
   }
 
   Future<bool> createPurchaseOrder({
-    required String supplierId,
-    required List<Map<String, dynamic>> items,
+    String? supplierId,
+    List<Map<String, dynamic>> items = const [],
     String? notes,
     DateTime? expectedDate,
     String? paymentTerms,
@@ -82,12 +112,15 @@ class PurchaseOrderController extends BaseController {
     String? shippingContact,
     String? shippingGstNo,
     String? termsAndConditions,
+    String status = 'PENDING',
   }) async {
+    if (!StaffAccess.ensure(StaffAccess.canAdjustStock)) return false;
     final body = <String, dynamic>{
       'userId': userId,
       'outletId': outletId,
-      'supplierId': supplierId,
       'items': items,
+      'status': status,
+      if (supplierId != null && supplierId.isNotEmpty) 'supplierId': supplierId,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
       if (expectedDate != null)
         'expectedDate': expectedDate.toUtc().toIso8601String(),
@@ -163,6 +196,7 @@ class PurchaseOrderController extends BaseController {
     String? shippingGstNo,
     String? termsAndConditions,
   }) async {
+    if (!StaffAccess.ensure(StaffAccess.canAdjustStock)) return false;
     final body = <String, dynamic>{
       'supplierId': supplierId,
       'items': items,

@@ -2,6 +2,7 @@ import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/notification/sync_notification_service.dart';
 import 'package:billkaro/app/services/sync/order_sync_util.dart';
 import 'package:billkaro/app/services/sync/refresh_online_data.dart';
+import 'package:billkaro/app/services/billing/platform_fee_service.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/offline/offline_category_loader.dart';
 import 'package:dio/dio.dart';
@@ -134,6 +135,9 @@ class Synchronisation {
 
         try {
           final payload = buildOrderSyncPayload(order);
+          if (PlatformFeeService.consumePendingFeeForOrder(appPref, localId)) {
+            payload['chargePlatformFee'] = true;
+          }
           debugPrint('📤 [SYNC] Uploading order $localId');
 
           final response = await apiClient.addOrder(payload);
@@ -334,7 +338,12 @@ class Synchronisation {
         return false;
       }
 
-      final response = await apiClient.addOrder(buildOrderSyncPayload(order));
+      final payload = buildOrderSyncPayload(order);
+      final appPref = Get.find<AppPref>();
+      if (PlatformFeeService.consumePendingFeeForOrder(appPref, order.id)) {
+        payload['chargePlatformFee'] = true;
+      }
+      final response = await apiClient.addOrder(payload);
       final serverOrder = parseSyncedOrderFromResponse(response, order);
       if (serverOrder == null) return false;
 

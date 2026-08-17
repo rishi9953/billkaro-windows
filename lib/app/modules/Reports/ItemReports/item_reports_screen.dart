@@ -1,7 +1,9 @@
 import 'package:billkaro/app/Widgets/app_dropdowns.dart';
 import 'package:billkaro/app/modules/Reports/ItemReports/item_reports_controller.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
+import 'package:billkaro/app/utils/pos_cart_line.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_access.dart';
 
 class ItemReportsScreen extends StatelessWidget {
   ItemReportsScreen({super.key});
@@ -27,13 +29,29 @@ class ItemReportsScreen extends StatelessWidget {
           ),
         ),
         actions: [
-          IconButton(
-            onPressed: () => controller.exportToExcel(),
+          if (StaffAccess.canGenerateReports || StaffAccess.canExportSales)
+            IconButton(
+            onPressed: () {
+              if (!StaffAccess.ensure(
+                StaffAccess.canGenerateReports || StaffAccess.canExportSales,
+              )) {
+                return;
+              }
+              controller.exportToExcel();
+            },
             icon: Assets.svg.excel.svg(height: 24, width: 24),
             tooltip: 'Export to Excel',
           ),
-          IconButton(
-            onPressed: () => controller.exportToPdf(),
+          if (StaffAccess.canGenerateReports || StaffAccess.canExportSales)
+            IconButton(
+            onPressed: () {
+              if (!StaffAccess.ensure(
+                StaffAccess.canGenerateReports || StaffAccess.canExportSales,
+              )) {
+                return;
+              }
+              controller.exportToPdf();
+            },
             icon: Assets.pdf.image(height: 24, width: 24),
             tooltip: 'Export to PDF',
           ),
@@ -303,14 +321,18 @@ class ItemReportsScreen extends StatelessWidget {
       Map<String, Map<String, dynamic>> groupedItems = {};
 
       for (var item in controller.filteredItemsList) {
-        String itemName = item.itemName;
+        final groupKey = PosCartLine.reportGroupKey(
+          itemName: item.itemName,
+          variantName: item.variantName,
+          variantId: item.variantId,
+        );
 
-        if (groupedItems.containsKey(itemName)) {
-          groupedItems[itemName]!['quantity'] += item.quantity;
-          groupedItems[itemName]!['totalAmount'] +=
+        if (groupedItems.containsKey(groupKey)) {
+          groupedItems[groupKey]!['quantity'] += item.quantity;
+          groupedItems[groupKey]!['totalAmount'] +=
               item.quantity * item.salePrice;
         } else {
-          groupedItems[itemName] = {
+          groupedItems[groupKey] = {
             'quantity': item.quantity,
             'totalAmount': item.quantity * item.salePrice,
             'category': item.category,

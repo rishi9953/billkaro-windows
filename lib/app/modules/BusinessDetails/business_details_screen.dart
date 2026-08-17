@@ -11,18 +11,28 @@ class BusinessDetailsScreen extends StatelessWidget {
 
   final controller = Get.put(BusinessDetailsController());
 
+  static const _pageBg = Color(0xFFE8EEF7);
+  static const _fieldFill = Color(0xFFF8FAFC);
+  static const _labelColor = Color(0xFF64748B);
+  static const _hintColor = Color(0xFF94A3B8);
+  static const _border = Color(0xFFE2E8F0);
+  static const _maxWidthDesktop = 1080.0;
+
   @override
   Widget build(BuildContext context) {
-    var loc = AppLocalizations.of(Get.context!)!;
+    final loc = AppLocalizations.of(context)!;
+    final canEdit = StaffAccess.isOwnerSession;
+
     return Scaffold(
+      backgroundColor: _pageBg,
       appBar: AppBar(
         elevation: 0,
-
+        scrolledUnderElevation: 0,
         title: Text(
           loc.business_details,
           style: const TextStyle(
             color: AppColor.white,
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -36,189 +46,8 @@ class BusinessDetailsScreen extends StatelessWidget {
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final width = constraints.maxWidth;
-          final isDesktop = width >= 900;
-          final contentMaxWidth = isDesktop ? 980.0 : 720.0;
-          final contentPadding = EdgeInsets.symmetric(
-            horizontal: isDesktop ? 24 : 16,
-            vertical: isDesktop ? 20 : 16,
-          );
-
-          final fields = <Widget>[
-            _SectionCard(
-              title: loc.business_details,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-
-                children: [
-                  _ResponsiveGrid(
-                    isDesktop: isDesktop,
-                    children: [
-                      _buildTextField(
-                        label: loc.business_name,
-                        controller: controller.businessNameController,
-                        hint: loc.tap_to_enter,
-                      ),
-                      _buildTextField(
-                        label: 'Phone Number',
-                        controller: controller.phoneController,
-                        required: true,
-                        keyboardType: TextInputType.phone,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  _buildLogoSection(),
-                  const SizedBox(height: 16),
-                  _ResponsiveGrid(
-                    isDesktop: isDesktop,
-                    children: [
-                      _buildTextField(
-                        label: loc.outlet_address,
-                        controller: controller.outletAddressController,
-                        hint: loc.tap_to_enter,
-                        maxLines: 2,
-                      ),
-                      _buildTextField(
-                        label: loc.upi_id,
-                        controller: controller.upiIdController,
-                        hint: loc.tap_to_enter,
-                        helperText: 'This will be used to print QR on bills',
-                      ),
-                      _buildTextField(
-                        label: loc.custom_footer_message_on_bills,
-                        controller: controller.footerMessageController,
-                        maxLines: 3,
-                      ),
-                      _buildTextField(
-                        label: loc.fssai_number,
-                        controller: controller.fssaiController,
-                        hint: loc.tap_to_enter,
-                      ),
-                      _buildDropdownField(
-                        label: loc.tax_slab,
-                        value: controller.selectedTaxSlab,
-                        items: controller.taxSlabOptions,
-                      ),
-                      Obx(
-                        () => _buildDropdownField(
-                          label: loc.business_type,
-                          value: controller.selectedBusinessType,
-                          items: controller.businessTypeOptions,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Obx(() {
-                    if (!controller.showSeatingCapacityField) {
-                      return const SizedBox.shrink();
-                    }
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 16),
-                      child: _ResponsiveGrid(
-                        isDesktop: isDesktop,
-                        children: [
-                          _buildSeatingCapacityField(
-                            label: loc.seating_capacity,
-                            value: controller.selectedSeatingCapacity,
-                            options: controller.seatingCapacityOptions,
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16),
-                    child: _ResponsiveGrid(
-                      isDesktop: isDesktop,
-                      children: [
-                        _buildDropdownField(
-                          label: loc.business_category_question,
-                          value: controller.selectedBusinessCategory,
-                          items: controller.businessCategoryOptions,
-                        ),
-                        _buildTextField(
-                          label: '${loc.gstin_number} (optional)',
-                          controller: controller.gstinController,
-                          hint: loc.tap_to_enter,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  GstinVerifyRow(
-                    helper: controller.gstinVerify,
-                    onVerify: controller.verifyGstin,
-                    alignEnd: true,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            _SectionCard(
-              title: 'Links',
-              child: _ResponsiveGrid(
-                isDesktop: isDesktop,
-                children: [
-                  _buildTextField(
-                    label: loc.google_profile_link,
-                    controller: controller.googleProfileController,
-                    hint: loc.tap_to_enter,
-                  ),
-                  _buildTextField(
-                    label: loc.swiggy_link,
-                    controller: controller.swiggyLinkController,
-                    hint: loc.tap_to_enter,
-                  ),
-                  _buildTextField(
-                    label: loc.zomato_link,
-                    controller: controller.zomatoLinkController,
-                    hint: loc.tap_to_enter,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            _SectionCard(
-              title: loc.business_address,
-              child: _buildTextField(
-                label: loc.business_address,
-                controller: controller.businessAddressController,
-                hint: loc.tap_to_enter,
-                maxLines: 3,
-              ),
-            ),
-            if (StaffAccess.isOwnerSession) ...[
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerRight,
-                child: _DangerZone(
-                  child: SizedBox(
-                    height: 44,
-                    child: ElevatedButton(
-                      onPressed: controller.deleteOutlet,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: Text(
-                        loc.delete_outlet,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-            const SizedBox(height: 24),
-          ];
+          final isDesktop = constraints.maxWidth >= 900;
+          final maxWidth = isDesktop ? _maxWidthDesktop : 720.0;
 
           return Column(
             children: [
@@ -227,21 +56,102 @@ class BusinessDetailsScreen extends StatelessWidget {
                   thumbVisibility: isDesktop,
                   child: SingleChildScrollView(
                     physics: const ClampingScrollPhysics(),
-                    padding: contentPadding,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isDesktop ? 28 : 16,
+                      vertical: isDesktop ? 20 : 16,
+                    ),
                     child: Center(
                       child: ConstrainedBox(
-                        constraints: BoxConstraints(maxWidth: contentMaxWidth),
+                        constraints: BoxConstraints(maxWidth: maxWidth),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: fields,
+                          children: [
+                            _PageHeader(
+                              title: loc.business_details,
+                              subtitle:
+                                  'Update outlet identity, billing, and online presence.',
+                            ),
+                            const SizedBox(height: 16),
+                            if (isDesktop)
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        _buildIdentitySection(
+                                          loc,
+                                          canEdit,
+                                          isDesktop,
+                                        ),
+                                        const SizedBox(height: 14),
+                                        _buildBillingSection(
+                                          loc,
+                                          canEdit,
+                                          isDesktop,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        _buildTypeSection(
+                                          loc,
+                                          canEdit,
+                                          isDesktop,
+                                        ),
+                                        const SizedBox(height: 14),
+                                        _buildLinksSection(
+                                          loc,
+                                          canEdit,
+                                          isDesktop,
+                                        ),
+                                        if (canEdit) ...[
+                                          const SizedBox(height: 14),
+                                          _DangerCard(
+                                            title: loc.delete_outlet,
+                                            subtitle:
+                                                'Permanently remove this outlet and its local data.',
+                                            buttonLabel: loc.delete_outlet,
+                                            onPressed: controller.deleteOutlet,
+                                            compact: true,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              )
+                            else ...[
+                              _buildIdentitySection(loc, canEdit, isDesktop),
+                              const SizedBox(height: 14),
+                              _buildBillingSection(loc, canEdit, isDesktop),
+                              const SizedBox(height: 14),
+                              _buildTypeSection(loc, canEdit, isDesktop),
+                              const SizedBox(height: 14),
+                              _buildLinksSection(loc, canEdit, isDesktop),
+                              if (canEdit) ...[
+                                const SizedBox(height: 14),
+                                _DangerCard(
+                                  title: loc.delete_outlet,
+                                  subtitle:
+                                      'Permanently remove this outlet and its local data.',
+                                  buttonLabel: loc.delete_outlet,
+                                  onPressed: controller.deleteOutlet,
+                                ),
+                              ],
+                            ],
+                            const SizedBox(height: 20),
+                          ],
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-              if (StaffAccess.isOwnerSession)
-                _buildBottomButtons(maxWidth: contentMaxWidth),
+              if (canEdit) _buildBottomButtons(loc, maxWidth: maxWidth),
             ],
           );
         },
@@ -249,67 +159,239 @@ class BusinessDetailsScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildIdentitySection(
+    AppLocalizations loc,
+    bool canEdit,
+    bool isDesktop,
+  ) {
+    return _SectionCard(
+      icon: Icons.storefront_outlined,
+      title: 'Outlet identity',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ResponsiveGrid(
+            isDesktop: isDesktop,
+            children: [
+              _buildTextField(
+                label: loc.business_name,
+                textController: controller.businessNameController,
+                hint: loc.tap_to_enter,
+                canEdit: canEdit,
+              ),
+              _buildTextField(
+                label: loc.mobile_number,
+                textController: controller.phoneController,
+                required: true,
+                keyboardType: TextInputType.phone,
+                canEdit: canEdit,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildLogoSection(loc, canEdit),
+          const SizedBox(height: 16),
+          _buildTextField(
+            label: loc.outlet_address,
+            textController: controller.outletAddressController,
+            hint: loc.tap_to_enter,
+            maxLines: 2,
+            canEdit: canEdit,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBillingSection(
+    AppLocalizations loc,
+    bool canEdit,
+    bool isDesktop,
+  ) {
+    return _SectionCard(
+      icon: Icons.receipt_long_outlined,
+      title: 'Billing',
+      child: _ResponsiveGrid(
+        isDesktop: isDesktop,
+        children: [
+          _buildTextField(
+            label: loc.upi_id,
+            textController: controller.upiIdController,
+            hint: loc.tap_to_enter,
+            helperText: 'This will be used to print QR on bills',
+            canEdit: canEdit,
+          ),
+          _buildTextField(
+            label: loc.custom_footer_message_on_bills,
+            textController: controller.footerMessageController,
+            maxLines: 3,
+            canEdit: canEdit,
+          ),
+          _buildTextField(
+            label: loc.fssai_number,
+            textController: controller.fssaiController,
+            hint: loc.tap_to_enter,
+            canEdit: canEdit,
+          ),
+          _buildDropdownField(
+            label: loc.tax_slab,
+            value: controller.selectedTaxSlab,
+            items: controller.taxSlabOptions,
+            canEdit: canEdit,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTypeSection(
+    AppLocalizations loc,
+    bool canEdit,
+    bool isDesktop,
+  ) {
+    return _SectionCard(
+      icon: Icons.category_outlined,
+      title: 'Business type',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ResponsiveGrid(
+            isDesktop: isDesktop,
+            children: [
+              Obx(
+                () => _buildDropdownField(
+                  label: loc.business_type,
+                  value: controller.selectedBusinessType,
+                  items: controller.businessTypeOptions,
+                  canEdit: canEdit,
+                ),
+              ),
+              _buildDropdownField(
+                label: loc.business_category_question,
+                value: controller.selectedBusinessCategory,
+                items: controller.businessCategoryOptions,
+                canEdit: canEdit,
+              ),
+            ],
+          ),
+          Obx(() {
+            if (!controller.showSeatingCapacityField) {
+              return const SizedBox.shrink();
+            }
+            return Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: _ResponsiveGrid(
+                isDesktop: isDesktop,
+                children: [
+                  _buildSeatingCapacityField(
+                    label: loc.seating_capacity,
+                    value: controller.selectedSeatingCapacity,
+                    options: controller.seatingCapacityOptions,
+                    canEdit: canEdit,
+                  ),
+                ],
+              ),
+            );
+          }),
+          const SizedBox(height: 16),
+          _ResponsiveGrid(
+            isDesktop: isDesktop,
+            children: [
+              _buildTextField(
+                label: '${loc.gstin_number} (optional)',
+                textController: controller.gstinController,
+                hint: loc.tap_to_enter,
+                canEdit: canEdit,
+              ),
+              _buildTextField(
+                label: loc.business_address,
+                textController: controller.businessAddressController,
+                hint: loc.tap_to_enter,
+                maxLines: 3,
+                canEdit: canEdit,
+              ),
+            ],
+          ),
+          if (canEdit) ...[
+            const SizedBox(height: 10),
+            GstinVerifyRow(
+              helper: controller.gstinVerify,
+              onVerify: controller.verifyGstin,
+              alignEnd: true,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLinksSection(
+    AppLocalizations loc,
+    bool canEdit,
+    bool isDesktop,
+  ) {
+    return _SectionCard(
+      icon: Icons.link_outlined,
+      title: 'Online links',
+      child: _ResponsiveGrid(
+        isDesktop: isDesktop,
+        children: [
+          _buildTextField(
+            label: loc.google_profile_link,
+            textController: controller.googleProfileController,
+            hint: loc.tap_to_enter,
+            canEdit: canEdit,
+          ),
+          _buildTextField(
+            label: loc.swiggy_link,
+            textController: controller.swiggyLinkController,
+            hint: loc.tap_to_enter,
+            canEdit: canEdit,
+          ),
+          _buildTextField(
+            label: loc.zomato_link,
+            textController: controller.zomatoLinkController,
+            hint: loc.tap_to_enter,
+            canEdit: canEdit,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTextField({
     required String label,
-    required TextEditingController controller,
+    required TextEditingController textController,
     String? hint,
-    String? prefix,
     String? helperText,
     bool required = false,
     int maxLines = 1,
     TextInputType? keyboardType,
+    required bool canEdit,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text(
-              label,
-              style: const TextStyle(fontSize: 14, color: Colors.black87),
-            ),
-            if (required)
-              const Text(
-                ' *',
-                style: TextStyle(color: Colors.red, fontSize: 14),
-              ),
-          ],
-        ),
+        _FieldLabel(label, required: required),
         const SizedBox(height: 8),
         TextField(
-          controller: controller,
+          enabled: canEdit,
+          controller: textController,
           maxLines: maxLines,
           keyboardType: keyboardType,
-          decoration: InputDecoration(
-            hintText: hint,
-            prefixText: prefix,
-            prefixStyle: const TextStyle(color: Colors.black, fontSize: 16),
-            hintStyle: const TextStyle(color: Colors.grey),
-            filled: true,
-            fillColor: Colors.grey[50],
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey[300]!),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey[300]!),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Colors.blue, width: 2),
-            ),
-          ),
+          decoration: _inputDecoration(hint: hint),
         ),
         if (helperText != null) ...[
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Row(
             children: [
-              const Icon(Icons.info_outline, size: 14, color: Colors.grey),
-              const SizedBox(width: 4),
-              Text(
-                helperText,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              Icon(Icons.info_outline, size: 14, color: Colors.grey.shade500),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  helperText,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
               ),
             ],
           ),
@@ -322,31 +404,34 @@ class BusinessDetailsScreen extends StatelessWidget {
     required String label,
     required RxString value,
     required List<String> items,
+    required bool canEdit,
   }) {
-    var loc = AppLocalizations.of(Get.context!)!;
+    final loc = AppLocalizations.of(Get.context!)!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 14, color: Colors.black87),
-        ),
+        _FieldLabel(label),
         const SizedBox(height: 8),
         Obx(
           () => AppFilterDropdown2<String>(
             value: value.value,
-            decoration: appFilterDropdownDecoration(borderRadius: 8),
+            isExpanded: true,
+            decoration: appFilterDropdownDecoration(borderRadius: 11),
             style: TextStyle(
               color: value.value.contains('Tap to') || value.value == loc.none
                   ? Colors.grey
                   : Colors.black,
+              overflow: TextOverflow.ellipsis,
             ),
             items: items.map((String item) {
               return DropdownItem<String>(
                 value: item,
+                enabled: canEdit,
                 child: Text(
                   item.capitalize!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: item.contains('Tap to') || item == loc.none
                         ? Colors.grey
@@ -355,11 +440,11 @@ class BusinessDetailsScreen extends StatelessWidget {
                 ),
               );
             }).toList(),
-            onChanged: (String? newValue) {
-              if (newValue != null) {
-                value.value = newValue;
-              }
-            },
+            onChanged: canEdit
+                ? (String? newValue) {
+                    if (newValue != null) value.value = newValue;
+                  }
+                : null,
           ),
         ),
       ],
@@ -370,45 +455,49 @@ class BusinessDetailsScreen extends StatelessWidget {
     required String label,
     required RxString value,
     required List<Map<String, String>> options,
+    required bool canEdit,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 14, color: Colors.black87),
-        ),
+        _FieldLabel(label),
         const SizedBox(height: 8),
         Obx(
           () => AppFilterDropdown2<String>(
             value: value.value,
-            decoration: appFilterDropdownDecoration(borderRadius: 8),
+            isExpanded: true,
+            decoration: appFilterDropdownDecoration(borderRadius: 11),
             items: options.map((opt) {
               return DropdownItem<String>(
                 value: opt['value'],
+                enabled: canEdit,
                 child: Text(
                   opt['label']!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: Colors.black),
                 ),
               );
             }).toList(),
-            onChanged: (String? newValue) {
-              if (newValue != null) value.value = newValue;
-            },
+            onChanged: canEdit
+                ? (String? newValue) {
+                    if (newValue != null) value.value = newValue;
+                  }
+                : null,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildLogoSection() {
-    var loc = AppLocalizations.of(Get.context!)!;
+  Widget _buildLogoSection(AppLocalizations loc, bool canEdit) {
     return Obx(() {
       final file = controller.businessLogo.value;
       final raw = controller.imageUrl.value.isNotEmpty
           ? controller.imageUrl.value
           : (controller.selectedOutlet.value?.logo ?? '');
       final url = resolvedMediaUrl(raw);
+      final hasLogo = file != null || url.isNotEmpty;
 
       Widget buildImage() {
         if (file != null) {
@@ -425,173 +514,145 @@ class BusinessDetailsScreen extends StatelessWidget {
             filterQuality: FilterQuality.high,
             loadingBuilder: (context, child, loadingProgress) {
               if (loadingProgress == null) return child;
-              return Center(
+              return const Center(
                 child: SizedBox(
                   width: 28,
                   height: 28,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.grey[400],
-                  ),
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
               );
             },
-            errorBuilder: (_, __, ___) => _buildLogoEmptyState(loc),
+            errorBuilder: (_, __, ___) => _LogoEmpty(loc: loc),
           );
         }
-        return _buildLogoEmptyState(loc);
+        return _LogoEmpty(loc: loc);
       }
 
-      final hasLogo = file != null || url.isNotEmpty;
-
-      return InkWell(
-        onTap: controller.pickImage,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[300]!),
-          ),
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                loc.logo,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: canEdit ? controller.pickImage : null,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: _fieldFill,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _FieldLabel(loc.logo),
+                const SizedBox(height: 4),
+                Text(
+                  loc.upload_business_logo,
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                loc.upload_business_logo,
-                style: TextStyle(color: Colors.grey[700], fontSize: 12),
-              ),
-              const SizedBox(height: 10),
-              AspectRatio(
-                aspectRatio: 16 / 6,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.grey[200]!),
-                  ),
-                  padding: const EdgeInsets.all(8),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Center(child: buildImage()),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.upload_file, size: 16, color: AppColor.primary),
-                  const SizedBox(width: 8),
-                  Text(
-                    hasLogo ? 'Change logo' : 'Upload logo',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColor.primary,
+                const SizedBox(height: 12),
+                AspectRatio(
+                  aspectRatio: 16 / 5.5,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFEEF2F7)),
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Center(child: buildImage()),
                     ),
                   ),
+                ),
+                if (canEdit) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.upload_outlined,
+                        size: 16,
+                        color: AppColor.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        hasLogo ? 'Change logo' : 'Upload logo',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColor.primary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       );
     });
   }
 
-  Widget _buildLogoEmptyState(AppLocalizations loc) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(Icons.image_outlined, size: 44, color: Colors.grey[500]),
-        const SizedBox(height: 10),
-        Text(
-          loc.upload_business_logo,
-          style: TextStyle(color: Colors.grey[700], fontSize: 14),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'PNG/JPG works best • Recommended: wide logo',
-          style: TextStyle(color: Colors.grey[600], fontSize: 12),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBottomButtons({required double maxWidth}) {
-    var loc = AppLocalizations.of(Get.context!)!;
-
+  Widget _buildBottomButtons(
+    AppLocalizations loc, {
+    required double maxWidth,
+  }) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 16,
-            offset: const Offset(0, -6),
-          ),
-        ],
+        border: Border(
+          top: BorderSide(color: Colors.black.withValues(alpha: 0.08)),
+        ),
       ),
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
           child: Center(
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: maxWidth),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 44,
-                      child: OutlinedButton(
-                        onPressed: () => Get.back(),
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: Colors.grey.shade300),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: Text(
-                          loc.cancel,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black,
-                          ),
-                        ),
+                  OutlinedButton(
+                    onPressed: () => Get.back(),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColor.primary,
+                      side: BorderSide(
+                        color: AppColor.primary.withValues(alpha: 0.35),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 22,
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(11),
                       ),
                     ),
+                    child: Text(loc.cancel),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(
-                    child: SizedBox(
-                      height: 44,
-                      child: ElevatedButton(
-                        onPressed: controller.updateBusinessDetails,
-                        style: ElevatedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
+                  SizedBox(
+                    width: 200,
+                    child: ElevatedButton(
+                      onPressed: controller.updateBusinessDetails,
+                      style: ElevatedButton.styleFrom(
+                        elevation: 0,
+                        backgroundColor: AppColor.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(11),
                         ),
-                        child: Text(
-                          loc.update_details,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
+                      ),
+                      child: Text(
+                        loc.update_details,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -601,6 +662,191 @@ class BusinessDetailsScreen extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration({String? hint}) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: _hintColor, fontSize: 14),
+      filled: true,
+      fillColor: _fieldFill,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(11),
+        borderSide: const BorderSide(color: _border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(11),
+        borderSide: const BorderSide(color: _border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(11),
+        borderSide: BorderSide(color: AppColor.primary, width: 1.6),
+      ),
+      disabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(11),
+        borderSide: const BorderSide(color: _border),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    );
+  }
+}
+
+class _PageHeader extends StatelessWidget {
+  const _PageHeader({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColor.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.business_outlined,
+              color: AppColor.primary,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FieldLabel extends StatelessWidget {
+  const _FieldLabel(this.label, {this.required = false});
+
+  final String label;
+  final bool required;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: RichText(
+        softWrap: true,
+        text: TextSpan(
+          text: label,
+          style: const TextStyle(
+            color: BusinessDetailsScreen._labelColor,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+          children: [
+            if (required)
+              const TextSpan(
+                text: ' *',
+                style: TextStyle(color: Color(0xFFEF4444)),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.icon,
+    required this.title,
+    required this.child,
+  });
+
+  final IconData icon;
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColor.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, size: 18, color: AppColor.primary),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: Colors.grey.shade200),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: SizedBox(width: double.infinity, child: child),
+          ),
+        ],
       ),
     );
   }
@@ -614,76 +860,149 @@ class _ResponsiveGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!isDesktop) {
-      return Column(
-        children: [
-          for (int i = 0; i < children.length; i++) ...[
-            children[i],
-            if (i != children.length - 1) const SizedBox(height: 16),
-          ],
-        ],
-      );
-    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxW = constraints.maxWidth;
+        // Only split into 2 columns when there is enough room for both tiles.
+        final useTwoCol = isDesktop && maxW >= 520 && children.length > 1;
+        final itemWidth =
+            useTwoCol ? (maxW - 16) / 2 : maxW;
 
-    return Wrap(
-      spacing: 16,
-      runSpacing: 16,
+        return Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: [
+            for (final child in children)
+              SizedBox(
+                width: itemWidth,
+                child: child,
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _LogoEmpty extends StatelessWidget {
+  const _LogoEmpty({required this.loc});
+
+  final AppLocalizations loc;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        for (final child in children) SizedBox(width: 460, child: child),
+        Icon(Icons.image_outlined, size: 40, color: Colors.grey.shade500),
+        const SizedBox(height: 8),
+        Text(
+          loc.upload_business_logo,
+          style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'PNG/JPG • Recommended: wide logo',
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
+        ),
       ],
     );
   }
 }
 
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.title, required this.child});
+class _DangerCard extends StatelessWidget {
+  const _DangerCard({
+    required this.title,
+    required this.subtitle,
+    required this.buttonLabel,
+    required this.onPressed,
+    this.compact = false,
+  });
 
   final String title;
-  final Widget child;
+  final String subtitle;
+  final String buttonLabel;
+  final VoidCallback onPressed;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: Colors.black87,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF5F5),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFECACA)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.warning_amber_rounded,
+                  color: Color(0xFFDC2626),
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF991B1B),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.red.shade700,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Align(
+            alignment: compact ? Alignment.centerRight : Alignment.centerLeft,
+            child: SizedBox(
+              width: compact ? 180 : double.infinity,
+              child: ElevatedButton(
+                onPressed: onPressed,
+                style: ElevatedButton.styleFrom(
+                  elevation: 0,
+                  backgroundColor: const Color(0xFFDC2626),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                ),
+                child: Text(
+                  buttonLabel,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 14),
-            child,
-          ],
-        ),
+          ),
+        ],
       ),
-    );
-  }
-}
-
-class _DangerZone extends StatelessWidget {
-  const _DangerZone({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      color: const Color(0xFFFFF5F5),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: Colors.red.shade100),
-      ),
-      child: Padding(padding: const EdgeInsets.all(16), child: child),
     );
   }
 }

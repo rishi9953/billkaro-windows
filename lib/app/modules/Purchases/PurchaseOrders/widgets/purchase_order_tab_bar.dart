@@ -1,6 +1,7 @@
 import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_controller.dart';
 import 'package:billkaro/app/modules/Purchases/PurchaseOrders/purchase_order_ui_actions.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_access.dart';
 
 class PurchaseOrderTabBar extends StatelessWidget {
   const PurchaseOrderTabBar({
@@ -40,16 +41,22 @@ class PurchaseOrderTabBar extends StatelessWidget {
                         onTap: () => controller.selectTab(index),
                         onClose: () => controller.requestCloseTab(index, loc),
                       ),
-                    IconButton(
-                      tooltip: loc.create_po,
-                      onPressed: controller.addTab,
-                      icon: const Icon(Icons.add, size: 18),
-                      visualDensity: VisualDensity.compact,
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        side: BorderSide(color: Colors.grey.shade300),
+                    if (StaffAccess.canAdjustStock)
+                      IconButton(
+                        tooltip: loc.create_po,
+                        onPressed: () {
+                          if (!StaffAccess.ensure(StaffAccess.canAdjustStock)) {
+                            return;
+                          }
+                          controller.addTab();
+                        },
+                        icon: const Icon(Icons.add, size: 18),
+                        visualDensity: VisualDensity.compact,
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),

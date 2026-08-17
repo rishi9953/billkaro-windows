@@ -1,5 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'combo_component.dart';
+import 'menu_item_variant.dart';
 
 part 'item_response.g.dart';
 
@@ -81,6 +82,13 @@ class ItemData {
   final bool isCombo;
   @JsonKey(defaultValue: [])
   final List<ComboComponent> comboComponents;
+  @JsonKey(defaultValue: '')
+  final String linkedRecipeItemId;
+  @JsonKey(defaultValue: false)
+  final bool hasVariants;
+  @JsonKey(defaultValue: [])
+  final List<MenuItemVariant> variants;
+  final String? matchedVariantId;
 
   ItemData({
     required this.id,
@@ -108,6 +116,10 @@ class ItemData {
     this.prepTimeMinutes = 15,
     this.isCombo = false,
     this.comboComponents = const [],
+    this.linkedRecipeItemId = '',
+    this.hasVariants = false,
+    this.variants = const [],
+    this.matchedVariantId,
   });
 
   factory ItemData.fromJson(Map<String, dynamic> json) =>

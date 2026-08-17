@@ -19,6 +19,12 @@ class PrimaryContactController extends BaseController {
 
   final List<String> titleList = ['CEO', 'Manager', 'Other'];
 
+  String _normalizeTitleForApi(String title) {
+    final trimmed = title.trim();
+    if (trimmed.toLowerCase() == 'other') return 'other';
+    return trimmed;
+  }
+
   Timer? _mobileCheckDebounce;
   final isMobileChecking = false.obs;
   final isMobileAvailable = Rxn<bool>();
@@ -238,7 +244,7 @@ class PrimaryContactController extends BaseController {
       'lastName': lastNameController.text.trim(),
       'name':
           '${firstNameController.text.trim()} ${lastNameController.text.trim()}',
-      'title': selectedTitle.value,
+      'title': _normalizeTitleForApi(selectedTitle.value),
       'mobile': digits,
       'email': emailController.text.trim().toLowerCase(),
     };

@@ -1,14 +1,18 @@
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/app/Database/app_database.dart' as dbs;
-import 'package:billkaro/app/modules/AddOrder/confirm_order_bottomsheet.dart';
+import 'package:billkaro/app/modules/AddOrder/confirm_order_dialog.dart';
 import 'package:billkaro/app/modules/AddOrder/quick_addItem_bottomsheet.dart';
+import 'package:billkaro/app/modules/AddOrder/wallet_balance_alert_dialog.dart';
 import 'package:billkaro/app/modules/BusinessOverview/business_overview_controller.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_item_controller.dart';
 import 'package:billkaro/app/modules/Order/HoldOrders/hold_orders_controller.dart';
 import 'package:billkaro/app/services/Modals/Categories/categories_response.dart';
 import 'package:billkaro/app/services/Modals/addItem/addItem_modal.dart';
+import 'package:billkaro/app/modules/AddOrder/widgets/variant_picker_dialog.dart';
 import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
+import 'package:billkaro/app/services/Modals/addItem/menu_item_variant.dart';
+import 'package:billkaro/app/utils/pos_cart_line.dart';
 import 'package:billkaro/app/services/Modals/login_response.dart';
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart'
@@ -17,6 +21,7 @@ import 'package:billkaro/app/services/Modals/orders/split_payment.dart';
 import 'package:billkaro/app/services/Modals/tables/tables_response.dart';
 import 'package:billkaro/app/Widgets/desktop_camera_capture_dialog.dart';
 import 'package:billkaro/app/services/ai/menu_ai_scanner.dart';
+import 'package:billkaro/app/services/billing/platform_fee_service.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/app/services/sync/bill_number_util.dart';
 import 'package:billkaro/app/services/sync/sync_manager.dart';
@@ -28,10 +33,12 @@ import 'dart:io';
 import 'package:billkaro/app/modules/StoreSession/store_session_controller.dart';
 import 'package:billkaro/app/modules/StoreSession/store_session_widget.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Invoice/invoice_controller.dart';
 import 'package:billkaro/app/modules/Tables/table_controller.dart';
+import 'package:billkaro/app/modules/Inventory/inventory_controller.dart';
 
 enum PosOrderAction { kot, hold, bill }
 
@@ -62,6 +69,9 @@ class AddOrderController extends BaseController {
 
   // State
   final RxMap<String, int> itemQuantities = <String, int>{}.obs;
+
+  /// Quantities already deducted for the open edit order (server-side stock).
+  final Map<String, int> committedStockQuantities = <String, int>{};
 
   /// Per-line remarks (itemId → note), sent as `itemRemark` on each order item.
   final RxMap<String, String> itemRemarks = <String, String>{}.obs;
@@ -137,6 +147,8 @@ class AddOrderController extends BaseController {
     }
     return raw;
   }
+
+  double serviceChargeAmount() => _asDouble(orderDetails['serviceCharge']);
 
   String _normalizePaymentMethod(dynamic value) {
     final method = (value ?? '').toString().trim().toLowerCase();
@@ -273,14 +285,16 @@ class AddOrderController extends BaseController {
     calculateTotals();
   }
 
+  /// Clears cart/draft state for a new order.
+  /// Keeps [selectedOrderSource] so the next order and invoice reuse it.
   void clearOrderDraft() {
     itemQuantities.clear();
     itemRemarks.clear();
+    committedStockQuantities.clear();
     kotPrintedQuantities.clear();
     orderDetails.clear();
     orders = null;
     isEdit.value = false;
-    selectedOrderSource.value = '';
     subtotal.value = 0.0;
     totalTax.value = 0.0;
     totalAmount.value = 0.0;
@@ -288,6 +302,10 @@ class AddOrderController extends BaseController {
     useSplitPayment.value = false;
     splitPayments.clear();
     orderDetailsVersion.value++;
+  }
+
+  String defaultOrderSource() {
+    return HomeMainRoutes.outletIsCafeOrRestaurant() ? 'Dine In' : 'Takeaway';
   }
 
   @override
@@ -381,22 +399,34 @@ class AddOrderController extends BaseController {
       }
       // Petpooja-style: order type tabs in UI — no blocking dialog.
       if (selectedOrderSource.value.isEmpty) {
-        selectedOrderSource.value = HomeMainRoutes.outletIsCafeOrRestaurant()
-            ? 'Dine In'
-            : 'Takeaway';
+        selectedOrderSource.value = defaultOrderSource();
       }
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      maybeShowWalletBalanceAlert(appPref: appPref, apiClient: apiClient);
+    });
+  }
+
+  String _lineKeyForOrderItem({required String itemId, String? variantId}) {
+    return PosCartLine(itemId: itemId, variantId: variantId).key;
   }
 
   void _loadOrderForEdit() {
     itemQuantities.clear();
     itemRemarks.clear();
+    committedStockQuantities.clear();
 
     for (final item in orders!.items) {
-      itemQuantities[item.itemId] = item.quantity ?? 1;
+      final lineKey = _lineKeyForOrderItem(
+        itemId: item.itemId,
+        variantId: item.variantId,
+      );
+      itemQuantities[lineKey] = item.quantity ?? 1;
+      committedStockQuantities[lineKey] = item.quantity ?? 1;
       final remark = item.itemRemark?.trim();
       if (remark != null && remark.isNotEmpty) {
-        itemRemarks[item.itemId] = remark;
+        itemRemarks[lineKey] = remark;
       }
     }
 
@@ -412,7 +442,11 @@ class AddOrderController extends BaseController {
         kotPrintedQuantities.clear();
         for (final item in orders!.items) {
           if (item.kotSentQuantity > 0) {
-            kotPrintedQuantities[item.itemId] = item.kotSentQuantity;
+            kotPrintedQuantities[_lineKeyForOrderItem(
+                  itemId: item.itemId,
+                  variantId: item.variantId,
+                )] =
+                item.kotSentQuantity;
           }
         }
         return;
@@ -459,8 +493,7 @@ class AddOrderController extends BaseController {
       final diff = qty - sent;
       if (diff <= 0) continue;
 
-      final item = allItemsMap[entry.key];
-      if (item == null) continue;
+      if (_catalogItemForLine(entry.key) == null) continue;
 
       delta.add(_cartOrderItem(entry.key, diff));
     }
@@ -545,10 +578,12 @@ class AddOrderController extends BaseController {
 
     // Populate quantities from order items
     for (final orderItem in orders!.items) {
-      final itemId = orderItem.itemId;
+      final lineKey = _lineKeyForOrderItem(
+        itemId: orderItem.itemId,
+        variantId: orderItem.variantId,
+      );
       final quantity = orderItem.quantity ?? 1;
-
-      itemQuantities[itemId] = quantity;
+      itemQuantities[lineKey] = quantity;
     }
 
     // Recalculate totals
@@ -609,6 +644,7 @@ class AddOrderController extends BaseController {
   /// Reload categories/items after the global outlet changes (other tabs stay mounted).
   Future<void> reloadForOutletChange() async {
     clearOrderDraft();
+    selectedOrderSource.value = defaultOrderSource();
     resetPagination();
     allItemsMap.clear();
     categories.clear();
@@ -622,57 +658,201 @@ class AddOrderController extends BaseController {
   // --------------------
   // Quantity management
   // --------------------
-  int getItemQuantity(String itemId) => itemQuantities[itemId] ?? 0;
+  int getItemQuantity(String lineKey) => itemQuantities[lineKey] ?? 0;
 
-  void incrementItemQuantity(String itemId) {
-    // Max 100 per item to prevent accidental over-ordering
+  int getParentItemQuantity(String itemId) {
+    var total = 0;
+    for (final entry in itemQuantities.entries) {
+      if (PosCartLine.fromKey(entry.key).itemId == itemId) {
+        total += entry.value;
+      }
+    }
+    return total;
+  }
 
-    itemQuantities[itemId] = (itemQuantities[itemId] ?? 0) + 1;
-    if (itemQuantities[itemId]! > 100) {
-      itemQuantities[itemId] = 100;
+  List<MenuItemVariant> _activeVariants(ItemData item) {
+    return item.variants.where((variant) => variant.isActive).toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  }
+
+  MenuItemVariant? _findVariant(ItemData item, String? variantId) {
+    if (variantId == null || variantId.isEmpty) return null;
+    for (final variant in item.variants) {
+      if (variant.id == variantId && variant.isActive) return variant;
+    }
+    return null;
+  }
+
+  /// Catalog is keyed by parent item id. Cart rows use `itemId` or `itemId::variantId`.
+  ItemData? _catalogItemForLine(String lineKey) {
+    return allItemsMap[PosCartLine.fromKey(lineKey).itemId];
+  }
+
+  ({ItemData item, MenuItemVariant? variant})? _tryResolveLine(String lineKey) {
+    final parsed = PosCartLine.fromKey(lineKey);
+    final item = _catalogItemForLine(lineKey);
+    if (item == null) return null;
+    return (item: item, variant: _findVariant(item, parsed.variantId));
+  }
+
+  ({ItemData item, MenuItemVariant? variant}) _resolveLine(String lineKey) {
+    final resolved = _tryResolveLine(lineKey);
+    if (resolved == null) {
+      throw StateError('Cart line is missing from the item catalog: $lineKey');
+    }
+    return resolved;
+  }
+
+  Future<void> handlePosItemTap(ItemData item) async {
+    final variants = _activeVariants(item);
+    if (variants.isEmpty) {
+      incrementItemQuantity(PosCartLine(itemId: item.id).key);
+      return;
+    }
+    final matchedId = item.matchedVariantId?.trim();
+    if (matchedId != null && matchedId.isNotEmpty) {
+      final matched = _findVariant(item, matchedId);
+      if (matched != null) {
+        incrementItemQuantity(
+          PosCartLine(itemId: item.id, variantId: matched.id).key,
+        );
+        return;
+      }
+    }
+    final selected = await showVariantPickerDialog(
+      item: item,
+      variants: variants,
+    );
+    if (selected == null) return;
+    incrementItemQuantity(
+      PosCartLine(itemId: item.id, variantId: selected.id).key,
+    );
+  }
+
+  String? _latestLineKeyForItem(String itemId) {
+    String? last;
+    for (final key in itemQuantities.keys) {
+      if (PosCartLine.fromKey(key).itemId == itemId) last = key;
+    }
+    return last;
+  }
+
+  void incrementItemQuantity(String lineKey) {
+    final parsed = PosCartLine.fromKey(lineKey);
+    final item = _catalogItemForLine(lineKey);
+    if (item == null) return;
+    if (_activeVariants(item).isNotEmpty &&
+        (parsed.variantId == null || parsed.variantId!.isEmpty)) {
+      handlePosItemTap(item);
+      return;
+    }
+
+    final resolved = _resolveLine(lineKey);
+    final variant = resolved.variant;
+    final current = itemQuantities[lineKey] ?? 0;
+    final trackStock = variant?.trackStock == true
+        ? true
+        : (variant == null && item.trackStock);
+    final availableStock = variant?.trackStock == true
+        ? variant!.stockQuantity
+        : item.stockQuantity;
+    if (trackStock) {
+      final committed = committedStockQuantities[lineKey] ?? 0;
+      final maxAllowed = availableStock + committed;
+      if (current >= maxAllowed) {
+        final label = variant != null
+            ? '${item.itemName} ${variant.name}'
+            : item.itemName;
+        showError(
+          description: maxAllowed <= 0
+              ? '$label is out of stock'
+              : 'Only ${maxAllowed == maxAllowed.roundToDouble() ? maxAllowed.toInt() : maxAllowed} available in stock for $label',
+        );
+        return;
+      }
+    }
+
+    itemQuantities[lineKey] = current + 1;
+    if (itemQuantities[lineKey]! > 100) {
+      itemQuantities[lineKey] = 100;
     }
     calculateTotals();
   }
 
-  void decrementItemQuantity(String itemId) {
-    final current = itemQuantities[itemId] ?? 0;
+  void decrementItemQuantity(String lineKey) {
+    var key = lineKey;
+    if (!itemQuantities.containsKey(key)) {
+      final parentLine = _latestLineKeyForItem(key);
+      if (parentLine == null) return;
+      key = parentLine;
+    }
+    final current = itemQuantities[key] ?? 0;
     if (current <= 1) {
-      itemQuantities.remove(itemId);
-      itemRemarks.remove(itemId);
+      itemQuantities.remove(key);
+      itemRemarks.remove(key);
     } else {
-      itemQuantities[itemId] = current - 1;
+      itemQuantities[key] = current - 1;
     }
     calculateTotals();
   }
 
-  void removeItemCompletely(String itemId) {
-    itemQuantities.remove(itemId);
-    itemRemarks.remove(itemId);
+  void removeItemCompletely(String lineKey) {
+    if (itemQuantities.containsKey(lineKey)) {
+      itemQuantities.remove(lineKey);
+      itemRemarks.remove(lineKey);
+    } else {
+      final keys = itemQuantities.keys
+          .where((key) => PosCartLine.fromKey(key).itemId == lineKey)
+          .toList();
+      for (final key in keys) {
+        itemQuantities.remove(key);
+        itemRemarks.remove(key);
+      }
+    }
     calculateTotals();
   }
 
-  String? _itemRemarkFor(String itemId) {
-    final remark = itemRemarks[itemId]?.trim();
+  String? _itemRemarkFor(String lineKey) {
+    final remark = itemRemarks[lineKey]?.trim();
     if (remark == null || remark.isEmpty) return null;
     return remark;
   }
 
   OrderItem _cartOrderItem(
-    String itemId,
+    String lineKey,
     int quantity, {
     int kotSentQuantity = 0,
   }) {
-    final item = allItemsMap[itemId]!;
+    final resolved = _resolveLine(lineKey);
+    final item = resolved.item;
+    final variant = resolved.variant;
+    final unitPrice = variant?.salePrice ?? item.salePrice;
     return OrderItem(
       itemId: item.id,
       itemName: item.itemName,
       category: item.category,
       quantity: quantity,
-      salePrice: item.salePrice,
+      salePrice: unitPrice,
       gst: item.gst.toDouble(),
       kotSentQuantity: kotSentQuantity,
-      itemRemark: _itemRemarkFor(itemId),
+      itemRemark: _itemRemarkFor(lineKey),
+      variantId: variant?.id,
+      variantName: variant?.name,
+      variantSku: variant?.sku,
     );
+  }
+
+  String cartLineLabel(String lineKey) {
+    final resolved = _resolveLine(lineKey);
+    return PosCartLine.displayName(
+      itemName: resolved.item.itemName,
+      variantName: resolved.variant?.name,
+    );
+  }
+
+  double cartLineUnitPrice(String lineKey) {
+    final resolved = _resolveLine(lineKey);
+    return resolved.variant?.salePrice ?? resolved.item.salePrice;
   }
 
   /// Get count of selected items (items with quantity >= 1)
@@ -750,8 +930,16 @@ class AddOrderController extends BaseController {
 
   Future<bool> ensureBillDetails() async => validatePayment();
 
+  Future<void> executeConfirmedPosAction(PosOrderAction action) async {
+    await executePosAction(action);
+  }
+
   /// Petpooja-style POS: KOT stays on screen; Hold saves & exits; Bill settles.
   Future<void> executePosAction(PosOrderAction action) async {
+    final canSaveOrder = isEdit.value
+        ? StaffAccess.canUpdateSales
+        : StaffAccess.canCreateSales;
+    if (!StaffAccess.ensure(canSaveOrder)) return;
     if (!hasTrialOrSubscription(appPref)) {
       checkSubscription();
       return;
@@ -791,12 +979,28 @@ class AddOrderController extends BaseController {
       await showRemarkDialog();
     }
 
+    final chargePlatformFee =
+        action != PosOrderAction.kot &&
+        PlatformFeeService.shouldCharge(appPref);
+    if (chargePlatformFee &&
+        !await PlatformFeeService.ensureSufficientBalance(
+          appPref,
+          apiClient: apiClient,
+        )) {
+      showError(
+        description:
+            'Insufficient wallet balance. Recharge at least ₹${PlatformFeeService.feeAmount.toStringAsFixed(0)} to continue.',
+      );
+      return;
+    }
+
     final status = action == PosOrderAction.bill ? 'closed' : 'pending';
     await saveAndBill(
       status,
       stayOnScreen: action == PosOrderAction.kot && isKotFeatureActive,
       skipKotPrint: action == PosOrderAction.hold,
       requireKotPrint: action == PosOrderAction.kot && isKotFeatureActive,
+      chargePlatformFee: chargePlatformFee,
     );
   }
 
@@ -833,8 +1037,7 @@ class AddOrderController extends BaseController {
     final payload = <OrderItem>[];
     for (final e in itemQuantities.entries) {
       if (e.value < 1) continue;
-      final item = allItemsMap[e.key];
-      if (item == null) continue;
+      if (_catalogItemForLine(e.key) == null) continue;
 
       payload.add(
         _cartOrderItem(
@@ -893,6 +1096,9 @@ class AddOrderController extends BaseController {
       savedId,
       statusOverride: 'pending',
     );
+    committedStockQuantities
+      ..clear()
+      ..addAll(Map<String, int>.from(itemQuantities));
   }
 
   // --------------------
@@ -1261,6 +1467,7 @@ class AddOrderController extends BaseController {
   }
 
   void showQuickAddItemBottomSheet({String? initialCategory}) {
+    if (!StaffAccess.ensure(StaffAccess.canCreateProducts)) return;
     if (initialCategory != null) {
       quickAddCategory.value = initialCategory.toLowerCase() == 'none'
           ? 'none'
@@ -1282,15 +1489,20 @@ class AddOrderController extends BaseController {
     );
   }
 
-  bool _isConfirmOrderBottomSheetOpen = false;
+  bool _isConfirmOrderDialogOpen = false;
 
-  /// Review items in a bottom sheet, then confirm Save or Bill.
-  void showConfirmOrderBottomSheet(PosOrderAction action) {
+  /// Review items in a dialog, then confirm Save or Bill.
+  void showConfirmOrderDialog(PosOrderAction action) {
     if (action != PosOrderAction.hold && action != PosOrderAction.bill) return;
-    if (_isConfirmOrderBottomSheetOpen) return;
+    if (_isConfirmOrderDialogOpen) return;
+
+    final canSaveOrder = isEdit.value
+        ? StaffAccess.canUpdateSales
+        : StaffAccess.canCreateSales;
+    if (!StaffAccess.ensure(canSaveOrder)) return;
 
     final loc = AppLocalizations.of(Get.context!)!;
-    if (itemQuantities.isEmpty) {
+    if (!hasSelectedItems) {
       showError(description: loc.add_items);
       return;
     }
@@ -1303,16 +1515,11 @@ class AddOrderController extends BaseController {
       return;
     }
 
-    _isConfirmOrderBottomSheetOpen = true;
-    showModalBottomSheet(
-      context: Get.context!,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
-      ),
-      builder: (_) => ConfirmOrderBottomSheet(action: action),
-    ).whenComplete(() => _isConfirmOrderBottomSheetOpen = false);
+    _isConfirmOrderDialogOpen = true;
+    ConfirmOrderDialog.show(
+      action,
+      controller: this,
+    ).whenComplete(() => _isConfirmOrderDialogOpen = false);
   }
 
   void selectTaxOption(String option) => selectedTaxOption.value = option;
@@ -1482,6 +1689,23 @@ class AddOrderController extends BaseController {
   // --------------------
   // Fetch data with pagination
   // --------------------
+  Future<void> _syncInventoryAfterSale() async {
+    try {
+      await getItems();
+      final inventory = Get.isRegistered<InventoryController>()
+          ? Get.find<InventoryController>()
+          : Get.put(InventoryController());
+      await Future.wait([
+        inventory.loadProductStock(),
+        inventory.loadRawMaterials(),
+        inventory.loadDashboard(),
+        inventory.loadTransactions(limit: 500),
+      ]);
+    } catch (e, st) {
+      debugPrint('_syncInventoryAfterSale error: $e\n$st');
+    }
+  }
+
   Future<void> getItems({
     bool append = false,
     bool isFromSearch = false,
@@ -1981,7 +2205,12 @@ class AddOrderController extends BaseController {
                     child: Text(loc.print_kot),
                   ),
                   ElevatedButton(
-                    onPressed: () => saveAndBill('closed'),
+                    onPressed: () => saveAndBill(
+                      'closed',
+                      chargePlatformFee: PlatformFeeService.shouldCharge(
+                        appPref,
+                      ),
+                    ),
                     child: Text(loc.print_bill),
                   ),
                 ],
@@ -2057,8 +2286,7 @@ class AddOrderController extends BaseController {
     final kotItems = <OrderItem>[];
     for (final entry in itemQuantities.entries) {
       if (entry.value < 1) continue;
-      final item = allItemsMap[entry.key];
-      if (item == null) continue;
+      if (_catalogItemForLine(entry.key) == null) continue;
       kotItems.add(_cartOrderItem(entry.key, entry.value));
     }
     return kotItems;
@@ -2137,15 +2365,7 @@ class AddOrderController extends BaseController {
       }
     }
 
-    final List<OrderItem> payload = [];
-
-    for (final e in itemQuantities.entries) {
-      final item = allItemsMap[e.key];
-      if (item == null) continue;
-
-      payload.add(_cartOrderItem(e.key, e.value));
-    }
-
+    final payload = _buildCartPayload();
     if (payload.isEmpty) {
       showError(description: loc.please_add_items_to_order);
       return;
@@ -2225,7 +2445,12 @@ class AddOrderController extends BaseController {
     bool stayOnScreen = false,
     bool skipKotPrint = false,
     bool requireKotPrint = false,
+    bool chargePlatformFee = false,
   }) async {
+    final canSaveOrder = isEdit.value
+        ? StaffAccess.canUpdateSales
+        : StaffAccess.canCreateSales;
+    if (!StaffAccess.ensure(canSaveOrder)) return;
     final loc = AppLocalizations.of(Get.context!)!;
     final normalizedStatus = status.trim().toLowerCase();
     // API expects 'pending' for billing flow, but the app UI/table status relies on
@@ -2341,16 +2566,47 @@ class AddOrderController extends BaseController {
     final shouldUpdate =
         isEdit.value && existingOrderId != null && existingOrderId.isNotEmpty;
 
+    Map<String, dynamic> withPlatformFee(Map<String, dynamic> body) {
+      if (!chargePlatformFee) return body;
+      return {...body, 'chargePlatformFee': true};
+    }
+
+    Future<void> onPlatformFeeCharged({
+      required bool online,
+      required String orderId,
+      String? billNumber,
+    }) async {
+      if (!chargePlatformFee) return;
+      final label = (billNumber != null && billNumber.isNotEmpty)
+          ? 'Bill #$billNumber'
+          : 'Order';
+      if (online) {
+        await PlatformFeeService.refreshWalletIfPossible();
+      } else {
+        PlatformFeeService.debitLocal(
+          appPref,
+          description:
+              'Platform fee ₹${PlatformFeeService.feeAmount.toStringAsFixed(0)} — $label',
+        );
+        PlatformFeeService.markPendingFeeForOrder(appPref, orderId);
+      }
+    }
+
     if (hasInternet) {
       dynamic response;
       if (shouldUpdate) {
         response = await callApi(
-          apiClient.updateOrder(existingOrderId!, request.toJson()),
+          apiClient.updateOrder(
+            existingOrderId!,
+            withPlatformFee(request.toJson()),
+          ),
         );
       } else {
         for (var attempt = 0; attempt < 3; attempt++) {
           response = await callApi(
-            apiClient.addOrder(buildOrderCreatePayload(request.toJson())),
+            apiClient.addOrder(
+              withPlatformFee(buildOrderCreatePayload(request.toJson())),
+            ),
             showLoader: attempt == 0,
             apiErrorHandler: attempt < 2
                 ? (error) async {
@@ -2393,21 +2649,14 @@ class AddOrderController extends BaseController {
           isSyncedFromApi: true,
         );
 
-        if (serverBillNumber != null && serverBillNumber.isNotEmpty) {
-          syncLocalOutletBillNumber(appPref, serverBillNumber);
-        }
-
-        await _syncTableStatusForDineInOrder(
-          orderStatus: normalizedStatus,
-          tableNumber: request.tableNumber,
-          currentBillNumber: response['data']?['billNumber']?.toString(),
+        await onPlatformFeeCharged(
+          online: true,
+          orderId: savedId,
+          billNumber: serverBillNumber,
         );
 
-        await homeController.getOrderList(forceApiRefresh: true);
-        if (Get.isRegistered<BusinessOverviewController>()) {
-          await Get.find<BusinessOverviewController>().getOrderList(
-            forceApiRefresh: true,
-          );
+        if (serverBillNumber != null && serverBillNumber.isNotEmpty) {
+          syncLocalOutletBillNumber(appPref, serverBillNumber);
         }
 
         final savedOrderId = savedId;
@@ -2429,32 +2678,47 @@ class AddOrderController extends BaseController {
           await _syncKitchenQuantitiesToServer(savedOrderId, request);
         }
 
+        final billNumberForTable = response['data']?['billNumber']?.toString();
+
         if (stayOnScreen) {
           await _enterEditModeAfterSave(
             responseData: response['data'] ?? {},
             request: request,
           );
-          await _refreshTablesAfterOrderSave();
+          await _runPostSaveUiRefresh(
+            orderStatus: normalizedStatus,
+            tableNumber: request.tableNumber,
+            currentBillNumber: billNumberForTable,
+          );
+          unawaited(_syncInventoryAfterSale());
           showSuccess(description: 'KOT sent — continue adding items');
           return;
         }
 
         clearOrderDraft();
+        unawaited(_syncInventoryAfterSale());
 
-        if (isHoldOnly) {
+        if (isHoldOnly || !isBilling) {
+          await _runPostSaveUiRefresh(
+            orderStatus: normalizedStatus,
+            tableNumber: request.tableNumber,
+            currentBillNumber: billNumberForTable,
+            refreshTables: false,
+          );
           showSuccess(description: loc.order_saved);
           await _returnAfterOrderSave();
           return;
         }
 
-        if (!isBilling) {
-          showSuccess(description: loc.order_saved);
-          await _returnAfterOrderSave();
-          return;
-        }
-
+        // Navigate to invoice immediately; refresh dashboards/tables in background.
         showSuccess(description: loc.order_saved);
-        await _refreshTablesAfterOrderSave();
+        unawaited(
+          _runPostSaveUiRefresh(
+            orderStatus: normalizedStatus,
+            tableNumber: request.tableNumber,
+            currentBillNumber: billNumberForTable,
+          ),
+        );
         await _maybeOpenCashDrawerOnBill(request);
 
         final invoiceRequest =
@@ -2466,7 +2730,7 @@ class AddOrderController extends BaseController {
           HomeMainRoutes.invoiceScreen,
           arguments: {
             'invoice': invoiceRequest,
-            'orderFrom': selectedOrderSource.value,
+            'orderFrom': invoiceRequest.orderFrom ?? selectedOrderSource.value,
             'isEdit': isEdit.value,
             'isOffline': false,
           },
@@ -2490,22 +2754,15 @@ class AddOrderController extends BaseController {
           isSyncedFromApi: false,
         );
 
+        await onPlatformFeeCharged(
+          online: false,
+          orderId: tempOrderId,
+          billNumber: request.billNumber,
+        );
+
         if (await NetworkUtils.hasInternetConnection()) {
           unawaited(SyncManager().triggerSync(immediate: true));
         }
-
-        await homeController.getOrderList(forceApiRefresh: true);
-        if (Get.isRegistered<BusinessOverviewController>()) {
-          await Get.find<BusinessOverviewController>().getOrderList(
-            forceApiRefresh: true,
-          );
-        }
-
-        await _syncTableStatusForDineInOrder(
-          orderStatus: normalizedStatus,
-          tableNumber: request.tableNumber,
-          currentBillNumber: request.billNumber,
-        );
 
         final loc = AppLocalizations.of(Get.context!)!;
         if (sendToKitchen || shouldPrintKot) {
@@ -2526,7 +2783,11 @@ class AddOrderController extends BaseController {
             responseData: {'id': tempOrderId, 'billNumber': request.billNumber},
             request: request,
           );
-          await _refreshTablesAfterOrderSave();
+          await _runPostSaveUiRefresh(
+            orderStatus: normalizedStatus,
+            tableNumber: request.tableNumber,
+            currentBillNumber: request.billNumber,
+          );
           showSuccess(
             description: 'KOT sent (offline) — continue adding items',
           );
@@ -2536,19 +2797,33 @@ class AddOrderController extends BaseController {
         clearOrderDraft();
 
         if (isHoldOnly || !isBilling) {
+          await _runPostSaveUiRefresh(
+            orderStatus: normalizedStatus,
+            tableNumber: request.tableNumber,
+            currentBillNumber: request.billNumber,
+            refreshTables: false,
+          );
           showSuccess(description: loc.order_saved_offline);
           await _returnAfterOrderSave();
           return;
         }
 
+        // Navigate to invoice immediately; refresh dashboards/tables in background.
         showSuccess(description: loc.order_saved_offline);
+        unawaited(
+          _runPostSaveUiRefresh(
+            orderStatus: normalizedStatus,
+            tableNumber: request.tableNumber,
+            currentBillNumber: request.billNumber,
+          ),
+        );
         await _maybeOpenCashDrawerOnBill(request);
 
         await Modular.to.pushNamed(
           HomeMainRoutes.invoiceScreen,
           arguments: {
             'invoice': request,
-            'orderFrom': selectedOrderSource.value,
+            'orderFrom': request.orderFrom ?? selectedOrderSource.value,
             'isEdit': isEdit.value,
             'isOffline': true,
           },
@@ -2704,16 +2979,12 @@ class AddOrderController extends BaseController {
     double t = 0.0;
 
     for (final entry in itemQuantities.entries) {
-      final id = entry.key;
       final qty = entry.value;
-      // Use allItemsMap for lookup instead of items list to find items across all categories
-      final itm = allItemsMap[id];
-      if (itm == null) continue;
-
-      final double price = double.tryParse(itm.salePrice.toString()) ?? 0.0;
-      final bool withTax = (itm.withTax ?? false);
-      final double gstRate =
-          double.tryParse((itm.gst ?? 0.0).toString()) ?? 0.0;
+      final resolved = _tryResolveLine(entry.key);
+      if (resolved == null) continue;
+      final price = resolved.variant?.salePrice ?? resolved.item.salePrice;
+      final withTax = resolved.item.withTax;
+      final gstRate = resolved.item.gst.toDouble();
 
       final double lineSubtotal = price * qty;
       final double lineTax = withTax ? (lineSubtotal * gstRate / 100.0) : 0.0;
@@ -2726,11 +2997,10 @@ class AddOrderController extends BaseController {
     totalTax.value = t;
 
     final discount = appliedDiscountAmount();
-    final serviceCharge = (orderDetails['serviceCharge'] is num)
-        ? (orderDetails['serviceCharge'] as num).toDouble()
-        : (double.tryParse('${orderDetails['serviceCharge'] ?? 0}') ?? 0.0);
+    final serviceCharge = serviceChargeAmount();
 
-    totalAmount.value = s + t + serviceCharge - discount;
+    // A discount larger than the bill must not produce a negative payable.
+    totalAmount.value = max(0.0, s + t + serviceCharge - discount);
     debugPrint(
       'Totals updated -> subtotal: ${subtotal.value}, tax: ${totalTax.value}, total: ${totalAmount.value}',
     );
@@ -2772,7 +3042,7 @@ class AddOrderController extends BaseController {
       final allOrders = await db.getAllOrders(outletId: outletId);
       final hasLocalConflict = allOrders.any((order) {
         final status = order.status.trim().toLowerCase();
-        if (status == 'closed') return false;
+        if (status == 'closed' || status == 'deleted') return false;
         if (currentOrderId != null && order.id == currentOrderId) return false;
 
         final orderTable = _normalizeTableNumber(order.tableNumber ?? '');
@@ -2800,7 +3070,7 @@ class AddOrderController extends BaseController {
 
       return response!.data.any((order) {
         final status = order.status.trim().toLowerCase();
-        if (status == 'closed') return false;
+        if (status == 'closed' || status == 'deleted') return false;
         if (currentOrderId != null && order.id == currentOrderId) return false;
 
         final orderTable = _normalizeTableNumber(order.tableNumber ?? '');
@@ -2825,6 +3095,41 @@ class AddOrderController extends BaseController {
   Future<void> _refreshTablesAfterOrderSave() async {
     if (Get.isRegistered<TableController>()) {
       await Get.find<TableController>().refresh();
+    }
+  }
+
+  /// Syncs table status + home/overview lists after an order save.
+  /// For Save & Bill this runs in the background so invoice navigation is not blocked.
+  Future<void> _runPostSaveUiRefresh({
+    required String orderStatus,
+    String? tableNumber,
+    String? currentBillNumber,
+    bool refreshTables = true,
+  }) async {
+    try {
+      await _syncTableStatusForDineInOrder(
+        orderStatus: orderStatus,
+        tableNumber: tableNumber,
+        currentBillNumber: currentBillNumber,
+      );
+
+      final refreshes = <Future<void>>[
+        homeController.getOrderList(forceApiRefresh: true),
+      ];
+      if (Get.isRegistered<BusinessOverviewController>()) {
+        refreshes.add(
+          Get.find<BusinessOverviewController>().getOrderList(
+            forceApiRefresh: true,
+          ),
+        );
+      }
+      await Future.wait(refreshes);
+
+      if (refreshTables) {
+        await _refreshTablesAfterOrderSave();
+      }
+    } catch (e) {
+      debugPrint('Post-save UI refresh failed: $e');
     }
   }
 

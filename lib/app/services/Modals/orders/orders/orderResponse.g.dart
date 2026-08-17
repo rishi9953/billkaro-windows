@@ -82,6 +82,9 @@ OrderItem _$OrderItemFromJson(Map<String, dynamic> json) => OrderItem(
   gst: (json['gst'] as num).toDouble(),
   kotSentQuantity: (json['kotSentQuantity'] as num?)?.toInt() ?? 0,
   itemRemark: json['itemRemark'] as String?,
+  variantId: json['variantId'] as String?,
+  variantName: json['variantName'] as String?,
+  variantSku: json['variantSku'] as String?,
 );
 
 Map<String, dynamic> _$OrderItemToJson(OrderItem instance) => <String, dynamic>{
@@ -93,4 +96,7 @@ Map<String, dynamic> _$OrderItemToJson(OrderItem instance) => <String, dynamic>{
   'gst': instance.gst,
   'kotSentQuantity': instance.kotSentQuantity,
   'itemRemark': instance.itemRemark,
+  'variantId': instance.variantId,
+  'variantName': instance.variantName,
+  'variantSku': instance.variantSku,
 };

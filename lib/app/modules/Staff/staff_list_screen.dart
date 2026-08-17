@@ -6,6 +6,7 @@ import 'package:billkaro/app/modules/Staff/staff_view_dialog.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:intl/intl.dart';
+import 'package:billkaro/utils/staff_access.dart';
 
 class StaffListScreen extends StatelessWidget {
   const StaffListScreen({super.key});
@@ -133,7 +134,8 @@ class StaffListScreen extends StatelessWidget {
                                     ),
                                     child: _EmptyStaffState(
                                       isSearching: isSearching,
-                                      onInviteTap: isSearching
+                                      onInviteTap: isSearching ||
+                                              !StaffAccess.canCreateStaff
                                           ? null
                                           : controller.onAddStaff,
                                     ),
@@ -244,6 +246,7 @@ class StaffListScreen extends StatelessWidget {
     StaffDetailsController controller,
     AppLocalizations loc,
   ) {
+    if (!StaffAccess.canCreateStaff) return const SizedBox.shrink();
     final isWindows = _isWindows(context);
     return Container(
       padding: EdgeInsets.symmetric(
@@ -266,7 +269,10 @@ class StaffListScreen extends StatelessWidget {
           width: isWindows ? 320 : double.infinity,
           height: isWindows ? 48 : 56,
           child: ElevatedButton.icon(
-            onPressed: controller.onAddStaff,
+            onPressed: () {
+              if (!StaffAccess.ensure(StaffAccess.canCreateStaff)) return;
+              controller.onAddStaff();
+            },
             icon: const Icon(Icons.person_add_alt_1),
             label: Text(
               loc.invite_staff,
@@ -472,7 +478,7 @@ class _StaffAvatar extends StatelessWidget {
 
     final size = radius * 2;
     return ClipOval(
-      child: CachedNetworkImage(
+      child: AppCachedNetworkImage(
         imageUrl: url,
         width: size,
         height: size,
@@ -694,7 +700,7 @@ class _StaffActionMenu extends StatelessWidget {
               iconColor: Colors.blueGrey.shade700,
             ),
           ),
-          if (!member.isActive)
+          if (!member.isActive && StaffAccess.canUpdateStaff)
             DropdownItem(
               value: 'reinvite',
               height: 44,
@@ -704,7 +710,8 @@ class _StaffActionMenu extends StatelessWidget {
                 iconColor: Colors.orange.shade800,
               ),
             ),
-          DropdownItem(
+          if (StaffAccess.canUpdateStaff)
+            DropdownItem(
             value: 'edit',
             height: 44,
             child: _staffActionMenuItem(
@@ -713,7 +720,8 @@ class _StaffActionMenu extends StatelessWidget {
               iconColor: AppColor.primary,
             ),
           ),
-          DropdownItem(
+          if (StaffAccess.canDeleteStaff)
+            DropdownItem(
             value: 'remove',
             height: 44,
             child: _staffActionMenuItem(
@@ -729,14 +737,17 @@ class _StaffActionMenu extends StatelessWidget {
             return;
           }
           if (value == 'reinvite') {
+            if (!StaffAccess.ensure(StaffAccess.canUpdateStaff)) return;
             await controller.reinviteStaff(member);
             return;
           }
-          if (value == 'edit') {
+          if (value == 'edit' &&
+              StaffAccess.ensure(StaffAccess.canUpdateStaff)) {
             await controller.onEditStaff(member);
             return;
           }
-          if (value == 'remove') {
+          if (value == 'remove' &&
+              StaffAccess.ensure(StaffAccess.canDeleteStaff)) {
             await _confirmDelete(context, member, loc);
           }
         },

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:billkaro/app/modules/AddOrder/AddCategory/add_category_controller.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter/widgets.dart' show Image;
+import 'package:billkaro/utils/staff_access.dart';
 
 class AddCategoryScreen extends StatefulWidget {
   const AddCategoryScreen({super.key});
@@ -145,7 +146,8 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                                         : loc.select_all,
                                   ),
                                 ),
-                                IconButton(
+                                if (StaffAccess.canDeleteCategories)
+                                  IconButton(
                                   tooltip: loc.delete_selected,
                                   onPressed:
                                       controller.selectedCategoryIds.isEmpty ||
@@ -177,7 +179,8 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                           return Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              if (controller.categories.isNotEmpty)
+                              if (controller.categories.isNotEmpty &&
+                                  StaffAccess.canDeleteCategories)
                                 IconButton(
                                   tooltip: loc.select_items_to_delete,
                                   onPressed: controller.toggleSelectionMode,
@@ -185,7 +188,8 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                                   color: AppColor.primary,
                                   splashRadius: 18,
                                 ),
-                              IconButton(
+                              if (StaffAccess.canCreateCategories)
+                                IconButton(
                                 tooltip: loc.add_category,
                                 onPressed: () {
                                   controller.exitSelectionMode();
@@ -294,7 +298,8 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                                 ),
                                 trailing: selectionMode
                                     ? null
-                                    : IconButton(
+                                    : StaffAccess.canDeleteCategories
+                                    ? IconButton(
                                         tooltip: loc.delete,
                                         icon: Assets.svg.delete.svg(
                                           width: 20,
@@ -304,7 +309,8 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                                           index,
                                           cat.categoryName,
                                         ),
-                                      ),
+                                      )
+                                    : null,
                               );
                             },
                           ),
@@ -546,8 +552,12 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                           Expanded(
                             child: ElevatedButton(
                               onPressed: isEdit
-                                  ? controller.updateCategory
-                                  : controller.addCategory,
+                                  ? (StaffAccess.canUpdateCategories
+                                        ? controller.updateCategory
+                                        : null)
+                                  : (StaffAccess.canCreateCategories
+                                        ? controller.addCategory
+                                        : null),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColor.primary,
                                 foregroundColor: Colors.white,

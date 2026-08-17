@@ -1,5 +1,6 @@
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Order/HoldOrders/edit_order_widget.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:billkaro/app/modules/Order/HoldOrders/hold_orders_controller.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/config/config.dart';
@@ -78,7 +79,8 @@ class _HoldOrdersScreenState extends State<HoldOrdersScreen> {
           },
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: StaffAccess.canCreateSales
+          ? FloatingActionButton.extended(
         onPressed: () => Modular.to.navigate(HomeMainRoutes.createOrder),
         backgroundColor: AppColor.secondaryPrimary,
         foregroundColor: AppColor.white,
@@ -88,7 +90,8 @@ class _HoldOrdersScreenState extends State<HoldOrdersScreen> {
           loc.add_Order,
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
-      ),
+      )
+          : null,
     );
   }
 
@@ -229,7 +232,9 @@ class _OrderCard extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: () => _editOrder(order),
+            onTap: StaffAccess.canUpdateSales
+                ? () => _editOrder(order)
+                : null,
             borderRadius: BorderRadius.circular(16),
             hoverColor: AppColor.primary.withOpacity(0.06),
             child: Padding(
@@ -434,20 +439,161 @@ class _OrderCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                      // Edit Button
-                      Tooltip(
-                        message: loc.edit,
-                        child: IconButton(
-                          onPressed: () => _editOrder(order),
-                          icon: const Icon(Icons.edit_outlined, size: 20),
-                          style: IconButton.styleFrom(
-                            backgroundColor: AppColor.primary.withOpacity(0.10),
-                            foregroundColor: AppColor.primary,
+                      // Edit + Delete
+                      if (StaffAccess.canUpdateSales) ...[
+                        Tooltip(
+                          message: loc.edit,
+                          child: IconButton(
+                            onPressed: () => _editOrder(order),
+                            icon: const Icon(Icons.edit_outlined, size: 20),
+                            style: IconButton.styleFrom(
+                              backgroundColor:
+                                  AppColor.primary.withOpacity(0.10),
+                              foregroundColor: AppColor.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              padding: const EdgeInsets.all(10),
+                              minimumSize: const Size(0, 0),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Tooltip(
+                          message: loc.delete_order,
+                          child: IconButton(
+                            onPressed: () => _confirmDelete(order, loc),
+                            icon: const Icon(Icons.delete_outline, size: 20),
+                            style: IconButton.styleFrom(
+                              backgroundColor:
+                                  Colors.red.withOpacity(0.10),
+                              foregroundColor: Colors.red,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              padding: const EdgeInsets.all(10),
+                              minimumSize: const Size(0, 0),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDelete(OrderModel order, AppLocalizations loc) {
+    if (!StaffAccess.ensure(StaffAccess.canUpdateSales)) return;
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 380),
+          child: Material(
+            color: Colors.white,
+            elevation: 16,
+            shadowColor: Colors.black.withOpacity(0.16),
+            borderRadius: BorderRadius.circular(18),
+            clipBehavior: Clip.antiAlias,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDC2626).withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.warning_amber_rounded,
+                          color: Color(0xFFDC2626),
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          loc.delete_order,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    loc.delete_order_confirm_message,
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      height: 1.45,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Get.back(),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            backgroundColor: Colors.grey.shade100,
+                            foregroundColor: Colors.black87,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            padding: const EdgeInsets.all(10),
-                            minimumSize: const Size(0, 0),
+                          ),
+                          child: Text(
+                            loc.cancel,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Get.back();
+                            if (Get.isRegistered<HoldOrdersController>()) {
+                              Get.find<HoldOrdersController>()
+                                  .softDeleteOrder(order);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFDC2626),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(
+                            loc.delete,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ),
@@ -459,6 +605,7 @@ class _OrderCard extends StatelessWidget {
           ),
         ),
       ),
+      barrierDismissible: true,
     );
   }
 
@@ -496,7 +643,8 @@ class _OrderCard extends StatelessWidget {
   }
 
   void _editOrder(OrderModel order) {
-    EditOrderBottomSheet.show(
+    if (!StaffAccess.ensure(StaffAccess.canUpdateSales)) return;
+    EditOrderDialog.show(
       order: order,
       onUpdate: () {
         Modular.to.pushNamed(
@@ -510,7 +658,9 @@ class _OrderCard extends StatelessWidget {
         // );
       },
       onDelete: () {
-        // Handle delete
+        if (Get.isRegistered<HoldOrdersController>()) {
+          Get.find<HoldOrdersController>().softDeleteOrder(order);
+        }
       },
     );
   }

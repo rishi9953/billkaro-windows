@@ -4,13 +4,16 @@ import 'package:billkaro/app/modules/Home/Widgets/outlet_bottomsheet.dart';
 import 'package:billkaro/app/services/outlet_scope_refresh.dart';
 import 'package:billkaro/app/modules/Home/payment_controller.dart';
 import 'package:billkaro/app/services/Modals/login_response.dart';
+import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/PrinterService2/printer_service2.dart';
 import 'package:billkaro/app/modules/AddOrder/add_order_controller.dart';
+import 'package:billkaro/app/modules/Items/menuItem/menu_item_controller.dart';
 import 'package:billkaro/app/modules/Theme/theme_controller.dart';
 import 'package:billkaro/app/modules/OrderPrefrences/order_prefrences_controller.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/date_util.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:billkaro/utils/staff_outlet_sync.dart';
 
 // Chart period filter enum (must be top-level)
@@ -27,6 +30,7 @@ class HomeScreenController extends BaseController {
   final RxList<OrderModel> ordersL = <OrderModel>[].obs;
   final printerservice2 = PrinterService2.to;
   final Map<String, String> _itemImageById = <String, String>{};
+  final Map<String, String> _itemImageByName = <String, String>{};
 
   // Chart period filter
   final Rx<ChartPeriod> selectedChartPeriod = ChartPeriod.weekly.obs;
@@ -239,6 +243,7 @@ class HomeScreenController extends BaseController {
       /// ===============================
       await _loadItemImageMap(outletId);
       _calculateSalesData();
+      await _enrichTopSellingImages(outletId);
       _calculateChartSalesData();
 
       // Refresh payment statistics after calculations
@@ -282,15 +287,16 @@ class HomeScreenController extends BaseController {
             ? 'Unnamed Item'
             : item.itemName.trim();
         final amount = item.salePrice * item.quantity;
-        final itemKey = item.itemId.trim().isEmpty ? itemName : item.itemId;
-        final imageUrl = _itemImageById[item.itemId] ?? '';
+        final itemId = item.itemId.trim();
+        final itemKey = itemId.isEmpty ? itemName : itemId;
+        final imageUrl = _imageForItem(itemId: itemId, itemName: itemName);
         final category = item.category.trim().isEmpty
             ? 'Uncategorized'
             : item.category.trim();
         final existingItem = allTimeByItem[itemKey];
         if (existingItem == null) {
           allTimeByItem[itemKey] = TopSellingItem(
-            itemId: item.itemId,
+            itemId: itemId,
             name: itemName,
             category: category,
             imageUrl: imageUrl,
@@ -596,21 +602,146 @@ class HomeScreenController extends BaseController {
     _calculateChartSalesData();
   }
 
+  void _ingestItemImages(Iterable<ItemData> items) {
+    for (final item in items) {
+      final image = resolvedMediaUrl(item.itemImage);
+      if (image.isEmpty) continue;
+
+      final id = item.id.trim();
+      if (id.isNotEmpty) {
+        _itemImageById[id] = image;
+      }
+      final name = item.itemName.trim().toLowerCase();
+      if (name.isNotEmpty) {
+        _itemImageByName[name] = image;
+      }
+    }
+  }
+
+  String _imageForItem({required String itemId, required String itemName}) {
+    final byId = itemId.trim().isEmpty
+        ? ''
+        : (_itemImageById[itemId.trim()] ?? '');
+    if (byId.isNotEmpty) return byId;
+    final name = itemName.trim().toLowerCase();
+    if (name.isEmpty) return '';
+    return _itemImageByName[name] ?? '';
+  }
+
   Future<void> _loadItemImageMap(String outletId) async {
     try {
-      final db = AppDatabase();
-      final items = await db.getItems(outletId: outletId);
       _itemImageById.clear();
-      for (final item in items) {
-        final id = item.id.trim();
-        final image = item.itemImage.trim();
-        if (id.isNotEmpty && image.isNotEmpty) {
-          _itemImageById[id] = image;
+      _itemImageByName.clear();
+
+      final db = AppDatabase();
+
+      // 1) Local SQLite (may only contain a paginated subset from Items screen)
+      _ingestItemImages(await db.getItems(outletId: outletId));
+
+      // 2) In-memory catalogs already loaded elsewhere in the app
+      if (Get.isRegistered<MenuItemController>()) {
+        _ingestItemImages(Get.find<MenuItemController>().allItems);
+      }
+      if (Get.isRegistered<AddOrderController>()) {
+        _ingestItemImages(Get.find<AddOrderController>().allItemsMap.values);
+      }
+
+      // 3) Always refresh a full catalog page when online so top-sellers
+      //    that were never opened in Items still get their image URLs.
+      final isOnline = await NetworkUtils.hasInternetConnection();
+      if (isOnline) {
+        final response = await callApi(
+          apiClient.getItems(outletId, 1, 500, null, null, null, null),
+          showLoader: false,
+        );
+        if (response?.status == 'success' && response!.data.isNotEmpty) {
+          _ingestItemImages(response.data);
+          await db.saveItems(response.data, outletId);
         }
       }
+
+      debugPrint(
+        '🖼️ Top-selling image map: '
+        '${_itemImageById.length} by id, ${_itemImageByName.length} by name',
+      );
     } catch (e) {
       debugPrint('⚠️ Failed to load item image map: $e');
-      _itemImageById.clear();
+    }
+  }
+
+  /// Fills any remaining missing thumbnails via best-selling API (includes itemImage).
+  Future<void> _enrichTopSellingImages(String outletId) async {
+    try {
+      final missing = topSellingItems
+          .take(5)
+          .where((item) => item.imageUrl.trim().isEmpty)
+          .toList();
+      if (missing.isEmpty) return;
+
+      final userId = appPref.ordersApiUserId;
+      if (userId == null) return;
+
+      final isOnline = await NetworkUtils.hasInternetConnection();
+      if (!isOnline) return;
+
+      final response = await callApi(
+        apiClient.getBestSellingItems(userId, outletId, 10),
+        showLoader: false,
+      );
+      if (response is! Map || response['status'] != 'success') return;
+
+      final rows = (response['data'] as List?) ?? const [];
+      for (final row in rows) {
+        if (row is! Map) continue;
+        final itemJson = row['item'];
+        final itemId = (row['itemId'] ??
+                (itemJson is Map ? itemJson['id'] : null))
+            ?.toString()
+            .trim() ??
+            '';
+        final itemName = (row['itemName'] ??
+                (itemJson is Map ? itemJson['itemName'] : null))
+            ?.toString()
+            .trim() ??
+            '';
+        final rawImage = itemJson is Map
+            ? (itemJson['itemImage']?.toString() ?? '')
+            : '';
+        final image = resolvedMediaUrl(rawImage);
+        if (image.isEmpty) continue;
+        if (itemId.isNotEmpty) {
+          _itemImageById[itemId] = image;
+        }
+        if (itemName.isNotEmpty) {
+          _itemImageByName[itemName.toLowerCase()] = image;
+        }
+      }
+
+      // Re-apply images onto the already-computed top sellers.
+      topSellingItems.value = topSellingItems.map((item) {
+        if (item.imageUrl.trim().isNotEmpty) return item;
+        final imageUrl = _imageForItem(
+          itemId: item.itemId,
+          itemName: item.name,
+        );
+        if (imageUrl.isEmpty) return item;
+        return TopSellingItem(
+          itemId: item.itemId,
+          name: item.name,
+          category: item.category,
+          imageUrl: imageUrl,
+          quantity: item.quantity,
+          amount: item.amount,
+        );
+      }).toList();
+
+      debugPrint(
+        '🖼️ Enriched top-selling images; '
+        'with image: ${topSellingItems.take(5).where((e) => e.imageUrl.isNotEmpty).length}/'
+        '${topSellingItems.take(5).length}',
+      );
+    } catch (e) {
+      debugPrint('⚠️ Failed to enrich top-selling images: $e');
     }
   }
 
@@ -631,10 +762,125 @@ class HomeScreenController extends BaseController {
     }
   }
 
+  /// Delete an outlet from the manage-outlets dialog (owner only).
+  Future<void> deleteOutlet(OutletData outlet) async {
+    if (!StaffAccess.isOwnerSession) return;
+
+    final deletedOutletId = outlet.id;
+    if (deletedOutletId == null || deletedOutletId.isEmpty) return;
+
+    final loc = AppLocalizations.of(Get.context!);
+    final confirm = await Get.dialog<bool>(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.delete_outline_rounded,
+                color: Colors.red,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(loc?.delete_outlet ?? 'Delete Outlet'),
+            ),
+          ],
+        ),
+        content: Text(
+          'Delete ${outlet.businessName ?? 'this outlet'}?\nThis cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: Text(loc?.cancel ?? 'Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () => Get.back(result: true),
+            child: Text(loc?.delete ?? 'Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final ownerId = appPref.ownerUserId;
+      if (ownerId == null) return;
+
+      final wasSelected = selectedOutlet.value?.id == deletedOutletId;
+      final res = await callApi(
+        apiClient.deleteOutlet(ownerId, deletedOutletId),
+      );
+
+      if (res['status'] != 'success') {
+        showError(
+          description:
+              res['message']?.toString() ??
+              (loc?.failed_to_delete_outlet ?? 'Failed to delete outlet'),
+        );
+        return;
+      }
+
+      try {
+        final db = Get.isRegistered<AppDatabase>()
+            ? Get.find<AppDatabase>()
+            : AppDatabase();
+        await db.clearOutletData(deletedOutletId);
+      } catch (e) {
+        debugPrint('⚠️ clearOutletData failed: $e');
+      }
+
+      await getUserDetails();
+
+      try {
+        while (Get.isDialogOpen == true) {
+          Get.back();
+        }
+      } catch (_) {}
+
+      if (appPref.allOutlets.isEmpty) {
+        appPref.selectedOutlet = null;
+        selectedOutlet.value = null;
+        Get.offAllNamed(AppRoute.createOutlet);
+        return;
+      }
+
+      if (wasSelected) {
+        selectedOutlet.value = appPref.selectedOutlet;
+        onOutletChanged();
+      } else {
+        selectedOutlet.refresh();
+      }
+    } catch (e) {
+      debugPrint('❌ deleteOutlet error: $e');
+      showError(
+        description: loc?.failed_to_delete_outlet ?? 'Failed to delete outlet',
+      );
+    }
+  }
+
   /// Called when outlet changes - reload all outlet-specific data
   void onOutletChanged() {
     // Stay on current route; restarting home route here re-creates ModularApp
     // and can trigger "Module ... is already started" exceptions.
+    // Instead we clear dashboard state, drop outlet-scoped GetX controllers,
+    // and re-fetch shell data for the newly selected outlet.
     allOrders.value = <OrderModel>[];
     todaySales.value = 0.0;
     yesterdaySales.value = 0.0;
@@ -645,17 +891,12 @@ class HomeScreenController extends BaseController {
     topSellingItems.value = <TopSellingItem>[];
     occupiedTableOrders.value = <OrderModel>[];
     _hasLoadedFromApi = false;
+    update();
 
-    getOrderList(forceApiRefresh: true);
-    update(); // Update GetBuilder widgets
-
-    // Other shell routes keep their GetX controllers alive — refresh cached outlet data.
-    // AddOrder reload runs here (not in outlet_scope_refresh) to avoid an import cycle with add_order_controller.
     unawaited(() async {
       await refreshOutletScopedControllers();
-      if (Get.isRegistered<AddOrderController>()) {
-        await Get.find<AddOrderController>().reloadForOutletChange();
-      }
+      await getOrderList(forceApiRefresh: true);
+      update();
     }());
   }
 
@@ -729,14 +970,11 @@ class HomeScreenController extends BaseController {
   }
 
   void showOutletBottomSheet(BuildContext context) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withOpacity(0.35),
-      isDismissible: true,
-      enableDrag: true,
-      builder: (context) => OutletBottomSheet(),
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.48),
+      builder: (context) => const OutletBottomSheet(),
     );
   }
 

@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
+import 'package:billkaro/app/utils/pos_cart_line.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/Print/jobs.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/builders/print_builder.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/helpers/text_helper.dart';
@@ -298,8 +299,11 @@ class InvoiceItem {
 
   factory InvoiceItem.fromOrderItem(OrderItem item) {
     return InvoiceItem(
-      name: item.itemName,
-      quantity: item.quantity ?? 1,
+      name: PosCartLine.invoiceLineName(
+        itemName: item.itemName,
+        variantName: item.variantName,
+      ),
+      quantity: item.quantity,
       price: item.salePrice,
       category: item.category,
     );

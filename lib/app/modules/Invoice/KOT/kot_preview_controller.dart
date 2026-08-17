@@ -1,10 +1,9 @@
-import 'dart:io';
 import 'package:billkaro/app/modules/AddOrder/add_order_controller.dart';
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
+import 'package:billkaro/app/services/download/file_download_service.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/date_util.dart';
-import 'package:billkaro/utils/download_path_util.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -94,6 +93,9 @@ class KOTPreviewController extends BaseController {
             gst: item.gst,
             kotSentQuantity: item.kotSentQuantity,
             itemRemark: remark,
+            variantId: item.variantId,
+            variantName: item.variantName,
+            variantSku: item.variantSku,
           );
         })
         .toList(growable: false);
@@ -404,7 +406,7 @@ class KOTPreviewController extends BaseController {
                             children: [
                               pw.Expanded(
                                 child: pw.Text(
-                                  item.itemName,
+                                  item.displayName,
                                   style: const pw.TextStyle(fontSize: 14),
                                 ),
                               ),
@@ -561,17 +563,21 @@ class KOTPreviewController extends BaseController {
 
   Future<void> _saveKOT(pw.Document pdf) async {
     try {
-      final savePath = await DownloadPathUtil.resolveSaveDirectory(
-        preferredPath: appPref.downloadPath,
+      final bytes = await pdf.save();
+      final fileName =
+          'KOT_${kotNumber.value}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+
+      final file = await FileDownloadService.instance.saveBytes(
+        bytes: bytes,
+        fileName: fileName,
+        preferredDirectory: appPref.downloadPath,
+        notificationTitle: 'KOT downloaded',
+        notificationBody: 'KOT PDF saved to Downloads folder',
       );
-      await Directory(savePath).create(recursive: true);
 
-      final filePath =
-          '$savePath/KOT_${kotNumber.value}_${DateTime.now().millisecondsSinceEpoch}.pdf';
-
-      final file = File(filePath);
-      await file.writeAsBytes(await pdf.save());
-      showSuccess(description: 'KOT saved to: $filePath');
+      if (file == null) {
+        showError(description: 'Failed to save KOT');
+      }
     } catch (e) {
       showError(description: 'Failed to save KOT: $e');
     }

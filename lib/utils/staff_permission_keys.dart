@@ -47,6 +47,16 @@ class StaffPermissionKeys {
   // Settings
   static const manageSettings = 'manage_settings';
 
+  // Store day session
+  static const openStore = 'open_store';
+  static const closeStore = 'close_store';
+
+  // Tables
+  static const viewTables = 'view_tables';
+  static const createTables = 'create_tables';
+  static const updateTables = 'update_tables';
+  static const deleteTables = 'delete_tables';
+
   /// Legacy keys still accepted when reading older staff records.
   static const legacyCreateBill = 'create_bill';
   static const legacyManageBills = 'manage_bills';
@@ -82,6 +92,12 @@ class StaffPermissionKeys {
     updateStaff,
     deleteStaff,
     manageSettings,
+    openStore,
+    closeStore,
+    viewTables,
+    createTables,
+    updateTables,
+    deleteTables,
   ];
 
   static const List<String> secondaryAdminDefaults = all;
@@ -92,15 +108,37 @@ class StaffPermissionKeys {
     issueRefunds,
     viewCustomers,
     createCustomers,
+    viewTables,
   ];
 }
 
+/// A single UI toggle that may grant one or more stored permission keys.
 class StaffPermissionItem {
-  const StaffPermissionItem({required this.key, required this.label});
+  const StaffPermissionItem({
+    required this.keys,
+    required this.label,
+  });
 
-  final String key;
+  /// Stored permission key(s) controlled by this toggle.
+  final List<String> keys;
   final String label;
+
+  /// True when every key in this toggle is present.
+  bool isGranted(Iterable<String> selected) {
+    final set = selected is Set<String> ? selected : selected.toSet();
+    return keys.every(set.contains);
+  }
 }
+
+StaffPermissionItem _perm(String key, String label) =>
+    StaffPermissionItem(keys: [key], label: label);
+
+StaffPermissionItem _pairedPerm(
+  String productKey,
+  String categoryKey,
+  String label,
+) =>
+    StaffPermissionItem(keys: [productKey, categoryKey], label: label);
 
 class StaffPermissionGroup {
   const StaffPermissionGroup({required this.title, required this.items});
@@ -109,162 +147,124 @@ class StaffPermissionGroup {
   final List<StaffPermissionItem> items;
 }
 
+/// Number of toggles shown in the Add / Edit Staff permissions UI.
+int get kStaffPermissionCatalogSize => kStaffPermissionGroups.fold<int>(
+      0,
+      (sum, group) => sum + group.items.length,
+    );
+
+/// How many catalog toggles are fully granted for [selected] keys.
+int countGrantedStaffPermissionItems(Iterable<String> selected) {
+  final set = selected is Set<String> ? selected : selected.toSet();
+  var count = 0;
+  for (final group in kStaffPermissionGroups) {
+    for (final item in group.items) {
+      if (item.isGranted(set)) count++;
+    }
+  }
+  return count;
+}
+
 /// UI catalog matching the Add Staff permissions section.
-const List<StaffPermissionGroup> kStaffPermissionGroups = [
+///
+/// Items and categories are paired: each toggle grants both related keys.
+final List<StaffPermissionGroup> kStaffPermissionGroups = [
   StaffPermissionGroup(
-    title: 'Products',
+    title: 'Items & Categories',
     items: [
-      StaffPermissionItem(
-        key: StaffPermissionKeys.viewProducts,
-        label: 'View products',
+      _pairedPerm(
+        StaffPermissionKeys.viewProducts,
+        StaffPermissionKeys.viewCategories,
+        'View items & categories',
       ),
-      StaffPermissionItem(
-        key: StaffPermissionKeys.createProducts,
-        label: 'Create products',
+      _pairedPerm(
+        StaffPermissionKeys.createProducts,
+        StaffPermissionKeys.createCategories,
+        'Create items & categories',
       ),
-      StaffPermissionItem(
-        key: StaffPermissionKeys.updateProducts,
-        label: 'Update products',
+      _pairedPerm(
+        StaffPermissionKeys.updateProducts,
+        StaffPermissionKeys.updateCategories,
+        'Update items & categories',
       ),
-      StaffPermissionItem(
-        key: StaffPermissionKeys.deleteProducts,
-        label: 'Delete products',
+      _pairedPerm(
+        StaffPermissionKeys.deleteProducts,
+        StaffPermissionKeys.deleteCategories,
+        'Delete items & categories',
       ),
-      StaffPermissionItem(
-        key: StaffPermissionKeys.importExportProducts,
-        label: 'Import / Export products',
-      ),
-    ],
-  ),
-  StaffPermissionGroup(
-    title: 'Categories',
-    items: [
-      StaffPermissionItem(
-        key: StaffPermissionKeys.viewCategories,
-        label: 'View categories',
-      ),
-      StaffPermissionItem(
-        key: StaffPermissionKeys.createCategories,
-        label: 'Create categories',
-      ),
-      StaffPermissionItem(
-        key: StaffPermissionKeys.updateCategories,
-        label: 'Update categories',
-      ),
-      StaffPermissionItem(
-        key: StaffPermissionKeys.deleteCategories,
-        label: 'Delete categories',
-      ),
-      StaffPermissionItem(
-        key: StaffPermissionKeys.importExportCategories,
-        label: 'Import / Export categories',
+      _pairedPerm(
+        StaffPermissionKeys.importExportProducts,
+        StaffPermissionKeys.importExportCategories,
+        'Import / Export items & categories',
       ),
     ],
   ),
   StaffPermissionGroup(
     title: 'Sales & POS',
     items: [
-      StaffPermissionItem(
-        key: StaffPermissionKeys.viewSales,
-        label: 'View sales',
-      ),
-      StaffPermissionItem(
-        key: StaffPermissionKeys.createSales,
-        label: 'Create sales',
-      ),
-      StaffPermissionItem(
-        key: StaffPermissionKeys.updateSales,
-        label: 'Update sales',
-      ),
-      StaffPermissionItem(
-        key: StaffPermissionKeys.issueRefunds,
-        label: 'Issue refunds',
-      ),
-      StaffPermissionItem(
-        key: StaffPermissionKeys.exportSales,
-        label: 'Export sales',
-      ),
+      _perm(StaffPermissionKeys.viewSales, 'View sales'),
+      _perm(StaffPermissionKeys.createSales, 'Create sales'),
+      _perm(StaffPermissionKeys.updateSales, 'Update sales'),
+      _perm(StaffPermissionKeys.issueRefunds, 'Issue refunds'),
+      _perm(StaffPermissionKeys.exportSales, 'Export sales'),
     ],
   ),
   StaffPermissionGroup(
     title: 'Inventory',
     items: [
-      StaffPermissionItem(
-        key: StaffPermissionKeys.viewInventory,
-        label: 'View inventory',
-      ),
-      StaffPermissionItem(
-        key: StaffPermissionKeys.adjustStock,
-        label: 'Adjust stock',
-      ),
+      _perm(StaffPermissionKeys.viewInventory, 'View inventory'),
+      _perm(StaffPermissionKeys.adjustStock, 'Adjust stock'),
     ],
   ),
   StaffPermissionGroup(
     title: 'Customers',
     items: [
-      StaffPermissionItem(
-        key: StaffPermissionKeys.viewCustomers,
-        label: 'View customers',
-      ),
-      StaffPermissionItem(
-        key: StaffPermissionKeys.createCustomers,
-        label: 'Create customers',
-      ),
-      StaffPermissionItem(
-        key: StaffPermissionKeys.updateCustomers,
-        label: 'Update customers',
-      ),
-      StaffPermissionItem(
-        key: StaffPermissionKeys.deleteCustomers,
-        label: 'Delete customers',
-      ),
-      StaffPermissionItem(
-        key: StaffPermissionKeys.importExportCustomers,
-        label: 'Import / Export customers',
+      _perm(StaffPermissionKeys.viewCustomers, 'View customers'),
+      _perm(StaffPermissionKeys.createCustomers, 'Create customers'),
+      _perm(StaffPermissionKeys.updateCustomers, 'Update customers'),
+      _perm(StaffPermissionKeys.deleteCustomers, 'Delete customers'),
+      _perm(
+        StaffPermissionKeys.importExportCustomers,
+        'Import / Export customers',
       ),
     ],
   ),
   StaffPermissionGroup(
     title: 'Reports',
     items: [
-      StaffPermissionItem(
-        key: StaffPermissionKeys.viewReports,
-        label: 'View reports',
-      ),
-      StaffPermissionItem(
-        key: StaffPermissionKeys.generateReports,
-        label: 'Generate reports',
-      ),
+      _perm(StaffPermissionKeys.viewReports, 'View reports'),
+      _perm(StaffPermissionKeys.generateReports, 'Generate reports'),
     ],
   ),
   StaffPermissionGroup(
     title: 'Staff',
     items: [
-      StaffPermissionItem(
-        key: StaffPermissionKeys.viewStaff,
-        label: 'View staff',
-      ),
-      StaffPermissionItem(
-        key: StaffPermissionKeys.createStaff,
-        label: 'Create staff',
-      ),
-      StaffPermissionItem(
-        key: StaffPermissionKeys.updateStaff,
-        label: 'Update staff',
-      ),
-      StaffPermissionItem(
-        key: StaffPermissionKeys.deleteStaff,
-        label: 'Delete staff',
-      ),
+      _perm(StaffPermissionKeys.viewStaff, 'View staff'),
+      _perm(StaffPermissionKeys.createStaff, 'Create staff'),
+      _perm(StaffPermissionKeys.updateStaff, 'Update staff'),
+      _perm(StaffPermissionKeys.deleteStaff, 'Delete staff'),
     ],
   ),
   StaffPermissionGroup(
     title: 'Settings',
     items: [
-      StaffPermissionItem(
-        key: StaffPermissionKeys.manageSettings,
-        label: 'Manage settings',
-      ),
+      _perm(StaffPermissionKeys.manageSettings, 'Manage settings'),
+    ],
+  ),
+  StaffPermissionGroup(
+    title: 'Store',
+    items: [
+      _perm(StaffPermissionKeys.openStore, 'Open store'),
+      _perm(StaffPermissionKeys.closeStore, 'Close store'),
+    ],
+  ),
+  StaffPermissionGroup(
+    title: 'Tables',
+    items: [
+      _perm(StaffPermissionKeys.viewTables, 'View tables'),
+      _perm(StaffPermissionKeys.createTables, 'Create tables'),
+      _perm(StaffPermissionKeys.updateTables, 'Update tables'),
+      _perm(StaffPermissionKeys.deleteTables, 'Delete tables'),
     ],
   ),
 ];

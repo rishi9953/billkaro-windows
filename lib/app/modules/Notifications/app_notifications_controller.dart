@@ -29,6 +29,8 @@ class AppNotificationsController extends BaseController {
         return Icons.receipt_long_rounded;
       case AppNotificationType.sync:
         return Icons.sync_rounded;
+      case AppNotificationType.download:
+        return Icons.download_done_rounded;
     }
   }
 
@@ -40,6 +42,8 @@ class AppNotificationsController extends BaseController {
         return const Color(0xFF083C6B);
       case AppNotificationType.sync:
         return AppColor.primary;
+      case AppNotificationType.download:
+        return const Color(0xFF2E7D32);
     }
   }
 }

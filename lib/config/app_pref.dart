@@ -45,6 +45,8 @@ class AppPref {
   static const String keyWalletHistoryPrefix = 'wallet_history_';
   static const String keyWalletInitializedPrefix = 'wallet_initialized_';
   static const String keyBillingAccessModePrefix = 'billing_access_mode_';
+  static const String keyPendingPlatformFeeOrderIds =
+      'pending_platform_fee_order_ids';
 
   AppPref(this._preferences);
 
@@ -366,6 +368,29 @@ class AppPref {
       '${keyBillingAccessModePrefix}${_walletOutletKey(outletId)}',
       mode,
     );
+  }
+
+  List<String> get pendingPlatformFeeOrderIds =>
+      _preferences.getStringList(keyPendingPlatformFeeOrderIds) ?? const [];
+
+  void addPendingPlatformFeeOrderId(String orderId) {
+    final id = orderId.trim();
+    if (id.isEmpty) return;
+    final next = {...pendingPlatformFeeOrderIds, id}.toList();
+    _preferences.setStringList(keyPendingPlatformFeeOrderIds, next);
+  }
+
+  /// Returns true if [orderId] was pending and removes it.
+  bool consumePendingPlatformFeeOrderId(String orderId) {
+    final id = orderId.trim();
+    if (id.isEmpty) return false;
+    final current = pendingPlatformFeeOrderIds;
+    if (!current.contains(id)) return false;
+    _preferences.setStringList(
+      keyPendingPlatformFeeOrderIds,
+      current.where((e) => e != id).toList(),
+    );
+    return true;
   }
 
   /// Clear all

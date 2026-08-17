@@ -1,9 +1,6 @@
-import 'package:billkaro/app/Widgets/app_dropdowns.dart';
 import 'package:billkaro/app/modules/Items/add_menu_items_controller.dart';
 import 'package:billkaro/config/config.dart';
-import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 Color? parsePosColor(String hex) {
   if (hex.isEmpty) return null;
@@ -98,42 +95,6 @@ class ProductFormExtras extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        fieldLabel('Sold by'),
-        const SizedBox(height: 8),
-        Obx(
-          () => AppDropdownFormField2<String>(
-            isExpanded: true,
-            decoration: _decoration(context),
-            value: controller.selectedSoldBy.value,
-            items: AddMenuItemController.soldByOptions
-                .map(
-                  (o) => DropdownItem<String>(value: o, child: Text(o)),
-                )
-                .toList(),
-            onChanged: (value) {
-              if (value != null) controller.selectedSoldBy.value = value;
-            },
-            iconStyleData: IconStyleData(
-              icon: Icon(Icons.keyboard_arrow_down, color: AppColor.primary),
-            ),
-          ),
-        ),
-        const SizedBox(height: 18),
-        fieldLabel('Cost'),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller.costPriceController,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
-          ],
-          decoration: _decoration(
-            context,
-            hintText: 'Cost price (optional)',
-            prefixText: '₹ ',
-          ),
-        ),
-        const SizedBox(height: 18),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -207,90 +168,6 @@ class ProductFormExtras extends StatelessWidget {
               ),
             ),
           ],
-        ),
-        const SizedBox(height: 8),
-        sectionDivider(Icons.warehouse_outlined, 'Inventory'),
-        Obx(
-          () => Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              border: Border.all(color: Colors.grey[300]!),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Track Stock',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[800],
-                        ),
-                      ),
-                    ),
-                    Switch(
-                      value: controller.trackStock.value,
-                      activeColor: AppColor.primary.withOpacity(0.95),
-                      activeTrackColor: AppColor.primary.withOpacity(0.25),
-                      onChanged: (v) => controller.trackStock.value = v,
-                    ),
-                  ],
-                ),
-                if (controller.trackStock.value) ...[
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: controller.stockController,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d+\.?\d{0,2}'),
-                            ),
-                          ],
-                          decoration: _decoration(context, hintText: 'Stock'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          controller: controller.minStockController,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d+\.?\d{0,2}'),
-                            ),
-                          ],
-                          decoration: _decoration(
-                            context,
-                            hintText: 'Low stock alert',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Sales auto-deduct product stock. Recipes deduct ingredients separately.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
         ),
         const SizedBox(height: 8),
         sectionDivider(Icons.desktop_windows_outlined, 'Representation on POS'),
