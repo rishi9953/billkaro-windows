@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:billkaro/app/Database/app_database.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
+import 'package:billkaro/app/services/sync/order_sync_util.dart';
 import 'package:billkaro/config/config.dart';
 
 class HoldOrdersController extends BaseController {
@@ -92,6 +93,8 @@ class HoldOrdersController extends BaseController {
           if (!loadMore) {
             _hasLoadedFromApi = true;
           }
+
+          await db.insertOrders(apiOrders, outletId, isSyncedFromApi: true);
         }
       } else if (!isOnline) {
         debugPrint('📴 No internet → loading from SQLite only');
@@ -108,13 +111,12 @@ class HoldOrdersController extends BaseController {
 
       if (!loadMore) {
         for (final order in localOrders) {
-          mergedOrders[order.id!] = order;
+          mergedOrders[order.id] = order;
         }
       }
 
-      for (final order in apiOrders) {
-        mergedOrders[order.id!] = order;
-      }
+      final unsyncedIds = await db.getUnsyncedOrderIds(outletId: outletId);
+      mergeRemoteOrders(mergedOrders, apiOrders, unsyncedIds: unsyncedIds);
 
       /// 🔹 Pending orders only
       final pendingOrders = mergedOrders.values
@@ -181,9 +183,16 @@ class HoldOrdersController extends BaseController {
           showError(description: 'Failed to delete order.');
           return false;
         }
+        await db.updateOrderStatus(orderId: orderId, status: 'deleted');
+      } else if (isClientGeneratedId(orderId)) {
+        await db.deleteOrderCompletely(orderId);
+      } else {
+        await db.updateOrderStatus(
+          orderId: orderId,
+          status: 'deleted',
+          markPendingSync: true,
+        );
       }
-
-      await db.updateOrderStatus(orderId: orderId, status: 'deleted');
       allOrders.removeWhere((e) => e.id == orderId);
 
       final loc = AppLocalizations.of(Get.context!)!;

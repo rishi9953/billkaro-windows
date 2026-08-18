@@ -4,6 +4,7 @@ import 'package:billkaro/app/modules/Tables/table_form_dialog.dart';
 import 'package:billkaro/app/modules/Tables/table_qr_print_service.dart';
 import 'package:billkaro/app/modules/Tables/table_qr_service.dart';
 import 'package:billkaro/app/Database/app_database.dart' as dbs;
+import 'package:billkaro/utils/offline/offline_table_loader.dart';
 import 'package:billkaro/utils/outlet_seating.dart';
 import 'package:billkaro/utils/qr_menu_url_config.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
@@ -50,6 +51,7 @@ class TableController extends BaseController {
   final RxnString selectedSection = RxnString();
   final RxString errorMessage = ''.obs;
   final RxString reservationFilterDate = ''.obs;
+  int _loadGeneration = 0;
 
   int get seatingCapacityLimit =>
       parseSeatingCapacityLimit(appPref.selectedOutlet?.seatingCapacity);
@@ -128,96 +130,128 @@ class TableController extends BaseController {
   }
 
   Future<void> loadTables() async {
-    if (isLoading.value) return;
-    isLoading.value = true;
+    final generation = ++_loadGeneration;
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null) {
+      tables.clear();
+      sections.clear();
+      isLoading.value = false;
+      return;
+    }
+
     errorMessage.value = '';
+    if (tables.isEmpty) isLoading.value = true;
 
     try {
-      await _refreshOutletSeatingFromApi();
-
-      final outletId = appPref.selectedOutlet?.id;
-      if (outletId == null) {
-        tables.clear();
-        sections.clear();
-        return;
+      _applyCachedSections(outletId);
+      final cachedTables = OfflineTableLoader.loadCached(
+        appPref,
+        outletId,
+        excludeMergedSecondary: true,
+      );
+      var orders = await _localOrders(outletId);
+      if (cachedTables.isNotEmpty) {
+        _assignTables(cachedTables, orders);
+        isLoading.value = false;
+        debugPrint('📴 Showing ${cachedTables.length} cached tables');
       }
 
-      List<TableModel> tableList = [];
+      final online = await NetworkUtils.hasInternetConnection();
+      if (!online || generation != _loadGeneration) return;
 
+      await _refreshOutletSeatingFromApi();
+      if (generation != _loadGeneration) return;
+
+      var tableList = List<TableModel>.from(cachedTables);
       try {
         final response = await callApi(
           apiClient.getOutletTables(outletId),
           showLoader: false,
         );
-
+        if (generation != _loadGeneration) return;
         if (response?.status == 'success') {
           tableList = response!.data
               .map((e) => TableModel.fromTableData(e))
               .where((t) => !t.isMergedSecondary)
               .toList();
           appPref.setCachedOutletTables(outletId, response.data);
+          errorMessage.value = '';
         }
-      } catch (_) {
-        final loc = AppLocalizations.of(Get.context!)!;
-        errorMessage.value = loc.unable_to_load_tables_from_server;
+      } catch (e) {
+        debugPrint('loadTables API error: $e');
+        if (tableList.isEmpty) {
+          errorMessage.value = _unableToLoadTablesMessage();
+        }
       }
 
       await _loadSections(outletId);
-
-      if (tableList.isEmpty) {
-        final cached = appPref.getCachedOutletTables(outletId);
-        if (cached != null && cached.isNotEmpty) {
-          tableList = cached
-              .map((e) => TableModel.fromTableData(e))
-              .where((t) => !t.isMergedSecondary)
-              .toList();
-          errorMessage.value = '';
-          debugPrint('📴 Loaded ${tableList.length} tables from offline cache');
-        } else if (errorMessage.value.isEmpty) {
-          errorMessage.value = '';
-        }
-      }
-
       await _loadReservations(outletId);
-
       await _trySyncOrdersForOutlet();
+      if (generation != _loadGeneration) return;
 
-      List<OrderModel> orders = <OrderModel>[];
-      try {
-        orders = await db.getAllOrders(outletId: outletId);
-      } catch (_) {
-        final loc = AppLocalizations.of(Get.context!)!;
-        errorMessage.value = loc.unable_to_load_local_orders;
-      }
-
-      tables.value = tableList.map((table) {
-        final tableOrders = orders
-            .where((o) => _matchesTable(o, table))
-            .toList(growable: false);
-        final order = _findCurrentOrderForTable(orders, table);
-        final reservation = _findUpcomingReservationForTable(table);
-        final status = _resolveStatus(
-          order: order,
-          table: table,
-          reservation: reservation,
-          hasLocalHistory: tableOrders.isNotEmpty,
-        );
-
-        return TableWithStatus(
-          table: table,
-          status: status,
-          currentOrder: order,
-          upcomingReservation: reservation,
-        );
-      }).toList();
+      orders = await _localOrders(outletId);
+      _assignTables(tableList, orders);
+    } catch (e) {
+      debugPrint('loadTables error: $e');
     } finally {
-      isLoading.value = false;
+      if (generation == _loadGeneration) {
+        isLoading.value = false;
+      }
     }
   }
 
+  void _assignTables(List<TableModel> tableList, List<OrderModel> orders) {
+    tables.value = tableList.map((table) {
+      final tableOrders = orders
+          .where((o) => _matchesTable(o, table))
+          .toList(growable: false);
+      final order = _findCurrentOrderForTable(orders, table);
+      final reservation = _findUpcomingReservationForTable(table);
+      final status = _resolveStatus(
+        order: order,
+        table: table,
+        reservation: reservation,
+        hasLocalHistory: tableOrders.isNotEmpty,
+      );
+      return TableWithStatus(
+        table: table,
+        status: status,
+        currentOrder: order,
+        upcomingReservation: reservation,
+      );
+    }).toList();
+  }
+
+  Future<List<OrderModel>> _localOrders(String outletId) async {
+    try {
+      return await db.getAllOrders(outletId: outletId);
+    } catch (e) {
+      debugPrint('loadTables orders error: $e');
+      return const [];
+    }
+  }
+
+  void _applyCachedSections(String outletId) {
+    final cached = appPref.getCachedOutletTableSections(outletId);
+    if (cached == null || cached.isEmpty) return;
+    sections.assignAll(cached);
+  }
+
+  String _unableToLoadTablesMessage() {
+    final context = Get.context;
+    if (context == null) return 'Unable to load tables';
+    return AppLocalizations.of(context)?.unable_to_load_tables_from_server ??
+        'Unable to load tables';
+  }
+
   Future<void> _refreshOutletSeatingFromApi() async {
-    if (Get.isRegistered<HomeScreenController>()) {
-      await Get.find<HomeScreenController>().getUserDetails();
+    if (!await NetworkUtils.hasInternetConnection()) return;
+    try {
+      if (Get.isRegistered<HomeScreenController>()) {
+        await Get.find<HomeScreenController>().getUserDetails();
+      }
+    } catch (e) {
+      debugPrint('refreshOutletSeating error: $e');
     }
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) return;
@@ -337,6 +371,8 @@ class TableController extends BaseController {
   }
 
   Future<void> _loadReservations(String outletId) async {
+    if (!await NetworkUtils.hasInternetConnection()) return;
+
     try {
       // Load all outlet reservations (no date filter). Filtering only by today
       // hid future bookings and made reserved tables look available.
@@ -364,9 +400,7 @@ class TableController extends BaseController {
         }
         reservations.value = parsed;
       }
-    } catch (_) {
-      reservations.clear();
-    }
+    } catch (_) {}
   }
 
   TableStatus _resolveStatus({
@@ -499,6 +533,9 @@ class TableController extends BaseController {
   bool get canAddMoreTables => remainingSeats >= 1;
 
   Future<void> _loadSections(String outletId) async {
+    _applyCachedSections(outletId);
+    if (!await NetworkUtils.hasInternetConnection()) return;
+
     try {
       final response = await callApi(
         apiClient.getOutletTableSections(outletId),
@@ -507,17 +544,16 @@ class TableController extends BaseController {
       if (response is Map && response['status'] == 'success') {
         final raw = response['data'];
         if (raw is List) {
-          sections.assignAll(
-            raw
-                .whereType<Map>()
-                .map(
-                  (e) =>
-                      TableSectionModel.fromJson(Map<String, dynamic>.from(e)),
-                )
-                .where((s) => s.name.isNotEmpty)
-                .toList(),
-          );
-          return;
+          final parsed = raw
+              .whereType<Map>()
+              .map(
+                (e) =>
+                    TableSectionModel.fromJson(Map<String, dynamic>.from(e)),
+              )
+              .where((s) => s.name.isNotEmpty)
+              .toList();
+          sections.assignAll(parsed);
+          appPref.setCachedOutletTableSections(outletId, parsed);
         }
       }
     } catch (_) {}
@@ -1739,6 +1775,7 @@ class TableController extends BaseController {
   }
 
   Future<bool> _trySyncOrdersForOutlet() async {
+    if (!await NetworkUtils.hasInternetConnection()) return false;
     final outletId = appPref.selectedOutlet?.id;
     final userId = appPref.ordersApiUserId;
     if (outletId == null || userId == null) return false;
@@ -1767,17 +1804,6 @@ class TableController extends BaseController {
     } catch (_) {
       return false;
     }
-  }
-
-  List<TableModel> _defaultTables() {
-    return List.generate(
-      12,
-      (i) => TableModel(
-        id: 'table_${i + 1}',
-        tableNumber: '${i + 1}',
-        status: 'available',
-      ),
-    );
   }
 
   /// CALL THIS AFTER PAYMENT SUCCESS

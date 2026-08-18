@@ -6,7 +6,9 @@ import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/Modals/tables/tables_response.dart';
 import 'package:billkaro/app/services/sync/bill_number_util.dart';
+import 'package:billkaro/app/services/sync/order_sync_util.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/offline/offline_table_loader.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:flutter/material.dart';
 
@@ -215,6 +217,13 @@ class OrderDetailsController extends BaseController {
       return;
     }
 
+    final cached = OfflineTableLoader.loadCached(appPref, outletId);
+    if (cached.isNotEmpty) {
+      _applyAvailableTables(cached);
+    }
+
+    if (!await NetworkUtils.hasInternetConnection()) return;
+
     try {
       final response = await callApi(
         apiClient.getOutletTables(outletId),
@@ -222,44 +231,42 @@ class OrderDetailsController extends BaseController {
       );
 
       if (response?.status == 'success') {
-        final allTables = response!.data
-            .map((e) => TableModel.fromTableData(e))
-            .toList();
-        hasOutletTables.value = allTables.isNotEmpty;
-        if (!hasOutletTables.value) {
-          availableTables.clear();
-          tableNumber.text = '';
-          return;
-        }
-        final currentTable = tableNumber.text.trim();
-
-        final tables = allTables.where((t) {
-          if (t.isAvailableFromApi) return true;
-          return _tableMatchesSelection(t, currentTable);
-        }).toList(growable: true);
-
-        if (currentTable.isNotEmpty &&
-            !tables.any((t) => _tableMatchesSelection(t, currentTable))) {
-          tables.insert(
-            0,
-            TableModel(
-              id: 'current_table',
-              tableNumber: currentTable,
-              status: 'occupied',
-            ),
-          );
-        }
-
-        availableTables.assignAll(tables);
-        return;
+        appPref.setCachedOutletTables(outletId, response!.data);
+        _applyAvailableTables(
+          response.data.map(TableModel.fromTableData).toList(),
+        );
       }
     } catch (e) {
       debugPrint('⚠️ Failed to load available tables: $e');
     }
+  }
 
-    hasOutletTables.value = false;
-    availableTables.clear();
-    tableNumber.text = '';
+  void _applyAvailableTables(List<TableModel> allTables) {
+    hasOutletTables.value = allTables.isNotEmpty;
+    if (!hasOutletTables.value) {
+      availableTables.clear();
+      return;
+    }
+
+    final currentTable = tableNumber.text.trim();
+    final tables = allTables.where((t) {
+      if (t.isAvailableFromApi) return true;
+      return _tableMatchesSelection(t, currentTable);
+    }).toList(growable: true);
+
+    if (currentTable.isNotEmpty &&
+        !tables.any((t) => _tableMatchesSelection(t, currentTable))) {
+      tables.insert(
+        0,
+        TableModel(
+          id: 'current_table',
+          tableNumber: currentTable,
+          status: 'occupied',
+        ),
+      );
+    }
+
+    availableTables.assignAll(tables);
   }
 
   /// Fetch orders & set latest bill number
@@ -321,6 +328,8 @@ class OrderDetailsController extends BaseController {
       List<OrderModel> localOrders = [];
       try {
         localOrders = await _db.getAllOrders(outletId: outletId);
+        allOrders.assignAll(localOrders);
+        allOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         debugPrint('✅ Loaded ${localOrders.length} orders from local database');
       } catch (e) {
         debugPrint('⚠️ Error loading local orders: $e');
@@ -343,10 +352,23 @@ class OrderDetailsController extends BaseController {
         );
 
         if (response != null && response.status == 'success') {
-          allOrders.value = response.data;
-          // Sort latest first
+          await _db.insertOrders(
+            response.data,
+            outletId,
+            isSyncedFromApi: true,
+          );
+          final merged = <String, OrderModel>{
+            for (final order in allOrders) order.id: order,
+          };
+          final unsyncedIds = await _db.getUnsyncedOrderIds(outletId: outletId);
+          mergeRemoteOrders(
+            merged,
+            response.data,
+            unsyncedIds: unsyncedIds,
+          );
+          allOrders.assignAll(merged.values);
           allOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          debugPrint('✅ Loaded ${allOrders.length} orders from API');
+          debugPrint('✅ Loaded ${allOrders.length} orders from API + local');
         }
       } catch (e) {
         debugPrint('⚠️ Could not load orders from API (may be offline): $e');

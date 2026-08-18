@@ -1,5 +1,6 @@
 import 'package:billkaro/app/Widgets/app_date_picker.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
+import 'package:billkaro/app/services/sync/order_sync_util.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/date_util.dart';
 
@@ -440,9 +441,16 @@ class ClosedOrdersController extends BaseController {
           showError(description: 'Failed to delete order.');
           return false;
         }
+        await db.updateOrderStatus(orderId: orderId, status: 'deleted');
+      } else if (isClientGeneratedId(orderId)) {
+        await db.deleteOrderCompletely(orderId);
+      } else {
+        await db.updateOrderStatus(
+          orderId: orderId,
+          status: 'deleted',
+          markPendingSync: true,
+        );
       }
-
-      await db.updateOrderStatus(orderId: orderId, status: 'deleted');
       allOrders.removeWhere((e) => e.id == orderId);
       ordersL.removeWhere((e) => e.id == orderId);
       categoryOrdersL.removeWhere((e) => e.id == orderId);

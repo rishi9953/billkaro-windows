@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:billkaro/app/Widgets/notification_bell_button.dart';
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
+import 'package:billkaro/app/modules/InternetSpeed/widgets/internet_speed_appbar_button.dart';
 import 'package:billkaro/app/modules/Home/showcase_controller.dart';
 import 'package:billkaro/app/modules/Home/Widgets/outlet_switcher.dart';
 import 'package:billkaro/app/modules/StoreSession/store_session_widget.dart';
@@ -122,6 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: StoreSessionChip(style: StoreSessionChipStyle.expanded),
             ),
           ),
+          const InternetSpeedAppBarButton(),
           const NotificationBellButton(iconColor: Colors.white, iconSize: 24),
           Padding(
             padding: const EdgeInsets.only(right: 12, bottom: 8, top: 8),

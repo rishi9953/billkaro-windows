@@ -6,6 +6,20 @@ bool isClientGeneratedId(String? id) {
   return id.startsWith('temp_') || id.startsWith('local_');
 }
 
+bool shouldCreateOnServer(String id) => isClientGeneratedId(id);
+
+/// Remote rows must not overwrite local orders waiting to sync.
+void mergeRemoteOrders(
+  Map<String, OrderModel> target,
+  Iterable<OrderModel> remote, {
+  Set<String> unsyncedIds = const {},
+}) {
+  for (final order in remote) {
+    if (unsyncedIds.contains(order.id)) continue;
+    target[order.id] = order;
+  }
+}
+
 /// Builds a server-safe order payload (strips local-only IDs and billNumber).
 Map<String, dynamic> buildOrderSyncPayload(OrderModel order) {
   final payload = Map<String, dynamic>.from(order.toJson());

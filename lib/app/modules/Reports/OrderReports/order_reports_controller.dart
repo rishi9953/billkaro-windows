@@ -238,6 +238,16 @@ class OrderReportsController extends BaseController {
           debugPrint('⚠️ API response status not success');
           if (loadMore) {
             hasMoreData.value = false;
+          } else {
+            debugPrint('📴 API failed → loading reports from SQLite');
+            final localOrders = await db.getAllOrders(
+              outletId: appPref.selectedOutlet!.id!,
+            );
+            allOrders.value = localOrders
+                .where((e) => e.status == 'closed')
+                .toList();
+            hasMoreData.value = false;
+            applyAllFilters();
           }
         }
       } else {

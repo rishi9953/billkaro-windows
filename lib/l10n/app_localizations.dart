@@ -9412,6 +9412,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Notifications'**
   String get notifications;
+
+  /// No description provided for @internet_speed_test.
+  ///
+  /// In en, this message translates to:
+  /// **'Internet Speed Test'**
+  String get internet_speed_test;
+
+  /// No description provided for @internet_speed_test_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Measure ping, download and upload speed'**
+  String get internet_speed_test_subtitle;
+
+  /// No description provided for @internet_speed_start_test.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Test'**
+  String get internet_speed_start_test;
+
+  /// No description provided for @internet_speed_retest.
+  ///
+  /// In en, this message translates to:
+  /// **'Retest'**
+  String get internet_speed_retest;
+
+  /// No description provided for @internet_speed_testing.
+  ///
+  /// In en, this message translates to:
+  /// **'Testing…'**
+  String get internet_speed_testing;
+
+  /// No description provided for @internet_speed_ping.
+  ///
+  /// In en, this message translates to:
+  /// **'Ping'**
+  String get internet_speed_ping;
+
+  /// No description provided for @internet_speed_download.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get internet_speed_download;
+
+  /// No description provided for @internet_speed_upload.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload'**
+  String get internet_speed_upload;
+
+  /// No description provided for @internet_speed_mbps.
+  ///
+  /// In en, this message translates to:
+  /// **'Mbps'**
+  String get internet_speed_mbps;
+
+  /// No description provided for @internet_speed_ms.
+  ///
+  /// In en, this message translates to:
+  /// **'ms'**
+  String get internet_speed_ms;
+
+  /// No description provided for @internet_speed_quality_excellent.
+  ///
+  /// In en, this message translates to:
+  /// **'Excellent'**
+  String get internet_speed_quality_excellent;
+
+  /// No description provided for @internet_speed_quality_good.
+  ///
+  /// In en, this message translates to:
+  /// **'Good'**
+  String get internet_speed_quality_good;
+
+  /// No description provided for @internet_speed_quality_fair.
+  ///
+  /// In en, this message translates to:
+  /// **'Fair'**
+  String get internet_speed_quality_fair;
+
+  /// No description provided for @internet_speed_quality_poor.
+  ///
+  /// In en, this message translates to:
+  /// **'Poor'**
+  String get internet_speed_quality_poor;
+
+  /// No description provided for @internet_speed_idle_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap start to measure your connection'**
+  String get internet_speed_idle_hint;
+
+  /// No description provided for @internet_speed_phase_ping.
+  ///
+  /// In en, this message translates to:
+  /// **'Measuring ping…'**
+  String get internet_speed_phase_ping;
+
+  /// No description provided for @internet_speed_phase_download.
+  ///
+  /// In en, this message translates to:
+  /// **'Measuring download…'**
+  String get internet_speed_phase_download;
+
+  /// No description provided for @internet_speed_phase_upload.
+  ///
+  /// In en, this message translates to:
+  /// **'Measuring upload…'**
+  String get internet_speed_phase_upload;
+
+  /// No description provided for @internet_speed_offline.
+  ///
+  /// In en, this message translates to:
+  /// **'No internet connection. Check your network and try again.'**
+  String get internet_speed_offline;
+
+  /// No description provided for @internet_speed_failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed test failed. Please try again.'**
+  String get internet_speed_failed;
+
+  /// No description provided for @internet_speed_tap_to_test.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to test internet speed'**
+  String get internet_speed_tap_to_test;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

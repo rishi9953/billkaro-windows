@@ -41,6 +41,7 @@ class AppPref {
   static const String keyStaffSession = 'staff_session';
   static const String keyStaffPermissions = 'staff_permissions';
   static const String keyCachedTablesPrefix = 'cached_tables_';
+  static const String keyCachedTableSectionsPrefix = 'cached_table_sections_';
   static const String keyWalletBalancePrefix = 'wallet_balance_';
   static const String keyWalletHistoryPrefix = 'wallet_history_';
   static const String keyWalletInitializedPrefix = 'wallet_initialized_';
@@ -286,16 +287,15 @@ class AppPref {
 
   /// Cached outlet table layout for offline table screen
   List<TableData>? getCachedOutletTables(String outletId) {
-    final raw = _preferences.getString('$keyCachedTablesPrefix$outletId');
-    if (raw == null || raw.isEmpty) return null;
-    try {
-      final list = jsonDecode(raw) as List<dynamic>;
-      return list
-          .map((e) => TableData.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } catch (_) {
-      return null;
+    final tables = <TableData>[];
+    for (final map in _decodeJsonObjectList(
+      _preferences.getString('$keyCachedTablesPrefix$outletId'),
+    )) {
+      try {
+        tables.add(TableData.fromJson(map));
+      } catch (_) {}
     }
+    return tables.isEmpty ? null : tables;
   }
 
   void setCachedOutletTables(String outletId, List<TableData> tables) {
@@ -305,12 +305,52 @@ class AppPref {
     );
   }
 
+  List<TableSectionModel>? getCachedOutletTableSections(String outletId) {
+    final sections = <TableSectionModel>[];
+    for (final map in _decodeJsonObjectList(
+      _preferences.getString('$keyCachedTableSectionsPrefix$outletId'),
+    )) {
+      try {
+        final section = TableSectionModel.fromJson(map);
+        if (section.name.trim().isEmpty) continue;
+        sections.add(section);
+      } catch (_) {}
+    }
+    return sections.isEmpty ? null : sections;
+  }
+
+  void setCachedOutletTableSections(
+    String outletId,
+    List<TableSectionModel> sections,
+  ) {
+    _preferences.setString(
+      '$keyCachedTableSectionsPrefix$outletId',
+      jsonEncode(sections.map((e) => e.toJson()).toList()),
+    );
+  }
+
   Future<void> clearCachedOutletTables() async {
-    final keys = _preferences
-        .getKeys()
-        .where((k) => k.startsWith(keyCachedTablesPrefix));
+    final keys = _preferences.getKeys().where(
+      (k) =>
+          k.startsWith(keyCachedTablesPrefix) ||
+          k.startsWith(keyCachedTableSectionsPrefix),
+    );
     for (final key in keys) {
       await _preferences.remove(key);
+    }
+  }
+
+  static List<Map<String, dynamic>> _decodeJsonObjectList(String? raw) {
+    if (raw == null || raw.isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return const [];
+      return decoded
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList(growable: false);
+    } catch (_) {
+      return const [];
     }
   }
 

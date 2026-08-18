@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
+import 'package:billkaro/app/services/sync/order_sync_util.dart';
 import 'package:billkaro/config/config.dart';
 
 class DeletedOrdersController extends BaseController {
@@ -75,6 +76,8 @@ class DeletedOrdersController extends BaseController {
           if (!loadMore) {
             _hasLoadedFromApi = true;
           }
+
+          await db.insertOrders(apiOrders, outletId, isSyncedFromApi: true);
         }
       } else if (!isOnline) {
         _hasLoadedFromApi = false;
@@ -87,13 +90,12 @@ class DeletedOrdersController extends BaseController {
 
       if (!loadMore) {
         for (final order in localOrders) {
-          mergedOrders[order.id!] = order;
+          mergedOrders[order.id] = order;
         }
       }
 
-      for (final order in apiOrders) {
-        mergedOrders[order.id!] = order;
-      }
+      final unsyncedIds = await db.getUnsyncedOrderIds(outletId: outletId);
+      mergeRemoteOrders(mergedOrders, apiOrders, unsyncedIds: unsyncedIds);
 
       final deletedOrders = mergedOrders.values
           .where((e) => e.status == 'deleted')
@@ -156,9 +158,14 @@ class DeletedOrdersController extends BaseController {
         if (data is Map && data['status'] is String) {
           restoreStatus = data['status'] as String;
         }
+        await db.updateOrderStatus(orderId: orderId, status: restoreStatus);
+      } else {
+        await db.updateOrderStatus(
+          orderId: orderId,
+          status: restoreStatus,
+          markPendingSync: true,
+        );
       }
-
-      await db.updateOrderStatus(orderId: orderId, status: restoreStatus);
       allOrders.removeWhere((e) => e.id == orderId);
 
       final loc = AppLocalizations.of(Get.context!)!;

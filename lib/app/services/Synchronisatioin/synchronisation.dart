@@ -134,33 +134,10 @@ class Synchronisation {
         }
 
         try {
-          final payload = buildOrderSyncPayload(order);
-          if (PlatformFeeService.consumePendingFeeForOrder(appPref, localId)) {
-            payload['chargePlatformFee'] = true;
-          }
-          debugPrint('📤 [SYNC] Uploading order $localId');
-
-          final response = await apiClient.addOrder(payload);
-          final serverOrder = parseSyncedOrderFromResponse(response, order);
-
-          if (serverOrder == null) {
-            throw FormatException(
-              'Invalid addOrder response for $localId: $response',
-            );
-          }
-
-          if (localId != serverOrder.id) {
-            await db.reconcileSyncedOrder(
-              localOrderId: localId,
-              serverOrder: serverOrder,
-            );
-          } else {
-            await db.markOrderAsSynced(localId);
-          }
-
-          affectedOutlets.add(serverOrder.outletId);
+          await _uploadPendingOrder(db, order);
+          affectedOutlets.add(order.outletId);
           successCount++;
-          debugPrint('✅ [SYNC] Order $localId → ${serverOrder.id}');
+          debugPrint('✅ [SYNC] Order $localId uploaded');
         } on DioException catch (e) {
           failCount++;
           final statusCode = e.response?.statusCode;
@@ -254,6 +231,60 @@ class Synchronisation {
     }
   }
 
+  Future<void> _uploadPendingOrder(AppDatabase db, OrderModel order) async {
+    final localId = order.id;
+    final status = order.status.toLowerCase();
+    debugPrint('📤 [SYNC] Uploading order $localId (status=$status)');
+
+    if (status == 'deleted') {
+      if (shouldCreateOnServer(localId)) {
+        await db.deleteOrderCompletely(localId);
+        return;
+      }
+      final response = await apiClient.softDeleteOrder(localId);
+      if (response is Map && response['status']?.toString() != 'success') {
+        throw FormatException('softDelete failed for $localId: $response');
+      }
+      await db.markOrderAsSynced(localId);
+      return;
+    }
+
+    final payload = buildOrderSyncPayload(order);
+    if (shouldCreateOnServer(localId) && Get.isRegistered<AppPref>()) {
+      final appPref = Get.find<AppPref>();
+      if (PlatformFeeService.consumePendingFeeForOrder(appPref, localId)) {
+        payload['chargePlatformFee'] = true;
+      }
+    }
+
+    final response = shouldCreateOnServer(localId)
+        ? await apiClient.addOrder(payload)
+        : await apiClient.updateOrder(localId, payload);
+
+    final serverOrder = parseSyncedOrderFromResponse(response, order);
+    if (serverOrder == null) {
+      if (response is Map && response['status']?.toString() == 'success') {
+        await db.markOrderAsSynced(localId);
+        return;
+      }
+      throw FormatException('Invalid sync response for $localId: $response');
+    }
+
+    if (localId != serverOrder.id) {
+      await db.reconcileSyncedOrder(
+        localOrderId: localId,
+        serverOrder: serverOrder,
+      );
+    } else {
+      await db.insertOrders(
+        [serverOrder],
+        serverOrder.outletId,
+        isSyncedFromApi: true,
+        protectUnsynced: false,
+      );
+    }
+  }
+
   Future<bool> _pullAndRefreshOutlets(
     AppDatabase db,
     String userId,
@@ -338,23 +369,7 @@ class Synchronisation {
         return false;
       }
 
-      final payload = buildOrderSyncPayload(order);
-      final appPref = Get.find<AppPref>();
-      if (PlatformFeeService.consumePendingFeeForOrder(appPref, order.id)) {
-        payload['chargePlatformFee'] = true;
-      }
-      final response = await apiClient.addOrder(payload);
-      final serverOrder = parseSyncedOrderFromResponse(response, order);
-      if (serverOrder == null) return false;
-
-      if (order.id != serverOrder.id) {
-        await db.reconcileSyncedOrder(
-          localOrderId: order.id,
-          serverOrder: serverOrder,
-        );
-      } else {
-        await db.markOrderAsSynced(orderId);
-      }
+      await _uploadPendingOrder(db, order);
 
       await refreshControllersAfterOnlineSync();
       return true;

@@ -28,6 +28,7 @@ import 'package:billkaro/app/services/sync/sync_manager.dart';
 import 'package:billkaro/utils/date_util.dart';
 import 'package:billkaro/utils/kot_print_tracker.dart';
 import 'package:billkaro/utils/offline/offline_category_loader.dart';
+import 'package:billkaro/utils/offline/offline_table_loader.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:billkaro/app/modules/StoreSession/store_session_controller.dart';
@@ -889,19 +890,30 @@ class AddOrderController extends BaseController {
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) return;
 
-    isLoadingTables.value = true;
+    final cached = OfflineTableLoader.loadCached(appPref, outletId);
+    if (cached.isNotEmpty) {
+      availableTables.value = cached;
+    }
+
+    if (!await NetworkUtils.hasInternetConnection()) {
+      isLoadingTables.value = false;
+      return;
+    }
+
+    isLoadingTables.value = availableTables.isEmpty;
     try {
       final response = await callApi(
         apiClient.getOutletTables(outletId),
         showLoader: false,
       );
       if (response?.status == 'success') {
-        availableTables.value = response!.data
+        appPref.setCachedOutletTables(outletId, response!.data);
+        availableTables.value = response.data
             .map((e) => TableModel.fromTableData(e))
             .toList();
       }
     } catch (_) {
-      // Tables optional for non-restaurant outlets.
+      // Keep cached tables when the API is unreachable.
     } finally {
       isLoadingTables.value = false;
     }
@@ -1786,75 +1798,81 @@ class AddOrderController extends BaseController {
 
           await calculateTotals();
 
+          final outletId = appPref.selectedOutlet?.id;
+          if (outletId != null && newItems.isNotEmpty) {
+            await db.saveItems(newItems, outletId);
+          }
+
           debugPrint(
             '✅ Loaded ${newItems.length} items. Total items: ${items.length}',
           );
         } else {
           debugPrint('getItems: unexpected response: $response');
-          hasMoreItems.value = false;
+          await _applyLocalItems(append: append);
         }
       } else {
         debugPrint('🌐 Offline → Fetching items from SQLite');
-        final allItems = await db.getItems();
-
-        // Apply filters
-        var filteredItems = allItems;
-
-        // Category filter
-        if (selectedCategoryId.value != 'none') {
-          filteredItems = filteredItems
-              .where(
-                (item) =>
-                    item.category.toLowerCase() ==
-                    selectedCategoryId.value.toLowerCase(),
-              )
-              .toList();
-        }
-
-        // Search filter
-        if (searchQuery.value.isNotEmpty) {
-          filteredItems = filteredItems
-              .where(
-                (item) => item.itemName.toLowerCase().contains(
-                  searchQuery.value.toLowerCase(),
-                ),
-              )
-              .toList();
-        }
-
-        // Apply pagination
-        final startIndex = (currentPage.value - 1) * itemsPerPage.value;
-        final endIndex = startIndex + itemsPerPage.value;
-
-        if (startIndex < filteredItems.length) {
-          final paginatedItems = filteredItems.sublist(
-            startIndex,
-            endIndex > filteredItems.length ? filteredItems.length : endIndex,
-          );
-
-          if (append) {
-            items.addAll(paginatedItems);
-          } else {
-            items.value = paginatedItems;
-          }
-
-          // Add all items to the lookup map for calculating totals across categories
-          for (final item in filteredItems) {
-            allItemsMap[item.id] = item;
-          }
-
-          hasMoreItems.value = endIndex < filteredItems.length;
-        } else {
-          hasMoreItems.value = false;
-        }
+        await _applyLocalItems(append: append);
       }
 
       isLoadingMore.value = false;
     } catch (e, st) {
       debugPrint('getItems error: $e\n$st');
+      try {
+        await _applyLocalItems(append: append);
+      } catch (_) {}
       isLoadingMore.value = false;
       hasMoreItems.value = false;
     }
+  }
+
+  Future<void> _applyLocalItems({required bool append}) async {
+    final outletId = appPref.selectedOutlet?.id;
+    final allCached = await db.getItems(outletId: outletId);
+    var filteredItems = allCached;
+
+    if (selectedCategoryId.value != 'none') {
+      final selected = selectedCategoryId.value.toLowerCase();
+      filteredItems = filteredItems
+          .where((item) => item.category.toLowerCase() == selected)
+          .toList();
+    }
+
+    if (searchQuery.value.isNotEmpty) {
+      final query = searchQuery.value.toLowerCase();
+      filteredItems = filteredItems
+          .where((item) => item.itemName.toLowerCase().contains(query))
+          .toList();
+    }
+
+    final startIndex = (currentPage.value - 1) * itemsPerPage.value;
+    final endIndex = startIndex + itemsPerPage.value;
+
+    if (startIndex < filteredItems.length) {
+      final paginatedItems = filteredItems.sublist(
+        startIndex,
+        endIndex > filteredItems.length ? filteredItems.length : endIndex,
+      );
+
+      if (append) {
+        items.addAll(paginatedItems);
+      } else {
+        items.value = paginatedItems;
+      }
+
+      for (final item in filteredItems) {
+        allItemsMap[item.id] = item;
+      }
+
+      hasMoreItems.value = endIndex < filteredItems.length;
+    } else if (!append) {
+      items.clear();
+      hasMoreItems.value = false;
+    } else {
+      hasMoreItems.value = false;
+    }
+
+    await calculateTotals();
   }
 
   Future<void> getCategories() async {
@@ -2735,105 +2753,166 @@ class AddOrderController extends BaseController {
             'isOffline': false,
           },
         );
+      } else if (response == null) {
+        await _completeOfflineOrderSave(
+          request: request,
+          localStatusForUi: localStatusForUi,
+          normalizedStatus: normalizedStatus,
+          isHoldOnly: isHoldOnly,
+          isBilling: isBilling,
+          stayOnScreen: stayOnScreen,
+          sendToKitchen: sendToKitchen,
+          shouldPrintKot: shouldPrintKot,
+          kotDeltaForPrint: kotDeltaForPrint,
+          chargePlatformFee: chargePlatformFee,
+        );
       } else {
         showError(description: loc.order_failed);
       }
     } else {
-      try {
-        final tempOrderId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+      await _completeOfflineOrderSave(
+        request: request,
+        localStatusForUi: localStatusForUi,
+        normalizedStatus: normalizedStatus,
+        isHoldOnly: isHoldOnly,
+        isBilling: isBilling,
+        stayOnScreen: stayOnScreen,
+        sendToKitchen: sendToKitchen,
+        shouldPrintKot: shouldPrintKot,
+        kotDeltaForPrint: kotDeltaForPrint,
+        chargePlatformFee: chargePlatformFee,
+      );
+    }
+  }
 
-        final orderModel = _mapToOrderModel(
-          request,
-          tempOrderId,
-          statusOverride: localStatusForUi,
-        );
-
-        await db.insertOrders(
-          [orderModel],
-          appPref.selectedOutlet!.id!,
-          isSyncedFromApi: false,
-        );
-
-        await onPlatformFeeCharged(
-          online: false,
-          orderId: tempOrderId,
-          billNumber: request.billNumber,
-        );
-
-        if (await NetworkUtils.hasInternetConnection()) {
-          unawaited(SyncManager().triggerSync(immediate: true));
-        }
-
-        final loc = AppLocalizations.of(Get.context!)!;
-        if (sendToKitchen || shouldPrintKot) {
-          if (shouldPrintKot) {
-            await _maybeAutoPrintKOT(
-              request,
-              orderId: tempOrderId,
-              kotItemsOverride: kotDeltaForPrint,
-            );
-          }
-          await _commitKotPrintedBaseline(orderId: tempOrderId);
-        }
-
-        if (stayOnScreen) {
-          orderDetails['id'] = tempOrderId;
-          orderDetails['billNumber'] = request.billNumber;
-          await _enterEditModeAfterSave(
-            responseData: {'id': tempOrderId, 'billNumber': request.billNumber},
-            request: request,
-          );
-          await _runPostSaveUiRefresh(
-            orderStatus: normalizedStatus,
-            tableNumber: request.tableNumber,
-            currentBillNumber: request.billNumber,
-          );
-          showSuccess(
-            description: 'KOT sent (offline) — continue adding items',
-          );
-          return;
-        }
-
-        clearOrderDraft();
-
-        if (isHoldOnly || !isBilling) {
-          await _runPostSaveUiRefresh(
-            orderStatus: normalizedStatus,
-            tableNumber: request.tableNumber,
-            currentBillNumber: request.billNumber,
-            refreshTables: false,
-          );
-          showSuccess(description: loc.order_saved_offline);
-          await _returnAfterOrderSave();
-          return;
-        }
-
-        // Navigate to invoice immediately; refresh dashboards/tables in background.
-        showSuccess(description: loc.order_saved_offline);
-        unawaited(
-          _runPostSaveUiRefresh(
-            orderStatus: normalizedStatus,
-            tableNumber: request.tableNumber,
-            currentBillNumber: request.billNumber,
-          ),
-        );
-        await _maybeOpenCashDrawerOnBill(request);
-
-        await Modular.to.pushNamed(
-          HomeMainRoutes.invoiceScreen,
-          arguments: {
-            'invoice': request,
-            'orderFrom': request.orderFrom ?? selectedOrderSource.value,
-            'isEdit': isEdit.value,
-            'isOffline': true,
-          },
-        );
-      } catch (e) {
-        debugPrint('Offline order save failed: $e');
-        showError(
-          description: '${loc.failed_to_save_order_offline} (${e.toString()})',
+  Future<void> _completeOfflineOrderSave({
+    required CreateorderRequest request,
+    required String localStatusForUi,
+    required String normalizedStatus,
+    required bool isHoldOnly,
+    required bool isBilling,
+    required bool stayOnScreen,
+    required bool sendToKitchen,
+    required bool shouldPrintKot,
+    required List<OrderItem> kotDeltaForPrint,
+    required bool chargePlatformFee,
+  }) async {
+    final loc = AppLocalizations.of(Get.context!)!;
+    try {
+      var savedRequest = request;
+      if (savedRequest.billNumber == null ||
+          savedRequest.billNumber!.trim().isEmpty) {
+        savedRequest = copyRequestWithBillNumber(
+          savedRequest,
+          await _offlineBillPreview(),
         );
       }
+
+      final existingId = _existingOrderId();
+      final orderId =
+          (existingId != null && existingId.isNotEmpty)
+          ? existingId
+          : 'temp_${DateTime.now().millisecondsSinceEpoch}';
+
+      final orderModel = _mapToOrderModel(
+        savedRequest,
+        orderId,
+        statusOverride: localStatusForUi,
+        createdAtOverride: orders?.createdAt,
+      );
+
+      await db.insertOrders(
+        [orderModel],
+        appPref.selectedOutlet!.id!,
+        isSyncedFromApi: false,
+      );
+
+      if (chargePlatformFee) {
+        final label =
+            (savedRequest.billNumber != null &&
+                savedRequest.billNumber!.isNotEmpty)
+            ? 'Bill #${savedRequest.billNumber}'
+            : 'Order';
+        PlatformFeeService.debitLocal(
+          appPref,
+          description:
+              'Platform fee ₹${PlatformFeeService.feeAmount.toStringAsFixed(0)} — $label',
+        );
+        PlatformFeeService.markPendingFeeForOrder(appPref, orderId);
+      }
+
+      if (await NetworkUtils.hasInternetConnection()) {
+        unawaited(SyncManager().triggerSync(immediate: true));
+      }
+
+      if (sendToKitchen || shouldPrintKot) {
+        if (shouldPrintKot) {
+          await _maybeAutoPrintKOT(
+            savedRequest,
+            orderId: orderId,
+            kotItemsOverride: kotDeltaForPrint,
+          );
+        }
+        await _commitKotPrintedBaseline(orderId: orderId);
+      }
+
+      if (stayOnScreen) {
+        orderDetails['id'] = orderId;
+        orderDetails['billNumber'] = savedRequest.billNumber;
+        await _enterEditModeAfterSave(
+          responseData: {
+            'id': orderId,
+            'billNumber': savedRequest.billNumber,
+          },
+          request: savedRequest,
+        );
+        await _runPostSaveUiRefresh(
+          orderStatus: normalizedStatus,
+          tableNumber: savedRequest.tableNumber,
+          currentBillNumber: savedRequest.billNumber,
+        );
+        showSuccess(description: loc.kot_sent_offline_continue_adding_items);
+        return;
+      }
+
+      clearOrderDraft();
+
+      if (isHoldOnly || !isBilling) {
+        await _runPostSaveUiRefresh(
+          orderStatus: normalizedStatus,
+          tableNumber: savedRequest.tableNumber,
+          currentBillNumber: savedRequest.billNumber,
+          refreshTables: false,
+        );
+        showSuccess(description: loc.order_saved_offline);
+        await _returnAfterOrderSave();
+        return;
+      }
+
+      showSuccess(description: loc.order_saved_offline);
+      unawaited(
+        _runPostSaveUiRefresh(
+          orderStatus: normalizedStatus,
+          tableNumber: savedRequest.tableNumber,
+          currentBillNumber: savedRequest.billNumber,
+        ),
+      );
+      await _maybeOpenCashDrawerOnBill(savedRequest);
+
+      await Modular.to.pushNamed(
+        HomeMainRoutes.invoiceScreen,
+        arguments: {
+          'invoice': savedRequest,
+          'orderFrom': savedRequest.orderFrom ?? selectedOrderSource.value,
+          'isEdit': isEdit.value,
+          'isOffline': true,
+        },
+      );
+    } catch (e, st) {
+      debugPrint('Offline order save failed: $e\n$st');
+      showError(
+        description: '${loc.failed_to_save_order_offline} (${e.toString()})',
+      );
     }
   }
 
@@ -2936,6 +3015,7 @@ class AddOrderController extends BaseController {
     String id, {
     String? statusOverride,
     String? billNumberOverride,
+    String? createdAtOverride,
   }) {
     return api.OrderModel(
       outletId: r.outletId ?? appPref.selectedOutlet!.id!,
@@ -2954,7 +3034,8 @@ class AddOrderController extends BaseController {
       splitPayments: r.splitPayments,
       status: (statusOverride ?? r.status ?? 'pending'),
       orderFrom: r.orderFrom ?? selectedOrderSource.value,
-      createdAt: DateTime.now().toIso8601String(),
+      specialInstructions: r.specialInstructions,
+      createdAt: createdAtOverride ?? DateTime.now().toIso8601String(),
       updatedAt: DateTime.now().toIso8601String(),
       items: (r.items ?? []).map((oi) {
         return api.OrderItem(
@@ -2966,6 +3047,9 @@ class AddOrderController extends BaseController {
           gst: oi.gst,
           kotSentQuantity: oi.kotSentQuantity,
           itemRemark: oi.itemRemark,
+          variantId: oi.variantId,
+          variantName: oi.variantName,
+          variantSku: oi.variantSku,
         );
       }).toList(),
     );
@@ -3144,17 +3228,20 @@ class AddOrderController extends BaseController {
 
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null) return;
+    if (!await NetworkUtils.hasInternetConnection()) return;
 
     try {
       final tablesResponse = await callApi(
         apiClient.getOutletTables(outletId),
         showLoader: false,
       );
-      if (tablesResponse?.status != 'success') return;
+      final fetched = tablesResponse;
+      if (fetched == null || fetched.status != 'success') return;
+      appPref.setCachedOutletTables(outletId, fetched.data);
 
       final normalizedTarget = _normalizeTableNumber(rawTable);
       TableData? table;
-      for (final t in tablesResponse!.data) {
+      for (final t in fetched.data) {
         final keys = {
           _normalizeTableNumber(t.tableNumber),
           _normalizeTableNumber('Table ${t.tableNumber}'),

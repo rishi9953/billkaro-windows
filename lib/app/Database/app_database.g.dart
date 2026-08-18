@@ -210,6 +210,17 @@ class $OrdersTable extends Orders with TableInfo<$OrdersTable, Order> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _orderJsonMeta = const VerificationMeta(
+    'orderJson',
+  );
+  @override
+  late final GeneratedColumn<String> orderJson = GeneratedColumn<String>(
+    'order_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -231,6 +242,7 @@ class $OrdersTable extends Orders with TableInfo<$OrdersTable, Order> {
     status,
     orderFrom,
     isSync,
+    orderJson,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -404,6 +416,12 @@ class $OrdersTable extends Orders with TableInfo<$OrdersTable, Order> {
     } else if (isInserting) {
       context.missing(_isSyncMeta);
     }
+    if (data.containsKey('order_json')) {
+      context.handle(
+        _orderJsonMeta,
+        orderJson.isAcceptableOrUnknown(data['order_json']!, _orderJsonMeta),
+      );
+    }
     return context;
   }
 
@@ -489,6 +507,10 @@ class $OrdersTable extends Orders with TableInfo<$OrdersTable, Order> {
         DriftSqlType.string,
         data['${effectivePrefix}is_sync'],
       )!,
+      orderJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}order_json'],
+      ),
     );
   }
 
@@ -520,6 +542,9 @@ class Order extends DataClass implements Insertable<Order> {
   final String status;
   final String orderFrom;
   final String isSync;
+
+  /// Full OrderModel JSON so offline \u2192 online sync keeps variants, remarks, etc.
+  final String? orderJson;
   const Order({
     required this.id,
     required this.createdAt,
@@ -540,6 +565,7 @@ class Order extends DataClass implements Insertable<Order> {
     required this.status,
     required this.orderFrom,
     required this.isSync,
+    this.orderJson,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -573,6 +599,9 @@ class Order extends DataClass implements Insertable<Order> {
     map['status'] = Variable<String>(status);
     map['order_from'] = Variable<String>(orderFrom);
     map['is_sync'] = Variable<String>(isSync);
+    if (!nullToAbsent || orderJson != null) {
+      map['order_json'] = Variable<String>(orderJson);
+    }
     return map;
   }
 
@@ -607,6 +636,9 @@ class Order extends DataClass implements Insertable<Order> {
       status: Value(status),
       orderFrom: Value(orderFrom),
       isSync: Value(isSync),
+      orderJson: orderJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(orderJson),
     );
   }
 
@@ -637,6 +669,7 @@ class Order extends DataClass implements Insertable<Order> {
       status: serializer.fromJson<String>(json['status']),
       orderFrom: serializer.fromJson<String>(json['orderFrom']),
       isSync: serializer.fromJson<String>(json['isSync']),
+      orderJson: serializer.fromJson<String?>(json['orderJson']),
     );
   }
   @override
@@ -662,6 +695,7 @@ class Order extends DataClass implements Insertable<Order> {
       'status': serializer.toJson<String>(status),
       'orderFrom': serializer.toJson<String>(orderFrom),
       'isSync': serializer.toJson<String>(isSync),
+      'orderJson': serializer.toJson<String?>(orderJson),
     };
   }
 
@@ -685,6 +719,7 @@ class Order extends DataClass implements Insertable<Order> {
     String? status,
     String? orderFrom,
     String? isSync,
+    Value<String?> orderJson = const Value.absent(),
   }) => Order(
     id: id ?? this.id,
     createdAt: createdAt ?? this.createdAt,
@@ -709,6 +744,7 @@ class Order extends DataClass implements Insertable<Order> {
     status: status ?? this.status,
     orderFrom: orderFrom ?? this.orderFrom,
     isSync: isSync ?? this.isSync,
+    orderJson: orderJson.present ? orderJson.value : this.orderJson,
   );
   Order copyWithCompanion(OrdersCompanion data) {
     return Order(
@@ -747,6 +783,7 @@ class Order extends DataClass implements Insertable<Order> {
       status: data.status.present ? data.status.value : this.status,
       orderFrom: data.orderFrom.present ? data.orderFrom.value : this.orderFrom,
       isSync: data.isSync.present ? data.isSync.value : this.isSync,
+      orderJson: data.orderJson.present ? data.orderJson.value : this.orderJson,
     );
   }
 
@@ -771,7 +808,8 @@ class Order extends DataClass implements Insertable<Order> {
           ..write('splitPayments: $splitPayments, ')
           ..write('status: $status, ')
           ..write('orderFrom: $orderFrom, ')
-          ..write('isSync: $isSync')
+          ..write('isSync: $isSync, ')
+          ..write('orderJson: $orderJson')
           ..write(')'))
         .toString();
   }
@@ -797,6 +835,7 @@ class Order extends DataClass implements Insertable<Order> {
     status,
     orderFrom,
     isSync,
+    orderJson,
   );
   @override
   bool operator ==(Object other) =>
@@ -820,7 +859,8 @@ class Order extends DataClass implements Insertable<Order> {
           other.splitPayments == this.splitPayments &&
           other.status == this.status &&
           other.orderFrom == this.orderFrom &&
-          other.isSync == this.isSync);
+          other.isSync == this.isSync &&
+          other.orderJson == this.orderJson);
 }
 
 class OrdersCompanion extends UpdateCompanion<Order> {
@@ -843,6 +883,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
   final Value<String> status;
   final Value<String> orderFrom;
   final Value<String> isSync;
+  final Value<String?> orderJson;
   final Value<int> rowid;
   const OrdersCompanion({
     this.id = const Value.absent(),
@@ -864,6 +905,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
     this.status = const Value.absent(),
     this.orderFrom = const Value.absent(),
     this.isSync = const Value.absent(),
+    this.orderJson = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   OrdersCompanion.insert({
@@ -886,6 +928,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
     required String status,
     required String orderFrom,
     required String isSync,
+    this.orderJson = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        createdAt = Value(createdAt),
@@ -921,6 +964,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
     Expression<String>? status,
     Expression<String>? orderFrom,
     Expression<String>? isSync,
+    Expression<String>? orderJson,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -943,6 +987,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
       if (status != null) 'status': status,
       if (orderFrom != null) 'order_from': orderFrom,
       if (isSync != null) 'is_sync': isSync,
+      if (orderJson != null) 'order_json': orderJson,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -967,6 +1012,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
     Value<String>? status,
     Value<String>? orderFrom,
     Value<String>? isSync,
+    Value<String?>? orderJson,
     Value<int>? rowid,
   }) {
     return OrdersCompanion(
@@ -989,6 +1035,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
       status: status ?? this.status,
       orderFrom: orderFrom ?? this.orderFrom,
       isSync: isSync ?? this.isSync,
+      orderJson: orderJson ?? this.orderJson,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1053,6 +1100,9 @@ class OrdersCompanion extends UpdateCompanion<Order> {
     if (isSync.present) {
       map['is_sync'] = Variable<String>(isSync.value);
     }
+    if (orderJson.present) {
+      map['order_json'] = Variable<String>(orderJson.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1081,6 +1131,7 @@ class OrdersCompanion extends UpdateCompanion<Order> {
           ..write('status: $status, ')
           ..write('orderFrom: $orderFrom, ')
           ..write('isSync: $isSync, ')
+          ..write('orderJson: $orderJson, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2870,6 +2921,7 @@ typedef $$OrdersTableCreateCompanionBuilder =
       required String status,
       required String orderFrom,
       required String isSync,
+      Value<String?> orderJson,
       Value<int> rowid,
     });
 typedef $$OrdersTableUpdateCompanionBuilder =
@@ -2893,6 +2945,7 @@ typedef $$OrdersTableUpdateCompanionBuilder =
       Value<String> status,
       Value<String> orderFrom,
       Value<String> isSync,
+      Value<String?> orderJson,
       Value<int> rowid,
     });
 
@@ -3020,6 +3073,11 @@ class $$OrdersTableFilterComposer
 
   ColumnFilters<String> get isSync => $composableBuilder(
     column: $table.isSync,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get orderJson => $composableBuilder(
+    column: $table.orderJson,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3152,6 +3210,11 @@ class $$OrdersTableOrderingComposer
     column: $table.isSync,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get orderJson => $composableBuilder(
+    column: $table.orderJson,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$OrdersTableAnnotationComposer
@@ -3236,6 +3299,9 @@ class $$OrdersTableAnnotationComposer
   GeneratedColumn<String> get isSync =>
       $composableBuilder(column: $table.isSync, builder: (column) => column);
 
+  GeneratedColumn<String> get orderJson =>
+      $composableBuilder(column: $table.orderJson, builder: (column) => column);
+
   Expression<T> orderItemsRefs<T extends Object>(
     Expression<T> Function($$OrderItemsTableAnnotationComposer a) f,
   ) {
@@ -3309,6 +3375,7 @@ class $$OrdersTableTableManager
                 Value<String> status = const Value.absent(),
                 Value<String> orderFrom = const Value.absent(),
                 Value<String> isSync = const Value.absent(),
+                Value<String?> orderJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => OrdersCompanion(
                 id: id,
@@ -3330,6 +3397,7 @@ class $$OrdersTableTableManager
                 status: status,
                 orderFrom: orderFrom,
                 isSync: isSync,
+                orderJson: orderJson,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -3353,6 +3421,7 @@ class $$OrdersTableTableManager
                 required String status,
                 required String orderFrom,
                 required String isSync,
+                Value<String?> orderJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => OrdersCompanion.insert(
                 id: id,
@@ -3374,6 +3443,7 @@ class $$OrdersTableTableManager
                 status: status,
                 orderFrom: orderFrom,
                 isSync: isSync,
+                orderJson: orderJson,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

@@ -27,7 +27,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// 🔹 SCHEMA VERSION
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   /// 🔹 MIGRATION STRATEGY (CRITICAL FIX)
   @override
@@ -37,15 +37,16 @@ class AppDatabase extends _$AppDatabase {
     },
     onUpgrade: (Migrator m, int from, int to) async {
       if (from < 5) {
-        // Add splitPayments column for version 5
         await m.addColumn(orders, orders.splitPayments);
       }
       if (from < 6) {
-        // Add imageURL column for categories cache (fixes missing image_u_r_l)
         await m.addColumn(categoriesTable, categoriesTable.imageURL);
       }
       if (from < 7) {
         await m.addColumn(items, items.variantsJson);
+      }
+      if (from < 8) {
+        await _tryAddColumn(m, orders, orders.orderJson);
       }
     },
     beforeOpen: (details) async {
@@ -88,6 +89,27 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
+  Future<void> _tryAddColumn(
+    Migrator m,
+    TableInfo table,
+    GeneratedColumn column,
+  ) async {
+    try {
+      await m.addColumn(table, column);
+    } catch (e) {
+      debugPrint('⏭️ skip adding ${column.name}: $e');
+    }
+  }
+
+  String _encodeOrderJson(OrderModel order) {
+    try {
+      return jsonEncode(order.toJson());
+    } catch (e) {
+      debugPrint('Error serializing order ${order.id}: $e');
+      return '';
+    }
+  }
+
   // ===================== ORDERS ===================== //
 
   /// 🔹 INSERT / UPDATE ORDERS (OFFLINE SAFE)
@@ -95,9 +117,16 @@ class AppDatabase extends _$AppDatabase {
     List<OrderModel> ordersList,
     String outletId, {
     required bool isSyncedFromApi,
+    bool protectUnsynced = true,
   }) async {
+    final protectedIds = (isSyncedFromApi && protectUnsynced)
+        ? await getUnsyncedOrderIds(outletId: outletId)
+        : <String>{};
+
     await batch((batch) {
       for (final order in ordersList) {
+        if (protectedIds.contains(order.id)) continue;
+
         batch.insert(
           orders,
           OrdersCompanion(
@@ -119,9 +148,8 @@ class AppDatabase extends _$AppDatabase {
             splitPayments: Value(_serializeSplitPayments(order.splitPayments)),
             status: Value(order.status),
             orderFrom: Value(order.orderFrom),
-
-            /// 🔥 HERE
             isSync: Value(isSyncedFromApi ? 'synced' : 'pending'),
+            orderJson: Value(_encodeOrderJson(order)),
           ),
           mode: InsertMode.insertOrReplace,
         );
@@ -149,6 +177,9 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<OrderModel> _orderRowToModel(Order order) async {
+    final fromJson = _orderFromStoredJson(order);
+    if (fromJson != null) return fromJson;
+
     final itemRows = await (select(
       orderItems,
     )..where((tbl) => tbl.orderId.equals(order.id))).get();
@@ -185,6 +216,23 @@ class AppDatabase extends _$AppDatabase {
           )
           .toList(),
     );
+  }
+
+  OrderModel? _orderFromStoredJson(Order order) {
+    final raw = order.orderJson;
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return null;
+      final map = Map<String, dynamic>.from(decoded);
+      map['id'] = order.id;
+      map['outletId'] ??= order.outletId;
+      map['status'] ??= order.status;
+      return OrderModel.fromJson(map);
+    } catch (e) {
+      debugPrint('Error parsing stored order JSON ${order.id}: $e');
+      return null;
+    }
   }
 
   /// 🔹 GET ALL ORDERS (FILTER BY OUTLET)
@@ -251,48 +299,9 @@ class AppDatabase extends _$AppDatabase {
         .get();
 
     final List<OrderModel> result = [];
-
     for (final order in orderRows) {
-      final itemRows = await (select(
-        orderItems,
-      )..where((tbl) => tbl.orderId.equals(order.id))).get();
-
-      result.add(
-        OrderModel(
-          id: order.id,
-          outletId: order.outletId,
-          createdAt: order.createdAt,
-          updatedAt: order.updatedAt,
-          billNumber: order.billNumber,
-          userId: order.userId,
-          tableNumber: order.tableNumber,
-          customerName: order.customerName,
-          phoneNumber: order.phoneNumber,
-          subtotal: order.subtotal,
-          totalTax: order.totalTax,
-          discount: order.discount,
-          serviceCharge: order.serviceCharge,
-          totalAmount: order.totalAmount,
-          paymentReceivedIn: order.paymentReceivedIn,
-          splitPayments: _deserializeSplitPayments(order.splitPayments),
-          status: order.status,
-          orderFrom: order.orderFrom,
-          items: itemRows
-              .map(
-                (e) => OrderItem(
-                  itemId: e.itemId,
-                  itemName: e.itemName,
-                  category: e.category,
-                  quantity: e.quantity,
-                  salePrice: e.salePrice,
-                  gst: e.gst,
-                ),
-              )
-              .toList(),
-        ),
-      );
+      result.add(await _orderRowToModel(order));
     }
-
     return result;
   }
 
@@ -353,7 +362,40 @@ class AppDatabase extends _$AppDatabase {
     required String orderId,
     required String status,
     String? paymentStatus,
+    bool markPendingSync = false,
   }) async {
+    final existing = await (select(
+      orders,
+    )..where((tbl) => tbl.id.equals(orderId))).getSingleOrNull();
+
+    String? nextJson;
+    if (existing != null) {
+      final model = await _orderRowToModel(existing);
+      final updated = OrderModel(
+        id: model.id,
+        createdAt: model.createdAt,
+        updatedAt: DateTime.now().toIso8601String(),
+        billNumber: model.billNumber,
+        userId: model.userId,
+        tableNumber: model.tableNumber,
+        customerName: model.customerName,
+        phoneNumber: model.phoneNumber,
+        outletId: model.outletId,
+        subtotal: model.subtotal,
+        totalTax: model.totalTax,
+        discount: model.discount,
+        serviceCharge: model.serviceCharge,
+        totalAmount: model.totalAmount,
+        paymentReceivedIn: paymentStatus ?? model.paymentReceivedIn,
+        splitPayments: model.splitPayments,
+        status: status,
+        items: model.items,
+        orderFrom: model.orderFrom,
+        specialInstructions: model.specialInstructions,
+      );
+      nextJson = _encodeOrderJson(updated);
+    }
+
     await (update(orders)..where((tbl) => tbl.id.equals(orderId))).write(
       OrdersCompanion(
         status: Value(status),
@@ -361,8 +403,27 @@ class AppDatabase extends _$AppDatabase {
             ? Value(paymentStatus)
             : const Value.absent(),
         updatedAt: Value(DateTime.now().toIso8601String()),
+        isSync: markPendingSync
+            ? const Value('pending')
+            : const Value.absent(),
+        orderJson: nextJson != null ? Value(nextJson) : const Value.absent(),
       ),
     );
+  }
+
+  Future<Set<String>> getUnsyncedOrderIds({String? outletId}) async {
+    final query = select(orders)
+      ..where((tbl) => tbl.isSync.isIn(['pending', 'failed']));
+    if (outletId != null) {
+      query.where((tbl) => tbl.outletId.equals(outletId));
+    }
+    final rows = await query.get();
+    return rows.map((e) => e.id).toSet();
+  }
+
+  Future<void> deleteOrderCompletely(String orderId) async {
+    await (delete(orderItems)..where((tbl) => tbl.orderId.equals(orderId))).go();
+    await (delete(orders)..where((tbl) => tbl.id.equals(orderId))).go();
   }
 
   /// 🔹 CLEAR ORDERS

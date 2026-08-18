@@ -165,4 +165,10 @@ class TableSectionModel {
       name: (json['name'] as String? ?? '').trim(),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'outletId': outletId,
+    'name': name,
+  };
 }

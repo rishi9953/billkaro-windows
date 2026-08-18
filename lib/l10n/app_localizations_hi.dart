@@ -4970,4 +4970,67 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get notifications => 'नोटिफ़िकेशन';
+
+  @override
+  String get internet_speed_test => 'इंटरनेट स्पीड टेस्ट';
+
+  @override
+  String get internet_speed_test_subtitle => 'पिंग, डाउनलोड और अपलोड स्पीड मापें';
+
+  @override
+  String get internet_speed_start_test => 'टेस्ट शुरू करें';
+
+  @override
+  String get internet_speed_retest => 'फिर से टेस्ट करें';
+
+  @override
+  String get internet_speed_testing => 'टेस्ट हो रहा है…';
+
+  @override
+  String get internet_speed_ping => 'पिंग';
+
+  @override
+  String get internet_speed_download => 'डाउनलोड';
+
+  @override
+  String get internet_speed_upload => 'अपलोड';
+
+  @override
+  String get internet_speed_mbps => 'Mbps';
+
+  @override
+  String get internet_speed_ms => 'ms';
+
+  @override
+  String get internet_speed_quality_excellent => 'उत्तम';
+
+  @override
+  String get internet_speed_quality_good => 'अच्छा';
+
+  @override
+  String get internet_speed_quality_fair => 'औसत';
+
+  @override
+  String get internet_speed_quality_poor => 'कमज़ोर';
+
+  @override
+  String get internet_speed_idle_hint => 'कनेक्शन मापने के लिए टेस्ट शुरू करें';
+
+  @override
+  String get internet_speed_phase_ping => 'पिंग मापा जा रहा है…';
+
+  @override
+  String get internet_speed_phase_download => 'डाउनलोड मापा जा रहा है…';
+
+  @override
+  String get internet_speed_phase_upload => 'अपलोड मापा जा रहा है…';
+
+  @override
+  String get internet_speed_offline => 'इंटरनेट कनेक्शन नहीं है। नेटवर्क जाँचें और फिर कोशिश करें।';
+
+  @override
+  String get internet_speed_failed => 'स्पीड टेस्ट विफल रहा। कृपया फिर कोशिश करें।';
+
+  @override
+  String get internet_speed_tap_to_test => 'इंटरनेट स्पीड टेस्ट के लिए टैप करें';
 }

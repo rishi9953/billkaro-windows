@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:billkaro/utils/connectivity/data_connection_checker.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -15,7 +14,7 @@ class ConnectivityHelper {
   final Connectivity _connectivity = Connectivity();
   StreamSubscription? _stream;
   StreamSubscription? _dataConnectionSubscription;
-  final _currentState = RxBool(true);
+  final _currentState = RxBool(false);
 
   final _onConnectivityChangeController = StreamController<bool>.broadcast();
 
@@ -85,26 +84,14 @@ class NetworkUtils {
   /// Check if device has actual internet connection
   static Future<bool> hasInternetConnection() async {
     try {
-      // First check if connected to network (WiFi/Cellular)
       final connectivityResult = await Connectivity().checkConnectivity();
-      if (connectivityResult.contains(ConnectivityResult.none)) {
+      if (connectivityResult.isEmpty ||
+          connectivityResult.contains(ConnectivityResult.none)) {
         return false;
       }
 
-      // Then verify actual internet access by pinging a reliable server
-      final result = await InternetAddress.lookup(
-        'google.com',
-      ).timeout(const Duration(seconds: 5));
-
-      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
-    } on SocketException catch (_) {
-      // No internet connection
-      return false;
-    } on TimeoutException catch (_) {
-      // Timeout means no internet
-      return false;
-    } catch (e) {
-      // Any other error, assume no internet
+      return ConnectivityHelper.instance.isConnected;
+    } catch (_) {
       return false;
     }
   }

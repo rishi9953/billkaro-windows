@@ -4970,4 +4970,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notifications => 'Notifications';
+
+  @override
+  String get internet_speed_test => 'Internet Speed Test';
+
+  @override
+  String get internet_speed_test_subtitle => 'Measure ping, download and upload speed';
+
+  @override
+  String get internet_speed_start_test => 'Start Test';
+
+  @override
+  String get internet_speed_retest => 'Retest';
+
+  @override
+  String get internet_speed_testing => 'Testing…';
+
+  @override
+  String get internet_speed_ping => 'Ping';
+
+  @override
+  String get internet_speed_download => 'Download';
+
+  @override
+  String get internet_speed_upload => 'Upload';
+
+  @override
+  String get internet_speed_mbps => 'Mbps';
+
+  @override
+  String get internet_speed_ms => 'ms';
+
+  @override
+  String get internet_speed_quality_excellent => 'Excellent';
+
+  @override
+  String get internet_speed_quality_good => 'Good';
+
+  @override
+  String get internet_speed_quality_fair => 'Fair';
+
+  @override
+  String get internet_speed_quality_poor => 'Poor';
+
+  @override
+  String get internet_speed_idle_hint => 'Tap start to measure your connection';
+
+  @override
+  String get internet_speed_phase_ping => 'Measuring ping…';
+
+  @override
+  String get internet_speed_phase_download => 'Measuring download…';
+
+  @override
+  String get internet_speed_phase_upload => 'Measuring upload…';
+
+  @override
+  String get internet_speed_offline => 'No internet connection. Check your network and try again.';
+
+  @override
+  String get internet_speed_failed => 'Speed test failed. Please try again.';
+
+  @override
+  String get internet_speed_tap_to_test => 'Tap to test internet speed';
 }

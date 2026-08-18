@@ -22,6 +22,10 @@ class Orders extends Table {
   TextColumn get status => text()();
   TextColumn get orderFrom => text()();
   TextColumn get isSync => text()();
+
+  /// Full OrderModel JSON so offline \u2192 online sync keeps variants, remarks, etc.
+  TextColumn get orderJson => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }

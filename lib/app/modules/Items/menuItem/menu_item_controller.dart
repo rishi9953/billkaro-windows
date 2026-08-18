@@ -224,7 +224,7 @@ class MenuItemController extends BaseController {
       else if (!isOnline) {
         if (!loadMore) {
           debugPrint('📴 Offline → Loading items from SQLite');
-          final localItems = await db.getItems();
+          final localItems = await db.getItems(outletId: outletId);
           allItems.value = localItems;
 
           // Update availability map from loaded items
