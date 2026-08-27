@@ -8,6 +8,7 @@ import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_import_file_dialog.dart';
+import 'package:billkaro/app/services/sync/item_catalog_sync.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_import_preview_dialog.dart';
 import 'package:billkaro/app/modules/Items/menuItem/menu_products_template_service.dart';
 import 'package:file_selector/file_selector.dart';
@@ -203,14 +204,17 @@ class MenuItemController extends BaseController {
           // Apply current filters (category/search)
           _applyFilters();
 
-          /// Save to SQLite (only on initial load or refresh, not on loadMore, and not when searching)
-          if (!loadMore && (search == null || search.isEmpty)) {
-            await db.saveItems(allItems, appPref.selectedOutlet!.id!);
-            _hasLoadedFromApi = true;
-            debugPrint('💾 Items synced to SQLite (${allItems.length})');
-          } else if (!loadMore && search != null && search.isNotEmpty) {
-            _hasLoadedFromApi = true; // Allow refresh when clearing search
+          final outletId = appPref.selectedOutlet?.id;
+          if (outletId != null && receivedItems.isNotEmpty) {
+            await db.saveItems(receivedItems, outletId);
+            unawaited(
+              ItemCatalogSync(apiClient: apiClient).pullCatalogInBackground(
+                outletId,
+              ),
+            );
           }
+          _hasLoadedFromApi = true;
+          debugPrint('💾 Items synced to SQLite (${receivedItems.length})');
         } else {
           debugPrint('❌ API returned no success status');
           if (loadMore) {
@@ -219,30 +223,43 @@ class MenuItemController extends BaseController {
         }
       }
       /// ===============================
-      /// 📴 OFFLINE → LOAD SQLITE
+      /// 📴 OFFLINE → PAGED SQLITE
       /// ===============================
       else if (!isOnline) {
-        if (!loadMore) {
-          debugPrint('📴 Offline → Loading items from SQLite');
-          final localItems = await db.getItems(outletId: outletId);
-          allItems.value = localItems;
+        final pageToLoad = loadMore ? currentPage.value + 1 : 1;
+        final pageSize = (search?.isNotEmpty == true) ? 50 : itemsPerPage;
+        final categoryFilter =
+            (selectedCategoryId.value != null && selectedCategoryId.value != 'none')
+            ? selectedCategoryId.value
+            : null;
 
-          // Update availability map from loaded items
-          itemAvailability.clear();
-          for (final item in localItems) {
-            itemAvailability[item.id] = item.showItem;
-          }
+        final pageResult = await db.getItemsPage(
+          outletId: outletId,
+          limit: pageSize,
+          offset: (pageToLoad - 1) * pageSize,
+          searchQuery: search ?? searchQuery.value,
+          categoryId: categoryFilter,
+        );
 
-          _applyFilters();
-
-          // In offline mode, all items are loaded at once
-          hasMoreItems.value = false;
-          debugPrint('💾 Loaded ${localItems.length} items from SQLite');
+        if (loadMore) {
+          allItems.addAll(pageResult.items);
+          currentPage.value = pageToLoad;
         } else {
-          // Can't load more in offline mode
-          debugPrint('📴 Offline - Cannot load more items');
-          hasMoreItems.value = false;
+          allItems.value = pageResult.items;
+          currentPage.value = 1;
+          itemAvailability.clear();
         }
+
+        for (final item in pageResult.items) {
+          itemAvailability[item.id] = item.showItem;
+        }
+
+        // SQLite query already applies category/search filters.
+        items.value = allItems;
+        hasMoreItems.value = pageResult.hasMore;
+        debugPrint(
+          '💾 Offline page loaded: ${pageResult.items.length} (total shown: ${items.length}, hasMore: ${hasMoreItems.value})',
+        );
         _hasLoadedFromApi = false;
       } else {
         // Already loaded from API and not forcing refresh or loading more
@@ -273,11 +290,6 @@ class MenuItemController extends BaseController {
       '📥 loadMoreItems called - hasMore: ${hasMoreItems.value}, isLoading: ${isLoadingMore.value}, currentPage: ${currentPage.value}',
     );
 
-    if (searchQuery.value.isNotEmpty) {
-      debugPrint('⏸️ Cannot load more while searching');
-      return;
-    }
-
     if (!hasMoreItems.value) {
       debugPrint('⏸️ Cannot load more - hasMore: false');
       return;
@@ -289,7 +301,11 @@ class MenuItemController extends BaseController {
     }
 
     debugPrint('📥 Loading more items...');
-    await getItems(showLoader: false, loadMore: true);
+    await getItems(
+      showLoader: false,
+      loadMore: true,
+      search: searchQuery.value.isEmpty ? null : searchQuery.value,
+    );
   }
 
   /// ===============================
@@ -458,28 +474,12 @@ class MenuItemController extends BaseController {
     );
 
     try {
-      final res = await callApi(
-        apiClient.updateItem(request, itemId),
-        showLoader: false,
+      await ItemCatalogSync(apiClient: apiClient).saveItemOnlineOrOffline(
+        request: request,
+        existingId: itemId,
       );
-      if (res != null && res is Map && res['status'] == 'success') {
-        debugPrint('✅ Item availability updated: $itemId -> $newShowItem');
-        // Update the item in allItems list if ItemData has copyWith method
-        final index = allItems.indexWhere((e) => e.id == itemId);
-        if (index != -1) {
-          // If ItemData doesn't have copyWith, just update the availability map
-          // allItems[index] = allItems[index].copyWith(showItem: newShowItem);
-        }
-      } else {
-        // Revert on failure
-        itemAvailability[itemId] = current;
-        final loc = AppLocalizations.of(Get.context!)!;
-        showError(
-          description: res?['message']?.toString() ?? loc.failed_to_update_item,
-        );
-      }
+      debugPrint('✅ Item availability updated: $itemId -> $newShowItem');
     } catch (e) {
-      // Revert on error
       itemAvailability[itemId] = current;
       final loc = AppLocalizations.of(Get.context!)!;
       showError(description: loc.failed_to_update_item);
@@ -644,7 +644,7 @@ class MenuItemController extends BaseController {
   /// IMPORT FROM FILE (Excel .xlsx)
   /// ===============================
   Future<void> importFromFile() async {
-    if (!StaffAccess.ensure(StaffAccess.canImportExportProducts)) return;
+    if (!StaffAccess.ensure(StaffAccess.canShowImportExportItems)) return;
     final loc = AppLocalizations.of(Get.context!)!;
     if (!hasTrialOrSubscription(appPref)) {
       checkSubscription();
@@ -814,7 +814,7 @@ class MenuItemController extends BaseController {
   }
 
   Future<void> exportToFile() async {
-    if (!StaffAccess.ensure(StaffAccess.canImportExportProducts)) return;
+    if (!StaffAccess.ensure(StaffAccess.canShowImportExportItems)) return;
     final loc = AppLocalizations.of(Get.context!)!;
     if (!hasTrialOrSubscription(appPref)) {
       checkSubscription();
@@ -864,8 +864,7 @@ class MenuItemController extends BaseController {
     _searchDebounce = null;
     searchController.clear();
     searchQuery.value = '';
-    _applyFilters();
-    // Reload full list from API when online
+    // Reload full list from API/SQLite with cleared query
     getItems(showLoader: false, forceApiRefresh: true);
     debugPrint('🔍 Search cleared');
   }
@@ -876,7 +875,6 @@ class MenuItemController extends BaseController {
   void filterItemsBySearch(String query) {
     final trimmed = query.trim();
     searchQuery.value = trimmed;
-    _applyFilters();
 
     _searchDebounce?.cancel();
     if (trimmed.isEmpty) {

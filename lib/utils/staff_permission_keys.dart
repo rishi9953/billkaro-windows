@@ -57,6 +57,12 @@ class StaffPermissionKeys {
   static const updateTables = 'update_tables';
   static const deleteTables = 'delete_tables';
 
+  // KOT
+  static const viewKot = 'view_kot';
+  static const printKot = 'print_kot';
+  static const reprintKot = 'reprint_kot';
+  static const kitchenDisplay = 'kitchen_display';
+
   /// Legacy keys still accepted when reading older staff records.
   static const legacyCreateBill = 'create_bill';
   static const legacyManageBills = 'manage_bills';
@@ -84,7 +90,7 @@ class StaffPermissionKeys {
     createCustomers,
     updateCustomers,
     deleteCustomers,
-    importExportCustomers,
+    // importExportCustomers,
     viewReports,
     generateReports,
     viewStaff,
@@ -98,6 +104,10 @@ class StaffPermissionKeys {
     createTables,
     updateTables,
     deleteTables,
+    viewKot,
+    printKot,
+    // reprintKot,
+    kitchenDisplay,
   ];
 
   static const List<String> secondaryAdminDefaults = all;
@@ -109,15 +119,16 @@ class StaffPermissionKeys {
     viewCustomers,
     createCustomers,
     viewTables,
+    viewKot,
+    printKot,
+    // reprintKot,
+    kitchenDisplay,
   ];
 }
 
 /// A single UI toggle that may grant one or more stored permission keys.
 class StaffPermissionItem {
-  const StaffPermissionItem({
-    required this.keys,
-    required this.label,
-  });
+  const StaffPermissionItem({required this.keys, required this.label});
 
   /// Stored permission key(s) controlled by this toggle.
   final List<String> keys;
@@ -137,8 +148,7 @@ StaffPermissionItem _pairedPerm(
   String productKey,
   String categoryKey,
   String label,
-) =>
-    StaffPermissionItem(keys: [productKey, categoryKey], label: label);
+) => StaffPermissionItem(keys: [productKey, categoryKey], label: label);
 
 class StaffPermissionGroup {
   const StaffPermissionGroup({required this.title, required this.items});
@@ -148,21 +158,69 @@ class StaffPermissionGroup {
 }
 
 /// Number of toggles shown in the Add / Edit Staff permissions UI.
-int get kStaffPermissionCatalogSize => kStaffPermissionGroups.fold<int>(
+int get kStaffPermissionCatalogSize =>
+    staffPermissionCatalogSize(includeTables: true);
+
+/// Permission groups for the Add / Edit Staff picker.
+///
+/// Hides the Tables group when the outlet has no seating.
+List<StaffPermissionGroup> staffPermissionGroups({
+  required bool includeTables,
+}) {
+  if (includeTables) return kStaffPermissionGroups;
+  return kStaffPermissionGroups
+      .where((group) => group.title != 'Tables')
+      .toList(growable: false);
+}
+
+int staffPermissionCatalogSize({required bool includeTables}) =>
+    staffPermissionGroups(includeTables: includeTables).fold<int>(
       0,
       (sum, group) => sum + group.items.length,
     );
 
 /// How many catalog toggles are fully granted for [selected] keys.
-int countGrantedStaffPermissionItems(Iterable<String> selected) {
+int countGrantedStaffPermissionItems(
+  Iterable<String> selected, {
+  bool includeTables = true,
+}) {
   final set = selected is Set<String> ? selected : selected.toSet();
   var count = 0;
-  for (final group in kStaffPermissionGroups) {
+  for (final group in staffPermissionGroups(includeTables: includeTables)) {
     for (final item in group.items) {
       if (item.isGranted(set)) count++;
     }
   }
   return count;
+}
+
+/// Keys from toggles that are fully on — drops orphan keys (e.g. update_products
+/// without update_categories) so the DB matches what the UI shows.
+List<String> keysFromGrantedToggles(
+  Iterable<String> selected, {
+  bool includeTables = true,
+}) {
+  final set = selected is Set<String> ? selected : selected.toSet();
+  final keys = <String>{};
+  for (final group in staffPermissionGroups(includeTables: includeTables)) {
+    for (final item in group.items) {
+      if (item.isGranted(set)) {
+        keys.addAll(item.keys);
+      }
+    }
+  }
+  return keys.toList()..sort();
+}
+
+/// All permission keys currently visible in the Add / Edit Staff picker.
+List<String> allVisibleStaffPermissionKeys({required bool includeTables}) {
+  final keys = <String>{};
+  for (final group in staffPermissionGroups(includeTables: includeTables)) {
+    for (final item in group.items) {
+      keys.addAll(item.keys);
+    }
+  }
+  return keys.toList()..sort();
 }
 
 /// UI catalog matching the Add Staff permissions section.
@@ -205,7 +263,7 @@ final List<StaffPermissionGroup> kStaffPermissionGroups = [
       _perm(StaffPermissionKeys.viewSales, 'View sales'),
       _perm(StaffPermissionKeys.createSales, 'Create sales'),
       _perm(StaffPermissionKeys.updateSales, 'Update sales'),
-      _perm(StaffPermissionKeys.issueRefunds, 'Issue refunds'),
+      // _perm(StaffPermissionKeys.issueRefunds, 'Issue refunds'),
       _perm(StaffPermissionKeys.exportSales, 'Export sales'),
     ],
   ),
@@ -223,10 +281,10 @@ final List<StaffPermissionGroup> kStaffPermissionGroups = [
       _perm(StaffPermissionKeys.createCustomers, 'Create customers'),
       _perm(StaffPermissionKeys.updateCustomers, 'Update customers'),
       _perm(StaffPermissionKeys.deleteCustomers, 'Delete customers'),
-      _perm(
-        StaffPermissionKeys.importExportCustomers,
-        'Import / Export customers',
-      ),
+      // _perm(
+      //   StaffPermissionKeys.importExportCustomers,
+      //   'Import / Export customers',
+      // ),
     ],
   ),
   StaffPermissionGroup(
@@ -247,9 +305,7 @@ final List<StaffPermissionGroup> kStaffPermissionGroups = [
   ),
   StaffPermissionGroup(
     title: 'Settings',
-    items: [
-      _perm(StaffPermissionKeys.manageSettings, 'Manage settings'),
-    ],
+    items: [_perm(StaffPermissionKeys.manageSettings, 'Manage settings')],
   ),
   StaffPermissionGroup(
     title: 'Store',
@@ -267,7 +323,25 @@ final List<StaffPermissionGroup> kStaffPermissionGroups = [
       _perm(StaffPermissionKeys.deleteTables, 'Delete tables'),
     ],
   ),
+  StaffPermissionGroup(
+    title: 'KOT',
+    items: [
+      _perm(StaffPermissionKeys.viewKot, 'View KOT history'),
+      _perm(StaffPermissionKeys.printKot, 'Print KOT'),
+      // _perm(StaffPermissionKeys.reprintKot, 'Reprint KOT'),
+      _perm(StaffPermissionKeys.kitchenDisplay, 'Kitchen display'),
+    ],
+  ),
 ];
+
+bool hasGranularProductPermission(Set<String> input) => input.any(
+  (k) =>
+      k == StaffPermissionKeys.viewProducts ||
+      k == StaffPermissionKeys.createProducts ||
+      k == StaffPermissionKeys.updateProducts ||
+      k == StaffPermissionKeys.deleteProducts ||
+      k == StaffPermissionKeys.importExportProducts,
+);
 
 /// Expands legacy permission keys into the granular set used by the UI.
 Set<String> expandStaffPermissions(Iterable<String> raw) {
@@ -276,6 +350,7 @@ Set<String> expandStaffPermissions(Iterable<String> raw) {
       .where((item) => item.isNotEmpty)
       .toSet();
   final result = <String>{};
+  final hasGranularProducts = hasGranularProductPermission(input);
 
   for (final key in input) {
     if (StaffPermissionKeys.all.contains(key)) {
@@ -289,13 +364,21 @@ Set<String> expandStaffPermissions(Iterable<String> raw) {
           StaffPermissionKeys.viewSales,
           StaffPermissionKeys.createSales,
         ]);
+        break;
       case StaffPermissionKeys.legacyEditMenu:
-        result.addAll([
-          StaffPermissionKeys.viewProducts,
-          StaffPermissionKeys.createProducts,
-          StaffPermissionKeys.updateProducts,
-          StaffPermissionKeys.viewCategories,
-        ]);
+        // Ignore obsolete edit_menu when granular product keys exist
+        // (e.g. view_products only) so view-only staff cannot create.
+        if (!hasGranularProducts) {
+          result.addAll([
+            StaffPermissionKeys.viewProducts,
+            StaffPermissionKeys.viewCategories,
+            StaffPermissionKeys.createProducts,
+            StaffPermissionKeys.createCategories,
+            StaffPermissionKeys.updateProducts,
+            StaffPermissionKeys.updateCategories,
+          ]);
+        }
+        break;
       default:
         break;
     }
@@ -310,6 +393,13 @@ Set<String> expandStaffPermissions(Iterable<String> raw) {
   if (input.contains(StaffPermissionKeys.viewReports) && !hasOtherGranular) {
     result.add(StaffPermissionKeys.viewInventory);
     result.add(StaffPermissionKeys.generateReports);
+  }
+
+  // Paired: Import / Export items & categories — if one key exists, grant both.
+  if (result.contains(StaffPermissionKeys.importExportProducts) ||
+      result.contains(StaffPermissionKeys.importExportCategories)) {
+    result.add(StaffPermissionKeys.importExportProducts);
+    result.add(StaffPermissionKeys.importExportCategories);
   }
 
   return result;

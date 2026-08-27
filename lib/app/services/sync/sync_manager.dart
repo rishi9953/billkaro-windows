@@ -199,15 +199,15 @@ class SyncManager {
         refreshUi: true,
       );
 
-      if (result.pendingRemaining > 0 && result.failedCount == 0) {
+      if (result.pendingRemaining > 0) {
         _scheduleRetry();
       } else {
         _retryTimer?.cancel();
       }
 
       debugPrint(
-        '✅ [SYNC MANAGER] Sync finished — synced=${result.syncedCount}, '
-        'pending=${result.pendingRemaining}',
+        '✅ [SYNC MANAGER] Sync finished — orders=${result.syncedCount}, '
+        'items=${result.itemsSynced}, pending=${result.pendingRemaining}',
       );
     } catch (e, stack) {
       debugPrint('❌ [SYNC MANAGER] Sync failed: $e');
@@ -252,6 +252,10 @@ class SyncManager {
 
   Future<int> getPendingOrdersCount() async {
     return _db.countPendingOrders();
+  }
+
+  Future<int> getPendingItemsCount() async {
+    return _db.countPendingItems();
   }
 
   /// Force a full online restore: sync + refresh (callable from UI).

@@ -45,13 +45,15 @@ class OfflineCategoryLoader {
   }
 
   static Future<List<CategoryData>> _deriveFromItems(String outletId) async {
-    final items = await AppDatabase().getItems();
+    final page = await AppDatabase().getItemsPage(
+      outletId: outletId,
+      limit: 300,
+    );
     final names = <String>{};
     final now = DateTime.now();
     final result = <CategoryData>[];
 
-    for (final item in items) {
-      if (item.outletId != outletId) continue;
+    for (final item in page.items) {
       final name = item.category.trim();
       if (name.isEmpty || name.toLowerCase() == 'none') continue;
       if (!names.add(name)) continue;

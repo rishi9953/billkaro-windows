@@ -15,9 +15,67 @@ class AuthSessionService {
   AuthSessionService._();
 
   static bool _isClearing = false;
+  static bool _handlingUnauthorized = false;
+  static bool _showingForcedLogout = false;
 
   static const String _activationBodyText =
       'Your account is not active. Tap Resend Email to receive a new activation link on your registered email address.';
+
+  static const String staffDeactivatedMessage =
+      'Your staff account has been deactivated. Please contact your outlet owner.';
+
+  static String? messageFromBody(dynamic data) {
+    if (data is Map && data['message'] != null) {
+      return data['message'].toString();
+    }
+    return null;
+  }
+
+  static bool isStaffSession() {
+    if (!Get.isRegistered<AppPref>()) return false;
+    final pref = Get.find<AppPref>();
+    return pref.isStaffSession || pref.user?.role == 'staff';
+  }
+
+  static bool isStaffSessionEndedMessage(String? message) {
+    if (message == null || message.trim().isEmpty) return isStaffSession();
+    final lower = message.toLowerCase();
+    return lower.contains('deactivated') ||
+        lower.contains('removed') ||
+        lower.contains('revoked');
+  }
+
+  /// Called for HTTP 401 — clears session and returns to login silently.
+  static Future<void> handleUnauthorized({String? message}) async {
+    if (_handlingUnauthorized) return;
+    _handlingUnauthorized = true;
+    try {
+      final hasToken = Get.isRegistered<AppPref>() &&
+          (Get.find<AppPref>().token.trim().isNotEmpty);
+
+      // No active session (e.g. failed staff login) — show credentials error only.
+      if (!hasToken) {
+        final text = (message != null && message.trim().isNotEmpty)
+            ? message.trim()
+            : 'Invalid credentials';
+        showError(description: text);
+        return;
+      }
+
+      if (isStaffSession() && isStaffSessionEndedMessage(message)) {
+        await performForcedLogout(
+          message: staffDeactivatedMessage,
+          title: 'Staff Deactivated',
+        );
+        return;
+      }
+
+      await clearSessionData();
+      Get.offAllNamed(AppRoute.main);
+    } finally {
+      _handlingUnauthorized = false;
+    }
+  }
 
   static Future<void> clearSessionData() async {
     if (_isClearing) return;
@@ -45,11 +103,23 @@ class AuthSessionService {
     }
   }
 
+  static void disconnectLiveServices() {
+    KitchenBumpMonitor.instance.stop();
+    KitchenNewOrderMonitor.instance.stop();
+    KdsRealtimeService.instance.disconnect();
+    SessionRealtimeService.instance.disconnect();
+    WalletRealtimeService.instance.disconnect();
+  }
+
   static Future<void> performForcedLogout({
     required String message,
     String? email,
     bool canResendActivation = false,
+    String title = 'Staff Deactivated',
   }) async {
+    if (_showingForcedLogout) return;
+    _showingForcedLogout = true;
+
     final resolvedEmail =
         email?.trim().isNotEmpty == true
             ? email!.trim()
@@ -57,20 +127,25 @@ class AuthSessionService {
                 ? Get.find<AppPref>().user?.email?.trim()
                 : null);
 
-    await clearSessionData();
+    try {
+      disconnectLiveServices();
 
-    if (canResendActivation &&
-        resolvedEmail != null &&
-        resolvedEmail.isNotEmpty) {
-      EmailVerificationDialog.showIfPossible(
-        resolvedEmail,
-        title: 'Account Not Activated',
-        bodyText: message.isNotEmpty ? message : _activationBodyText,
-      );
-      return;
+      if (canResendActivation &&
+          resolvedEmail != null &&
+          resolvedEmail.isNotEmpty) {
+        await clearSessionData();
+        EmailVerificationDialog.showIfPossible(
+          resolvedEmail,
+          title: 'Account Not Activated',
+          bodyText: message.isNotEmpty ? message : _activationBodyText,
+        );
+        return;
+      }
+
+      await _showForcedLogoutDialog(message: message, title: title);
+    } finally {
+      _showingForcedLogout = false;
     }
-
-    await _showForcedLogoutDialog(message);
   }
 
   static bool isAccountNotActivatedError(DioException error) {
@@ -96,23 +171,26 @@ class AuthSessionService {
     );
   }
 
-  static Future<void> _showForcedLogoutDialog(String message) async {
+  static Future<void> _showForcedLogoutDialog({
+    required String message,
+    required String title,
+  }) async {
     try {
       await Get.dialog(
-        WillPopScope(
-          onWillPop: () async => false,
+        PopScope(
+          canPop: false,
           child: AlertDialog(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.block, color: Colors.red, size: 28),
-                SizedBox(width: 12),
+                const Icon(Icons.block, color: Colors.red, size: 28),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Account Deactivated',
-                    style: TextStyle(
+                    title,
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
@@ -136,8 +214,9 @@ class AuthSessionService {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Get.back();
+                  onPressed: () async {
+                    if (Get.isDialogOpen == true) Get.back();
+                    await clearSessionData();
                     Get.offAllNamed(AppRoute.main);
                   },
                   style: ElevatedButton.styleFrom(
@@ -150,7 +229,7 @@ class AuthSessionService {
                     elevation: 2,
                   ),
                   child: const Text(
-                    'OK',
+                    'Logout',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -163,6 +242,7 @@ class AuthSessionService {
       );
     } catch (e) {
       debugPrint('Error showing forced logout dialog: $e');
+      await clearSessionData();
       Get.offAllNamed(AppRoute.main);
     }
   }

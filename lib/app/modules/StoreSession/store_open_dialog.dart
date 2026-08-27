@@ -1,6 +1,8 @@
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/StoreSession/store_session_controller.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
 class StoreOpenDialog extends StatefulWidget {
   const StoreOpenDialog({super.key});
@@ -38,6 +40,11 @@ class _StoreOpenDialogState extends State<StoreOpenDialog> {
       Navigator.pop(context);
       showSuccess(description: AppLocalizations.of(context)!.store_opened_success);
     }
+  }
+
+  void _onCancel() {
+    Navigator.pop(context);
+    Modular.to.navigate(HomeMainRoutes.home);
   }
 
   @override
@@ -140,7 +147,7 @@ class _StoreOpenDialogState extends State<StoreOpenDialog> {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: loading ? null : () => Navigator.pop(context),
+                        onPressed: loading ? null : _onCancel,
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(

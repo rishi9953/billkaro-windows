@@ -1,5 +1,6 @@
 import 'package:billkaro/app/services/Modals/login_response.dart';
 import 'package:billkaro/app/services/billing/billing_access_mode.dart';
+import 'package:billkaro/app/services/billing/platform_fee_service.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/app_pref.dart';
 import 'package:get/get.dart';
@@ -51,7 +52,7 @@ class BillingAccessService {
       case BillingAccessMode.subscription:
         return _hasActiveSubscription();
       case BillingAccessMode.wallet:
-        return true;
+        return PlatformFeeService.hasSufficientBalance(_appPref);
     }
   }
 

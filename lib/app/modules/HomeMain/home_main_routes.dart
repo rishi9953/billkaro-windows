@@ -35,10 +35,12 @@ abstract class HomeMainRoutes {
   static const customersDetails = '/customer-details';
   static const addRegularCustomer = '/add-regular-customer';
   static const addStaffScreen = '/add-staff';
+  static const staffMemberDetails = '/staff-member-details';
   static const staffActivityScreen = '/staff-activity';
   static const whatsaapMarketing = '/whatsaap-marketing';
   static const storeSessionHistory = '/store-session-history';
   static const settings = '/app-settings';
+  static const helpSetup = '/help-setup';
   static const notifications = '/notifications';
   static const changeLanguage = '/change-language';
   static const subscriptions = '/subscriptions';
@@ -115,14 +117,15 @@ abstract class HomeMainRoutes {
   }) {
     return [
       home,
-      if (StaffAccess.canCreateSales) createOrder,
-      if (hasSeating) tables,
+      if (StaffAccess.canShowCreateOrder) createOrder,
+      if (hasSeating && StaffAccess.canAccessTables) tables,
       if (StaffAccess.canAccessProducts) items,
-      if (StaffAccess.canAccessSales) closedOrders,
+      if (StaffAccess.canShowOrdersList) closedOrders,
       if (StaffAccess.canViewInventory) inventory,
       if (StaffAccess.canViewInventory) purchaseOrders,
       if (StaffAccess.canViewReports) reports,
-      if (kotEnabled) ...[kotHistory, kitchenDisplay],
+      if (kotEnabled && StaffAccess.canViewKot) kotHistory,
+      if (kotEnabled && StaffAccess.canOpenKitchenDisplay) kitchenDisplay,
       if (StaffAccess.canAccessCustomers) customers,
       if (StaffAccess.canManageStaff) staff,
       menu,

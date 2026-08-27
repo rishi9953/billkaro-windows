@@ -15,6 +15,7 @@ class SidebarRouteSelection {
     required this.purchaseOrders,
     required this.notifications,
     required this.wallet,
+    required this.helpSetup,
   });
 
   final bool itemList;
@@ -30,6 +31,7 @@ class SidebarRouteSelection {
   final bool purchaseOrders;
   final bool notifications;
   final bool wallet;
+  final bool helpSetup;
 
   factory SidebarRouteSelection.fromPath(String path) {
     return SidebarRouteSelection(
@@ -46,6 +48,7 @@ class SidebarRouteSelection {
       purchaseOrders: path.startsWith(HomeMainRoutes.purchaseOrders),
       notifications: path.startsWith(HomeMainRoutes.notifications),
       wallet: path.startsWith(HomeMainRoutes.wallet),
+      helpSetup: path.startsWith(HomeMainRoutes.helpSetup),
     );
   }
 }

@@ -240,6 +240,7 @@ class CustomerListScreen extends StatelessWidget {
                 ],
               ),
             ),
+
             InkWell(
               borderRadius: BorderRadius.circular(8),
               child: Container(
@@ -252,6 +253,27 @@ class CustomerListScreen extends StatelessWidget {
               ),
               onTap: () => openWhatsApp(customerData.phoneNumber),
             ),
+            const SizedBox(width: 8),
+
+            if (StaffAccess.canDeleteCustomers) ...[
+              InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => controller.deleteRegularCustomer(customerData),
+                child: Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.delete_outline,
+                    size: 20,
+                    color: Colors.red.shade700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
           ],
         ),
       ),

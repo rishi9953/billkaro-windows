@@ -2,6 +2,7 @@ import 'package:billkaro/app/modules/Invoice/KOT/kot_preview_controller.dart';
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
 import 'package:billkaro/app/services/billing/platform_fee_service.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_access.dart';
 
 class ThermalKOTReceipt extends StatefulWidget {
   const ThermalKOTReceipt({super.key});
@@ -22,19 +23,25 @@ class _ThermalKOTReceiptState extends State<ThermalKOTReceipt> {
     controller = Get.put(KOTPreviewController());
   }
 
+  bool get _canPrintKot =>
+      StaffAccess.canPrintKot || StaffAccess.canReprintKot;
+
   @override
   Widget build(BuildContext context) {
+    final showGenerateOrder = controller.addOrderController != null;
+
     return Scaffold(
       backgroundColor: Colors.grey[200],
       appBar: AppBar(
         title: const Text('KOT Receipt'),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.print),
-            onPressed: () => controller.onPrintKOT(),
-            tooltip: 'Generate PDF',
-          ),
+          if (_canPrintKot)
+            IconButton(
+              icon: const Icon(Icons.print),
+              onPressed: () => controller.onPrintKOT(),
+              tooltip: 'Print KOT',
+            ),
         ],
       ),
       body: Center(
@@ -364,58 +371,58 @@ class _ThermalKOTReceiptState extends State<ThermalKOTReceipt> {
         ),
       ),
 
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () async {
-                  await controller.onGenerateKOTPdf();
-                },
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.grey),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                child: const Text('Print KOT'),
+      bottomNavigationBar: (!_canPrintKot && !showGenerateOrder)
+          ? null
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  if (_canPrintKot)
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          await controller.onGenerateKOTPdf();
+                        },
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.grey),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text('Print KOT'),
+                      ),
+                    ),
+                  if (_canPrintKot && showGenerateOrder)
+                    const SizedBox(width: 12),
+                  if (showGenerateOrder)
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          final addOrder = controller.addOrderController!;
+                          final charge =
+                              PlatformFeeService.shouldCharge(addOrder.appPref);
+                          if (charge &&
+                              !PlatformFeeService.hasSufficientBalance(
+                                addOrder.appPref,
+                              )) {
+                            Get.snackbar(
+                              'Wallet',
+                              'Insufficient wallet balance. Recharge at least ₹${PlatformFeeService.feeAmount.toStringAsFixed(0)} to continue.',
+                            );
+                            return;
+                          }
+                          await addOrder.saveAndBill(
+                            'billing',
+                            chargePlatformFee: charge,
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text('Generate Order'),
+                      ),
+                    ),
+                ],
               ),
             ),
-            const SizedBox(width: 12),
-            if (controller.addOrderController != null)
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final addOrder = controller.addOrderController!;
-                    final charge =
-                        PlatformFeeService.shouldCharge(addOrder.appPref);
-                    if (charge &&
-                        !PlatformFeeService.hasSufficientBalance(
-                          addOrder.appPref,
-                        )) {
-                      Get.snackbar(
-                        'Wallet',
-                        'Insufficient wallet balance. Recharge at least ₹${PlatformFeeService.feeAmount.toStringAsFixed(0)} to continue.',
-                      );
-                      return;
-                    }
-                    await addOrder.saveAndBill(
-                      'billing',
-                      chargePlatformFee: charge,
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: const Text('Generate Order'),
-                ),
-              ),
-          ],
-        ),
-      ), // floatingActionButton: FloatingActionButton.extended(
-      //   onPressed: () => controller.onGenerateKOTPdf(),
-      //   icon: const Icon(Icons.picture_as_pdf),
-      //   label: const Text('Generate PDF'),
-      // ),
     );
   }
 

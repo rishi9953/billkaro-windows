@@ -87,7 +87,7 @@ class SidebarScrollableNav extends StatelessWidget {
                   ),
                 ),
               ),
-              if (StaffAccess.canCreateSales)
+              if (StaffAccess.canShowCreateOrder)
                 _nav(
                   index: indices.createOrder,
                   label: loc.create_order,
@@ -112,7 +112,7 @@ class SidebarScrollableNav extends StatelessWidget {
                   ),
                 ),
               if (StaffAccess.canAccessProducts) _buildItemsSection(context),
-              if (StaffAccess.canAccessSales) _buildOrdersSection(context),
+              if (StaffAccess.canShowOrdersList) _buildOrdersSection(context),
               if (StaffAccess.canViewInventory)
                 _nav(
                   index: indices.inventory,
@@ -127,18 +127,17 @@ class SidebarScrollableNav extends StatelessWidget {
                 ),
               if (StaffAccess.canViewInventory) _buildPurchasesSection(context),
               if (StaffAccess.canViewReports) _buildReportsSection(context),
-              if (kotEnabled)
+              if (kotEnabled && StaffAccess.canViewKot)
                 _nav(
                   index: indices.kot,
                   label: loc.kot_history,
                   icon: Icon(
                     Icons.history_rounded,
                     size: SidebarLayout.navIconSize,
-                    color:
-                        selectedIndex == indices.kot ? _active : _inactive,
+                    color: selectedIndex == indices.kot ? _active : _inactive,
                   ),
                 ),
-              if (kotEnabled)
+              if (kotEnabled && StaffAccess.canOpenKitchenDisplay)
                 _nav(
                   index: indices.kds,
                   label: loc.kitchen_display,
@@ -176,9 +175,7 @@ class SidebarScrollableNav extends StatelessWidget {
                     width: SidebarLayout.navIconSize,
                     height: SidebarLayout.navIconSize,
                     colorFilter: ColorFilter.mode(
-                      selectedIndex == indices.customers
-                          ? _active
-                          : _inactive,
+                      selectedIndex == indices.customers ? _active : _inactive,
                       BlendMode.srcIn,
                     ),
                   ),
@@ -190,9 +187,7 @@ class SidebarScrollableNav extends StatelessWidget {
                   icon: Icon(
                     Icons.group_outlined,
                     size: SidebarLayout.navIconSize,
-                    color: selectedIndex == indices.staff
-                        ? _active
-                        : _inactive,
+                    color: selectedIndex == indices.staff ? _active : _inactive,
                   ),
                 ),
               if (StaffAccess.canManageSubscriptions)
@@ -239,8 +234,7 @@ class SidebarScrollableNav extends StatelessWidget {
                 icon: Icon(
                   Icons.print_rounded,
                   size: SidebarLayout.navIconSize,
-                  color:
-                      selectedIndex == indices.printer ? _active : _inactive,
+                  color: selectedIndex == indices.printer ? _active : _inactive,
                 ),
               ),
               if (StaffAccess.canManageSettings)
@@ -255,6 +249,19 @@ class SidebarScrollableNav extends StatelessWidget {
                         : _inactive,
                   ),
                 ),
+              _nav(
+                index: -1,
+                label: loc.help_and_setup,
+                selectedOverride: routes.helpSetup,
+                icon: Icon(
+                  Icons.support_outlined,
+                  size: SidebarLayout.navIconSize,
+                  color: routes.helpSetup ? _active : _inactive,
+                ),
+                onTapOverride: () async {
+                  Modular.to.navigate(HomeMainRoutes.helpSetup);
+                },
+              ),
             ],
           ),
         ),
@@ -319,11 +326,17 @@ class SidebarScrollableNav extends StatelessWidget {
           selected: routes.itemList,
           targetRoute: HomeMainRoutes.items,
         ),
-        if (StaffAccess.canCreateProducts)
+        if (StaffAccess.canShowAddMenuItemInShell)
           SidebarChildNavItem(
             label: loc.add_item,
             selected: routes.addItem,
             targetRoute: HomeMainRoutes.addItem,
+          ),
+        if (StaffAccess.canShowAddCategoryInShell)
+          SidebarChildNavItem(
+            label: loc.add_category,
+            selected: currentPath.startsWith(HomeMainRoutes.category),
+            targetRoute: HomeMainRoutes.category,
           ),
       ],
     );
@@ -338,11 +351,7 @@ class SidebarScrollableNav extends StatelessWidget {
     );
 
     if (collapsed) {
-      return _nav(
-        index: indices.purchases,
-        label: 'Purchases',
-        icon: leading,
-      );
+      return _nav(index: indices.purchases, label: 'Purchases', icon: leading);
     }
 
     return SidebarExpansionNav(
@@ -411,16 +420,18 @@ class SidebarScrollableNav extends StatelessWidget {
           selected: routes.holdOrders,
           targetRoute: HomeMainRoutes.holdOrders,
         ),
-        SidebarChildNavItem(
-          label: loc.deletedOrders,
-          selected: routes.deletedOrders,
-          targetRoute: HomeMainRoutes.deletedOrders,
-        ),
-        SidebarChildNavItem(
-          label: loc.stockSummary,
-          selected: routes.stockSummary,
-          targetRoute: HomeMainRoutes.stockSummary,
-        ),
+        if (StaffAccess.canAccessDeletedOrders)
+          SidebarChildNavItem(
+            label: loc.deletedOrders,
+            selected: routes.deletedOrders,
+            targetRoute: HomeMainRoutes.deletedOrders,
+          ),
+        if (StaffAccess.canAccessStockSummary)
+          SidebarChildNavItem(
+            label: loc.stockSummary,
+            selected: routes.stockSummary,
+            targetRoute: HomeMainRoutes.stockSummary,
+          ),
       ],
     );
   }

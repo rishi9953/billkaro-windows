@@ -103,22 +103,26 @@ class SessionRealtimeService {
     _handlingLogout = true;
 
     final reason = data is Map ? data['reason']?.toString() : null;
-    final isStaffRevoked = reason == 'staff_revoked';
+    final isStaffKick =
+        reason == 'staff_revoked' || reason == 'staff_deactivated';
     final email = Get.isRegistered<AppPref>()
         ? Get.find<AppPref>().user?.email?.trim()
         : null;
 
     disconnect();
 
-    final message = isStaffRevoked
-        ? 'Your staff access has been revoked. Please contact your outlet owner.'
-        : 'Your account has been deactivated. Resend the activation link to your email to reactivate your account.';
+    final message = reason == 'staff_deactivated'
+        ? AuthSessionService.staffDeactivatedMessage
+        : reason == 'staff_revoked'
+            ? 'Your staff access has been revoked. Please contact your outlet owner.'
+            : 'Your account has been deactivated. Resend the activation link to your email to reactivate your account.';
 
     try {
       await AuthSessionService.performForcedLogout(
         message: message,
         email: email,
-        canResendActivation: !isStaffRevoked,
+        canResendActivation: !isStaffKick,
+        title: isStaffKick ? 'Staff Deactivated' : 'Account Deactivated',
       );
     } finally {
       _handlingLogout = false;

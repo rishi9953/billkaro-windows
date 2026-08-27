@@ -366,7 +366,8 @@ class HomeScreenController extends BaseController {
         if (quantityCompare != 0) return quantityCompare;
         return b.amount.compareTo(a.amount);
       });
-    topSellingItems.value = sortedItems;
+    topSellingItems.value =
+        StaffAccess.canViewProducts ? sortedItems : <TopSellingItem>[];
 
     debugPrint('📊 Today: ₹$todaySalesTotal ($todayOrdersCount orders)');
     debugPrint(
@@ -636,7 +637,9 @@ class HomeScreenController extends BaseController {
       final db = AppDatabase();
 
       // 1) Local SQLite (may only contain a paginated subset from Items screen)
-      _ingestItemImages(await db.getItems(outletId: outletId));
+      _ingestItemImages(
+        (await db.getItemsPage(outletId: outletId, limit: 300)).items,
+      );
 
       // 2) In-memory catalogs already loaded elsewhere in the app
       if (Get.isRegistered<MenuItemController>()) {
@@ -671,6 +674,7 @@ class HomeScreenController extends BaseController {
 
   /// Fills any remaining missing thumbnails via best-selling API (includes itemImage).
   Future<void> _enrichTopSellingImages(String outletId) async {
+    if (!StaffAccess.canViewProducts) return;
     try {
       final missing = topSellingItems
           .take(5)

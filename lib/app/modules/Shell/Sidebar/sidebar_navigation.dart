@@ -43,6 +43,8 @@ abstract final class SidebarNavigation {
 
     await onBeforeNavigate?.call();
 
+    dismissAllAppLoader();
+
     if (staffFromSidebar) {
       Modular.to.navigate('${HomeMainRoutes.staff}?fromSidebar=true');
     } else {

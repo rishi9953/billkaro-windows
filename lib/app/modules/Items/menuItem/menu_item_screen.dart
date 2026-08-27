@@ -417,7 +417,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                 ),
               ),
             ),
-          if (StaffAccess.canImportExportProducts) ...[
+          if (StaffAccess.canShowImportExportItems) ...[
             const SizedBox(width: 8),
             PopupMenuButton(
               itemBuilder: (context) {
@@ -508,7 +508,8 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                   ),
                 ),
                 const Spacer(),
-                if (selectedCategory != null && StaffAccess.canUpdateCategories)
+                if (selectedCategory != null &&
+                    StaffAccess.canShowCategoryEditActions)
                   Tooltip(
                     message: loc.edit_selected_category,
                     child: IconButton(
@@ -593,7 +594,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                           selected: isSelected,
                           onTap: () => controller.selectCategory(id),
                           image: category.imageURL,
-                          onLongPress: StaffAccess.canUpdateCategories
+                          onLongPress: StaffAccess.canShowCategoryEditActions
                               ? () {
                                   final appPref = Get.find<AppPref>();
                                   if (!hasTrialOrSubscription(appPref)) {
@@ -859,7 +860,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                               onTap: () => controller.selectCategory(
                                 category.categoryName.toLowerCase(),
                               ),
-                              onLongPress: StaffAccess.canUpdateCategories
+                              onLongPress: StaffAccess.canShowCategoryEditActions
                                   ? () {
                                       final appPref = Get.find<AppPref>();
                                       if (!hasTrialOrSubscription(appPref)) {
@@ -963,7 +964,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
           }),
           Row(
             children: [
-              if (StaffAccess.canImportExportProducts)
+              if (StaffAccess.canShowImportExportItems)
                 Expanded(
                   child: Material(
                     color: Colors.transparent,
@@ -1009,7 +1010,7 @@ class _MenuItemScreenState extends State<MenuItemScreen> {
                     ),
                   ),
                 ),
-              if (StaffAccess.canImportExportProducts &&
+              if (StaffAccess.canShowImportExportItems &&
                   StaffAccess.canCreateProducts)
                 SizedBox(width: isTablet ? 12 : 10),
               if (StaffAccess.canCreateProducts)
@@ -1602,74 +1603,81 @@ class _ItemCard extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    final canEdit = StaffAccess.canUpdateProducts;
+    final canDelete = StaffAccess.canDeleteProducts;
+    final showMenu = StaffAccess.canShowMenuItemOverflowMenu;
+    final showToggle = StaffAccess.canShowItemAvailabilityToggle;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        SizedBox(
-          height: compact ? 30 : (isTablet ? 34 : 30),
-          width: compact ? 32 : (isTablet ? 40 : 36),
-          child: AppActionDropdown2<String>(
-            customButton: Icon(
-              Icons.more_vert,
-              size: compact ? 18 : (isTablet ? 22 : 20),
-              color: Colors.grey.shade700,
-            ),
-            width: 150,
-            buttonStyleData: ButtonStyleData(
-              height: compact ? 30 : (isTablet ? 34 : 30),
-              width: compact ? 32 : (isTablet ? 40 : 36),
-              padding: EdgeInsets.zero,
-            ),
-            items: [
-              if (StaffAccess.canUpdateProducts)
-                DropdownItem<String>(
-                  value: 'edit',
-                  height: 44,
-                  child: Row(
-                    children: [
-                      const Icon(Icons.edit_outlined, size: 18),
-                      const SizedBox(width: 10),
-                      Text(loc.edit),
-                    ],
+        if (showMenu)
+          SizedBox(
+            height: compact ? 30 : (isTablet ? 34 : 30),
+            width: compact ? 32 : (isTablet ? 40 : 36),
+            child: AppActionDropdown2<String>(
+              customButton: Icon(
+                Icons.more_vert,
+                size: compact ? 18 : (isTablet ? 22 : 20),
+                color: Colors.grey.shade700,
+              ),
+              width: 150,
+              buttonStyleData: ButtonStyleData(
+                height: compact ? 30 : (isTablet ? 34 : 30),
+                width: compact ? 32 : (isTablet ? 40 : 36),
+                padding: EdgeInsets.zero,
+              ),
+              items: [
+                if (canEdit)
+                  DropdownItem<String>(
+                    value: 'edit',
+                    height: 44,
+                    child: Row(
+                      children: [
+                        const Icon(Icons.edit_outlined, size: 18),
+                        const SizedBox(width: 10),
+                        Text(loc.edit),
+                      ],
+                    ),
                   ),
-                ),
-              if (StaffAccess.canDeleteProducts)
-                DropdownItem<String>(
-                  value: 'delete',
-                  height: 44,
-                  child: Row(
-                    children: [
-                      const Icon(Icons.delete_outlined, size: 18),
-                      const SizedBox(width: 10),
-                      Text(loc.delete),
-                    ],
+                if (canDelete)
+                  DropdownItem<String>(
+                    value: 'delete',
+                    height: 44,
+                    child: Row(
+                      children: [
+                        const Icon(Icons.delete_outlined, size: 18),
+                        const SizedBox(width: 10),
+                        Text(loc.delete),
+                      ],
+                    ),
                   ),
-                ),
-            ],
-            onChanged: (value) {
-              if (value == 'edit' &&
-                  StaffAccess.ensure(StaffAccess.canUpdateProducts)) {
-                Modular.to.pushNamed(
-                  HomeMainRoutes.addItem,
-                  arguments: {'item': item, 'isEdit': true},
-                );
-              } else if (value == 'delete') {
-                controller.deleteItem(item);
-              }
-            },
+              ],
+              onChanged: (value) {
+                if (value == 'edit' &&
+                    StaffAccess.ensure(StaffAccess.canUpdateProducts)) {
+                  Modular.to.pushNamed(
+                    HomeMainRoutes.addItem,
+                    arguments: {'item': item, 'isEdit': true},
+                  );
+                } else if (value == 'delete') {
+                  controller.deleteItem(item);
+                }
+              },
+            ),
           ),
-        ),
-        const SizedBox(width: 4),
-        Obx(() {
-          final isAvailable = controller.isItemAvailable(item.id);
-          return Switch(
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            value: isAvailable,
-            onChanged: (_) => controller.toggleItemAvailability(item.id),
-            activeColor: AppColor.primary.withOpacity(0.9),
-            activeTrackColor: AppColor.primary.withOpacity(0.2),
-          );
-        }),
+        if (showMenu) const SizedBox(width: 4),
+        if (showToggle)
+          Obx(() {
+            final isAvailable = controller.isItemAvailable(item.id);
+            return Switch(
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              value: isAvailable,
+              onChanged: (_) => controller.toggleItemAvailability(item.id),
+              activeColor: AppColor.primary.withOpacity(0.9),
+              activeTrackColor: AppColor.primary.withOpacity(0.2),
+            );
+          }),
       ],
     );
   }
@@ -1779,82 +1787,99 @@ class _ItemCard extends StatelessWidget {
           ),
         ),
         SizedBox(width: isTablet ? 12 : 8),
-        if (!selectionMode)
-          SizedBox(
-            width: isTablet ? 72 : 64,
-            height: isTablet ? 80 : 70,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                SizedBox(
-                  height: isTablet ? 34 : 30,
-                  width: isTablet ? 40 : 36,
-                  child: AppActionDropdown2<String>(
-                    customButton: Icon(
-                      Icons.more_vert,
-                      size: isTablet ? 22 : 20,
-                      color: Colors.grey.shade700,
-                    ),
-                    width: 150,
-                    buttonStyleData: ButtonStyleData(
-                      height: isTablet ? 34 : 30,
-                      width: isTablet ? 40 : 36,
-                      padding: EdgeInsets.zero,
-                    ),
-                    items: [
-                      if (StaffAccess.canUpdateProducts)
-                        DropdownItem<String>(
-                          value: 'edit',
-                          height: 44,
-                          child: Row(
-                            children: [
-                              const Icon(Icons.edit_outlined, size: 18),
-                              const SizedBox(width: 10),
-                              Text(loc.edit),
-                            ],
+        if (!selectionMode) ...[
+          Builder(
+            builder: (context) {
+              final canEdit = StaffAccess.canUpdateProducts;
+              final canDelete = StaffAccess.canDeleteProducts;
+              final showMenu = StaffAccess.canShowMenuItemOverflowMenu;
+              final showToggle = StaffAccess.canShowItemAvailabilityToggle;
+              return SizedBox(
+                width: isTablet ? 72 : 64,
+                height: isTablet ? 80 : 70,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (showMenu)
+                      SizedBox(
+                        height: isTablet ? 34 : 30,
+                        width: isTablet ? 40 : 36,
+                        child: AppActionDropdown2<String>(
+                          customButton: Icon(
+                            Icons.more_vert,
+                            size: isTablet ? 22 : 20,
+                            color: Colors.grey.shade700,
                           ),
-                        ),
-                      if (StaffAccess.canDeleteProducts)
-                        DropdownItem<String>(
-                          value: 'delete',
-                          height: 44,
-                          child: Row(
-                            children: [
-                              const Icon(Icons.delete_outlined, size: 18),
-                              const SizedBox(width: 10),
-                              Text(loc.delete),
-                            ],
+                          width: 150,
+                          buttonStyleData: ButtonStyleData(
+                            height: isTablet ? 34 : 30,
+                            width: isTablet ? 40 : 36,
+                            padding: EdgeInsets.zero,
                           ),
+                          items: [
+                            if (canEdit)
+                              DropdownItem<String>(
+                                value: 'edit',
+                                height: 44,
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.edit_outlined, size: 18),
+                                    const SizedBox(width: 10),
+                                    Text(loc.edit),
+                                  ],
+                                ),
+                              ),
+                            if (canDelete)
+                              DropdownItem<String>(
+                                value: 'delete',
+                                height: 44,
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.delete_outlined, size: 18),
+                                    const SizedBox(width: 10),
+                                    Text(loc.delete),
+                                  ],
+                                ),
+                              ),
+                          ],
+                          onChanged: (value) {
+                            if (value == 'edit' &&
+                                StaffAccess.ensure(
+                                  StaffAccess.canUpdateProducts,
+                                )) {
+                              Modular.to.pushNamed(
+                                HomeMainRoutes.addItem,
+                                arguments: {'item': item, 'isEdit': true},
+                              );
+                            } else if (value == 'delete') {
+                              controller.deleteItem(item);
+                            }
+                          },
                         ),
-                    ],
-                    onChanged: (value) {
-                      if (value == 'edit' &&
-                          StaffAccess.ensure(StaffAccess.canUpdateProducts)) {
-                        Modular.to.pushNamed(
-                          HomeMainRoutes.addItem,
-                          arguments: {'item': item, 'isEdit': true},
+                      )
+                    else
+                      const SizedBox.shrink(),
+                    if (showToggle)
+                      Obx(() {
+                        final isAvailable =
+                            controller.isItemAvailable(item.id);
+                        return Switch(
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          value: isAvailable,
+                          onChanged: (_) =>
+                              controller.toggleItemAvailability(item.id),
+                          activeColor: AppColor.primary.withOpacity(0.9),
+                          activeTrackColor: AppColor.primary.withOpacity(0.2),
                         );
-                      } else if (value == 'delete') {
-                        controller.deleteItem(item);
-                      }
-                    },
-                  ),
+                      }),
+                  ],
                 ),
-                Obx(() {
-                  final isAvailable = controller.isItemAvailable(item.id);
-                  return Switch(
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    value: isAvailable,
-                    onChanged: (_) =>
-                        controller.toggleItemAvailability(item.id),
-                    activeColor: AppColor.primary.withOpacity(0.9),
-                    activeTrackColor: AppColor.primary.withOpacity(0.2),
-                  );
-                }),
-              ],
-            ),
+              );
+            },
           ),
+        ],
       ],
     );
   }

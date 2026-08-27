@@ -15,7 +15,6 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class InvoicePreviewController extends BaseController {
   final phone = ''.obs;
@@ -54,324 +53,227 @@ class InvoicePreviewController extends BaseController {
   double get totalAmount =>
       subtotal + totalTax + serviceCharge.value - discount.value;
 
-  /// Builds the invoice PDF document (used by Generate Bill, Download, Share).
+  /// Builds the invoice PDF document matching the preview screen layout.
   void _buildPdfDocument() {
+    final user = appPref.user!;
+    final outlet = appPref.selectedOutlet!;
+
     pdf = pw.Document();
+    // MultiPage auto-creates extra pages when item rows overflow A4 height.
     pdf.addPage(
-      pw.Page(
+      pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
         build: (pw.Context context) {
-          return pw.Container(
-            padding: const pw.EdgeInsets.all(32),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
+          return [
+            // --- Business Header ---
+            pw.Text(
+              '${user.brandName},',
+              style: const pw.TextStyle(fontSize: 14),
+            ),
+            pw.Text(
+              businessName.value,
+              style: const pw.TextStyle(fontSize: 14),
+            ),
+            pw.Text(
+              user.address ?? '',
+              textAlign: pw.TextAlign.center,
+              style: const pw.TextStyle(fontSize: 12),
+            ),
+            pw.Text(
+              'GSTIN No: ${outlet.gstinNumber ?? 'N/A'}',
+              style: const pw.TextStyle(fontSize: 12),
+            ),
+            pw.Text(
+              'FSSAI No: ${outlet.fssaiNumber ?? 'N/A'}',
+              style: const pw.TextStyle(fontSize: 12),
+            ),
+            pw.Text(
+              'Phone No: ${outlet.phoneNumber ?? 'N/A'}',
+              style: const pw.TextStyle(fontSize: 12),
+            ),
+            pw.SizedBox(height: 10),
+            _buildDottedLine(),
+            pw.SizedBox(height: 10),
+
+            // --- Invoice Title ---
+            pw.Text(
+              'Invoice',
+              style: pw.TextStyle(
+                fontSize: 16,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+            pw.SizedBox(height: 10),
+            _buildDottedLine(),
+            pw.SizedBox(height: 10),
+
+            // --- Order Source ---
+            pw.Text(
+              '* ${orderFrom.value} *',
+              style: pw.TextStyle(
+                fontSize: 20,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+            pw.SizedBox(height: 10),
+
+            // --- Customer & Date Info ---
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Center(
-                  child: pw.Column(
-                    children: [
-                      pw.Text(
-                        'Phone: ${phone.value}',
-                        style: pw.TextStyle(
-                          fontSize: 12,
-                          fontWeight: pw.FontWeight.normal,
-                        ),
-                      ),
-                      pw.SizedBox(height: 10),
-                      _buildDottedLine(),
-                      pw.SizedBox(height: 10),
-                      pw.Text(
-                        'Tax Invoice',
-                        style: pw.TextStyle(
-                          fontSize: 20,
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                pw.SizedBox(height: 20),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     pw.Text(
-                      'Cash Sale',
-                      style: pw.TextStyle(
-                        fontSize: 14,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
+                      'Bill To : ${customerName.value}',
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12),
                     ),
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.end,
-                      children: [
-                        pw.Text(
-                          'Date: ${date.value}',
-                          style: const pw.TextStyle(fontSize: 12),
-                        ),
-                        pw.Text(
-                          'Time: ${time.value}',
-                          style: const pw.TextStyle(fontSize: 12),
-                        ),
-                        pw.Text(
-                          'Invoice no: ${invoiceNo.value}',
-                          style: const pw.TextStyle(fontSize: 12),
-                        ),
-                      ],
+                    if (customerPhone.value.isNotEmpty)
+                      pw.Text(
+                        'Phone : ${customerPhone.value}',
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12),
+                      ),
+                    pw.Text(
+                      'Payment In : ${paymentMode.value}',
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12),
                     ),
                   ],
                 ),
-                pw.SizedBox(height: 20),
-                _buildDottedLine(),
-                pw.SizedBox(height: 10),
-                pw.Row(
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
                   children: [
-                    pw.Expanded(
-                      flex: 3,
-                      child: pw.Text(
-                        'Item Name',
-                        style: pw.TextStyle(
-                          fontSize: 12,
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    pw.Expanded(
-                      flex: 1,
-                      child: pw.Text(
-                        'Qty',
-                        textAlign: pw.TextAlign.center,
-                        style: pw.TextStyle(
-                          fontSize: 12,
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    pw.Expanded(
-                      flex: 1,
-                      child: pw.Text(
-                        'Price',
-                        textAlign: pw.TextAlign.right,
-                        style: pw.TextStyle(
-                          fontSize: 12,
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    pw.Expanded(
-                      flex: 1,
-                      child: pw.Text(
-                        'Amount',
-                        textAlign: pw.TextAlign.right,
-                        style: pw.TextStyle(
-                          fontSize: 12,
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                    pw.Text('Date: ${date.value}', style: const pw.TextStyle(fontSize: 12)),
+                    pw.Text('Time: ${time.value}', style: const pw.TextStyle(fontSize: 12)),
+                    pw.Text('Invoice no: ${invoiceNo.value}', style: const pw.TextStyle(fontSize: 12)),
                   ],
-                ),
-                pw.SizedBox(height: 10),
-                ...itemList.map((item) {
-                  final quantity = item.quantity ?? 1;
-                  final price = (item.salePrice ?? 0).toDouble();
-                  final amount = price * quantity;
-                  return pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 4),
-                    child: pw.Row(
-                      children: [
-                        pw.Expanded(
-                          flex: 3,
-                          child: pw.Text(
-                            PosCartLine.invoiceLineName(
-                              itemName: item.itemName,
-                              variantName: item.variantName,
-                            ),
-                            style: const pw.TextStyle(fontSize: 12),
-                          ),
-                        ),
-                        pw.Expanded(
-                          flex: 1,
-                          child: pw.Text(
-                            'x$quantity',
-                            textAlign: pw.TextAlign.center,
-                            style: const pw.TextStyle(fontSize: 12),
-                          ),
-                        ),
-                        pw.Expanded(
-                          flex: 1,
-                          child: pw.Text(
-                            'Rs${price.toStringAsFixed(2)}',
-                            textAlign: pw.TextAlign.right,
-                            style: const pw.TextStyle(fontSize: 12),
-                          ),
-                        ),
-                        pw.Expanded(
-                          flex: 1,
-                          child: pw.Text(
-                            'Rs${amount.toStringAsFixed(2)}',
-                            textAlign: pw.TextAlign.right,
-                            style: const pw.TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-                pw.SizedBox(height: 10),
-                _buildDottedLine(),
-                pw.SizedBox(height: 10),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text(
-                      'Subtotal',
-                      style: const pw.TextStyle(fontSize: 12),
-                    ),
-                    pw.Text(
-                      'Rs${subtotal.toStringAsFixed(2)}',
-                      style: const pw.TextStyle(fontSize: 12),
-                    ),
-                  ],
-                ),
-                if (totalTax > 0) ...[
-                  pw.SizedBox(height: 5),
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Text(
-                        'Tax (GST)',
-                        style: const pw.TextStyle(fontSize: 12),
-                      ),
-                      pw.Text(
-                        'Rs${totalTax.toStringAsFixed(2)}',
-                        style: const pw.TextStyle(fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ],
-                if (serviceCharge.value > 0) ...[
-                  pw.SizedBox(height: 5),
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Text(
-                        'Service Charge',
-                        style: const pw.TextStyle(fontSize: 12),
-                      ),
-                      pw.Text(
-                        'Rs${serviceCharge.value.toStringAsFixed(2)}',
-                        style: const pw.TextStyle(fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ],
-                if (discount.value > 0) ...[
-                  pw.SizedBox(height: 5),
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Text(
-                        'Discount',
-                        style: const pw.TextStyle(fontSize: 12),
-                      ),
-                      pw.Text(
-                        '- Rs${discount.value.toStringAsFixed(2)}',
-                        style: const pw.TextStyle(fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ],
-                pw.SizedBox(height: 10),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text(
-                      'Total',
-                      style: pw.TextStyle(
-                        fontSize: 14,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                    pw.Text(
-                      'Rs${totalAmount.toStringAsFixed(2)}',
-                      style: pw.TextStyle(
-                        fontSize: 14,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                pw.SizedBox(height: 20),
-                pw.Divider(thickness: 1, color: PdfColors.grey400),
-                pw.SizedBox(height: 20),
-                if (appPref.showQrOnBill &&
-                    upiId.value.isNotEmpty &&
-                    qrCodeImageProvider != null) ...[
-                  pw.Center(
-                    child: pw.Column(
-                      children: [
-                        pw.Text(
-                          'Scan to Pay',
-                          style: pw.TextStyle(
-                            fontSize: 14,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                        pw.SizedBox(height: 10),
-                        pw.Container(
-                          padding: const pw.EdgeInsets.all(10),
-                          decoration: pw.BoxDecoration(
-                            border: pw.Border.all(color: PdfColors.grey400),
-                            borderRadius: pw.BorderRadius.circular(8),
-                          ),
-                          child: pw.Image(
-                            qrCodeImageProvider!,
-                            width: 150,
-                            height: 150,
-                          ),
-                        ),
-                        pw.SizedBox(height: 10),
-                        pw.Text(
-                          'UPI ID: ${upiId.value}',
-                          style: const pw.TextStyle(fontSize: 10),
-                        ),
-                        pw.Text(
-                          'Amount: Rs${totalAmount.toStringAsFixed(2)}',
-                          style: pw.TextStyle(
-                            fontSize: 12,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  pw.SizedBox(height: 20),
-                  pw.Divider(thickness: 1, color: PdfColors.grey400),
-                  pw.SizedBox(height: 20),
-                ],
-                pw.Center(
-                  child: pw.Column(
-                    children: [
-                      pw.Text(
-                        'Terms & Conditions',
-                        style: pw.TextStyle(
-                          fontSize: 12,
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                      ),
-                      pw.SizedBox(height: 8),
-                      pw.Text(
-                        'Thank you for doing business with us.',
-                        style: const pw.TextStyle(fontSize: 11),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ],
-                  ),
                 ),
               ],
             ),
-          );
+            pw.SizedBox(height: 10),
+            _buildDottedLine(),
+            pw.SizedBox(height: 10),
+
+            // --- Table Header ---
+            pw.Row(
+              children: [
+                pw.Expanded(flex: 3, child: pw.Text('Item Name', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12))),
+                pw.Expanded(flex: 1, child: pw.Text('Qty', textAlign: pw.TextAlign.center, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12))),
+                pw.Expanded(flex: 1, child: pw.Text('Price', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12))),
+                pw.Expanded(flex: 1, child: pw.Text('GST', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12))),
+                pw.Expanded(flex: 1, child: pw.Text('Amount', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12))),
+              ],
+            ),
+            pw.SizedBox(height: 10),
+
+            // --- Items (flat list so MultiPage can split across pages) ---
+            ...itemList.map((item) {
+              final quantity = item.quantity ?? 1;
+              final price = (item.salePrice ?? 0).toDouble();
+              final amount = price * quantity;
+              final gstRate = (item.gst ?? 0).toDouble();
+              final gstLabel = gstRate <= 0
+                  ? '-'
+                  : gstRate == gstRate.roundToDouble()
+                      ? '${gstRate.toInt()}%'
+                      : '${gstRate.toStringAsFixed(1)}%';
+              return pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(vertical: 4),
+                child: pw.Row(
+                  children: [
+                    pw.Expanded(flex: 3, child: pw.Text(PosCartLine.invoiceLineName(itemName: item.itemName, variantName: item.variantName), style: const pw.TextStyle(fontSize: 12))),
+                    pw.Expanded(flex: 1, child: pw.Text('x$quantity', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 12))),
+                    pw.Expanded(flex: 1, child: pw.Text('Rs ${price.toStringAsFixed(2)}', textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 12))),
+                    pw.Expanded(flex: 1, child: pw.Text(gstLabel, textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 12))),
+                    pw.Expanded(flex: 1, child: pw.Text('Rs ${amount.toStringAsFixed(2)}', textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 12))),
+                  ],
+                ),
+              );
+            }),
+            pw.SizedBox(height: 10),
+            _buildDottedLine(),
+            pw.SizedBox(height: 10),
+
+            // --- Subtotal ---
+            _buildSummaryRow('Subtotal', 'Rs ${subtotal.toStringAsFixed(2)}'),
+
+            // --- Tax ---
+            if (totalTax > 0) ...[
+              pw.SizedBox(height: 5),
+              _buildSummaryRow('Tax (GST)', 'Rs ${totalTax.toStringAsFixed(2)}'),
+            ],
+
+            // --- Service Charge ---
+            if (serviceCharge.value > 0) ...[
+              pw.SizedBox(height: 5),
+              _buildSummaryRow('Service Charge', 'Rs ${serviceCharge.value.toStringAsFixed(2)}'),
+            ],
+
+            // --- Discount ---
+            if (discount.value > 0) ...[
+              pw.SizedBox(height: 5),
+              _buildSummaryRow('Discount', '- Rs ${discount.value.toStringAsFixed(2)}'),
+            ],
+            pw.SizedBox(height: 10),
+
+            // --- Total ---
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Total', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                pw.Text('Rs ${totalAmount.toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+              ],
+            ),
+            pw.SizedBox(height: 10),
+            _buildDottedLine(),
+            pw.SizedBox(height: 10),
+
+            // --- Terms ---
+            pw.Center(
+              child: pw.Column(children: [
+                pw.Text('Terms & Conditions', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
+                pw.SizedBox(height: 4),
+                pw.Text('Thank you for doing business with us.', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 11)),
+              ]),
+            ),
+
+            // --- QR Code ---
+            if (appPref.showQrOnBill && upiId.value.isNotEmpty && qrCodeImageProvider != null) ...[
+              pw.SizedBox(height: 10),
+              pw.Center(
+                child: pw.Column(children: [
+                  pw.Text('Scan to Pay', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                  pw.SizedBox(height: 10),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(10),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.grey400),
+                      borderRadius: pw.BorderRadius.circular(8),
+                    ),
+                    child: pw.Image(qrCodeImageProvider!, width: 150, height: 150),
+                  ),
+                  pw.SizedBox(height: 10),
+                  pw.Text('UPI ID: ${upiId.value}', style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey)),
+                  pw.Text('Amount: Rs ${totalAmount.toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                ]),
+              ),
+              pw.SizedBox(height: 10),
+              _buildDottedLine(),
+            ],
+          ];
         },
       ),
+    );
+  }
+
+  pw.Widget _buildSummaryRow(String label, String value) {
+    return pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      children: [
+        pw.Text(label, style: const pw.TextStyle(fontSize: 12)),
+        pw.Text(value, style: const pw.TextStyle(fontSize: 12)),
+      ],
     );
   }
 
@@ -604,8 +506,7 @@ class InvoicePreviewController extends BaseController {
       }
 
       final name = _sanitizeFileName(invoiceNo.value);
-      final fileName =
-          'invoice_${name}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final fileName = 'invoice-$name.pdf';
 
       final file = await FileDownloadService.instance.saveBytes(
         bytes: bytes,
@@ -613,8 +514,8 @@ class InvoicePreviewController extends BaseController {
         preferredDirectory: appPref.downloadPath,
         notify: notify,
         notificationId: notificationId,
-        notificationTitle: 'Invoice downloaded',
-        notificationBody: 'Invoice saved to Downloads folder',
+        notificationTitle: 'Invoice $name downloaded',
+        notificationBody: '$fileName saved to Downloads',
       );
 
       if (file == null) {
@@ -643,77 +544,38 @@ class InvoicePreviewController extends BaseController {
           message ??
           'Invoice ${invoiceNo.value}\n'
               'Customer: ${customerName.value}\n'
-              'Total: Rs${totalAmount.toStringAsFixed(2)}\n'
+              'Phone: $phone\n'
+              'Total: Rs ${totalAmount.toStringAsFixed(2)}\n'
               'Date: ${date.value} ${time.value}';
 
-      File? pdfFile;
+      // Build PDF in temp only — do not save/download to Downloads.
       await _withLoader(() async {
         _buildPdfDocument();
-        pdfFile = await _savePdf(pdf, notify: true);
+        final bytes = await pdf.save();
+        if (bytes.isEmpty) {
+          showError(description: 'PDF generation failed - empty document');
+          return;
+        }
+
+        final name = _sanitizeFileName(invoiceNo.value);
+        final fileName = 'invoice-$name.pdf';
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}${Platform.pathSeparator}$fileName');
+        await file.writeAsBytes(bytes, flush: true);
+
+        try {
+          await SharePlus.instance.share(
+            ShareParams(
+              files: [XFile(file.path, mimeType: 'application/pdf')],
+              text: invoiceMessage,
+              subject: 'Invoice ${invoiceNo.value}',
+              title: 'Invoice ${invoiceNo.value}',
+            ),
+          );
+        } on UnimplementedError {
+          await Printing.sharePdf(bytes: bytes, filename: fileName);
+        }
       });
-
-      if (pdfFile == null) return;
-
-      // Share the downloaded PDF (user can pick WhatsApp).
-      try {
-        await SharePlus.instance.share(
-          ShareParams(
-            files: [XFile(pdfFile!.path, mimeType: 'application/pdf')],
-            text: invoiceMessage,
-            subject: 'Invoice ${invoiceNo.value}',
-            title: 'Invoice ${invoiceNo.value}',
-          ),
-        );
-      } on UnimplementedError {
-        await Printing.sharePdf(
-          bytes: await pdfFile!.readAsBytes(),
-          filename: pdfFile!.uri.pathSegments.last,
-        );
-      }
-
-      // Open WhatsApp chat for the invoice phone number.
-      final encodedMessage = Uri.encodeComponent(invoiceMessage);
-      final webUri = Uri.parse(
-        'https://web.whatsapp.com/send?phone=$phone&text=$encodedMessage',
-      );
-      final waMeUri = Uri.parse('https://wa.me/$phone?text=$encodedMessage');
-      final mobileUri = Uri.parse(
-        'whatsapp://send?phone=$phone&text=$encodedMessage',
-      );
-
-      bool launched = false;
-      if (Platform.isAndroid || Platform.isIOS) {
-        launched = await launchUrl(
-          mobileUri,
-          mode: LaunchMode.externalNonBrowserApplication,
-        );
-        if (!launched) {
-          launched = await launchUrl(
-            waMeUri,
-            mode: LaunchMode.externalApplication,
-          );
-        }
-      } else if (Platform.isWindows) {
-        launched = await launchUrl(
-          webUri,
-          mode: LaunchMode.externalApplication,
-        );
-        if (!launched) {
-          launched = await launchUrl(
-            waMeUri,
-            mode: LaunchMode.externalApplication,
-          );
-        }
-      } else {
-        launched = await launchUrl(
-          waMeUri,
-          mode: LaunchMode.externalApplication,
-        );
-      }
-
-      if (!launched) {
-        showError(description: 'Could not open WhatsApp');
-      }
     } catch (e) {
       showError(description: 'Failed to share invoice on WhatsApp: $e');
     } finally {
@@ -730,7 +592,7 @@ class InvoicePreviewController extends BaseController {
         return;
       }
       final name = _sanitizeFileName(invoiceNo.value);
-      final fileName = 'invoice_$name.pdf';
+      final fileName = 'invoice-$name.pdf';
 
       // `Printing.sharePdf` just opens the PDF in the default viewer on
       // Windows, so use the native Windows share sheet via share_plus instead.

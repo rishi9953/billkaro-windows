@@ -1789,6 +1789,79 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
     requiredDuringInsert: false,
     defaultValue: const Constant('[]'),
   );
+  static const VerificationMeta _barcodeMeta = const VerificationMeta(
+    'barcode',
+  );
+  @override
+  late final GeneratedColumn<String> barcode = GeneratedColumn<String>(
+    'barcode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _skuMeta = const VerificationMeta('sku');
+  @override
+  late final GeneratedColumn<String> sku = GeneratedColumn<String>(
+    'sku',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _showItemMeta = const VerificationMeta(
+    'showItem',
+  );
+  @override
+  late final GeneratedColumn<bool> showItem = GeneratedColumn<bool>(
+    'show_item',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_item" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _isDeletedMeta = const VerificationMeta(
+    'isDeleted',
+  );
+  @override
+  late final GeneratedColumn<bool> isDeleted = GeneratedColumn<bool>(
+    'is_deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _isSyncMeta = const VerificationMeta('isSync');
+  @override
+  late final GeneratedColumn<String> isSync = GeneratedColumn<String>(
+    'is_sync',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('synced'),
+  );
+  static const VerificationMeta _itemJsonMeta = const VerificationMeta(
+    'itemJson',
+  );
+  @override
+  late final GeneratedColumn<String> itemJson = GeneratedColumn<String>(
+    'item_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1804,6 +1877,12 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
     itemImage,
     orderFrom,
     variantsJson,
+    barcode,
+    sku,
+    showItem,
+    isDeleted,
+    isSync,
+    itemJson,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1915,6 +1994,42 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
         ),
       );
     }
+    if (data.containsKey('barcode')) {
+      context.handle(
+        _barcodeMeta,
+        barcode.isAcceptableOrUnknown(data['barcode']!, _barcodeMeta),
+      );
+    }
+    if (data.containsKey('sku')) {
+      context.handle(
+        _skuMeta,
+        sku.isAcceptableOrUnknown(data['sku']!, _skuMeta),
+      );
+    }
+    if (data.containsKey('show_item')) {
+      context.handle(
+        _showItemMeta,
+        showItem.isAcceptableOrUnknown(data['show_item']!, _showItemMeta),
+      );
+    }
+    if (data.containsKey('is_deleted')) {
+      context.handle(
+        _isDeletedMeta,
+        isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta),
+      );
+    }
+    if (data.containsKey('is_sync')) {
+      context.handle(
+        _isSyncMeta,
+        isSync.isAcceptableOrUnknown(data['is_sync']!, _isSyncMeta),
+      );
+    }
+    if (data.containsKey('item_json')) {
+      context.handle(
+        _itemJsonMeta,
+        itemJson.isAcceptableOrUnknown(data['item_json']!, _itemJsonMeta),
+      );
+    }
     return context;
   }
 
@@ -1976,6 +2091,30 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, Item> {
         DriftSqlType.string,
         data['${effectivePrefix}variants_json'],
       )!,
+      barcode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}barcode'],
+      )!,
+      sku: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sku'],
+      )!,
+      showItem: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_item'],
+      )!,
+      isDeleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_deleted'],
+      )!,
+      isSync: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}is_sync'],
+      )!,
+      itemJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}item_json'],
+      ),
     );
   }
 
@@ -1999,6 +2138,12 @@ class Item extends DataClass implements Insertable<Item> {
   final String itemImage;
   final String? orderFrom;
   final String variantsJson;
+  final String barcode;
+  final String sku;
+  final bool showItem;
+  final bool isDeleted;
+  final String isSync;
+  final String? itemJson;
   const Item({
     required this.id,
     required this.userId,
@@ -2013,6 +2158,12 @@ class Item extends DataClass implements Insertable<Item> {
     required this.itemImage,
     this.orderFrom,
     required this.variantsJson,
+    required this.barcode,
+    required this.sku,
+    required this.showItem,
+    required this.isDeleted,
+    required this.isSync,
+    this.itemJson,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2032,6 +2183,14 @@ class Item extends DataClass implements Insertable<Item> {
       map['order_from'] = Variable<String>(orderFrom);
     }
     map['variants_json'] = Variable<String>(variantsJson);
+    map['barcode'] = Variable<String>(barcode);
+    map['sku'] = Variable<String>(sku);
+    map['show_item'] = Variable<bool>(showItem);
+    map['is_deleted'] = Variable<bool>(isDeleted);
+    map['is_sync'] = Variable<String>(isSync);
+    if (!nullToAbsent || itemJson != null) {
+      map['item_json'] = Variable<String>(itemJson);
+    }
     return map;
   }
 
@@ -2052,6 +2211,14 @@ class Item extends DataClass implements Insertable<Item> {
           ? const Value.absent()
           : Value(orderFrom),
       variantsJson: Value(variantsJson),
+      barcode: Value(barcode),
+      sku: Value(sku),
+      showItem: Value(showItem),
+      isDeleted: Value(isDeleted),
+      isSync: Value(isSync),
+      itemJson: itemJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(itemJson),
     );
   }
 
@@ -2074,6 +2241,12 @@ class Item extends DataClass implements Insertable<Item> {
       itemImage: serializer.fromJson<String>(json['itemImage']),
       orderFrom: serializer.fromJson<String?>(json['orderFrom']),
       variantsJson: serializer.fromJson<String>(json['variantsJson']),
+      barcode: serializer.fromJson<String>(json['barcode']),
+      sku: serializer.fromJson<String>(json['sku']),
+      showItem: serializer.fromJson<bool>(json['showItem']),
+      isDeleted: serializer.fromJson<bool>(json['isDeleted']),
+      isSync: serializer.fromJson<String>(json['isSync']),
+      itemJson: serializer.fromJson<String?>(json['itemJson']),
     );
   }
   @override
@@ -2093,6 +2266,12 @@ class Item extends DataClass implements Insertable<Item> {
       'itemImage': serializer.toJson<String>(itemImage),
       'orderFrom': serializer.toJson<String?>(orderFrom),
       'variantsJson': serializer.toJson<String>(variantsJson),
+      'barcode': serializer.toJson<String>(barcode),
+      'sku': serializer.toJson<String>(sku),
+      'showItem': serializer.toJson<bool>(showItem),
+      'isDeleted': serializer.toJson<bool>(isDeleted),
+      'isSync': serializer.toJson<String>(isSync),
+      'itemJson': serializer.toJson<String?>(itemJson),
     };
   }
 
@@ -2110,6 +2289,12 @@ class Item extends DataClass implements Insertable<Item> {
     String? itemImage,
     Value<String?> orderFrom = const Value.absent(),
     String? variantsJson,
+    String? barcode,
+    String? sku,
+    bool? showItem,
+    bool? isDeleted,
+    String? isSync,
+    Value<String?> itemJson = const Value.absent(),
   }) => Item(
     id: id ?? this.id,
     userId: userId ?? this.userId,
@@ -2124,6 +2309,12 @@ class Item extends DataClass implements Insertable<Item> {
     itemImage: itemImage ?? this.itemImage,
     orderFrom: orderFrom.present ? orderFrom.value : this.orderFrom,
     variantsJson: variantsJson ?? this.variantsJson,
+    barcode: barcode ?? this.barcode,
+    sku: sku ?? this.sku,
+    showItem: showItem ?? this.showItem,
+    isDeleted: isDeleted ?? this.isDeleted,
+    isSync: isSync ?? this.isSync,
+    itemJson: itemJson.present ? itemJson.value : this.itemJson,
   );
   Item copyWithCompanion(ItemsCompanion data) {
     return Item(
@@ -2142,6 +2333,12 @@ class Item extends DataClass implements Insertable<Item> {
       variantsJson: data.variantsJson.present
           ? data.variantsJson.value
           : this.variantsJson,
+      barcode: data.barcode.present ? data.barcode.value : this.barcode,
+      sku: data.sku.present ? data.sku.value : this.sku,
+      showItem: data.showItem.present ? data.showItem.value : this.showItem,
+      isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
+      isSync: data.isSync.present ? data.isSync.value : this.isSync,
+      itemJson: data.itemJson.present ? data.itemJson.value : this.itemJson,
     );
   }
 
@@ -2160,7 +2357,13 @@ class Item extends DataClass implements Insertable<Item> {
           ..write('updatedAt: $updatedAt, ')
           ..write('itemImage: $itemImage, ')
           ..write('orderFrom: $orderFrom, ')
-          ..write('variantsJson: $variantsJson')
+          ..write('variantsJson: $variantsJson, ')
+          ..write('barcode: $barcode, ')
+          ..write('sku: $sku, ')
+          ..write('showItem: $showItem, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('isSync: $isSync, ')
+          ..write('itemJson: $itemJson')
           ..write(')'))
         .toString();
   }
@@ -2180,6 +2383,12 @@ class Item extends DataClass implements Insertable<Item> {
     itemImage,
     orderFrom,
     variantsJson,
+    barcode,
+    sku,
+    showItem,
+    isDeleted,
+    isSync,
+    itemJson,
   );
   @override
   bool operator ==(Object other) =>
@@ -2197,7 +2406,13 @@ class Item extends DataClass implements Insertable<Item> {
           other.updatedAt == this.updatedAt &&
           other.itemImage == this.itemImage &&
           other.orderFrom == this.orderFrom &&
-          other.variantsJson == this.variantsJson);
+          other.variantsJson == this.variantsJson &&
+          other.barcode == this.barcode &&
+          other.sku == this.sku &&
+          other.showItem == this.showItem &&
+          other.isDeleted == this.isDeleted &&
+          other.isSync == this.isSync &&
+          other.itemJson == this.itemJson);
 }
 
 class ItemsCompanion extends UpdateCompanion<Item> {
@@ -2214,6 +2429,12 @@ class ItemsCompanion extends UpdateCompanion<Item> {
   final Value<String> itemImage;
   final Value<String?> orderFrom;
   final Value<String> variantsJson;
+  final Value<String> barcode;
+  final Value<String> sku;
+  final Value<bool> showItem;
+  final Value<bool> isDeleted;
+  final Value<String> isSync;
+  final Value<String?> itemJson;
   final Value<int> rowid;
   const ItemsCompanion({
     this.id = const Value.absent(),
@@ -2229,6 +2450,12 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     this.itemImage = const Value.absent(),
     this.orderFrom = const Value.absent(),
     this.variantsJson = const Value.absent(),
+    this.barcode = const Value.absent(),
+    this.sku = const Value.absent(),
+    this.showItem = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.isSync = const Value.absent(),
+    this.itemJson = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ItemsCompanion.insert({
@@ -2245,6 +2472,12 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     this.itemImage = const Value.absent(),
     this.orderFrom = const Value.absent(),
     this.variantsJson = const Value.absent(),
+    this.barcode = const Value.absent(),
+    this.sku = const Value.absent(),
+    this.showItem = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.isSync = const Value.absent(),
+    this.itemJson = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        userId = Value(userId),
@@ -2270,6 +2503,12 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     Expression<String>? itemImage,
     Expression<String>? orderFrom,
     Expression<String>? variantsJson,
+    Expression<String>? barcode,
+    Expression<String>? sku,
+    Expression<bool>? showItem,
+    Expression<bool>? isDeleted,
+    Expression<String>? isSync,
+    Expression<String>? itemJson,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2286,6 +2525,12 @@ class ItemsCompanion extends UpdateCompanion<Item> {
       if (itemImage != null) 'item_image': itemImage,
       if (orderFrom != null) 'order_from': orderFrom,
       if (variantsJson != null) 'variants_json': variantsJson,
+      if (barcode != null) 'barcode': barcode,
+      if (sku != null) 'sku': sku,
+      if (showItem != null) 'show_item': showItem,
+      if (isDeleted != null) 'is_deleted': isDeleted,
+      if (isSync != null) 'is_sync': isSync,
+      if (itemJson != null) 'item_json': itemJson,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2304,6 +2549,12 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     Value<String>? itemImage,
     Value<String?>? orderFrom,
     Value<String>? variantsJson,
+    Value<String>? barcode,
+    Value<String>? sku,
+    Value<bool>? showItem,
+    Value<bool>? isDeleted,
+    Value<String>? isSync,
+    Value<String?>? itemJson,
     Value<int>? rowid,
   }) {
     return ItemsCompanion(
@@ -2320,6 +2571,12 @@ class ItemsCompanion extends UpdateCompanion<Item> {
       itemImage: itemImage ?? this.itemImage,
       orderFrom: orderFrom ?? this.orderFrom,
       variantsJson: variantsJson ?? this.variantsJson,
+      barcode: barcode ?? this.barcode,
+      sku: sku ?? this.sku,
+      showItem: showItem ?? this.showItem,
+      isDeleted: isDeleted ?? this.isDeleted,
+      isSync: isSync ?? this.isSync,
+      itemJson: itemJson ?? this.itemJson,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2366,6 +2623,24 @@ class ItemsCompanion extends UpdateCompanion<Item> {
     if (variantsJson.present) {
       map['variants_json'] = Variable<String>(variantsJson.value);
     }
+    if (barcode.present) {
+      map['barcode'] = Variable<String>(barcode.value);
+    }
+    if (sku.present) {
+      map['sku'] = Variable<String>(sku.value);
+    }
+    if (showItem.present) {
+      map['show_item'] = Variable<bool>(showItem.value);
+    }
+    if (isDeleted.present) {
+      map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
+    if (isSync.present) {
+      map['is_sync'] = Variable<String>(isSync.value);
+    }
+    if (itemJson.present) {
+      map['item_json'] = Variable<String>(itemJson.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2388,6 +2663,12 @@ class ItemsCompanion extends UpdateCompanion<Item> {
           ..write('itemImage: $itemImage, ')
           ..write('orderFrom: $orderFrom, ')
           ..write('variantsJson: $variantsJson, ')
+          ..write('barcode: $barcode, ')
+          ..write('sku: $sku, ')
+          ..write('showItem: $showItem, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('isSync: $isSync, ')
+          ..write('itemJson: $itemJson, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3880,6 +4161,12 @@ typedef $$ItemsTableCreateCompanionBuilder =
       Value<String> itemImage,
       Value<String?> orderFrom,
       Value<String> variantsJson,
+      Value<String> barcode,
+      Value<String> sku,
+      Value<bool> showItem,
+      Value<bool> isDeleted,
+      Value<String> isSync,
+      Value<String?> itemJson,
       Value<int> rowid,
     });
 typedef $$ItemsTableUpdateCompanionBuilder =
@@ -3897,6 +4184,12 @@ typedef $$ItemsTableUpdateCompanionBuilder =
       Value<String> itemImage,
       Value<String?> orderFrom,
       Value<String> variantsJson,
+      Value<String> barcode,
+      Value<String> sku,
+      Value<bool> showItem,
+      Value<bool> isDeleted,
+      Value<String> isSync,
+      Value<String?> itemJson,
       Value<int> rowid,
     });
 
@@ -3970,6 +4263,36 @@ class $$ItemsTableFilterComposer extends Composer<_$AppDatabase, $ItemsTable> {
 
   ColumnFilters<String> get variantsJson => $composableBuilder(
     column: $table.variantsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get barcode => $composableBuilder(
+    column: $table.barcode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sku => $composableBuilder(
+    column: $table.sku,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get showItem => $composableBuilder(
+    column: $table.showItem,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get isSync => $composableBuilder(
+    column: $table.isSync,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get itemJson => $composableBuilder(
+    column: $table.itemJson,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -4047,6 +4370,36 @@ class $$ItemsTableOrderingComposer
     column: $table.variantsJson,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get barcode => $composableBuilder(
+    column: $table.barcode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sku => $composableBuilder(
+    column: $table.sku,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get showItem => $composableBuilder(
+    column: $table.showItem,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get isSync => $composableBuilder(
+    column: $table.isSync,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get itemJson => $composableBuilder(
+    column: $table.itemJson,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ItemsTableAnnotationComposer
@@ -4098,6 +4451,24 @@ class $$ItemsTableAnnotationComposer
     column: $table.variantsJson,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get barcode =>
+      $composableBuilder(column: $table.barcode, builder: (column) => column);
+
+  GeneratedColumn<String> get sku =>
+      $composableBuilder(column: $table.sku, builder: (column) => column);
+
+  GeneratedColumn<bool> get showItem =>
+      $composableBuilder(column: $table.showItem, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDeleted =>
+      $composableBuilder(column: $table.isDeleted, builder: (column) => column);
+
+  GeneratedColumn<String> get isSync =>
+      $composableBuilder(column: $table.isSync, builder: (column) => column);
+
+  GeneratedColumn<String> get itemJson =>
+      $composableBuilder(column: $table.itemJson, builder: (column) => column);
 }
 
 class $$ItemsTableTableManager
@@ -4141,6 +4512,12 @@ class $$ItemsTableTableManager
                 Value<String> itemImage = const Value.absent(),
                 Value<String?> orderFrom = const Value.absent(),
                 Value<String> variantsJson = const Value.absent(),
+                Value<String> barcode = const Value.absent(),
+                Value<String> sku = const Value.absent(),
+                Value<bool> showItem = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
+                Value<String> isSync = const Value.absent(),
+                Value<String?> itemJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ItemsCompanion(
                 id: id,
@@ -4156,6 +4533,12 @@ class $$ItemsTableTableManager
                 itemImage: itemImage,
                 orderFrom: orderFrom,
                 variantsJson: variantsJson,
+                barcode: barcode,
+                sku: sku,
+                showItem: showItem,
+                isDeleted: isDeleted,
+                isSync: isSync,
+                itemJson: itemJson,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -4173,6 +4556,12 @@ class $$ItemsTableTableManager
                 Value<String> itemImage = const Value.absent(),
                 Value<String?> orderFrom = const Value.absent(),
                 Value<String> variantsJson = const Value.absent(),
+                Value<String> barcode = const Value.absent(),
+                Value<String> sku = const Value.absent(),
+                Value<bool> showItem = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
+                Value<String> isSync = const Value.absent(),
+                Value<String?> itemJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ItemsCompanion.insert(
                 id: id,
@@ -4188,6 +4577,12 @@ class $$ItemsTableTableManager
                 itemImage: itemImage,
                 orderFrom: orderFrom,
                 variantsJson: variantsJson,
+                barcode: barcode,
+                sku: sku,
+                showItem: showItem,
+                isDeleted: isDeleted,
+                isSync: isSync,
+                itemJson: itemJson,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

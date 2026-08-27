@@ -57,6 +57,9 @@ abstract class ApiClient {
   @POST(forgotPass)
   Future<dynamic> forgotPassword(@Body() Map<String, dynamic> body);
 
+  @POST(staffForgotPass)
+  Future<dynamic> staffForgotPassword(@Body() Map<String, dynamic> body);
+
   @POST(verifyEmail)
   Future<dynamic> verifyAuthEmail(@Body() Map<String, dynamic> body);
 
@@ -68,6 +71,12 @@ abstract class ApiClient {
 
   @POST(resendActivation)
   Future<dynamic> resendAuthActivation(@Body() Map<String, dynamic> body);
+
+  @POST('$user/{id}/choose-access-mode')
+  Future<dynamic> chooseAccessMode(
+    @Path('id') String id,
+    @Body() Map<String, dynamic> body,
+  );
 
   // -------------------- USER --------------------
 
@@ -416,6 +425,13 @@ abstract class ApiClient {
     @Path('staffId') String staffId,
   );
 
+  @PATCH('outlets/{outletId}/$staff/{staffId}/activation')
+  Future<dynamic> setStaffActivation(
+    @Path('outletId') String outletId,
+    @Path('staffId') String staffId,
+    @Body() Map<String, dynamic> body,
+  );
+
   @POST('outlets/{outletId}/$staff/{staffId}/reinvite')
   Future<dynamic> reinviteStaff(
     @Path('outletId') String outletId,
@@ -424,6 +440,12 @@ abstract class ApiClient {
 
   @GET('$staffProfile/{staffId}')
   Future<UserResponse> getStaffProfile(@Path('staffId') String staffId);
+
+  @PATCH('$staffProfile/{staffId}')
+  Future<dynamic> updateStaffProfile(
+    @Path('staffId') String staffId,
+    @Body() Map<String, dynamic> body,
+  );
 
   @GET(activities)
   Future<ActivityResponseModel> getActivities(

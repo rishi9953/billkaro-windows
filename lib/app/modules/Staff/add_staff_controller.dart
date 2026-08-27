@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/modules/Staff/staff_details_controller.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/app/services/uploadFile.dart';
@@ -117,9 +118,7 @@ class AddStaffController extends BaseController {
     selectedDateOfBirth.value = _parseDateOfBirth(member.dateOfBirth);
     selectedRole.value = _normalizeRole(member.role);
     imageUrl.value = member.profileImage;
-    selectedPermissions
-      ..clear()
-      ..addAll(expandStaffPermissions(member.permissions));
+    _setSelectedPermissions(_permissionsFromStored(member.permissions));
     isEmailAvailable.value = true;
     _lastCheckedEmail = member.email.trim().toLowerCase();
   }
@@ -134,13 +133,7 @@ class AddStaffController extends BaseController {
     }
     selectedRole.value = next;
     if (isEditMode) return;
-    selectedPermissions
-      ..clear()
-      ..addAll(
-        next == 'Secondary Admin'
-            ? StaffPermissionKeys.secondaryAdminDefaults
-            : StaffPermissionKeys.billerDefaults,
-      );
+    _applyRolePermissionDefaults(next);
   }
 
   bool _ensureCanAssignSelectedRole() {
@@ -150,11 +143,11 @@ class AddStaffController extends BaseController {
         _normalizeRole(editingStaff?.role ?? '') == 'Secondary Admin') {
       return true;
     }
-    showError(
-      description: 'Only the outlet owner can add a secondary admin.',
-    );
+    showError(description: 'Only the outlet owner can add a secondary admin.');
     return false;
   }
+
+  bool get _includeTablePermissions => HomeMainRoutes.outletHasSeating();
 
   void togglePermission(List<String> keys, bool enabled) {
     if (enabled) {
@@ -162,12 +155,24 @@ class AddStaffController extends BaseController {
     } else {
       selectedPermissions.removeAll(keys);
     }
+    // Drop orphan keys so selection matches checked toggles only.
+    final cleaned = keysFromGrantedToggles(
+      selectedPermissions,
+      includeTables: _includeTablePermissions,
+    );
+    selectedPermissions
+      ..clear()
+      ..addAll(cleaned);
   }
 
   void selectAllPermissions() {
     selectedPermissions
       ..clear()
-      ..addAll(StaffPermissionKeys.all);
+      ..addAll(
+        allVisibleStaffPermissionKeys(
+          includeTables: _includeTablePermissions,
+        ),
+      );
   }
 
   void deselectAllPermissions() {
@@ -259,13 +264,37 @@ class AddStaffController extends BaseController {
     return null;
   }
 
+  /// Permissions must not be empty for Biller (add + edit).
+  /// Uses granted toggles (same as what is saved), not raw key count.
+  String? validatePermissions() {
+    // Secondary Admin always has full access, so skip check.
+    if (selectedRole.value == 'Secondary Admin') return null;
+
+    final grantedKeys = keysFromGrantedToggles(
+      List<String>.from(selectedPermissions),
+    );
+    if (grantedKeys.isEmpty) {
+      return 'Please select at least one permission';
+    }
+    return null;
+  }
+
   bool _validateForm() {
     showValidationErrors.value = true;
     final formValid = formKey.currentState?.validate() ?? false;
+
+    // Permissions cannot be empty (add staff + edit staff).
+    final permissionError = validatePermissions();
+    if (permissionError != null) {
+      showError(description: permissionError);
+      return false;
+    }
+
     if (isEditMode) {
       return formValid;
     }
-    final genderValid = validateGender(
+    final genderValid =
+        validateGender(
           selectedGender.value.isEmpty ? null : selectedGender.value,
         ) ==
         null;
@@ -348,6 +377,14 @@ class AddStaffController extends BaseController {
       return;
     }
 
+    // Block invite when no permission is selected (Biller).
+    final permissionError = validatePermissions();
+    if (permissionError != null) {
+      showValidationErrors.value = true;
+      showError(description: permissionError);
+      return;
+    }
+
     if (!_validateForm()) return;
     if (!await _ensureEmailAvailable()) return;
     if (selectedImage.value != null && !await _ensureStaffImageUploaded()) {
@@ -368,6 +405,14 @@ class AddStaffController extends BaseController {
     final role = selectedRole.value == 'Secondary Admin'
         ? 'secondary_admin'
         : 'biller';
+
+    // Final check: do not send empty permissions.
+    final permissions = _buildPermissions(role);
+    if (role == 'biller' && permissions.isEmpty) {
+      showValidationErrors.value = true;
+      showError(description: 'Please select at least one permission');
+      return;
+    }
 
     final response = await callApi(
       apiClient.addStaff(outletId, _buildStaffPayload(role: role)),
@@ -398,13 +443,7 @@ class AddStaffController extends BaseController {
     selectedDateOfBirth.value = null;
     selectedImage.value = null;
     imageUrl.value = '';
-    selectedPermissions
-      ..clear()
-      ..addAll(
-        selectedRole.value == 'Secondary Admin'
-            ? StaffPermissionKeys.secondaryAdminDefaults
-            : StaffPermissionKeys.billerDefaults,
-      );
+    _applyRolePermissionDefaults(selectedRole.value);
     assignUniqueId();
     _resetEmailVerification();
     formKey.currentState?.reset();
@@ -429,8 +468,7 @@ class AddStaffController extends BaseController {
       return;
     }
 
-    if (isEditMode &&
-        trimmed == editingStaff!.email.trim().toLowerCase()) {
+    if (isEditMode && trimmed == editingStaff!.email.trim().toLowerCase()) {
       isEmailAvailable.value = true;
       _lastCheckedEmail = trimmed;
       isEmailChecking.value = false;
@@ -577,6 +615,14 @@ class AddStaffController extends BaseController {
       return;
     }
 
+    // Always block edit when no permission is selected (Biller).
+    final permissionError = validatePermissions();
+    if (permissionError != null) {
+      showValidationErrors.value = true;
+      showError(description: permissionError);
+      return;
+    }
+
     if (!_validateForm()) return;
     if (!await _ensureEmailAvailable()) return;
     if (selectedImage.value != null && !await _ensureStaffImageUploaded()) {
@@ -604,16 +650,26 @@ class AddStaffController extends BaseController {
         ? 'secondary_admin'
         : 'biller';
 
+    // Final check: do not send empty permissions on update.
+    final permissions = _buildPermissions(role);
+    if (role == 'biller' && permissions.isEmpty) {
+      showValidationErrors.value = true;
+      showError(description: 'Please select at least one permission');
+      return;
+    }
+
     final response = await callApi(
-      apiClient.updateStaff(
-        outletId,
-        staffId,
-        _buildStaffPayload(role: role),
-      ),
+      apiClient.updateStaff(outletId, staffId, _buildStaffPayload(role: role)),
     );
     if (response == null) return;
 
-    final message = loc.staff_member_updated_successfully;
+    final emailChanged =
+        emailController.text.trim().toLowerCase() !=
+        editingStaff!.email.trim().toLowerCase();
+    final message =
+        emailChanged && editingStaff!.isInvitePending
+            ? loc.invite_sent_successfully
+            : loc.staff_member_updated_successfully;
     await _finishWithSuccess(
       result: {'updated': true, 'message': message},
       message: message,
@@ -710,14 +766,51 @@ class AddStaffController extends BaseController {
     return digits;
   }
 
+  /// Secondary Admin always stores full access. Biller stores only toggled keys.
   List<String> _buildPermissions(String role) {
-    final selected = selectedPermissions
+    if (role == 'secondary_admin') {
+      return List<String>.from(StaffPermissionKeys.secondaryAdminDefaults)
+        ..sort();
+    }
+    return keysFromGrantedToggles(
+      Set<String>.from(selectedPermissions.toList()),
+      includeTables: _includeTablePermissions,
+    );
+  }
+
+  void _applyRolePermissionDefaults(String roleLabel) {
+    if (roleLabel == 'Secondary Admin') {
+      _setSelectedPermissions(StaffPermissionKeys.secondaryAdminDefaults);
+    } else {
+      _setSelectedPermissions(const []);
+    }
+  }
+
+  void _setSelectedPermissions(Iterable<String> keys) {
+    selectedPermissions
+      ..clear()
+      ..addAll(
+        keysFromGrantedToggles(
+          keys,
+          includeTables: _includeTablePermissions,
+        ),
+      );
+  }
+
+  /// Load stored keys, then keep only complete UI toggles (no orphans).
+  List<String> _permissionsFromStored(Iterable permissions) {
+    final raw = permissions
+        .map((e) => e.toString().trim())
+        .where((e) => e.isNotEmpty);
+    final canonical = raw
         .where((key) => StaffPermissionKeys.all.contains(key))
-        .toList()
-      ..sort();
-    if (selected.isNotEmpty) return selected;
-    return role == 'secondary_admin'
-        ? List<String>.from(StaffPermissionKeys.secondaryAdminDefaults)
-        : List<String>.from(StaffPermissionKeys.billerDefaults);
+        .toList();
+    final expanded = canonical.isNotEmpty
+        ? canonical
+        : expandStaffPermissions(raw).toList();
+    return keysFromGrantedToggles(
+      expanded,
+      includeTables: _includeTablePermissions,
+    );
   }
 }

@@ -1,3 +1,4 @@
+import 'package:billkaro/app/modules/Staff/StaffMemberDetails/staff_member_details_controller.dart';
 import 'package:billkaro/app/modules/Staff/staff_details_controller.dart';
 import 'package:billkaro/app/modules/Staff/widgets/staff_permissions_section.dart';
 import 'package:billkaro/app/services/common_function.dart';
@@ -7,249 +8,488 @@ import 'package:billkaro/utils/staff_permission_keys.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-Future<void> showStaffViewDialog(BuildContext context, StaffMember member) {
-  return showDialog<void>(
-    context: context,
-    builder: (context) => _StaffViewDialog(member: member),
-  );
-}
+export 'package:billkaro/app/modules/Staff/StaffMemberDetails/staff_member_details_controller.dart'
+    show openStaffMemberDetails;
 
-class _StaffViewDialog extends StatelessWidget {
-  const _StaffViewDialog({required this.member});
+/// Full-screen staff member profile / details (desktop).
+class StaffMemberDetailsScreen extends StatelessWidget {
+  const StaffMemberDetailsScreen({super.key, this.member});
 
-  final StaffMember member;
+  final StaffMember? member;
 
   @override
   Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context)!;
-    final roleTitle = _localizedRoleTitle(loc, member.role);
-    final isSecondaryAdmin = _isSecondaryAdminRole(member.role);
-    final granted = expandStaffPermissions(member.permissions);
-    final permissionCount = _countGrantedLabels(granted);
-    final displayName =
-        member.name.trim().isEmpty ? loc.manage_staff : member.name.trim();
+    final controller = Get.isRegistered<StaffMemberDetailsController>()
+        ? Get.find<StaffMemberDetailsController>()
+        : Get.put(StaffMemberDetailsController());
+    if (member != null && controller.member.value?.id != member!.id) {
+      controller.resolveMember(seed: member);
+    }
 
-    return Dialog(
-      backgroundColor: const Color(0xFFF4F7FC),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 28),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      clipBehavior: Clip.antiAlias,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 640, maxHeight: 760),
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(20, 12, 8, 12),
-              color: AppColor.primary,
-              child: Row(
+    return Obx(() {
+      final loc = AppLocalizations.of(context)!;
+      final current = controller.member.value;
+
+      if (current == null) {
+        return Scaffold(
+          backgroundColor: const Color(0xFFF4F7FC),
+          appBar: AppBar(
+            title: Text(loc.manage_staff.capitalize ?? ''),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: controller.goBack,
+            ),
+          ),
+          body: Center(child: Text(loc.unable_to_update_staff)),
+        );
+      }
+
+      final roleTitle = _localizedRoleTitle(loc, current.role);
+      final isSecondaryAdmin = _isSecondaryAdminRole(current.role);
+      final granted = expandStaffPermissions(current.permissions);
+      final permissionCount = countGrantedStaffPermissionItems(granted);
+      final displayName = current.name.trim().isEmpty
+          ? loc.manage_staff.capitalize ?? ''
+          : current.name.trim().capitalize ?? '';
+
+      return Scaffold(
+        backgroundColor: const Color(0xFFF4F7FC),
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: AppColor.primary,
+          foregroundColor: Colors.white,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: controller.goBack,
+          ),
+          title: Text(
+            displayName,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          actions: [
+            if (StaffAccess.canUpdateStaff)
+              IconButton(
+                tooltip: loc.edit,
+                onPressed: controller.openEdit,
+                icon: const Icon(Icons.edit_outlined),
+              ),
+          ],
+        ),
+        body: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: Text(
-                      displayName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                  _HeroHeader(
+                    member: current,
+                    roleTitle: roleTitle,
+                    isSecondaryAdmin: isSecondaryAdmin,
+                    loc: loc,
                   ),
-                  if (StaffAccess.canUpdateStaff)
-                    IconButton(
-                      tooltip: loc.edit,
-                      onPressed: () => _openEdit(context, member),
-                      icon: const Icon(Icons.edit_outlined, color: Colors.white),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _SummaryStrip(
+                          member: current,
+                          roleTitle: roleTitle,
+                          permissionCount: permissionCount,
+                          loc: loc,
+                        ),
+                        _QuickActions(member: current, loc: loc),
+                        const SizedBox(height: 14),
+                        _SectionCard(
+                          title: 'Contact',
+                          icon: Icons.contact_mail_outlined,
+                          children: [
+                            _InfoTile(
+                              icon: Icons.badge_outlined,
+                              label: loc.unique_id,
+                              value: current.uniqueId,
+                            ),
+                            _InfoTile(
+                              icon: Icons.email_outlined,
+                              label: loc.email,
+                              value: current.email,
+                            ),
+                            _InfoTile(
+                              icon: Icons.phone_outlined,
+                              label: loc.mobile_number,
+                              value: current.phone,
+                              isLast: true,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        _SectionCard(
+                          title: loc.address_label,
+                          icon: Icons.location_on_outlined,
+                          children: [
+                            _InfoTile(
+                              icon: Icons.home_outlined,
+                              label: loc.address_label,
+                              value: current.address,
+                            ),
+                            _InfoTile(
+                              icon: Icons.map_outlined,
+                              label: loc.state_label,
+                              value: current.state,
+                            ),
+                            _InfoTile(
+                              icon: Icons.place_outlined,
+                              label: loc.district_label,
+                              value: current.district,
+                            ),
+                            _InfoTile(
+                              icon: Icons.pin_drop_outlined,
+                              label: loc.pincode_label,
+                              value: current.pincode,
+                              isLast: true,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        _SectionCard(
+                          title: 'Personal',
+                          icon: Icons.person_outline,
+                          children: [
+                            _InfoTile(
+                              icon: Icons.cake_outlined,
+                              label: loc.date_of_birth,
+                              value: _formatDate(current.dateOfBirth),
+                            ),
+                            _InfoTile(
+                              icon: Icons.event_available_outlined,
+                              label: loc.join_date,
+                              value: _formatDate(current.joinDate),
+                            ),
+                            _InfoTile(
+                              icon: Icons.wc_outlined,
+                              label: loc.gender_label,
+                              value: _genderLabel(loc, current.gender),
+                              isLast: true,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        if (isSecondaryAdmin)
+                          const StaffFullAccessPermissionsCard()
+                        else
+                          _PermissionsSection(
+                            granted: granted,
+                            totalCatalog: kStaffPermissionCatalogSize,
+                          ),
+                        const SizedBox(height: 14),
+                        _AccountActionsCard(
+                          member: current,
+                          loc: loc,
+                          detailsController: controller,
+                        ),
+                      ],
                     ),
-                  IconButton(
-                    tooltip: loc.close,
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close, color: Colors.white),
                   ),
                 ],
               ),
             ),
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
+          ),
+        ),
+        // bottomNavigationBar: StaffAccess.canUpdateStaff
+        //     ? Material(
+        //         color: Colors.white,
+        //         elevation: 8,
+        //         child: SafeArea(
+        //           child: Align(
+        //             alignment: Alignment.center,
+        //             child: ConstrainedBox(
+        //               constraints: const BoxConstraints(maxWidth: 720),
+        //               child: Padding(
+        //                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+        //                 child: SizedBox(
+        //                   width: double.infinity,
+        //                   child: ElevatedButton.icon(
+        //                     onPressed: controller.openEdit,
+        //                     icon: const Icon(Icons.edit_outlined, size: 18),
+        //                     label: Text(loc.edit),
+        //                     style: ElevatedButton.styleFrom(
+        //                       elevation: 0,
+        //                       backgroundColor: AppColor.primary,
+        //                       foregroundColor: Colors.white,
+        //                       padding:
+        //                           const EdgeInsets.symmetric(vertical: 14),
+        //                       shape: RoundedRectangleBorder(
+        //                         borderRadius: BorderRadius.circular(12),
+        //                       ),
+        //                     ),
+        //                   ),
+        //                 ),
+        //               ),
+        //             ),
+        //           ),
+        //         ),
+        //       )
+        //     : null,
+      );
+    });
+  }
+}
+
+class _AccountActionsCard extends StatelessWidget {
+  const _AccountActionsCard({
+    required this.member,
+    required this.loc,
+    required this.detailsController,
+  });
+
+  final StaffMember member;
+  final AppLocalizations loc;
+  final StaffMemberDetailsController detailsController;
+
+  @override
+  Widget build(BuildContext context) {
+    final showActivate = member.canActivate && StaffAccess.canUpdateStaff;
+    final showDeactivate = member.canDeactivate && StaffAccess.canUpdateStaff;
+    final showReinvite = member.canReinvite && StaffAccess.canUpdateStaff;
+    final showDelete = StaffAccess.canDeleteStaff;
+    final showEdit = StaffAccess.canUpdateStaff;
+
+    if (!showActivate &&
+        !showDeactivate &&
+        !showReinvite &&
+        !showDelete &&
+        !showEdit) {
+      return const SizedBox.shrink();
+    }
+
+    final list = detailsController.listController;
+    final staffId = member.id.trim();
+
+    Widget actionsColumn({
+      required bool busyActivate,
+      required bool busyReinvite,
+      required bool busyDelete,
+    }) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (showEdit)
+            _ManageActionTile(
+              icon: Icons.edit_outlined,
+              title: loc.edit,
+              subtitle: 'Update profile, role, or permissions',
+              color: AppColor.primary,
+              onTap: detailsController.openEdit,
+            ),
+          if (showReinvite) ...[
+            if (showEdit) const SizedBox(height: 8),
+            _ManageActionTile(
+              icon: Icons.mail_outline,
+              title: loc.reinvite,
+              subtitle: 'Send invite email again',
+              color: Colors.orange.shade800,
+              onTap: busyReinvite ? null : detailsController.reinvite,
+              loading: busyReinvite,
+            ),
+          ],
+          if (showActivate) ...[
+            if (showEdit || showReinvite) const SizedBox(height: 8),
+            _ManageActionTile(
+              icon: Icons.check_circle_outline,
+              title: 'Activate',
+              subtitle: 'Restore access for this staff member',
+              color: const Color(0xFF059669),
+              onTap: busyActivate ? null : detailsController.activate,
+              loading: busyActivate,
+            ),
+          ],
+          if (showDeactivate) ...[
+            if (showEdit || showReinvite || showActivate)
+              const SizedBox(height: 8),
+            _ManageActionTile(
+              icon: Icons.block_outlined,
+              title: 'Deactivate',
+              subtitle: 'Revoke access and log them out now',
+              color: Colors.orange.shade800,
+              onTap: busyActivate ? null : detailsController.deactivate,
+              loading: busyActivate,
+            ),
+          ],
+          if (showDelete) ...[
+            if (showEdit || showReinvite || showActivate || showDeactivate)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Divider(height: 1, color: Colors.grey.shade200),
+              )
+            else
+              const SizedBox(height: 8),
+            _ManageActionTile(
+              icon: Icons.delete_outline,
+              title: loc.remove,
+              subtitle: 'Permanently remove this staff member',
+              color: const Color(0xFFDC2626),
+              onTap: busyDelete ? null : detailsController.deleteStaff,
+              loading: busyDelete,
+              destructive: true,
+            ),
+          ],
+        ],
+      );
+    }
+
+    final Widget body = list == null
+        ? actionsColumn(
+            busyActivate: false,
+            busyReinvite: false,
+            busyDelete: false,
+          )
+        : Obx(() {
+            final busyActivate =
+                staffId.isNotEmpty && list.activationStaffIds.contains(staffId);
+            final busyReinvite =
+                staffId.isNotEmpty && list.reinvitingStaffIds.contains(staffId);
+            final busyDelete =
+                staffId.isNotEmpty && list.deletingStaffIds.contains(staffId);
+            return actionsColumn(
+              busyActivate: busyActivate,
+              busyReinvite: busyReinvite,
+              busyDelete: busyDelete,
+            );
+          });
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColor.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.manage_accounts_outlined,
+                  size: 18,
+                  color: Color(0xFFB91C1C),
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'Manage account',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          body,
+        ],
+      ),
+    );
+  }
+}
+
+class _ManageActionTile extends StatelessWidget {
+  const _ManageActionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+    this.loading = false,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback? onTap;
+  final bool loading;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: destructive
+          ? const Color(0xFFFFF1F2)
+          : color.withValues(alpha: 0.06),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: loading ? null : onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: color.withValues(alpha: 0.2)),
+                ),
+                child: loading
+                    ? Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: color,
+                        ),
+                      )
+                    : Icon(icon, size: 20, color: color),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _HeroHeader(
-                      member: member,
-                      roleTitle: roleTitle,
-                      isSecondaryAdmin: isSecondaryAdmin,
-                      loc: loc,
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: color,
+                      ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-                      child: Column(
-                        children: [
-                          _SummaryStrip(
-                            roleTitle: roleTitle,
-                            isActive: member.isActive,
-                            permissionCount: permissionCount,
-                            loc: loc,
-                          ),
-                          _QuickActions(member: member, loc: loc),
-                          const SizedBox(height: 14),
-                          _SectionCard(
-                            title: 'Contact',
-                            icon: Icons.contact_mail_outlined,
-                            children: [
-                              _InfoTile(
-                                icon: Icons.badge_outlined,
-                                label: loc.unique_id,
-                                value: member.uniqueId,
-                              ),
-                              _InfoTile(
-                                icon: Icons.email_outlined,
-                                label: loc.email,
-                                value: member.email,
-                              ),
-                              _InfoTile(
-                                icon: Icons.phone_outlined,
-                                label: loc.mobile_number,
-                                value: member.phone,
-                                isLast: true,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-                          _SectionCard(
-                            title: loc.address_label,
-                            icon: Icons.location_on_outlined,
-                            children: [
-                              _InfoTile(
-                                icon: Icons.home_outlined,
-                                label: loc.address_label,
-                                value: member.address,
-                              ),
-                              _InfoTile(
-                                icon: Icons.map_outlined,
-                                label: loc.state_label,
-                                value: member.state,
-                              ),
-                              _InfoTile(
-                                icon: Icons.place_outlined,
-                                label: loc.district_label,
-                                value: member.district,
-                              ),
-                              _InfoTile(
-                                icon: Icons.pin_drop_outlined,
-                                label: loc.pincode_label,
-                                value: member.pincode,
-                                isLast: true,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-                          _SectionCard(
-                            title: 'Personal',
-                            icon: Icons.person_outline,
-                            children: [
-                              _InfoTile(
-                                icon: Icons.cake_outlined,
-                                label: loc.date_of_birth,
-                                value: _formatDate(member.dateOfBirth),
-                              ),
-                              _InfoTile(
-                                icon: Icons.event_available_outlined,
-                                label: loc.join_date,
-                                value: _formatDate(member.joinDate),
-                              ),
-                              _InfoTile(
-                                icon: Icons.wc_outlined,
-                                label: loc.gender_label,
-                                value: _genderLabel(loc, member.gender),
-                                isLast: true,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-                          if (isSecondaryAdmin)
-                            const StaffFullAccessPermissionsCard()
-                          else
-                            _PermissionsSection(
-                              granted: granted,
-                              totalCatalog: kStaffPermissionCatalogSize,
-                            ),
-                        ],
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColor.primary,
-                        side: BorderSide(
-                          color: AppColor.primary.withValues(alpha: 0.4),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(loc.close),
-                    ),
-                  ),
-                  if (StaffAccess.canUpdateStaff) ...[
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _openEdit(context, member),
-                        icon: const Icon(Icons.edit_outlined, size: 18),
-                        label: Text(loc.edit),
-                        style: ElevatedButton.styleFrom(
-                          elevation: 0,
-                          backgroundColor: AppColor.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
+              Icon(Icons.chevron_right, color: color.withValues(alpha: 0.7)),
+            ],
+          ),
         ),
       ),
     );
   }
-
-  Future<void> _openEdit(BuildContext context, StaffMember member) async {
-    if (!StaffAccess.ensure(StaffAccess.canUpdateStaff)) return;
-    Navigator.of(context).pop();
-    if (Get.isRegistered<StaffDetailsController>()) {
-      await Get.find<StaffDetailsController>().onEditStaff(member);
-    }
-  }
 }
-
-int _countGrantedLabels(Set<String> granted) =>
-    countGrantedStaffPermissionItems(granted);
 
 class _HeroHeader extends StatelessWidget {
   const _HeroHeader({
@@ -303,7 +543,7 @@ class _HeroHeader extends StatelessWidget {
             _Avatar(member: member, size: 88),
             const SizedBox(height: 14),
             Text(
-              name,
+              name.capitalize ?? '',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 22,
@@ -341,16 +581,20 @@ class _HeroHeader extends StatelessWidget {
                 _StatusPill(
                   icon: member.isActive
                       ? Icons.check_circle_outline
-                      : Icons.pause_circle_outline,
-                  label: member.isActive
-                      ? loc.status_active_label
-                      : loc.status_inactive_label,
+                      : member.isInvitePending
+                      ? Icons.hourglass_empty_outlined
+                      : Icons.block_outlined,
+                  label: member.statusLabel(loc),
                   background: member.isActive
                       ? const Color(0xFFD1FAE5)
-                      : const Color(0xFFFEF3C7),
+                      : member.isInvitePending
+                      ? const Color(0xFFFEF3C7)
+                      : const Color(0xFFFEE2E2),
                   foreground: member.isActive
                       ? const Color(0xFF047857)
-                      : const Color(0xFFB45309),
+                      : member.isInvitePending
+                      ? const Color(0xFFB45309)
+                      : const Color(0xFFB91C1C),
                 ),
               ],
             ),
@@ -460,14 +704,14 @@ class _StatusPill extends StatelessWidget {
 
 class _SummaryStrip extends StatelessWidget {
   const _SummaryStrip({
+    required this.member,
     required this.roleTitle,
-    required this.isActive,
     required this.permissionCount,
     required this.loc,
   });
 
+  final StaffMember member;
   final String roleTitle;
-  final bool isActive;
   final int permissionCount;
   final AppLocalizations loc;
 
@@ -486,14 +730,18 @@ class _SummaryStrip extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           child: _MiniStat(
-            icon: isActive
+            icon: member.isActive
                 ? Icons.verified_outlined
-                : Icons.hourglass_empty_outlined,
+                : member.isInvitePending
+                ? Icons.hourglass_empty_outlined
+                : Icons.block_outlined,
             label: 'Status',
-            value: isActive
-                ? loc.status_active_label
-                : loc.status_inactive_label,
-            color: isActive ? const Color(0xFF059669) : const Color(0xFFD97706),
+            value: member.statusLabel(loc),
+            color: member.isActive
+                ? const Color(0xFF059669)
+                : member.isInvitePending
+                ? const Color(0xFFD97706)
+                : const Color(0xFFB91C1C),
           ),
         ),
         const SizedBox(width: 10),
@@ -612,8 +860,7 @@ class _QuickActions extends StatelessWidget {
                   icon: Icons.mail_outline,
                   label: loc.email,
                   color: const Color(0xFF2563EB),
-                  onTap: () =>
-                      _launchUri(Uri(scheme: 'mailto', path: email)),
+                  onTap: () => _launchUri(Uri(scheme: 'mailto', path: email)),
                 ),
               ),
           ],
@@ -820,8 +1067,9 @@ class _PermissionsSection extends StatelessWidget {
       }
     }
 
-    final progress =
-        totalCatalog == 0 ? 0.0 : (grantedCount / totalCatalog).clamp(0.0, 1.0);
+    final progress = totalCatalog == 0
+        ? 0.0
+        : (grantedCount / totalCatalog).clamp(0.0, 1.0);
 
     return Container(
       width: double.infinity,
@@ -867,8 +1115,10 @@ class _PermissionsSection extends StatelessWidget {
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: AppColor.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
@@ -939,8 +1189,7 @@ class _PermissionsSection extends StatelessWidget {
                               color: AppColor.primary.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color:
-                                    AppColor.primary.withValues(alpha: 0.18),
+                                color: AppColor.primary.withValues(alpha: 0.18),
                               ),
                             ),
                             child: Row(

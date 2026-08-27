@@ -1,4 +1,5 @@
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:flutter/rendering.dart';
 
 class ItemDetailsScreen extends StatefulWidget {
@@ -86,7 +87,7 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
               ),
             ),
           ),
-          if (_showButtons)
+          if (_showButtons && StaffAccess.canCreateProducts)
             AnimatedSlide(
               duration: const Duration(milliseconds: 200),
               offset: Offset.zero,
@@ -138,7 +139,7 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
           children: [
             OutlinedButton(
               onPressed: () {
-                // Action for the first button
+                if (!StaffAccess.ensure(StaffAccess.canCreateProducts)) return;
                 Get.toNamed(AppRoute.addMenuItem);
               },
               style: OutlinedButton.styleFrom(

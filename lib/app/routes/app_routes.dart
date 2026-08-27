@@ -258,7 +258,9 @@ abstract class AppRoute {
       name: createOutlet,
       page: CreateOutletScreen.new,
       transition: transition,
-      binding: BindingsBuilder(() => Get.lazyPut(() => CreateOutletController())),
+      binding: BindingsBuilder(
+        () => Get.lazyPut(() => CreateOutletController()),
+      ),
     ),
     GetPage(
       name: ownerPanel,

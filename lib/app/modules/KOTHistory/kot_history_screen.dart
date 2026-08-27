@@ -7,6 +7,7 @@ import 'package:billkaro/app/modules/KOTHistory/kot_history_controller.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/date_util.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
@@ -104,6 +105,7 @@ class _KotHistoryScreenState extends State<KotHistoryScreen> {
   }
 
   void _openKotReceipt(KotHistoryController c, OrderModel o) {
+    if (!StaffAccess.canViewKot) return;
     Modular.to.pushNamed(
       HomeMainRoutes.kotReceipt,
       arguments: {
@@ -149,36 +151,38 @@ class _KotHistoryScreenState extends State<KotHistoryScreen> {
         size: isWin ? 22 : 24,
       ),
       items: [
-        DropdownItem(
-          value: 'view',
-          height: 44,
-          child: Row(
-            children: [
-              Icon(
-                Icons.visibility_outlined,
-                size: 20,
-                color: AppColor.primary,
-              ),
-              const SizedBox(width: 12),
-              const Text('View KOT'),
-            ],
+        if (StaffAccess.canViewKot)
+          DropdownItem(
+            value: 'view',
+            height: 44,
+            child: Row(
+              children: [
+                Icon(
+                  Icons.visibility_outlined,
+                  size: 20,
+                  color: AppColor.primary,
+                ),
+                const SizedBox(width: 12),
+                const Text('View KOT'),
+              ],
+            ),
           ),
-        ),
-        DropdownItem(
-          value: 'print',
-          height: 44,
-          child: Row(
-            children: [
-              Icon(
-                Icons.print_outlined,
-                size: 20,
-                color: AppColor.secondaryPrimary,
-              ),
-              const SizedBox(width: 12),
-              const Text('Reprint (Thermal)'),
-            ],
+        if (StaffAccess.canReprintKot)
+          DropdownItem(
+            value: 'print',
+            height: 44,
+            child: Row(
+              children: [
+                Icon(
+                  Icons.print_outlined,
+                  size: 20,
+                  color: AppColor.secondaryPrimary,
+                ),
+                const SizedBox(width: 12),
+                const Text('Reprint (Thermal)'),
+              ],
+            ),
           ),
-        ),
       ],
       onChanged: (value) {
         if (value != null) {

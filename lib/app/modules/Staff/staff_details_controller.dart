@@ -1,5 +1,6 @@
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 
 class StaffMember {
@@ -9,7 +10,7 @@ class StaffMember {
     required this.role,
     required this.phone,
     required this.email,
-    required this.isActive,
+    required this.status,
     required this.permissions,
     this.uniqueId = '',
     this.address = '',
@@ -27,7 +28,8 @@ class StaffMember {
   final String role;
   final String phone;
   final String email;
-  final bool isActive;
+  /// pending | active | deactivated
+  final String status;
   final List<String> permissions;
   final String uniqueId;
   final String address;
@@ -38,6 +40,20 @@ class StaffMember {
   final String gender;
   final String profileImage;
   final String joinDate;
+
+  bool get isActive => status == 'active';
+  bool get isInvitePending => status == 'pending';
+  bool get isDeactivated => status == 'deactivated';
+
+  bool get canDeactivate => isActive;
+  bool get canActivate => isDeactivated;
+  bool get canReinvite => isInvitePending;
+
+  String statusLabel(AppLocalizations loc) {
+    if (isActive) return loc.status_active_label;
+    if (isInvitePending) return loc.status_pending;
+    return loc.status_deactivated_label;
+  }
 
   /// API uses `role: staff` for account type; actual role is in `staffRole`.
   static String roleFromApiMap(
@@ -67,6 +83,7 @@ class StaffDetailsController extends BaseController {
   final staffList = <Map<String, dynamic>>[].obs;
   final deletingStaffIds = <String>{}.obs;
   final reinvitingStaffIds = <String>{}.obs;
+  final activationStaffIds = <String>{}.obs;
   final searchController = TextEditingController();
   final searchQuery = ''.obs;
 
@@ -74,7 +91,26 @@ class StaffDetailsController extends BaseController {
       staffList.map(_toStaffMember).toList(growable: false);
 
   List<StaffMember> get filteredStaff {
-    final members = staffMembers;
+    var members = staffMembers;
+
+    // Staff login: hide self. Billers also hide secondary admins.
+    if (StaffAccess.isStaffSession) {
+      members = members.where((member) {
+        if (StaffAccess.isSelfStaffRecord(
+          staffId: member.id,
+          email: member.email,
+          uniqueId: member.uniqueId,
+        )) {
+          return false;
+        }
+        if (StaffAccess.isBillerSession &&
+            StaffAccess.isSecondaryAdminRole(member.role)) {
+          return false;
+        }
+        return true;
+      }).toList(growable: false);
+    }
+
     final query = searchQuery.value.trim().toLowerCase();
     if (query.isEmpty) return members;
 
@@ -139,6 +175,15 @@ class StaffDetailsController extends BaseController {
   }
 
   Future<void> onEditStaff(StaffMember member) async {
+    if (StaffAccess.isSelfStaffRecord(
+      staffId: member.id,
+      email: member.email,
+      uniqueId: member.uniqueId,
+    )) {
+      showError(description: 'You cannot update your own staff account.');
+      return;
+    }
+
     final result = await Modular.to.pushNamed(
       HomeMainRoutes.addStaffScreen,
       arguments: member,
@@ -157,7 +202,7 @@ class StaffDetailsController extends BaseController {
       showError(description: loc.unable_to_delete_staff);
       return;
     }
-    if (member.isActive) return;
+    if (!member.canReinvite) return;
     if (reinvitingStaffIds.contains(staffId)) return;
 
     reinvitingStaffIds.add(staffId);
@@ -179,6 +224,44 @@ class StaffDetailsController extends BaseController {
       );
     } finally {
       reinvitingStaffIds.remove(staffId);
+    }
+  }
+
+  Future<void> setStaffActive(StaffMember member, bool activate) async {
+    final outletId = appPref.selectedOutlet?.id;
+    final staffId = member.id.trim();
+    if (outletId == null || outletId.isEmpty || staffId.isEmpty) {
+      final loc = AppLocalizations.of(Get.context!)!;
+      showError(description: loc.unable_to_delete_staff);
+      return;
+    }
+    if (activate && !member.canActivate) return;
+    if (!activate && !member.canDeactivate) return;
+    if (activationStaffIds.contains(staffId)) return;
+
+    activationStaffIds.add(staffId);
+    try {
+      final response = await callApi(
+        apiClient.setStaffActivation(outletId, staffId, {
+          'activate': activate,
+        }),
+        showLoader: false,
+      );
+      if (response == null) return;
+
+      final message = response is Map
+          ? (response['message']?.toString() ?? '').trim()
+          : '';
+      showSuccess(
+        description: message.isNotEmpty
+            ? message
+            : (activate
+                  ? 'Staff activated successfully'
+                  : 'Staff deactivated successfully'),
+      );
+      await loadStaffList();
+    } finally {
+      activationStaffIds.remove(staffId);
     }
   }
 
@@ -300,16 +383,7 @@ class StaffDetailsController extends BaseController {
         userMap?['email'],
         userMap?['mail'],
       ]),
-      isActive: _asBool(
-        raw['activated'] ??
-            raw['isActive'] ??
-            raw['active'] ??
-            raw['status'] ??
-            raw['is_active'] ??
-            userMap?['isActive'] ??
-            userMap?['active'],
-        defaultValue: true,
-      ),
+      status: _resolveStatus(raw, userMap),
       permissions: _asStringList(raw['permissions'] ?? userMap?['permissions']),
       uniqueId: _firstNonEmpty([raw['uniqueId'], userMap?['uniqueId']]),
       address: _firstNonEmpty([raw['address'], userMap?['address']]),
@@ -373,10 +447,43 @@ class StaffDetailsController extends BaseController {
     if (normalized == 'false' ||
         normalized == '0' ||
         normalized == 'inactive' ||
-        normalized == 'disabled') {
+        normalized == 'disabled' ||
+        normalized == 'pending' ||
+        normalized == 'deactivated' ||
+        normalized == 'deleted') {
       return false;
     }
 
     return defaultValue;
+  }
+
+  String _resolveStatus(
+    Map<String, dynamic> raw,
+    Map<String, dynamic>? userMap,
+  ) {
+    final status = _asString(raw['status'] ?? userMap?['status']).toLowerCase();
+    if (status == 'active' ||
+        status == 'pending' ||
+        status == 'deactivated' ||
+        status == 'deleted') {
+      return status == 'deleted' ? 'deactivated' : status;
+    }
+
+    final activated = _asBool(
+      raw['activated'] ??
+          raw['isActive'] ??
+          raw['active'] ??
+          userMap?['activated'] ??
+          userMap?['isActive'],
+      defaultValue: false,
+    );
+    if (activated) return 'active';
+
+    final inviteAccepted = raw['inviteAccepted'] ?? userMap?['inviteAccepted'];
+    if (inviteAccepted is bool) {
+      return inviteAccepted ? 'deactivated' : 'pending';
+    }
+
+    return 'pending';
   }
 }

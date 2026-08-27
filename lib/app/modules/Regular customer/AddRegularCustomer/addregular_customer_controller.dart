@@ -278,24 +278,60 @@ class AddCustomerController extends BaseController {
     }
   }
 
-  void deleteRegularCustomer() async {
+  Future<void> deleteRegularCustomer() async {
     if (!StaffAccess.ensure(StaffAccess.canDeleteCustomers)) return;
+
     final loc = AppLocalizations.of(Get.context!)!;
     final outletId = appPref.selectedOutlet?.id;
+    final id = customerId.value.trim();
+
     if (outletId == null) {
       showError(description: loc.please_select_outlet_first);
       return;
     }
+    if (id.isEmpty) {
+      showError(description: loc.error_occurred_try_again);
+      return;
+    }
+
+    final customerName = nameController.text.trim().isEmpty
+        ? loc.customer_section_title
+        : nameController.text.trim();
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(loc.delete),
+        content: Text(loc.delete_confirm_message(customerName)),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: Text(loc.cancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(Get.context!).colorScheme.error,
+            ),
+            onPressed: () => Get.back(result: true),
+            child: Text(loc.delete),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
+    if (confirmed != true) return;
 
     final response = await callApi(
-      apiClient.deleteRegularCustomer(outletId, customerId.value),
+      apiClient.deleteRegularCustomer(outletId, id),
     );
-    if (response['status'] == 'success') {
+    if (response is Map && response['status']?.toString() == 'success') {
       cutomerListController.getCustomerList();
       dismissAllAppLoader();
       Get.back();
       Get.back();
-      showSuccess(description: response['message']);
+      showSuccess(
+        description:
+            response['message']?.toString() ?? loc.customer_deleted,
+      );
     }
   }
 

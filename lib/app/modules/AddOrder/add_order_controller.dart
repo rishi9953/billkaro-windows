@@ -24,6 +24,7 @@ import 'package:billkaro/app/services/ai/menu_ai_scanner.dart';
 import 'package:billkaro/app/services/billing/platform_fee_service.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/app/services/sync/bill_number_util.dart';
+import 'package:billkaro/app/services/sync/item_catalog_sync.dart';
 import 'package:billkaro/app/services/sync/sync_manager.dart';
 import 'package:billkaro/utils/date_util.dart';
 import 'package:billkaro/utils/kot_print_tracker.dart';
@@ -147,6 +148,18 @@ class AddOrderController extends BaseController {
       return (subtotal.value + totalTax.value) * raw / 100.0;
     }
     return raw;
+  }
+
+  void _applyDiscountFromOrder(api.OrderModel order) {
+    final type = order.discountType?.trim().toLowerCase();
+    if (type == 'percentage' || type == 'amount') {
+      orderDetails['discountType'] = type;
+      orderDetails['discount'] = order.discountValue ?? order.discount;
+    } else {
+      // Legacy rows: [discount] is the applied rupee amount.
+      orderDetails['discountType'] = 'amount';
+      orderDetails['discount'] = order.discount;
+    }
   }
 
   double serviceChargeAmount() => _asDouble(orderDetails['serviceCharge']);
@@ -344,11 +357,10 @@ class AddOrderController extends BaseController {
           ..['tableNumber'] = orders!.tableNumber
           ..['customerName'] = orders!.customerName
           ..['phoneNumber'] = orders!.phoneNumber
-          ..['discount'] = orders!.discount ?? 0.0
-          ..['discountType'] = 'amount'
           ..['serviceCharge'] = orders!.serviceCharge ?? 0.0
           ..['paymentReceivedIn'] = orders!.paymentReceivedIn ?? ''
           ..['status'] = orders!.status;
+        _applyDiscountFromOrder(orders!);
         if (orders!.splitPayments != null &&
             orders!.splitPayments!.isNotEmpty) {
           orderDetails['splitPayments'] = orders!.splitPayments!
@@ -404,8 +416,12 @@ class AddOrderController extends BaseController {
       }
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      maybeShowWalletBalanceAlert(appPref: appPref, apiClient: apiClient);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final shouldExit = await maybeShowWalletBalanceAlert(
+        appPref: appPref,
+        apiClient: apiClient,
+      );
+      if (shouldExit) Get.back();
     });
   }
 
@@ -949,9 +965,13 @@ class AddOrderController extends BaseController {
   /// Petpooja-style POS: KOT stays on screen; Hold saves & exits; Bill settles.
   Future<void> executePosAction(PosOrderAction action) async {
     final canSaveOrder = isEdit.value
-        ? StaffAccess.canUpdateSales
-        : StaffAccess.canCreateSales;
+        ? StaffAccess.canShowEditOrder
+        : StaffAccess.canShowCreateOrder;
     if (!StaffAccess.ensure(canSaveOrder)) return;
+    if (action == PosOrderAction.kot &&
+        !StaffAccess.ensure(StaffAccess.canPrintKot)) {
+      return;
+    }
     if (!hasTrialOrSubscription(appPref)) {
       checkSubscription();
       return;
@@ -1288,6 +1308,7 @@ class AddOrderController extends BaseController {
 
   /// Open camera/gallery, scan menu with AI, then show quick add bottom sheet
   Future<void> addMenuUsingAI() async {
+    if (!StaffAccess.ensure(StaffAccess.canCreateProducts)) return;
     try {
       // Show image source selection dialog
       final imageSource = await _showImageSourceDialog();
@@ -1509,8 +1530,8 @@ class AddOrderController extends BaseController {
     if (_isConfirmOrderDialogOpen) return;
 
     final canSaveOrder = isEdit.value
-        ? StaffAccess.canUpdateSales
-        : StaffAccess.canCreateSales;
+        ? StaffAccess.canShowEditOrder
+        : StaffAccess.canShowCreateOrder;
     if (!StaffAccess.ensure(canSaveOrder)) return;
 
     final loc = AppLocalizations.of(Get.context!)!;
@@ -1690,8 +1711,10 @@ class AddOrderController extends BaseController {
     for (final entry in sortedIds.take(_bestSellingLimit)) {
       final cached =
           allItemsMap[entry.key] ??
-          items.firstWhereOrNull((item) => item.id == entry.key);
+          items.firstWhereOrNull((item) => item.id == entry.key) ??
+          await db.getItemById(entry.key);
       if (cached != null && cached.showItem) {
+        allItemsMap[cached.id] = cached;
         loaded.add(cached);
       }
     }
@@ -1801,6 +1824,11 @@ class AddOrderController extends BaseController {
           final outletId = appPref.selectedOutlet?.id;
           if (outletId != null && newItems.isNotEmpty) {
             await db.saveItems(newItems, outletId);
+            unawaited(
+              ItemCatalogSync(apiClient: apiClient).pullCatalogInBackground(
+                outletId,
+              ),
+            );
           }
 
           debugPrint(
@@ -1828,50 +1856,38 @@ class AddOrderController extends BaseController {
 
   Future<void> _applyLocalItems({required bool append}) async {
     final outletId = appPref.selectedOutlet?.id;
-    final allCached = await db.getItems(outletId: outletId);
-    var filteredItems = allCached;
-
-    if (selectedCategoryId.value != 'none') {
-      final selected = selectedCategoryId.value.toLowerCase();
-      filteredItems = filteredItems
-          .where((item) => item.category.toLowerCase() == selected)
-          .toList();
-    }
-
-    if (searchQuery.value.isNotEmpty) {
-      final query = searchQuery.value.toLowerCase();
-      filteredItems = filteredItems
-          .where((item) => item.itemName.toLowerCase().contains(query))
-          .toList();
-    }
-
-    final startIndex = (currentPage.value - 1) * itemsPerPage.value;
-    final endIndex = startIndex + itemsPerPage.value;
-
-    if (startIndex < filteredItems.length) {
-      final paginatedItems = filteredItems.sublist(
-        startIndex,
-        endIndex > filteredItems.length ? filteredItems.length : endIndex,
-      );
-
-      if (append) {
-        items.addAll(paginatedItems);
-      } else {
-        items.value = paginatedItems;
-      }
-
-      for (final item in filteredItems) {
-        allItemsMap[item.id] = item;
-      }
-
-      hasMoreItems.value = endIndex < filteredItems.length;
-    } else if (!append) {
-      items.clear();
+    if (outletId == null) {
+      if (!append) items.clear();
       hasMoreItems.value = false;
+      return;
+    }
+
+    final categoryFilter = selectedCategoryId.value == 'none'
+        ? null
+        : selectedCategoryId.value;
+    final pageSize = itemsPerPage.value;
+    final offset = append ? items.length : (currentPage.value - 1) * pageSize;
+
+    final pageResult = await db.getItemsPage(
+      outletId: outletId,
+      limit: pageSize,
+      offset: offset < 0 ? 0 : offset,
+      searchQuery: searchQuery.value,
+      categoryId: categoryFilter,
+      showItemOnly: true,
+    );
+
+    if (append) {
+      items.addAll(pageResult.items);
     } else {
-      hasMoreItems.value = false;
+      items.value = pageResult.items;
     }
 
+    for (final item in pageResult.items) {
+      allItemsMap[item.id] = item;
+    }
+
+    hasMoreItems.value = pageResult.hasMore;
     await calculateTotals();
   }
 
@@ -2223,12 +2239,24 @@ class AddOrderController extends BaseController {
                     child: Text(loc.print_kot),
                   ),
                   ElevatedButton(
-                    onPressed: () => saveAndBill(
-                      'closed',
-                      chargePlatformFee: PlatformFeeService.shouldCharge(
-                        appPref,
-                      ),
-                    ),
+                    onPressed: () async {
+                      final charge = PlatformFeeService.shouldCharge(appPref);
+                      if (charge &&
+                          !await PlatformFeeService.ensureSufficientBalance(
+                            appPref,
+                            apiClient: apiClient,
+                          )) {
+                        showError(
+                          description:
+                              'Insufficient wallet balance. Recharge at least ₹${PlatformFeeService.feeAmount.toStringAsFixed(0)} to continue.',
+                        );
+                        return;
+                      }
+                      saveAndBill(
+                        'closed',
+                        chargePlatformFee: charge,
+                      );
+                    },
                     child: Text(loc.print_bill),
                   ),
                 ],
@@ -2242,6 +2270,7 @@ class AddOrderController extends BaseController {
   }
 
   Future<void> getKOTBill() async {
+    if (!StaffAccess.ensure(StaffAccess.canPrintKot)) return;
     final loc = AppLocalizations.of(Get.context!)!;
     if (itemQuantities.isEmpty) {
       showError(description: loc.please_add_items_to_order);
@@ -2316,6 +2345,7 @@ class AddOrderController extends BaseController {
     List<OrderItem>? kotItemsOverride,
   }) async {
     if (!isKotFeatureActive) return;
+    if (!StaffAccess.canPrintKot) return;
 
     final kotItems = kotItemsOverride ?? buildKotDeltaItems();
     if (kotItems.isEmpty) return;
@@ -2466,8 +2496,8 @@ class AddOrderController extends BaseController {
     bool chargePlatformFee = false,
   }) async {
     final canSaveOrder = isEdit.value
-        ? StaffAccess.canUpdateSales
-        : StaffAccess.canCreateSales;
+        ? StaffAccess.canShowEditOrder
+        : StaffAccess.canShowCreateOrder;
     if (!StaffAccess.ensure(canSaveOrder)) return;
     final loc = AppLocalizations.of(Get.context!)!;
     final normalizedStatus = status.trim().toLowerCase();
@@ -2713,44 +2743,30 @@ class AddOrderController extends BaseController {
           return;
         }
 
-        clearOrderDraft();
         unawaited(_syncInventoryAfterSale());
-
-        if (isHoldOnly || !isBilling) {
-          await _runPostSaveUiRefresh(
-            orderStatus: normalizedStatus,
-            tableNumber: request.tableNumber,
-            currentBillNumber: billNumberForTable,
-            refreshTables: false,
-          );
-          showSuccess(description: loc.order_saved);
-          await _returnAfterOrderSave();
-          return;
-        }
-
-        // Navigate to invoice immediately; refresh dashboards/tables in background.
         showSuccess(description: loc.order_saved);
-        unawaited(
-          _runPostSaveUiRefresh(
-            orderStatus: normalizedStatus,
-            tableNumber: request.tableNumber,
-            currentBillNumber: billNumberForTable,
-          ),
-        );
-        await _maybeOpenCashDrawerOnBill(request);
-
         final invoiceRequest =
             serverBillNumber != null && serverBillNumber.isNotEmpty
             ? copyRequestWithBillNumber(request, serverBillNumber)
             : request;
-
-        await Modular.to.pushNamed(
-          HomeMainRoutes.invoiceScreen,
-          arguments: {
-            'invoice': invoiceRequest,
-            'orderFrom': invoiceRequest.orderFrom ?? selectedOrderSource.value,
-            'isEdit': isEdit.value,
-            'isOffline': false,
+        await _finishSaveLeaveOrReset(
+          isHoldOnly: isHoldOnly,
+          isBilling: isBilling,
+          orderStatus: normalizedStatus,
+          tableNumber: request.tableNumber,
+          currentBillNumber: billNumberForTable,
+          openInvoice: () async {
+            await _maybeOpenCashDrawerOnBill(request);
+            await Modular.to.pushNamed(
+              HomeMainRoutes.invoiceScreen,
+              arguments: {
+                'invoice': invoiceRequest,
+                'orderFrom':
+                    invoiceRequest.orderFrom ?? selectedOrderSource.value,
+                'isEdit': isEdit.value,
+                'isOffline': false,
+              },
+            );
           },
         );
       } else if (response == null) {
@@ -2875,37 +2891,25 @@ class AddOrderController extends BaseController {
         return;
       }
 
-      clearOrderDraft();
-
-      if (isHoldOnly || !isBilling) {
-        await _runPostSaveUiRefresh(
-          orderStatus: normalizedStatus,
-          tableNumber: savedRequest.tableNumber,
-          currentBillNumber: savedRequest.billNumber,
-          refreshTables: false,
-        );
-        showSuccess(description: loc.order_saved_offline);
-        await _returnAfterOrderSave();
-        return;
-      }
-
       showSuccess(description: loc.order_saved_offline);
-      unawaited(
-        _runPostSaveUiRefresh(
-          orderStatus: normalizedStatus,
-          tableNumber: savedRequest.tableNumber,
-          currentBillNumber: savedRequest.billNumber,
-        ),
-      );
-      await _maybeOpenCashDrawerOnBill(savedRequest);
-
-      await Modular.to.pushNamed(
-        HomeMainRoutes.invoiceScreen,
-        arguments: {
-          'invoice': savedRequest,
-          'orderFrom': savedRequest.orderFrom ?? selectedOrderSource.value,
-          'isEdit': isEdit.value,
-          'isOffline': true,
+      await _finishSaveLeaveOrReset(
+        isHoldOnly: isHoldOnly,
+        isBilling: isBilling,
+        orderStatus: normalizedStatus,
+        tableNumber: savedRequest.tableNumber,
+        currentBillNumber: savedRequest.billNumber,
+        openInvoice: () async {
+          await _maybeOpenCashDrawerOnBill(savedRequest);
+          await Modular.to.pushNamed(
+            HomeMainRoutes.invoiceScreen,
+            arguments: {
+              'invoice': savedRequest,
+              'orderFrom':
+                  savedRequest.orderFrom ?? selectedOrderSource.value,
+              'isEdit': isEdit.value,
+              'isOffline': true,
+            },
+          );
         },
       );
     } catch (e, st) {
@@ -3028,6 +3032,8 @@ class AddOrderController extends BaseController {
       subtotal: r.subtotal ?? 0,
       totalTax: r.totalTax ?? 0,
       discount: r.discount ?? 0,
+      discountType: _orderDiscountType(),
+      discountValue: _rawDiscountValue(),
       serviceCharge: r.serviceCharge ?? 0,
       totalAmount: r.totalAmount ?? 0,
       paymentReceivedIn: r.paymentReceivedIn,
@@ -3064,11 +3070,18 @@ class AddOrderController extends BaseController {
 
     for (final entry in itemQuantities.entries) {
       final qty = entry.value;
+      final frozen = isEdit.value ? _frozenOrderItem(entry.key) : null;
       final resolved = _tryResolveLine(entry.key);
-      if (resolved == null) continue;
-      final price = resolved.variant?.salePrice ?? resolved.item.salePrice;
-      final withTax = resolved.item.withTax;
-      final gstRate = resolved.item.gst.toDouble();
+      if (frozen == null && resolved == null) continue;
+
+      final catalogPrice = resolved == null
+          ? null
+          : (resolved.variant?.salePrice ?? resolved.item.salePrice);
+      final price = frozen?.salePrice ?? catalogPrice;
+      if (price == null) continue;
+
+      final gstRate = frozen?.gst ?? resolved?.item.gst.toDouble() ?? 0.0;
+      final withTax = resolved?.item.withTax ?? gstRate > 0;
 
       final double lineSubtotal = price * qty;
       final double lineTax = withTax ? (lineSubtotal * gstRate / 100.0) : 0.0;
@@ -3088,6 +3101,21 @@ class AddOrderController extends BaseController {
     debugPrint(
       'Totals updated -> subtotal: ${subtotal.value}, tax: ${totalTax.value}, total: ${totalAmount.value}',
     );
+  }
+
+  api.OrderItem? _frozenOrderItem(String lineKey) {
+    final order = orders;
+    if (order == null) return null;
+    for (final item in order.items) {
+      if (_lineKeyForOrderItem(
+            itemId: item.itemId,
+            variantId: item.variantId,
+          ) ==
+          lineKey) {
+        return item;
+      }
+    }
+    return null;
   }
 
   // --------------------
@@ -3165,6 +3193,64 @@ class AddOrderController extends BaseController {
     }
   }
 
+  /// After save: reset for a new order only if staff may create sales.
+  /// Update-only staff must leave — blank create screen would let them bill.
+  Future<void> _finishSaveLeaveOrReset({
+    required bool isHoldOnly,
+    required bool isBilling,
+    required String orderStatus,
+    String? tableNumber,
+    String? currentBillNumber,
+    required Future<void> Function() openInvoice,
+  }) async {
+    final canStartNew = StaffAccess.canShowCreateOrder;
+
+    if (!canStartNew) {
+      if (isHoldOnly || !isBilling) {
+        await _runPostSaveUiRefresh(
+          orderStatus: orderStatus,
+          tableNumber: tableNumber,
+          currentBillNumber: currentBillNumber,
+          refreshTables: false,
+        );
+        await _returnAfterOrderSave();
+        return;
+      }
+      unawaited(
+        _runPostSaveUiRefresh(
+          orderStatus: orderStatus,
+          tableNumber: tableNumber,
+          currentBillNumber: currentBillNumber,
+        ),
+      );
+      await openInvoice();
+      await _returnAfterOrderSave();
+      return;
+    }
+
+    clearOrderDraft();
+
+    if (isHoldOnly || !isBilling) {
+      await _runPostSaveUiRefresh(
+        orderStatus: orderStatus,
+        tableNumber: tableNumber,
+        currentBillNumber: currentBillNumber,
+        refreshTables: false,
+      );
+      await _returnAfterOrderSave();
+      return;
+    }
+
+    unawaited(
+      _runPostSaveUiRefresh(
+        orderStatus: orderStatus,
+        tableNumber: tableNumber,
+        currentBillNumber: currentBillNumber,
+      ),
+    );
+    await openInvoice();
+  }
+
   Future<void> _returnAfterOrderSave() async {
     await _refreshTablesAfterOrderSave();
     if (isFromTableScreen.value) {
@@ -3173,6 +3259,10 @@ class AddOrderController extends BaseController {
     }
     if (Modular.to.canPop()) {
       Modular.to.pop();
+      return;
+    }
+    if (!StaffAccess.canShowCreateOrder) {
+      Modular.to.navigate(HomeMainRoutes.holdOrders);
     }
   }
 
@@ -3282,6 +3372,8 @@ class AddOrderController extends BaseController {
   }
 
   void openSettings() async {
+    if (!StaffAccess.ensure(StaffAccess.canManageSettings)) return;
+
     // await Get.toNamed(AppRoute.orderPreferences);
     await Modular.to.pushNamed(HomeMainRoutes.orderSettings);
 

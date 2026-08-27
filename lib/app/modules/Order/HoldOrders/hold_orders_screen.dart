@@ -79,18 +79,18 @@ class _HoldOrdersScreenState extends State<HoldOrdersScreen> {
           },
         ),
       ),
-      floatingActionButton: StaffAccess.canCreateSales
+      floatingActionButton: StaffAccess.canShowCreateOrder
           ? FloatingActionButton.extended(
-        onPressed: () => Modular.to.navigate(HomeMainRoutes.createOrder),
-        backgroundColor: AppColor.secondaryPrimary,
-        foregroundColor: AppColor.white,
-        elevation: 4,
-        icon: Icon(Icons.add, size: 24),
-        label: Text(
-          loc.add_Order,
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-      )
+              onPressed: () => Modular.to.navigate(HomeMainRoutes.createOrder),
+              backgroundColor: AppColor.secondaryPrimary,
+              foregroundColor: AppColor.white,
+              elevation: 4,
+              icon: Icon(Icons.add, size: 24),
+              label: Text(
+                loc.add_Order,
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            )
           : null,
     );
   }
@@ -232,7 +232,7 @@ class _OrderCard extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: StaffAccess.canUpdateSales
+            onTap: StaffAccess.canShowEditOrder
                 ? () => _editOrder(order)
                 : null,
             borderRadius: BorderRadius.circular(16),
@@ -338,7 +338,17 @@ class _OrderCard extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                loc.home_table_number(order.tableNumber!),
+                                loc.home_table_number(
+                                  order.tableNumber!
+                                          .trim()
+                                          .toLowerCase()
+                                          .startsWith('table ')
+                                      ? order.tableNumber!
+                                            .trim()
+                                            .substring(6)
+                                            .trim()
+                                      : order.tableNumber!.trim(),
+                                ),
                                 style: TextStyle(
                                   color: Colors.grey[700],
                                   fontSize: 12,
@@ -440,15 +450,16 @@ class _OrderCard extends StatelessWidget {
                         ),
                       ),
                       // Edit + Delete
-                      if (StaffAccess.canUpdateSales) ...[
+                      if (StaffAccess.canShowEditOrder) ...[
                         Tooltip(
                           message: loc.edit,
                           child: IconButton(
                             onPressed: () => _editOrder(order),
                             icon: const Icon(Icons.edit_outlined, size: 20),
                             style: IconButton.styleFrom(
-                              backgroundColor:
-                                  AppColor.primary.withOpacity(0.10),
+                              backgroundColor: AppColor.primary.withOpacity(
+                                0.10,
+                              ),
                               foregroundColor: AppColor.primary,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -465,8 +476,7 @@ class _OrderCard extends StatelessWidget {
                             onPressed: () => _confirmDelete(order, loc),
                             icon: const Icon(Icons.delete_outline, size: 20),
                             style: IconButton.styleFrom(
-                              backgroundColor:
-                                  Colors.red.withOpacity(0.10),
+                              backgroundColor: Colors.red.withOpacity(0.10),
                               foregroundColor: Colors.red,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -489,7 +499,7 @@ class _OrderCard extends StatelessWidget {
   }
 
   void _confirmDelete(OrderModel order, AppLocalizations loc) {
-    if (!StaffAccess.ensure(StaffAccess.canUpdateSales)) return;
+    if (!StaffAccess.ensure(StaffAccess.canShowEditOrder)) return;
     Get.dialog(
       Dialog(
         backgroundColor: Colors.transparent,
@@ -575,8 +585,9 @@ class _OrderCard extends StatelessWidget {
                           onPressed: () {
                             Get.back();
                             if (Get.isRegistered<HoldOrdersController>()) {
-                              Get.find<HoldOrdersController>()
-                                  .softDeleteOrder(order);
+                              Get.find<HoldOrdersController>().softDeleteOrder(
+                                order,
+                              );
                             }
                           },
                           style: ElevatedButton.styleFrom(
@@ -643,7 +654,7 @@ class _OrderCard extends StatelessWidget {
   }
 
   void _editOrder(OrderModel order) {
-    if (!StaffAccess.ensure(StaffAccess.canUpdateSales)) return;
+    if (!StaffAccess.ensure(StaffAccess.canShowEditOrder)) return;
     EditOrderDialog.show(
       order: order,
       onUpdate: () {

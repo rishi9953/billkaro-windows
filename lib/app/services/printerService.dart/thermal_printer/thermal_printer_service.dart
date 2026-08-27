@@ -527,7 +527,6 @@ class ThermalPrinterService extends GetxController {
     try {
       if (await FlutterBluePlus.isSupported == false) {
         connectionStatus.value = 'Bluetooth not supported on this device';
-        isScanning.value = false;
         return;
       }
       await stopScan();
@@ -539,24 +538,42 @@ class ThermalPrinterService extends GetxController {
             .where((r) => r.device.platformName.trim().isNotEmpty)
             .toList(),
       );
-      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 10));
-      await Future.delayed(const Duration(seconds: 10));
-      await stopScan();
+      // Windows BLE can hang inside startScan; never leave isScanning=true forever.
+      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 10))
+          .timeout(const Duration(seconds: 12));
+    } on TimeoutException {
+      debugPrint('Scan timed out (adapter/plugin hang)');
+      connectionStatus.value = 'Bluetooth scan timed out';
     } catch (e) {
       debugPrint('Scan error: $e');
       connectionStatus.value = 'Scan failed: $e';
-      isScanning.value = false;
+    } finally {
+      await stopScan();
     }
   }
 
   Future<void> stopScan() async {
-    if (kIsWeb) return;
+    if (kIsWeb) {
+      isScanning.value = false;
+      return;
+    }
     try {
-      await FlutterBluePlus.stopScan();
+      await FlutterBluePlus.stopScan().timeout(const Duration(seconds: 3));
     } catch (_) {}
     isScanning.value = false;
     await _scanResultsSubscription?.cancel();
     _scanResultsSubscription = null;
+  }
+
+  /// Clears hung BLE UI flags (common on Windows after a stuck scan/connect).
+  void recoverStuckBleUiState() {
+    if (isScanning.value) {
+      isScanning.value = false;
+    }
+    if (isBleConnecting.value) {
+      isBleConnecting.value = false;
+      connectingBleDeviceId.value = null;
+    }
   }
 
   // Public API - USB Scanning and Connection
@@ -1011,7 +1028,9 @@ class ThermalPrinterService extends GetxController {
     return false;
   }
 
-  ({int w, int item, int qty, int price, int amount}) _invoiceColumns(int w) {
+  ({int w, int item, int qty, int price, int gst, int amount}) _invoiceColumns(
+    int w,
+  ) {
     return selectedPaperSize.value.invoiceColumns();
   }
 
@@ -1078,7 +1097,9 @@ class ThermalPrinterService extends GetxController {
         } catch (_) {}
 
         BluetoothDevice? targetDevice;
-        await FlutterBluePlus.stopScan();
+        try {
+          await FlutterBluePlus.stopScan().timeout(const Duration(seconds: 3));
+        } catch (_) {}
         final sub = FlutterBluePlus.scanResults.listen((results) {
           for (final r in results) {
             if (r.device.remoteId.toString() == savedId) {
@@ -1087,10 +1108,23 @@ class ThermalPrinterService extends GetxController {
           }
         });
 
-        await FlutterBluePlus.startScan(timeout: const Duration(seconds: 6));
-        await Future.delayed(const Duration(seconds: 6));
-        await FlutterBluePlus.stopScan();
-        await sub.cancel();
+        try {
+          await FlutterBluePlus.startScan(timeout: const Duration(seconds: 6))
+              .timeout(const Duration(seconds: 8));
+          await Future.delayed(const Duration(seconds: 6));
+        } on TimeoutException {
+          debugPrint('Role BLE reconnect scan timed out');
+        } catch (e) {
+          debugPrint('Role BLE reconnect scan failed: $e');
+        } finally {
+          try {
+            await FlutterBluePlus.stopScan().timeout(
+              const Duration(seconds: 3),
+            );
+          } catch (_) {}
+          await sub.cancel();
+          isScanning.value = false;
+        }
 
         if (targetDevice != null) {
           final ok = await connectToDevice(targetDevice!);
@@ -1493,6 +1527,7 @@ class ThermalPrinterService extends GetxController {
         TextHelper.padRight('Item', cols.item) +
         TextHelper.padRight('Qty', cols.qty) +
         TextHelper.padRight('Price', cols.price) +
+        TextHelper.padRight('GST', cols.gst) +
         TextHelper.padLeft('Amount', cols.amount);
     builder.bold('$itemHeader\n');
 
@@ -1503,12 +1538,20 @@ class ThermalPrinterService extends GetxController {
           : item.displayName;
       String qty = 'x${item.quantity}';
       String price = item.salePrice.toStringAsFixed(0);
+      final gstRate = item.gst;
+      String gst = gstRate <= 0
+          ? '-'
+          : gstRate == gstRate.roundToDouble()
+              ? '${gstRate.toInt()}%'
+              : '${gstRate.toStringAsFixed(1)}%';
+      if (gst.length > cols.gst) gst = gst.substring(0, cols.gst);
       String amount = (item.quantity * item.salePrice).toStringAsFixed(2);
 
       String row =
           TextHelper.padRight(itemName, cols.item) +
           TextHelper.padRight(qty, cols.qty) +
           TextHelper.padRight(price, cols.price) +
+          TextHelper.padRight(gst, cols.gst) +
           TextHelper.padLeft(amount, cols.amount);
       builder.text('$row\n');
     }
@@ -1856,10 +1899,11 @@ class ThermalPrinterService extends GetxController {
           pw.Table(
             // Give right-side numbers more space to avoid clipping.
             columnWidths: const {
-              0: pw.FlexColumnWidth(6.5), // Item
-              1: pw.FlexColumnWidth(1.5), // Qty
-              2: pw.FlexColumnWidth(2.0), // Price
-              3: pw.FlexColumnWidth(2.0), // Amount
+              0: pw.FlexColumnWidth(5.5), // Item
+              1: pw.FlexColumnWidth(1.3), // Qty
+              2: pw.FlexColumnWidth(1.8), // Price
+              3: pw.FlexColumnWidth(1.4), // GST
+              4: pw.FlexColumnWidth(2.0), // Amount
             },
             border: pw.TableBorder(
               horizontalInside: pw.BorderSide(
@@ -1894,6 +1938,13 @@ class ThermalPrinterService extends GetxController {
                     padding: const pw.EdgeInsets.symmetric(vertical: 4),
                     child: pw.Align(
                       alignment: pw.Alignment.centerRight,
+                      child: pw.Text('GST', style: t(b: true)),
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 4),
+                    child: pw.Align(
+                      alignment: pw.Alignment.centerRight,
                       child: pw.Text('Amt', style: t(b: true)),
                     ),
                   ),
@@ -1903,6 +1954,12 @@ class ThermalPrinterService extends GetxController {
                 final qty = it.quantity;
                 final price = it.salePrice;
                 final amt = qty * price;
+                final gstRate = it.gst;
+                final gstLabel = gstRate <= 0
+                    ? '-'
+                    : gstRate == gstRate.roundToDouble()
+                        ? '${gstRate.toInt()}%'
+                        : '${gstRate.toStringAsFixed(1)}%';
                 return pw.TableRow(
                   children: [
                     pw.Padding(
@@ -1921,6 +1978,13 @@ class ThermalPrinterService extends GetxController {
                       child: pw.Align(
                         alignment: pw.Alignment.centerRight,
                         child: pw.Text(price.toStringAsFixed(2), style: t()),
+                      ),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                      child: pw.Align(
+                        alignment: pw.Alignment.centerRight,
+                        child: pw.Text(gstLabel, style: t()),
                       ),
                     ),
                     pw.Padding(

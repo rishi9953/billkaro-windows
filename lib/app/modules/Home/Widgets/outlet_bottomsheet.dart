@@ -1,6 +1,7 @@
 // Manage outlets dialog (kept filename for existing imports).
 
 import 'package:billkaro/app/modules/Home/home_screen_controller.dart';
+import 'package:billkaro/app/Widgets/delete_outlet_dialog.dart';
 import 'package:billkaro/app/Widgets/logout_dialog.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/staff_access.dart';
@@ -187,7 +188,11 @@ class _OutletBottomSheetState extends State<OutletBottomSheet> {
           logoUrl: logo,
           isSelected: isSelected,
           showDelete: StaffAccess.isOwnerSession,
-          onDelete: () => controller.deleteOutlet(outlet),
+          onDelete: () async {
+            final name = outlet.businessName?.toString().capitalize ?? 'Unnamed Outlet';
+            final confirmed = await showDeleteOutletDialog(context, outletName: name);
+            if (confirmed) controller.deleteOutlet(outlet);
+          },
           onTap: () {
             Navigator.of(context).pop();
             if (!isSelected) {

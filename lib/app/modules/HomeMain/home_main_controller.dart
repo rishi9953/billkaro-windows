@@ -1,6 +1,7 @@
 import 'package:billkaro/app/services/Modals/login_response.dart';
 import 'package:billkaro/app/services/kds/kds_realtime_service.dart';
 import 'package:billkaro/app/services/session/session_realtime_service.dart';
+import 'package:billkaro/app/services/subscription_post_login_dialogs.dart';
 import 'package:billkaro/app/services/wallet/wallet_realtime_service.dart';
 import 'package:billkaro/app/services/notification/app_background_notification_service.dart';
 import 'package:billkaro/app/services/notification/app_notification_store.dart';
@@ -73,6 +74,12 @@ class HomeMainController extends BaseController {
   @override
   void onReady() async {
     await getUserDetails();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Give the shell / overlay a moment so title-bar-safe overlay can insert.
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      if (isClosed) return;
+      await showPostLoginSubscriptionDialogsIfNeeded();
+    });
     // Defer notification permission to next frame (avoids Android 16 crash when enabling)
     // SchedulerBinding.instance.addPostFrameCallback((_) {
     //   _requestNotificationPermissionAfterLogin();

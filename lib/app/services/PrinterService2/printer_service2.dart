@@ -226,10 +226,11 @@ class PrinterService2 extends GetxService {
     final bool isLargePaper = paperSize == PaperSize.mm80 ? false : true;
 
     // Column widths for different sections - using 12-column grid system
-    // Total must equal 12: Item Name(6) + Qty(2) + Price(2) + Amount(2) = 12
-    final int itemNameWidth = 6;
+    // Total must equal 12: Item(5) + Qty(2) + Price(2) + GST(1) + Amount(2) = 12
+    final int itemNameWidth = 5;
     final int qtyWidth = 2;
     final int priceWidth = 2;
+    final int gstWidth = 1;
     final int amountWidth = 2;
 
     final int labelWidth = isLargePaper ? 10 : 8;
@@ -312,6 +313,11 @@ class PrinterService2 extends GetxService {
         styles: const PosStyles(bold: true, align: PosAlign.right),
       ),
       PosColumn(
+        text: 'GST',
+        width: gstWidth,
+        styles: const PosStyles(bold: true, align: PosAlign.right),
+      ),
+      PosColumn(
         text: 'Amount',
         width: amountWidth,
         styles: const PosStyles(bold: true, align: PosAlign.right),
@@ -322,13 +328,25 @@ class PrinterService2 extends GetxService {
 
     /// 📦 ITEMS - Item name on first line, quantity on second line below it
     for (final item in items) {
-      // First line: Item name (left) | Price (right) | Amount (right)
+      final gstRate = item.gst;
+      final gstLabel = gstRate <= 0
+          ? '-'
+          : gstRate == gstRate.roundToDouble()
+              ? '${gstRate.toInt()}%'
+              : '${gstRate.toStringAsFixed(0)}%';
+
+      // First line: Item name | Price | GST | Amount
       bytes += gen.row([
         PosColumn(text: item.itemName, width: itemNameWidth),
-        PosColumn(text: '', width: qtyWidth), // Empty space for Qty column
+        PosColumn(text: '', width: qtyWidth),
         PosColumn(
           text: item.salePrice.toStringAsFixed(2),
           width: priceWidth,
+          styles: const PosStyles(align: PosAlign.right),
+        ),
+        PosColumn(
+          text: gstLabel,
+          width: gstWidth,
           styles: const PosStyles(align: PosAlign.right),
         ),
         PosColumn(
@@ -347,6 +365,7 @@ class PrinterService2 extends GetxService {
         ),
         PosColumn(text: '', width: qtyWidth),
         PosColumn(text: '', width: priceWidth),
+        PosColumn(text: '', width: gstWidth),
         PosColumn(text: '', width: amountWidth),
       ]);
     }

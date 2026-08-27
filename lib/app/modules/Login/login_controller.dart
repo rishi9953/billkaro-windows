@@ -283,10 +283,13 @@ class LoginController extends BaseController {
       isLoading.value = true;
 
       final email = emailOrPhoneController.text.trim();
+      final isStaff = signInTabIndex.value == 1;
 
-      // Call forgot password API
+      // Call forgot password API (user or staff)
       final response = await callApi(
-        apiClient.forgotPassword({'email': email}),
+        isStaff
+            ? apiClient.staffForgotPassword({'email': email})
+            : apiClient.forgotPassword({'email': email}),
       );
 
       if (response != null) {
@@ -378,10 +381,15 @@ class LoginController extends BaseController {
 
     final outlets = response.user.outletData;
     if (outlets == null || outlets.isEmpty) {
-      showError(
-        description:
-            'No outlet is linked to this account. Please contact support or complete outlet setup.',
-      );
+      if (roleIsStaff) {
+        showError(
+          description:
+              'No outlet is linked to this account. Please contact support or complete outlet setup.',
+        );
+        return;
+      }
+      appPref.selectedOutlet = null;
+      Get.offAllNamed(AppRoute.createOutlet);
       return;
     }
 

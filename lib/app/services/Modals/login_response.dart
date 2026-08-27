@@ -28,6 +28,17 @@ Object? _readUserIsTrial(Map json, String key) {
   return null;
 }
 
+Object? _readAccessModeChosen(Map json, String key) {
+  final v = json['accessModeChosen'] ?? json['access_mode_chosen'];
+  if (v is bool) return v;
+  if (v is int) return v != 0;
+  if (v is String) {
+    final s = v.toLowerCase();
+    return s == 'true' || s == '1' || s == 'yes';
+  }
+  return null;
+}
+
 @JsonSerializable()
 class LoginResponse {
   @JsonKey(name: 'access_token')
@@ -62,6 +73,9 @@ class User {
   final String? mobile;
   @JsonKey(readValue: _readUserIsTrial)
   final bool? isTrial;
+  @JsonKey(readValue: _readAccessModeChosen)
+  final bool? accessModeChosen;
+  final String? billingAccessMode;
   final List<OutletData>? outletData;
   final String? role;
   final String? staffRole;
@@ -69,6 +83,16 @@ class User {
 
   /// Business owner user id when [role] is `staff` ([id] is the staff record id).
   final String? userId;
+
+  /// Staff-only profile fields (ignored for business owners).
+  final String? userName;
+  final String? uniqueId;
+  final String? district;
+  final String? pincode;
+  final String? dateOfBirth;
+  final String? gender;
+  final String? profileImage;
+  final bool? activated;
 
   User({
     this.createdAt,
@@ -86,11 +110,21 @@ class User {
     this.title,
     this.mobile,
     this.isTrial,
+    this.accessModeChosen,
+    this.billingAccessMode,
     this.outletData,
     this.role,
     this.staffRole,
     this.permissions,
     this.userId,
+    this.userName,
+    this.uniqueId,
+    this.district,
+    this.pincode,
+    this.dateOfBirth,
+    this.gender,
+    this.profileImage,
+    this.activated,
   });
 
   factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);

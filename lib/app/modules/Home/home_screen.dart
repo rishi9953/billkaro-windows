@@ -220,10 +220,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         _weeklySalesChart(loc),
                       ],
                       const SizedBox(height: _sectionGap),
-                      _topSellingItemsSection(loc),
-                      const SizedBox(height: _sectionGap),
+                      if (StaffAccess.canViewProducts) ...[
+                        _topSellingItemsSection(loc),
+                        const SizedBox(height: _sectionGap),
+                      ],
                       _featuresSection(loc),
-                      const SizedBox(height: 22),
                       _testimonialsCarousel(loc),
                       const SizedBox(height: 22),
                       Padding(
@@ -613,7 +614,7 @@ class _HomeScreenState extends State<HomeScreen> {
             controller.selectedOutlet.value;
             final showTables = HomeMainRoutes.outletShowsTables();
             final actions = <Map<String, dynamic>>[
-              if (StaffAccess.canAccessSales)
+              if (StaffAccess.canShowOrdersList)
                 {
                   'icon': Icons.check_circle_outline,
                   'label': loc.closedOrders,
@@ -621,14 +622,28 @@ class _HomeScreenState extends State<HomeScreen> {
                     Modular.to.pushNamed(HomeMainRoutes.closedOrders);
                   },
                 },
-              if (StaffAccess.canAccessSales)
+              if (StaffAccess.canShowOrdersList)
                 {
                   'icon': Icons.schedule_outlined,
                   'label': loc.onHoldOrders,
                   'onTap': () =>
                       Modular.to.pushNamed(HomeMainRoutes.holdOrders),
                 },
-              if (StaffAccess.canCreateSales)
+              if (StaffAccess.canAccessDeletedOrders)
+                {
+                  'icon': Icons.delete_outline,
+                  'label': loc.deletedOrders,
+                  'onTap': () =>
+                      Modular.to.pushNamed(HomeMainRoutes.deletedOrders),
+                },
+              if (StaffAccess.canAccessStockSummary)
+                {
+                  'icon': Icons.inventory_2_outlined,
+                  'label': loc.stockSummary,
+                  'onTap': () =>
+                      Modular.to.pushNamed(HomeMainRoutes.stockSummary),
+                },
+              if (StaffAccess.canShowCreateOrder)
                 {
                   'icon': Icons.point_of_sale_outlined,
                   'label': loc.create_order,
@@ -673,14 +688,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   'label': loc.reports,
                   'onTap': () => Modular.to.pushNamed(HomeMainRoutes.reports),
                 },
-              if (kotVisible)
+              if (kotVisible && StaffAccess.canViewKot)
                 {
                   'icon': Icons.receipt_long_outlined,
                   'label': loc.kot_history,
                   'onTap': () =>
                       Modular.to.pushNamed(HomeMainRoutes.kotHistory),
                 },
-              if (kotVisible)
+              if (kotVisible && StaffAccess.canOpenKitchenDisplay)
                 {
                   'icon': Icons.open_in_browser_rounded,
                   'label': loc.home_kitchen_web,
@@ -826,13 +841,15 @@ class _HomeScreenState extends State<HomeScreen> {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           hoverColor: statusColor.withOpacity(0.10),
-          onTap: () {
-            if (!StaffAccess.ensure(StaffAccess.canUpdateSales)) return;
-            Modular.to.pushNamed(
-              HomeMainRoutes.createOrder,
-              arguments: {'order': order, 'isEdit': true},
-            );
-          },
+          onTap: StaffAccess.canShowEditOrder
+              ? () {
+                  if (!StaffAccess.ensure(StaffAccess.canShowEditOrder)) return;
+                  Modular.to.pushNamed(
+                    HomeMainRoutes.createOrder,
+                    arguments: {'order': order, 'isEdit': true},
+                  );
+                }
+              : null,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             decoration: BoxDecoration(
@@ -2303,105 +2320,96 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _featuresSection(AppLocalizations loc) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Showcase(
-          key: showcaseController.featuresKey,
-          title: loc.featuresForYou,
-          description: loc.home_features_showcase_desc,
-          titleTextStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-          descTextStyle: const TextStyle(fontSize: 14, color: Colors.white70),
-          overlayColor: Colors.black54,
-          overlayOpacity: 0.7,
-          tooltipBackgroundColor: AppColor.primary,
-          textColor: Colors.white,
-          child: _sectionHeader(
-            loc.featuresForYou,
-            subtitle: loc.home_recommended_setup_tools,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: _pageHMargin),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final isWide = constraints.maxWidth >= 700;
+    return Obx(() {
+      // Always read Rx first — staff without print/settings short-circuit && and
+      // would leave Obx with no observables (GetX improper-use error).
+      final isKotEnabled = controller.isKOT.value;
+      final showAddStaff = StaffAccess.canCreateStaff;
+      final showPrintKot =
+          StaffAccess.canPrintKot &&
+          StaffAccess.canManageSettings &&
+          HomeMainRoutes.outletIsCafeOrRestaurant() &&
+          !isKotEnabled;
+      if (!showAddStaff && !showPrintKot) {
+        return const SizedBox.shrink();
+      }
 
-              return Obx(() {
-                final List<Widget> tiles = [];
-
-                tiles.add(
-                  Expanded(
-                    child: _buildFeatureListTile(
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Showcase(
+            key: showcaseController.featuresKey,
+            title: loc.featuresForYou,
+            description: loc.home_features_showcase_desc,
+            titleTextStyle: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+            descTextStyle: const TextStyle(fontSize: 14, color: Colors.white70),
+            overlayColor: Colors.black54,
+            overlayOpacity: 0.7,
+            tooltipBackgroundColor: AppColor.primary,
+            textColor: Colors.white,
+            child: _sectionHeader(
+              loc.featuresForYou,
+              subtitle: loc.home_recommended_setup_tools,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: _pageHMargin),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isWide = constraints.maxWidth >= 700;
+                final tiles = <Widget>[
+                  if (showAddStaff)
+                    _buildFeatureListTile(
                       title: loc.addStaffSecurely_title,
                       description: loc.addStaffSecurely_desc,
                       icon: Icons.people_outline,
                       onTap: () => Modular.to.navigate(HomeMainRoutes.staff),
                     ),
-                  ),
-                );
-
-                if (HomeMainRoutes.outletIsCafeOrRestaurant() &&
-                    !controller.isKOT.value) {
-                  tiles.add(const SizedBox(width: 12, height: 12));
-                  tiles.add(
-                    Expanded(
-                      child: _buildFeatureListTile(
-                        title: loc.printKOT_title,
-                        description: loc.printKOT_desc,
-                        icon: Icons.print_outlined,
-                        onTap: () {
-                          controller.setKotMode(true);
-                        },
-                        badgeText: loc.badge_new,
-                      ),
+                  if (showPrintKot)
+                    _buildFeatureListTile(
+                      title: loc.printKOT_title,
+                      description: loc.printKOT_desc,
+                      icon: Icons.print_outlined,
+                      onTap: () {
+                        controller.setKotMode(true);
+                      },
+                      badgeText: loc.badge_new,
                     ),
-                  );
-                }
+                ];
 
-                if (isWide) {
-                  // Show tiles in a single row on wide screens
+                if (isWide && tiles.length > 1) {
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: tiles,
+                    children: [
+                      for (var i = 0; i < tiles.length; i++) ...[
+                        if (i > 0) const SizedBox(width: 12),
+                        Expanded(child: tiles[i]),
+                      ],
+                    ],
                   );
                 }
 
-                // Stack tiles vertically on small screens
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _buildFeatureListTile(
-                      title: loc.addStaffSecurely_title,
-                      description: loc.addStaffSecurely_desc,
-                      icon: Icons.people_outline,
-                      onTap: () => Get.toNamed(AppRoute.staffDetailsScreen),
-                    ),
-                    const SizedBox(height: 12),
-                    if (HomeMainRoutes.outletIsCafeOrRestaurant() &&
-                        !controller.isKOT.value)
-                      _buildFeatureListTile(
-                        title: loc.printKOT_title,
-                        description: loc.printKOT_desc,
-                        icon: Icons.print_outlined,
-                        onTap: () {
-                          controller.setKotMode(true);
-                        },
-                        badgeText: loc.badge_new,
-                      ),
+                    for (var i = 0; i < tiles.length; i++) ...[
+                      if (i > 0) const SizedBox(height: 12),
+                      tiles[i],
+                    ],
                   ],
                 );
-              });
-            },
+              },
+            ),
           ),
-        ),
-      ],
-    );
+          const SizedBox(height: 22),
+        ],
+      );
+    });
   }
 
   Widget _buildFeatureListTile({

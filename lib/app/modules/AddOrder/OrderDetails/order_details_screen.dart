@@ -98,6 +98,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                             loc: loc,
                             prefixIcon: Icons.phone_outlined,
                             bottomGap: 0,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
                           ),
                         ),
                       ],
@@ -123,6 +126,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                           loc: loc,
                           prefixIcon: Icons.phone_outlined,
                           bottomGap: 0,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
                         ),
                       ],
                     ),
@@ -414,6 +420,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     required AppLocalizations loc,
     double bottomGap = 24,
     IconData? prefixIcon,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     String hintText = '';
     if (label == loc.table_number) {
@@ -443,6 +450,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
             keyboardType: type,
             textCapitalization: cap,
             maxLength: max,
+            inputFormatters: inputFormatters,
             validator:
                 validator ?? (v) => v?.isEmpty ?? true ? loc.required : null,
             decoration: _fieldDecoration(

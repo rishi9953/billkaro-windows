@@ -7,6 +7,7 @@ import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/date_util.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -115,6 +116,7 @@ class KotHistoryController extends BaseController {
   }
 
   Future<void> reprintThermal(OrderModel o) async {
+    if (!StaffAccess.ensure(StaffAccess.canReprintKot)) return;
     try {
       final printerService = ThermalPrinterService.instance;
       final connected = await printerService.ensureConnectedForRole(

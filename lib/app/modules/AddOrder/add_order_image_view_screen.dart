@@ -1,5 +1,7 @@
 import 'package:billkaro/app/modules/AddOrder/add_order_controller.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_access.dart';
+import 'package:billkaro/utils/staff_create_product_gate.dart';
 
 class AddOrderImageViewScreen extends StatefulWidget {
   final AddOrderController controller;
@@ -88,7 +90,8 @@ class _AddOrderImageViewScreenState extends State<AddOrderImageViewScreen> {
 
           // Quick Add Item Button
           Obx(() {
-            if (widget.controller.showSearchBar.value) {
+            if (widget.controller.showSearchBar.value ||
+                !StaffAccess.canCreateProducts) {
               return SizedBox.shrink();
             }
             return Column(
@@ -242,7 +245,23 @@ class _AddOrderImageViewScreenState extends State<AddOrderImageViewScreen> {
           Expanded(
             child: Obx(() {
               if (widget.controller.items.isEmpty) {
-                // Empty State
+                if (!StaffAccess.canCreateProducts) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        loc.no_items_found,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                // Empty State — create shortcuts (owners / create-permitted staff)
                 return SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.all(8),
@@ -253,76 +272,80 @@ class _AddOrderImageViewScreenState extends State<AddOrderImageViewScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Add Menu using Photos (AI-powered)
-                          GestureDetector(
-                            onTap: () => widget.controller.addMenuUsingAI(),
-                            child: Container(
-                              padding: const EdgeInsets.all(8.0),
-                              height: 160,
-                              width: 130,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Color(0xFF9D6CFF),
-                                    Color(0xFF5E8EFF),
+                          StaffCreateProductGate(
+                            child: GestureDetector(
+                              onTap: () => widget.controller.addMenuUsingAI(),
+                              child: Container(
+                                padding: const EdgeInsets.all(8.0),
+                                height: 160,
+                                width: 130,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Color(0xFF9D6CFF),
+                                      Color(0xFF5E8EFF),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.auto_awesome,
+                                      color: Colors.white,
+                                    ),
+                                    Text(
+                                      loc.add_your_menu_using_photos,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
                                   ],
                                 ),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.auto_awesome,
-                                    color: Colors.white,
-                                  ),
-                                  Text(
-                                    loc.add_your_menu_using_photos,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
                               ),
                             ),
                           ),
                           const SizedBox(width: 16),
                           // Add Item
-                          GestureDetector(
-                            onTap: () => widget.controller.addItem('none'),
-                            child: Container(
-                              padding: const EdgeInsets.all(8.0),
-                              height: 160,
-                              width: 130,
-                              decoration: BoxDecoration(
-                                color: AppColor.white,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: Colors.grey[300]!,
-                                  width: 2,
+                          StaffCreateProductGate(
+                            child: GestureDetector(
+                              onTap: () => widget.controller.addItem('none'),
+                              child: Container(
+                                padding: const EdgeInsets.all(8.0),
+                                height: 160,
+                                width: 130,
+                                decoration: BoxDecoration(
+                                  color: AppColor.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: Colors.grey[300]!,
+                                    width: 2,
+                                  ),
                                 ),
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.add,
-                                    color: Colors.grey[600],
-                                    size: 15,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    loc.addItems,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.add,
                                       color: Colors.grey[600],
-                                      fontWeight: FontWeight.w500,
+                                      size: 15,
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      loc.addItems,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -405,41 +428,43 @@ class _AddOrderImageViewScreenState extends State<AddOrderImageViewScreen> {
                                       ),
                                     );
                                   }),
-                                  GestureDetector(
-                                    onTap: () => widget.controller.addItem(
-                                      category.categoryName,
-                                    ),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(8.0),
-                                      height: 160,
-                                      width: 130,
-                                      decoration: BoxDecoration(
-                                        color: AppColor.white,
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                          color: Colors.grey[300]!,
-                                          width: 2,
-                                        ),
+                                  StaffCreateProductGate(
+                                    child: GestureDetector(
+                                      onTap: () => widget.controller.addItem(
+                                        category.categoryName,
                                       ),
-                                      child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.add,
-                                            color: Colors.grey[600],
-                                            size: 15,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(8.0),
+                                        height: 160,
+                                        width: 130,
+                                        decoration: BoxDecoration(
+                                          color: AppColor.white,
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: Colors.grey[300]!,
+                                            width: 2,
                                           ),
-                                          const SizedBox(height: 16),
-                                          Text(
-                                            loc.addItems,
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
+                                        ),
+                                        child: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.add,
                                               color: Colors.grey[600],
-                                              fontWeight: FontWeight.w500,
+                                              size: 15,
                                             ),
-                                          ),
-                                        ],
+                                            const SizedBox(height: 16),
+                                            Text(
+                                              loc.addItems,
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                color: Colors.grey[600],
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -481,82 +506,86 @@ class _AddOrderImageViewScreenState extends State<AddOrderImageViewScreen> {
                                   runSpacing: 12,
                                   children: [
                                     // Add Photo Card
-                                    GestureDetector(
-                                      onTap: () =>
-                                          widget.controller.addMenuUsingAI(),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(8.0),
-                                        height: 160,
-                                        width: 130,
-                                        decoration: BoxDecoration(
-                                          gradient: const LinearGradient(
-                                            begin: Alignment.topCenter,
-                                            end: Alignment.bottomCenter,
-                                            colors: [
-                                              Color(0xFF9D6CFF),
-                                              Color(0xFF5E8EFF),
+                                    StaffCreateProductGate(
+                                      child: GestureDetector(
+                                        onTap: () =>
+                                            widget.controller.addMenuUsingAI(),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(8.0),
+                                          height: 160,
+                                          width: 130,
+                                          decoration: BoxDecoration(
+                                            gradient: const LinearGradient(
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                              colors: [
+                                                Color(0xFF9D6CFF),
+                                                Color(0xFF5E8EFF),
+                                              ],
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                          ),
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              const Icon(
+                                                Icons.auto_awesome,
+                                                color: Colors.white,
+                                              ),
+                                              Text(
+                                                loc.add_your_menu_using_photos,
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
                                             ],
                                           ),
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                        ),
-                                        child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            const Icon(
-                                              Icons.auto_awesome,
-                                              color: Colors.white,
-                                            ),
-                                            Text(
-                                              loc.add_your_menu_using_photos,
-                                              textAlign: TextAlign.center,
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ],
                                         ),
                                       ),
                                     ),
 
                                     // Add Item Card
-                                    GestureDetector(
-                                      onTap: () =>
-                                          widget.controller.addItem('none'),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(8.0),
-                                        height: 160,
-                                        width: 130,
-                                        decoration: BoxDecoration(
-                                          color: AppColor.white,
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                          border: Border.all(
-                                            color: Colors.grey[300]!,
-                                            width: 2,
+                                    StaffCreateProductGate(
+                                      child: GestureDetector(
+                                        onTap: () =>
+                                            widget.controller.addItem('none'),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(8.0),
+                                          height: 160,
+                                          width: 130,
+                                          decoration: BoxDecoration(
+                                            color: AppColor.white,
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            border: Border.all(
+                                              color: Colors.grey[300]!,
+                                              width: 2,
+                                            ),
                                           ),
-                                        ),
-                                        child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.add,
-                                              color: Colors.grey[600],
-                                              size: 15,
-                                            ),
-                                            const SizedBox(height: 16),
-                                            Text(
-                                              loc.addItems,
-                                              textAlign: TextAlign.center,
-                                              style: TextStyle(
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.add,
                                                 color: Colors.grey[600],
-                                                fontWeight: FontWeight.w500,
+                                                size: 15,
                                               ),
-                                            ),
-                                          ],
+                                              const SizedBox(height: 16),
+                                              Text(
+                                                loc.addItems,
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  color: Colors.grey[600],
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -671,40 +700,42 @@ class _AddOrderImageViewScreenState extends State<AddOrderImageViewScreen> {
                                 ),
                               );
                             }),
-                            GestureDetector(
-                              onTap: () => widget.controller.addItem(
-                                widget.controller.selectedCategory.value,
-                              ),
-                              child: Container(
-                                padding: const EdgeInsets.all(8.0),
-                                height: 160,
-                                width: 130,
-                                decoration: BoxDecoration(
-                                  color: AppColor.white,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: Colors.grey[300]!,
-                                    width: 2,
-                                  ),
+                            StaffCreateProductGate(
+                              child: GestureDetector(
+                                onTap: () => widget.controller.addItem(
+                                  widget.controller.selectedCategory.value,
                                 ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.add,
-                                      color: Colors.grey[600],
-                                      size: 15,
+                                child: Container(
+                                  padding: const EdgeInsets.all(8.0),
+                                  height: 160,
+                                  width: 130,
+                                  decoration: BoxDecoration(
+                                    color: AppColor.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: Colors.grey[300]!,
+                                      width: 2,
                                     ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      loc.addItems,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.add,
                                         color: Colors.grey[600],
-                                        fontWeight: FontWeight.w500,
+                                        size: 15,
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        loc.addItems,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),

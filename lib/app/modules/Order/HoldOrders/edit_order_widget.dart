@@ -103,14 +103,14 @@ class EditOrderDialog extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: Column(
                   children: [
-                    if (StaffAccess.canUpdateSales) ...[
+                    if (StaffAccess.canShowEditOrder) ...[
                       _ActionTile(
                         icon: Icons.edit_rounded,
                         title: loc.update_order,
                         subtitle: loc.modify_order_details_subtitle,
                         accent: AppColor.primary,
                         onTap: () {
-                          if (!StaffAccess.ensure(StaffAccess.canUpdateSales)) {
+                          if (!StaffAccess.ensure(StaffAccess.canShowEditOrder)) {
                             return;
                           }
                           Navigator.of(context).pop();

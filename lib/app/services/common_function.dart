@@ -2,6 +2,7 @@ import 'package:billkaro/app/Widgets/membershipSheet.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/Modals/login_response.dart';
 import 'package:billkaro/app/services/billing/billing_access_mode.dart';
+import 'package:billkaro/app/services/billing/platform_fee_service.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:intl/intl.dart';
@@ -58,7 +59,9 @@ bool hasTrialOrSubscription(AppPref appPref) {
   final mode = BillingAccessModeX.fromStorage(
     appPref.billingAccessModeRawForOutlet(appPref.selectedOutlet?.id),
   );
-  if (mode.isWallet) return true;
+  if (mode.isWallet) {
+    return PlatformFeeService.hasSufficientBalance(appPref);
+  }
 
   // Subscription mode: allow if selected outlet (or matched user outlet) has active subscription.
   final selectedOutlet = appPref.selectedOutlet;

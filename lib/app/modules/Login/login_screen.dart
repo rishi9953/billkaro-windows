@@ -242,11 +242,8 @@ class LoginScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        Obx(() {
-          if (controller.signInTabIndex.value == 1) {
-            return const SizedBox.shrink();
-          }
-          return Center(
+        Obx(
+          () => Center(
             child: TextButton(
               onPressed: controller.isLoading.value
                   ? null
@@ -263,8 +260,8 @@ class LoginScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
               ),
             ),
-          );
-        }),
+          ),
+        ),
       ],
     );
   }

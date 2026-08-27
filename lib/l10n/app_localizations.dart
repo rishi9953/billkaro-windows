@@ -62,7 +62,8 @@ import 'app_localizations_hi.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale)
+    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -70,7 +71,8 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate =
+      _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -82,17 +84,18 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
-    delegate,
-    GlobalMaterialLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-  ];
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
+      <LocalizationsDelegate<dynamic>>[
+        delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
-    Locale('hi')
+    Locale('hi'),
   ];
 
   /// No description provided for @homeTitle.
@@ -513,7 +516,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'You haven\'t added any orders yet.\nAdd an order to see most selling items.'**
-  String get you_havent_added_any_orders_yet_Add_an_order_to_see_most_selling_items;
+  String
+  get you_havent_added_any_orders_yet_Add_an_order_to_see_most_selling_items;
 
   /// No description provided for @view_Item_Reports.
   ///
@@ -543,7 +547,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'You haven\'t added any orders.\nPlease add an order to see their reports.'**
-  String get you_havent_added_any_orders_Please_add_an_order_to_see_their_reports;
+  String
+  get you_havent_added_any_orders_Please_add_an_order_to_see_their_reports;
 
   /// No description provided for @add_Order.
   ///
@@ -561,7 +566,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'You haven\'t added any orders.\nPlease add an order to see item reports.'**
-  String get you_havent_added_any_orders_Please_add_an_order_to_see_item_reports;
+  String
+  get you_havent_added_any_orders_Please_add_an_order_to_see_item_reports;
 
   /// No description provided for @add_your_menu_using_photos.
   ///
@@ -3986,7 +3992,7 @@ abstract class AppLocalizations {
   /// No description provided for @recommended_items.
   ///
   /// In en, this message translates to:
-  /// **'Recommended items'**
+  /// **'Most selling items'**
   String get recommended_items;
 
   /// No description provided for @features_for_you_subtitle.
@@ -5297,6 +5303,12 @@ abstract class AppLocalizations {
   /// **'No valid rows found. Use headers like: Item Name, Price / Price (₹), Category, Tax % or GST. Avoid Item Code / Description / Unit only as names. Prices must be numbers greater than 0.'**
   String get no_valid_import_rows;
 
+  /// No description provided for @import_item_missing_fields.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing fields in item #{row}: {fields}'**
+  String import_item_missing_fields(int row, String fields);
+
   /// No description provided for @items_imported_successfully.
   ///
   /// In en, this message translates to:
@@ -5571,7 +5583,12 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{name}: {quantity} {unit} @ ₹{price}'**
-  String purchase_order_line_item(String name, String quantity, String unit, String price);
+  String purchase_order_line_item(
+    String name,
+    String quantity,
+    String unit,
+    String price,
+  );
 
   /// No description provided for @no_recipes_yet.
   ///
@@ -5739,7 +5756,12 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{current} {unit} · Min: {min} · ₹{price}/unit'**
-  String material_stock_subtitle(String current, String unit, String min, String price);
+  String material_stock_subtitle(
+    String current,
+    String unit,
+    String min,
+    String price,
+  );
 
   /// No description provided for @adjust_stock_tooltip.
   ///
@@ -5756,7 +5778,7 @@ abstract class AppLocalizations {
   /// No description provided for @import_products_description.
   ///
   /// In en, this message translates to:
-  /// **'Select an Excel (.xlsx) file following the BillKaro template format. Required columns: Name and Price. Optional: Category, Tax %, and Image Link. Missing categories will be created automatically.'**
+  /// **'Select an Excel (.xlsx) file following the BillKaro template format. Required columns: Item Name and Price (₹). Optional: Item Code, Category, Description, Item Image, Unit, Tax %, Price Incl. Tax (₹). Missing categories will be created automatically.'**
   String get import_products_description;
 
   /// No description provided for @export_products_excel.
@@ -5768,7 +5790,7 @@ abstract class AppLocalizations {
   /// No description provided for @export_products_description.
   ///
   /// In en, this message translates to:
-  /// **'Export your menu items to an Excel (.xlsx) file using the BillKaro template format. Columns include Name, Price, Category, Tax %, and Image Link.'**
+  /// **'Export your menu items to an Excel (.xlsx) file using the BillKaro template format. Columns include Item Code, Category, Item Name, Description, Item Image, Unit, Price (₹), Tax %, and Price Incl. Tax (₹).'**
   String get export_products_description;
 
   /// No description provided for @export_file.
@@ -6790,6 +6812,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Inactive'**
   String get status_inactive_label;
+
+  /// No description provided for @status_deactivated_label.
+  ///
+  /// In en, this message translates to:
+  /// **'Deactivated'**
+  String get status_deactivated_label;
 
   /// No description provided for @edit_staff.
   ///
@@ -8393,6 +8421,24 @@ abstract class AppLocalizations {
   /// **'Item Edited'**
   String get item_edited;
 
+  /// No description provided for @staff_added.
+  ///
+  /// In en, this message translates to:
+  /// **'Staff Added'**
+  String get staff_added;
+
+  /// No description provided for @staff_deleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Staff Deleted'**
+  String get staff_deleted;
+
+  /// No description provided for @staff_updated.
+  ///
+  /// In en, this message translates to:
+  /// **'Staff Updated'**
+  String get staff_updated;
+
   /// No description provided for @activity_fallback.
   ///
   /// In en, this message translates to:
@@ -9538,9 +9584,106 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tap to test internet speed'**
   String get internet_speed_tap_to_test;
+
+  /// No description provided for @help_and_setup.
+  ///
+  /// In en, this message translates to:
+  /// **'Help & Setup'**
+  String get help_and_setup;
+
+  /// No description provided for @help_were_here.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'re here to help'**
+  String get help_were_here;
+
+  /// No description provided for @help_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick setup steps and direct support options'**
+  String get help_subtitle;
+
+  /// No description provided for @help_your_account.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Account'**
+  String get help_your_account;
+
+  /// No description provided for @help_user_id.
+  ///
+  /// In en, this message translates to:
+  /// **'User ID'**
+  String get help_user_id;
+
+  /// No description provided for @help_name.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get help_name;
+
+  /// No description provided for @help_restaurant.
+  ///
+  /// In en, this message translates to:
+  /// **'Restaurant'**
+  String get help_restaurant;
+
+  /// No description provided for @help_quick_setup.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Setup'**
+  String get help_quick_setup;
+
+  /// No description provided for @help_setup_step_1.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect a printer: Menu → Printer → Select your printer → Pair & Test print.'**
+  String get help_setup_step_1;
+
+  /// No description provided for @help_setup_step_2.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable online orders: Ask support to activate QR menu for your restaurant. Orders will appear in Dashboard automatically.'**
+  String get help_setup_step_2;
+
+  /// No description provided for @help_setup_step_3.
+  ///
+  /// In en, this message translates to:
+  /// **'Test print an order: Open any order → \'View Order\' → Print from the print screen.'**
+  String get help_setup_step_3;
+
+  /// No description provided for @help_contact_support.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Support'**
+  String get help_contact_support;
+
+  /// No description provided for @help_call_us.
+  ///
+  /// In en, this message translates to:
+  /// **'Call Us'**
+  String get help_call_us;
+
+  /// No description provided for @help_whatsapp.
+  ///
+  /// In en, this message translates to:
+  /// **'WhatsApp'**
+  String get help_whatsapp;
+
+  /// No description provided for @help_live_chat.
+  ///
+  /// In en, this message translates to:
+  /// **'Live Chat'**
+  String get help_live_chat;
+
+  /// No description provided for @help_support_hours.
+  ///
+  /// In en, this message translates to:
+  /// **'Available 10am–6pm IST'**
+  String get help_support_hours;
 }
 
-class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -9549,25 +9692,26 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
   }
 
   @override
-  bool isSupported(Locale locale) => <String>['en', 'hi'].contains(locale.languageCode);
+  bool isSupported(Locale locale) =>
+      <String>['en', 'hi'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
-
-
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en': return AppLocalizationsEn();
-    case 'hi': return AppLocalizationsHi();
+    case 'en':
+      return AppLocalizationsEn();
+    case 'hi':
+      return AppLocalizationsHi();
   }
 
   throw FlutterError(
     'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
     'an issue with the localizations generation tool. Please file an issue '
     'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.'
+    'that was used.',
   );
 }

@@ -15,6 +15,12 @@ class Items extends Table {
   TextColumn get itemImage => text().withDefault(const Constant(''))();
   TextColumn get orderFrom => text().nullable()();
   TextColumn get variantsJson => text().withDefault(const Constant('[]'))();
+  TextColumn get barcode => text().withDefault(const Constant(''))();
+  TextColumn get sku => text().withDefault(const Constant(''))();
+  BoolColumn get showItem => boolean().withDefault(const Constant(true))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  TextColumn get isSync => text().withDefault(const Constant('synced'))();
+  TextColumn get itemJson => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

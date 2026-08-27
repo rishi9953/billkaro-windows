@@ -123,15 +123,16 @@ class ItemFileService {
           extraSkip: {columns.nameCol},
         );
       }
-      if (name == null || name.isEmpty) continue;
+      // Keep incomplete rows so the preview dialog can ask for missing fields.
+      name ??= '';
 
-      var price =
+      final price =
           _parsePriceValue(_cellAt(cells, columns.priceCol)) ??
           (columns.inclusivePriceCol != null
               ? _parsePriceValue(_cellAt(cells, columns.inclusivePriceCol!))
               : null) ??
-          _firstPriceInRowSkippingCoreColumns(cells, columns);
-      if (price == null || price <= 0) continue;
+          _firstPriceInRowSkippingCoreColumns(cells, columns) ??
+          0.0;
 
       // Lowercase to match app category chips / API filters (case-sensitive match otherwise)
       final category = categoryRaw != null && categoryRaw.isNotEmpty

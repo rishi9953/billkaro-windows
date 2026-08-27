@@ -1,3 +1,4 @@
+import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/staff_permission_keys.dart';
 import 'package:flutter/material.dart';
@@ -42,6 +43,7 @@ class StaffPermissionsSection extends StatelessWidget {
       onSelectAll: onSelectAll!,
       onDeselectAll: onDeselectAll!,
       initiallyExpanded: initiallyExpanded,
+      includeTables: HomeMainRoutes.outletHasSeating(),
     );
   }
 }
@@ -117,6 +119,7 @@ class _PermissionsPicker extends StatelessWidget {
     required this.onSelectAll,
     required this.onDeselectAll,
     required this.initiallyExpanded,
+    required this.includeTables,
   });
 
   final dynamic selected;
@@ -124,12 +127,18 @@ class _PermissionsPicker extends StatelessWidget {
   final VoidCallback onSelectAll;
   final VoidCallback onDeselectAll;
   final bool initiallyExpanded;
+  final bool includeTables;
 
   @override
   Widget build(BuildContext context) {
+    final groups = staffPermissionGroups(includeTables: includeTables);
+
     return Obx(() {
-      final count = countGrantedStaffPermissionItems(selected);
-      final total = kStaffPermissionCatalogSize;
+      final count = countGrantedStaffPermissionItems(
+        selected,
+        includeTables: includeTables,
+      );
+      final total = staffPermissionCatalogSize(includeTables: includeTables);
       final progress = total == 0 ? 0.0 : (count / total).clamp(0.0, 1.0);
 
       return Container(
@@ -201,7 +210,7 @@ class _PermissionsPicker extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              for (final group in kStaffPermissionGroups) ...[
+              for (final group in groups) ...[
                 _PermissionGroupCard(
                   group: group,
                   selected: selected,
@@ -252,10 +261,19 @@ class _PermissionGroupCard extends StatelessWidget {
   final dynamic selected;
   final void Function(List<String> keys, bool enabled) onToggle;
 
+  List<String> get _groupKeys {
+    final keys = <String>[];
+    for (final item in group.items) {
+      keys.addAll(item.keys);
+    }
+    return keys;
+  }
+
   @override
   Widget build(BuildContext context) {
     final granted =
         group.items.where((item) => item.isGranted(selected)).length;
+    final allSelected = granted == group.items.length && group.items.isNotEmpty;
 
     return Container(
       width: double.infinity,
@@ -280,6 +298,11 @@ class _PermissionGroupCard extends StatelessWidget {
                   ),
                 ),
               ),
+              _LinkAction(
+                label: allSelected ? 'Clear' : 'Select all',
+                onTap: () => onToggle(_groupKeys, !allSelected),
+              ),
+              const SizedBox(width: 10),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(

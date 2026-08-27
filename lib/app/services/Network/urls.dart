@@ -77,6 +77,7 @@ const String createPaymentOrder = 'payments/create-order';
 const String subscribe = 'payments/subscribe';
 const String businessTypes = 'services';
 const String forgotPass = 'auth/forgot-password';
+const String staffForgotPass = 'auth/staff/forgot-password';
 const String verifyEmail = 'auth/verify-email';
 const String checkEmail = 'auth/check-email';
 const String checkMobile = 'auth/check-mobile';

@@ -58,12 +58,21 @@ class PrinterScreen2Controller extends GetxController {
   }
 
   String _roleLabel(PrintRole role) {
-    final loc = AppLocalizations.of(Get.context!)!;
+    final ctx = Get.context;
+    if (ctx == null) return role == PrintRole.bill ? 'Bill' : 'KOT';
+    final loc = AppLocalizations.of(ctx)!;
     return role == PrintRole.bill ? loc.bill_label : loc.kot_label;
   }
 
   String? _typeLabel(String? type) {
-    final loc = AppLocalizations.of(Get.context!)!;
+    final ctx = Get.context;
+    if (ctx == null) {
+      if (type == 'usb') return 'USB';
+      if (type == 'bluetooth') return 'Bluetooth';
+      if (type == 'network') return 'Ethernet';
+      return null;
+    }
+    final loc = AppLocalizations.of(ctx)!;
     if (type == 'usb') return loc.usb;
     if (type == 'bluetooth') return loc.bluetooth;
     if (type == 'network') return loc.ethernet;
@@ -77,7 +86,18 @@ class PrinterScreen2Controller extends GetxController {
   }
 
   String paperSizeLabel(ThermalPaperSize size) {
-    final loc = AppLocalizations.of(Get.context!)!;
+    final ctx = Get.context;
+    if (ctx == null) {
+      switch (size) {
+        case ThermalPaperSize.mm58:
+          return '2 inch';
+        case ThermalPaperSize.mm80:
+          return '3 inch';
+        case ThermalPaperSize.mm104:
+          return '4 inch';
+      }
+    }
+    final loc = AppLocalizations.of(ctx)!;
     switch (size) {
       case ThermalPaperSize.mm58:
         return loc.paper_size_2inch;

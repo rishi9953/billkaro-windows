@@ -88,7 +88,7 @@ class StoreSessionHistoryController extends BaseController {
     }
   }
 
-  Future<void> loadHistory({bool showLoader = true}) async {
+  Future<void> loadHistory() async {
     final outletId = appPref.selectedOutlet?.id;
     if (outletId == null || outletId.isEmpty) {
       _allSessions.clear();
@@ -108,7 +108,7 @@ class StoreSessionHistoryController extends BaseController {
 
       final response = await callApi(
         apiClient.getDaySessionHistory(outletId, startDateStr, endDateStr),
-        showLoader: showLoader,
+        showLoader: false,
       );
       if (response != null && response['status'] == 'success') {
         final data = response['data'];

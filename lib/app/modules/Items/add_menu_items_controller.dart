@@ -20,6 +20,7 @@ import '../../services/Modals/Categories/categories_response.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:billkaro/utils/offline/offline_category_loader.dart';
 import 'package:billkaro/utils/staff_access.dart';
+import 'package:billkaro/app/services/sync/item_catalog_sync.dart';
 
 class AddMenuItemController extends BaseController {
   static const String comboCategoryName = 'combo';
@@ -1182,6 +1183,21 @@ class AddMenuItemController extends BaseController {
       if (alreadyPersisted) return;
     }
 
+    if (!await NetworkUtils.hasInternetConnection()) {
+      await AppDatabase().upsertCategory(
+        CategoryData(
+          id: 'local_cat_${categoryName.hashCode.abs()}',
+          userId: userId,
+          outletId: outletId,
+          categoryName: selectedCategory.value,
+          imageURL: '',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+      return;
+    }
+
     await callApi(
       apiClient.addCategory(outletId, {
         'userId': userId,
@@ -1303,23 +1319,36 @@ class AddMenuItemController extends BaseController {
       isLoadingComboOptions.value = true;
     }
     try {
-      final response = await callApi(
-        apiClient.getItems(
-          outletId,
-          1,
-          500,
-          null,
-          query.isEmpty ? null : query,
-          null,
-          null,
-        ),
-        showLoader: false,
+      final isOnline = await NetworkUtils.hasInternetConnection();
+      if (isOnline) {
+        final response = await callApi(
+          apiClient.getItems(
+            outletId,
+            1,
+            200,
+            null,
+            query.isEmpty ? null : query,
+            null,
+            null,
+          ),
+          showLoader: false,
+        );
+        if (requestId != _comboOptionsRequestId) return;
+        if (response?.status == 'success') {
+          _rememberComboOptions(response!.data);
+          comboOptionItems.assignAll(response.data);
+          return;
+        }
+      }
+
+      final local = await AppDatabase().getItemsPage(
+        outletId: outletId,
+        limit: 100,
+        searchQuery: query.isEmpty ? null : query,
       );
       if (requestId != _comboOptionsRequestId) return;
-      if (response?.status == 'success') {
-        _rememberComboOptions(response!.data);
-        comboOptionItems.assignAll(response.data);
-      }
+      _rememberComboOptions(local.items);
+      comboOptionItems.assignAll(local.items);
     } finally {
       if (requestId == _comboOptionsRequestId) {
         isLoadingComboOptions.value = false;
@@ -1479,19 +1508,19 @@ class AddMenuItemController extends BaseController {
 
   void onDeleteItem() async {
     if (!StaffAccess.ensure(StaffAccess.canDeleteProducts)) return;
-    final response = await callApi(apiClient.deleteItem(itemId.value.trim()));
-    if (response['status'] == 'success') {
-      if (Get.isDialogOpen == true) {
-        Get.back();
-      }
-      menuItemController?.getItems(showLoader: false, forceApiRefresh: true);
-      if (Modular.to.canPop()) {
-        Modular.to.pop();
-      }
-      isEdit.value = false;
-      resetForm();
-      showSuccess(description: response['message']);
+    await ItemCatalogSync(
+      apiClient: apiClient,
+    ).deleteItemOnlineOrOffline(itemId.value.trim());
+    if (Get.isDialogOpen == true) {
+      Get.back();
     }
+    menuItemController?.getItems(showLoader: false, forceApiRefresh: true);
+    if (Modular.to.canPop()) {
+      Modular.to.pop();
+    }
+    isEdit.value = false;
+    resetForm();
+    showSuccess(description: 'Item deleted');
   }
 
   void saveItem() {
@@ -1509,7 +1538,8 @@ class AddMenuItemController extends BaseController {
   void onUpdateItem() async {
     if (!StaffAccess.ensure(StaffAccess.canUpdateProducts)) return;
     if (!_validateForm()) return;
-    if (selectedImage.value != null) {
+    if (selectedImage.value != null &&
+        await NetworkUtils.hasInternetConnection()) {
       await uploadItemImage();
     }
     await _ensureSelectedCategoryExists();
@@ -1544,17 +1574,20 @@ class AddMenuItemController extends BaseController {
       hasVariants: hasVariantsEnabled.value,
       variants: buildVariantInputs(),
     );
-    final response = await callApi(
-      apiClient.updateItem(request, itemId.value.trim()),
+    final saved = await ItemCatalogSync(
+      apiClient: apiClient,
+    ).saveItemOnlineOrOffline(
+      request: request,
+      existingId: itemId.value.trim(),
     );
-    if (response['status'] == 'success') {
+    if (saved != null) {
       selectedImage.value = null;
       imagePath.value = '';
       aiScanResult.value = null;
       await _refreshRelatedLists();
       Get.back();
       dismissAllAppLoader();
-      showSuccess(description: response['message']);
+      showSuccess(description: 'Item updated');
     }
   }
 
@@ -1745,12 +1778,10 @@ class AddMenuItemController extends BaseController {
 
   // Save API Call
   void onAddItem({required bool closeOnSuccess}) async {
-    if (selectedImage.value != null) {
+    if (selectedImage.value != null &&
+        await NetworkUtils.hasInternetConnection()) {
       final ok = await uploadItemImage();
-      if (!ok) {
-        // uploadItemImage already shows an error
-        return;
-      }
+      if (!ok) return;
     }
 
     await _ensureSelectedCategoryExists();
@@ -1787,20 +1818,19 @@ class AddMenuItemController extends BaseController {
       variants: buildVariantInputs(),
     );
 
-    final response = await callApi(apiClient.addItem(request));
+    final saved = await ItemCatalogSync(
+      apiClient: apiClient,
+    ).saveItemOnlineOrOffline(request: request);
 
-    if (response['status'] == 'success') {
+    if (saved != null) {
       await _refreshRelatedLists();
-      showSuccess(
-        description: response['message'] ?? 'Item added successfully',
-      );
-      // Clear the form after a successful add (requested behavior).
+      showSuccess(description: 'Item added successfully');
       resetForm();
       if (closeOnSuccess) {
         Get.back();
       }
     } else {
-      showError(description: response['message'] ?? 'Failed to add item');
+      showError(description: 'Failed to add item');
     }
   }
 

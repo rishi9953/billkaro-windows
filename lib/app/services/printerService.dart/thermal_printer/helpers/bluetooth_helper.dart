@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:billkaro/config/app_pref.dart';
@@ -96,11 +97,22 @@ class BluetoothHelper {
       try {
         service.connectionStatus.value = 'Connecting... (Attempt $attempt)';
 
-        // 1️⃣ Wait for Bluetooth adapter to be fully ON
-        final adapterState = await FlutterBluePlus.adapterState.firstWhere(
-          (state) => state == BluetoothAdapterState.on,
-          orElse: () => BluetoothAdapterState.off,
-        );
+        // 1️⃣ Wait for Bluetooth adapter to be fully ON (must timeout on Windows —
+        // adapterState can stay open forever without emitting `on`).
+        late final BluetoothAdapterState adapterState;
+        try {
+          adapterState = await FlutterBluePlus.adapterState
+              .firstWhere((state) => state == BluetoothAdapterState.on)
+              .timeout(const Duration(seconds: 5));
+        } on TimeoutException {
+          try {
+            adapterState = await FlutterBluePlus.adapterState.first.timeout(
+              const Duration(seconds: 2),
+            );
+          } catch (_) {
+            adapterState = BluetoothAdapterState.off;
+          }
+        }
 
         if (adapterState != BluetoothAdapterState.on) {
           debugPrint('❌ Bluetooth is OFF');
@@ -157,7 +169,9 @@ class BluetoothHelper {
 
         // 7️⃣ Discover services
         debugPrint('🔍 Discovering services...');
-        final services = await device.discoverServices();
+        final services = await device.discoverServices().timeout(
+          const Duration(seconds: 15),
+        );
         if (services.isEmpty) {
           debugPrint('❌ No services discovered');
           await device.disconnect();
@@ -395,8 +409,14 @@ class BluetoothHelper {
   // =========================
   Future<bool> isBluetoothEnabled() async {
     if (_skipBle) return false;
-    final state = await FlutterBluePlus.adapterState.first;
-    return state == BluetoothAdapterState.on;
+    try {
+      final state = await FlutterBluePlus.adapterState.first.timeout(
+        const Duration(seconds: 3),
+      );
+      return state == BluetoothAdapterState.on;
+    } on TimeoutException {
+      return false;
+    }
   }
 
   Future<bool> turnOnBluetooth() async {

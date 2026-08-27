@@ -396,12 +396,32 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
             if (controller.selectedRole.value == 'Secondary Admin') {
               return const StaffPermissionsSection(hasFullAccess: true);
             }
-            return StaffPermissionsSection(
-              hasFullAccess: false,
-              selected: controller.selectedPermissions,
-              onToggle: controller.togglePermission,
-              onSelectAll: controller.selectAllPermissions,
-              onDeselectAll: controller.deselectAllPermissions,
+            final permissionError = controller.showValidationErrors.value
+                ? controller.validatePermissions()
+                : null;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                StaffPermissionsSection(
+                  hasFullAccess: false,
+                  selected: controller.selectedPermissions,
+                  onToggle: controller.togglePermission,
+                  onSelectAll: controller.selectAllPermissions,
+                  onDeselectAll: controller.deselectAllPermissions,
+                ),
+                // Simple error: permissions should not be empty
+                if (permissionError != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    permissionError,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.red.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ],
             );
           },
         ),

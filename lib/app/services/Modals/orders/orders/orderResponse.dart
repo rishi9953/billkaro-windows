@@ -35,6 +35,10 @@ class OrderModel {
   final double subtotal;
   final double totalTax;
   final double discount;
+  /// UI input type: `percentage` or `amount`. Kept in local orderJson for hold/reopen.
+  final String? discountType;
+  /// Raw discount entered in the UI (before %→₹). When null, [discount] is treated as amount.
+  final double? discountValue;
   final double serviceCharge;
   final double totalAmount;
   final String? paymentReceivedIn;
@@ -58,6 +62,8 @@ class OrderModel {
     required this.subtotal,
     required this.totalTax,
     required this.discount,
+    this.discountType,
+    this.discountValue,
     required this.serviceCharge,
     required this.totalAmount,
     this.paymentReceivedIn,
@@ -119,6 +125,10 @@ class OrderModel {
       subtotal: requiredDouble('subtotal'),
       totalTax: requiredDouble('totalTax', 'total_tax'),
       discount: requiredDouble('discount'),
+      discountType: optionalString('discountType', 'discount_type'),
+      discountValue: json['discountValue'] is num
+          ? (json['discountValue'] as num).toDouble()
+          : double.tryParse('${json['discountValue'] ?? ''}'),
       serviceCharge: requiredDouble('serviceCharge', 'service_charge'),
       totalAmount: requiredDouble('totalAmount', 'total_amount'),
       paymentReceivedIn: optionalString(

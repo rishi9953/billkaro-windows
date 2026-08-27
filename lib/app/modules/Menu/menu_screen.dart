@@ -349,8 +349,8 @@ class MenuScreen extends StatelessWidget {
                         children: [
                           _buildMenuItem(
                             icon: Icons.headset_mic_outlined,
-                            title: loc.support,
-                            subtitle: loc.get_help_and_support,
+                            title: loc.help_and_setup,
+                            subtitle: loc.help_subtitle,
                             iconColor: const Color(0xff3498DB),
                             onTap: () => controller.onSupportTap(),
                           ),

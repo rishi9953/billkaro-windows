@@ -424,6 +424,12 @@ class ItemReportsController extends BaseController {
     return '${_formatDate(range.start)} TO ${_formatDate(range.end)}';
   }
 
+  String _exportFileSlug(DateTimeRange? range) {
+    if (range == null) return 'all';
+    final fmt = DateFormat('yyyy-MM-dd');
+    return '${fmt.format(range.start)}_to_${fmt.format(range.end)}';
+  }
+
   /// Fetch orders for export — uses API when online, local SQLite when offline.
   Future<List<OrderItem>> fetchItemsForExport(DateTimeRange range) async {
     final outletId = appPref.selectedOutlet?.id;
@@ -805,15 +811,15 @@ class ItemReportsController extends BaseController {
       final bytes = workbook.saveAsStream();
       workbook.dispose();
 
-      final fileName =
-          'BillKaro_Item_Reports_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+      final rangeSlug = _exportFileSlug(exportDateRange);
+      final fileName = 'item-report-$rangeSlug.xlsx';
       final file = await FileDownloadService.instance.saveBytes(
         bytes: Uint8List.fromList(bytes),
         fileName: fileName,
         preferredDirectory: appPref.downloadPath,
         notificationId: notificationId,
-        notificationTitle: 'Excel downloaded',
-        notificationBody: loc.excel_saved_to_downloads,
+        notificationTitle: 'Item report downloaded',
+        notificationBody: '$fileName saved to Downloads',
       );
 
       if (file == null) {
@@ -1141,16 +1147,16 @@ class ItemReportsController extends BaseController {
 
       // Download only — no options dialog, open, or share
       final bytes = await pdf.save();
-      final fileName =
-          'item_reports_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final rangeSlug = _exportFileSlug(exportDateRange);
+      final fileName = 'item-report-$rangeSlug.pdf';
 
       final file = await FileDownloadService.instance.saveBytes(
         bytes: bytes,
         fileName: fileName,
         preferredDirectory: appPref.downloadPath,
         notificationId: notificationId,
-        notificationTitle: 'PDF downloaded',
-        notificationBody: loc.pdf_saved_to_downloads,
+        notificationTitle: 'Item report downloaded',
+        notificationBody: '$fileName saved to Downloads',
       );
 
       if (file == null) {

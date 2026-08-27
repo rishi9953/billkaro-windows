@@ -59,15 +59,16 @@ extension ThermalPaperSizeX on ThermalPaperSize {
     }
   }
 
-  ({int w, int item, int qty, int price, int amount}) invoiceColumns() {
+  ({int w, int item, int qty, int price, int gst, int amount})
+  invoiceColumns() {
     final w = receiptWidthChars;
     if (w >= 64) {
-      return (w: w, item: 32, qty: 6, price: 10, amount: 16);
+      return (w: w, item: 28, qty: 5, price: 9, gst: 6, amount: 16);
     }
     if (w >= 48) {
-      return (w: w, item: 24, qty: 6, price: 8, amount: 10);
+      return (w: w, item: 20, qty: 5, price: 7, gst: 5, amount: 11);
     }
-    return (w: w, item: 12, qty: 4, price: 8, amount: 8);
+    return (w: w, item: 10, qty: 4, price: 6, gst: 4, amount: 8);
   }
 
   /// Dots per QR module (solid black/white squares). Larger = clearer scan.

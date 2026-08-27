@@ -9,19 +9,15 @@ Widget wrapWithConnectivityBanner(BuildContext context, Widget? child) {
 }
 
 class InternetConnectionController extends BaseController {
-  bool? _lastState;
-  bool _initialized = false;
-  bool _wasEverDisconnected = false;
+  bool? _previousState;
 
   @override
   void onReady() {
     super.onReady();
 
-    _handleConnectivity(ConnectivityHelper.instance.isConnected);
-
     unawaited(
       ConnectivityHelper.instance.refreshStatus().then((_) {
-        _handleConnectivity(ConnectivityHelper.instance.isConnected);
+        _previousState = ConnectivityHelper.instance.isConnected;
       }),
     );
 
@@ -34,54 +30,31 @@ class InternetConnectionController extends BaseController {
   }
 
   void _handleConnectivity(bool connected) {
-    if (_lastState == connected) return;
+    if (_previousState == connected) return;
 
-    final previous = _lastState;
-    _lastState = connected;
+    final wasConnected = _previousState;
+    _previousState = connected;
 
-    if (!_initialized) {
-      _initialized = true;
-      if (!connected) {
-        _wasEverDisconnected = true;
-        _showOfflineToast();
-      }
-      return;
-    }
+    // Skip the very first emission — no toast until we have a real previous state
+    if (wasConnected == null) return;
 
     if (!connected) {
-      _wasEverDisconnected = true;
-      _showOfflineToast();
-      return;
-    }
-
-    if (_wasEverDisconnected && previous == false) {
-      _showOnlineToast();
+      _showToast(isOnline: false);
+    } else {
+      _showToast(isOnline: true);
     }
   }
 
-  void _showOfflineToast() {
+  void _showToast({required bool isOnline}) {
     final context = Get.context;
     if (context == null) return;
 
     final loc = AppLocalizations.of(context)!;
     AppSnackbar.showConnectivity(
-      title: loc.status_offline,
-      message: loc.internet_connection_lost,
-      badge: loc.status_offline,
-      isOnline: false,
-    );
-  }
-
-  void _showOnlineToast() {
-    final context = Get.context;
-    if (context == null) return;
-
-    final loc = AppLocalizations.of(context)!;
-    AppSnackbar.showConnectivity(
-      title: loc.status_online,
-      message: loc.internet_connection_restored,
-      badge: loc.status_online,
-      isOnline: true,
+      title: isOnline ? loc.status_online : loc.status_offline,
+      message: isOnline ? loc.internet_connection_restored : loc.internet_connection_lost,
+      badge: isOnline ? loc.status_online : loc.status_offline,
+      isOnline: isOnline,
     );
   }
 }

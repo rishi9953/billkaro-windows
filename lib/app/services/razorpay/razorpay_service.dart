@@ -1,22 +1,15 @@
-import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform, kIsWeb;
-import 'package:get/get.dart';
-import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:billkaro/app/modules/Theme/theme_controller.dart';
 import 'package:billkaro/app/services/razorpay/razorpay_web_checkout.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 
-enum RazorpayEnvironment { test, production }
-
-/// `razorpay_flutter` only registers native code on Android and iOS.
-/// On Windows/macOS/Linux/web, constructing [Razorpay] throws [MissingPluginException].
 bool get isRazorpayNativeSdkSupported {
   if (kIsWeb) return false;
   return defaultTargetPlatform == TargetPlatform.android ||
       defaultTargetPlatform == TargetPlatform.iOS;
 }
 
-/// Desktop apps use Razorpay Standard Checkout inside a WebView (see [RazorpayWebCheckout]).
 bool get isRazorpayWebCheckoutSupported {
   if (kIsWeb) return false;
   return defaultTargetPlatform == TargetPlatform.windows ||
@@ -29,67 +22,18 @@ class RazorpayService {
   factory RazorpayService() => _instance;
   RazorpayService._internal();
 
-  /// UPI, card, wallet, and netbanking only — hides EMI and Pay Later.
-  static const Map<String, dynamic> instantPaymentMethods = {
-    'netbanking': true,
-    'card': true,
-    'upi': true,
-    'wallet': true,
-    'emi': false,
-    'paylater': false,
-  };
+  static const String defaultMerchantUpiId = '9582222724@pthdfc';
+  static const String testUpiId = 'success@razorpay';
 
-  static String get merchantUpiId =>
-      dotenv.env['RAZORPAY_MERCHANT_UPI_ID']?.trim() ?? '';
-
-  static Map<String, dynamic> _instantPaymentCheckoutConfig(String upiId) {
-    final config = <String, dynamic>{
-      'display': {
-        'hide': [
-          {'method': 'emi'},
-          {'method': 'paylater'},
-        ],
-        'preferences': {
-          'show_default_blocks': true,
-        },
-      },
-    };
-    if (upiId.isNotEmpty) {
-      config['display']['blocks'] = {
-        'upi': {
-          'name': 'Pay via UPI',
-          'instruments': [
-            {'method': 'upi'},
-          ],
-        },
-      };
-      config['display']['sequence'] = ['block.upi', 'card', 'netbanking', 'wallet'];
-    }
-    return config;
+  static String get merchantUpiId {
+    final fromEnv = dotenv.env['RAZORPAY_MERCHANT_UPI_ID']?.trim() ?? '';
+    return fromEnv.isNotEmpty ? fromEnv : defaultMerchantUpiId;
   }
 
-  static Map<String, dynamic>? _instantPaymentUpiOptions(String upiId) {
-    if (upiId.isEmpty) return null;
-    return {
-      'vpa': upiId,
-      'flow': 'qr',
-    };
-  }
+  static String get walletUpiId => isTestMode ? testUpiId : merchantUpiId;
 
-  /// Desktop WebView cannot launch UPI apps; hide EMI/pay later and keep defaults.
-  static Map<String, dynamic> _desktopWebCheckoutConfig() {
-    return {
-      'display': {
-        'hide': [
-          {'method': 'emi'},
-          {'method': 'paylater'},
-        ],
-        'preferences': {
-          'show_default_blocks': true,
-        },
-      },
-    };
-  }
+  static bool get isTestMode =>
+      (dotenv.env['RAZORPAY_ENVIRONMENT'] ?? 'test') != 'production';
 
   Razorpay? _razorpay;
   Function(PaymentSuccessResponse)? onSuccess;
@@ -98,16 +42,54 @@ class RazorpayService {
 
   static String get keyId {
     final environment = dotenv.env['RAZORPAY_ENVIRONMENT'] ?? 'test';
-    if (environment == 'production') {
-      return dotenv.env['RAZORPAY_KEY_PRODUCTION'] ??
-          (throw Exception('RAZORPAY_KEY_PRODUCTION not found in .env file'));
-    } else {
-      return dotenv.env['RAZORPAY_KEY_TEST'] ??
-          (throw Exception('RAZORPAY_KEY_TEST not found in .env file'));
+    final isProduction = environment == 'production';
+    final key = isProduction
+        ? dotenv.env['RAZORPAY_KEY_PRODUCTION']
+        : dotenv.env['RAZORPAY_KEY_TEST'];
+    if (key == null || key.trim().isEmpty) {
+      throw Exception(
+        isProduction
+            ? 'RAZORPAY_KEY_PRODUCTION not found in .env file'
+            : 'RAZORPAY_KEY_TEST not found in .env file',
+      );
     }
+    final trimmed = key.trim();
+    final expectedPrefix = isProduction ? 'rzp_live_' : 'rzp_test_';
+    if (!trimmed.startsWith(expectedPrefix) ||
+        trimmed.contains('xxxxx') ||
+        trimmed.length < 20) {
+      throw Exception(
+        'Invalid Razorpay key for $environment. '
+        'Expected a real $expectedPrefix key in .env '
+        '(and RAZORPAY_ENVIRONMENT=$environment).',
+      );
+    }
+    return trimmed;
   }
 
-  /// Initialize Razorpay
+  /// Razorpay expects `+{country}{number}`. Without a country code it defaults
+  /// to `+1`, which hides Indian UPI on live checkout.
+  static String normalizeContact(String? contact) {
+    final digits = (contact ?? '').replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) return '';
+    if (digits.length >= 12 && digits.startsWith('91')) {
+      return '+${digits.substring(digits.length - 12)}';
+    }
+    if (digits.length >= 10) {
+      return '+91${digits.substring(digits.length - 10)}';
+    }
+    return digits.startsWith('+') ? digits : '+$digits';
+  }
+
+  String _checkoutThemeColor() {
+    if (Get.isRegistered<ThemeController>()) {
+      return ThemeController.hexRgbString(
+        Get.find<ThemeController>().themeColor.value,
+      );
+    }
+    return '#12B3A3';
+  }
+
   void initialize({
     Function(PaymentSuccessResponse)? onSuccess,
     Function(PaymentFailureResponse)? onFailure,
@@ -118,51 +100,32 @@ class RazorpayService {
     this.onExternalWallet = onExternalWallet;
 
     if (!isRazorpayNativeSdkSupported) {
-      debugPrint(
-        'Razorpay native SDK skipped on this platform; '
-        'desktop uses Standard Checkout (WebView / WebView2).',
-      );
+      debugPrint('Razorpay native SDK skipped; desktop uses WebView checkout.');
       return;
     }
 
+    _razorpay?.clear();
     _razorpay = Razorpay();
     _razorpay!.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay!.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
     _razorpay!.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
   }
 
-  /// Handle payment success
   void _handlePaymentSuccess(PaymentSuccessResponse response) {
     debugPrint('Payment Success: ${response.paymentId}');
-    if (onSuccess != null) {
-      onSuccess!(response);
-    }
+    onSuccess?.call(response);
   }
 
-  /// Handle payment error/failure
   void _handlePaymentError(PaymentFailureResponse response) {
     debugPrint('Payment Error: ${response.code} - ${response.message}');
-    if (onFailure != null) {
-      onFailure!(response);
-    }
+    onFailure?.call(response);
   }
 
-  /// Handle external wallet
   void _handleExternalWallet(ExternalWalletResponse response) {
     debugPrint('External Wallet: ${response.walletName}');
-    if (onExternalWallet != null) {
-      onExternalWallet!(response);
-    }
+    onExternalWallet?.call(response);
   }
 
-  /// Open Razorpay checkout
-  ///
-  /// [amountInPaise] - Amount in paise (e.g., 10000 for ₹100)
-  /// [name] - Customer name
-  /// [description] - Payment description
-  /// [email] - Customer email (optional)
-  /// [contact] - Customer contact number (optional)
-  /// [orderId] - Order ID from your backend (optional, for server-side verification)
   void openCheckout({
     required int amountInPaise,
     required String name,
@@ -172,48 +135,40 @@ class RazorpayService {
     String? orderId,
     Map<String, dynamic>? prefill,
     Map<String, dynamic>? notes,
-    bool instantPaymentsOnly = false,
   }) {
     try {
       if (amountInPaise <= 0) {
         throw Exception('Invalid amountInPaise: $amountInPaise');
       }
 
-      final merchantUpi = merchantUpiId;
-      final checkoutNotes = <String, dynamic>{
-        ...?notes,
-        if (merchantUpi.isNotEmpty) 'merchant_upi_id': merchantUpi,
-      };
       final hasOrderId = orderId != null && orderId.isNotEmpty;
-
+      final normalizedContact = normalizeContact(contact);
+      final trimmedEmail = (email ?? '').trim();
       final options = <String, dynamic>{
         'key': keyId,
-        'amount': amountInPaise.toString(),
         'currency': 'INR',
         'name': 'BillKaro ChillKaro',
         'description': description,
+        // SDK expects amount as int (paise), not a string.
+        'amount': amountInPaise,
         'prefill': {
-          'contact': contact ?? '',
-          'email': email ?? '',
+          if (normalizedContact.isNotEmpty) 'contact': normalizedContact,
+          if (trimmedEmail.isNotEmpty) 'email': trimmedEmail,
           ...?prefill,
         },
-        'notes': checkoutNotes,
-        'theme': {'color': '#D4AF37'},
-        if (hasOrderId) 'order_id': orderId,
-        if (instantPaymentsOnly) ...{
-          'method': instantPaymentMethods,
-          'config': _instantPaymentCheckoutConfig(merchantUpi),
-          if (_instantPaymentUpiOptions(merchantUpi) != null)
-            'upi': _instantPaymentUpiOptions(merchantUpi),
-        } else if (isRazorpayWebCheckoutSupported) ...{
-          'method': instantPaymentMethods,
-          'config': _desktopWebCheckoutConfig(),
+        'notes': notes ?? {},
+        'theme': {
+          'color': _checkoutThemeColor(),
+          'backdrop_color': 'transparent',
         },
+        'modal': {'backdropclose': false, 'escape': true, 'animation': true},
+        if (hasOrderId) 'order_id': orderId,
       };
 
       debugPrint(
-        'Opening Razorpay checkout: amountInPaise=$amountInPaise, '
-        'orderId=${orderId ?? ''}, currency=INR',
+        'Opening Razorpay checkout: amount=$amountInPaise, '
+        'orderId=${orderId ?? ''}, testMode=$isTestMode, '
+        'contact=${normalizedContact.isNotEmpty}',
       );
 
       if (isRazorpayNativeSdkSupported) {
@@ -266,9 +221,32 @@ class RazorpayService {
     }
   }
 
-  /// Dispose Razorpay instance
+  void openWalletCheckout({
+    required int amountInPaise,
+    required String name,
+    required String description,
+    String? email,
+    String? contact,
+    String? orderId,
+    Map<String, dynamic>? notes,
+    Map<String, dynamic>? prefill,
+  }) {
+    if (isTestMode) {
+      debugPrint('Test UPI: select UPI and enter $testUpiId');
+    }
+    openCheckout(
+      amountInPaise: amountInPaise,
+      name: name,
+      description: description,
+      email: email,
+      contact: contact,
+      orderId: orderId,
+      prefill: prefill,
+      notes: {...?notes, 'wallet_upi_hint': walletUpiId},
+    );
+  }
+
   void dispose() {
     _razorpay?.clear();
-    _razorpay = null;
   }
 }

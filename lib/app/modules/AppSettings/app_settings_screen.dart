@@ -321,6 +321,16 @@ class AppSettingsScreen extends StatelessWidget {
                   showChevron: true,
                 ),
               ]),
+              const Gap(24),
+              _buildSection(loc.help_and_setup, [
+                _buildActionOrNavTile(
+                  icon: Icons.support_outlined,
+                  title: loc.help_and_setup,
+                  subtitle: loc.help_subtitle,
+                  onTap: () => Modular.to.pushNamed(HomeMainRoutes.helpSetup),
+                  showChevron: true,
+                ),
+              ]),
               const Gap(40),
             ],
           ),

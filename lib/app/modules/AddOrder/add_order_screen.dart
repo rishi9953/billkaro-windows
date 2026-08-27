@@ -8,6 +8,7 @@ import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_req
 import 'package:billkaro/app/services/Modals/orders/split_payment.dart';
 import 'package:billkaro/app/utils/pos_cart_line.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 
@@ -276,12 +277,37 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
             );
           }),
           Expanded(
-            child: Obx(
-              () => controller.isListView.value
-                  ? AddOrderListScreen(controller: controller)
-                  : Obx(() {
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final scrollHorizontalPadding =
+                    (_isDesktopPlatform ? 12 : 8) * 2.0;
+                final itemCardWidth = resolveWrapItemCardWidth(
+                  constraints.maxWidth - scrollHorizontalPadding,
+                  minWidth: _isDesktopPlatform ? 140.0 : 130.0,
+                );
+
+                return Obx(
+                  () => controller.isListView.value
+                      ? AddOrderListScreen(controller: controller)
+                      : Obx(() {
                       if (controller.items.isEmpty) {
-                        // Empty State
+                        // Empty State — only show create shortcuts when allowed.
+                        if (!StaffAccess.canCreateProducts) {
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Text(
+                                loc.no_items_found,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          );
+                        }
                         return SingleChildScrollView(
                           physics: const BouncingScrollPhysics(),
                           padding: const EdgeInsets.all(8),
@@ -294,12 +320,14 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                   // Add Menu using Photos (AI-powered)
                                   AddMenuAiCard(
                                     label: loc.add_your_menu_using_photos,
+                                    cardWidth: itemCardWidth,
                                     onTap: () => controller.addMenuUsingAI(),
                                   ),
                                   const SizedBox(width: 16),
                                   // Add Item
                                   AddItemCard(
                                     label: loc.addItems,
+                                    cardWidth: itemCardWidth,
                                     onTap: () => controller.addItem('none'),
                                   ),
                                 ],
@@ -371,6 +399,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                                   ) {
                                                     return Obx(
                                                       () => OrderItemCard(
+                                                        cardWidth: itemCardWidth,
                                                         imageUrl: item.itemImage,
                                                         posColor: item.posColor,
                                                         itemName:
@@ -456,6 +485,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                                   ...noneItems.map((item) {
                                                     return Obx(
                                                       () => OrderItemCard(
+                                                        cardWidth: itemCardWidth,
                                                         imageUrl: item.itemImage,
                                                         posColor: item.posColor,
                                                         itemName:
@@ -497,6 +527,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                                   AddMenuAiCard(
                                                     label: loc
                                                         .add_your_menu_using_photos,
+                                                    cardWidth: itemCardWidth,
                                                     onTap: () => controller
                                                         .addMenuUsingAI(),
                                                   ),
@@ -504,6 +535,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                                   // Add Item Card
                                                   AddItemCard(
                                                     label: loc.addItems,
+                                                    cardWidth: itemCardWidth,
                                                     onTap: () => controller
                                                         .addItem('none'),
                                                   ),
@@ -559,6 +591,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                                 ...categoryItems.map((item) {
                                                   return Obx(
                                                     () => OrderItemCard(
+                                                      cardWidth: itemCardWidth,
                                                       imageUrl: item.itemImage,
                                                         posColor: item.posColor,
                                                       itemName:
@@ -599,6 +632,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                                 }),
                                                 AddItemCard(
                                                   label: loc.addItems,
+                                                  cardWidth: itemCardWidth,
                                                   onTap: () =>
                                                       controller.addItem(
                                                         category.categoryName,
@@ -683,6 +717,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                           ...selectedItems.map((item) {
                                             return Obx(
                                               () => OrderItemCard(
+                                                cardWidth: itemCardWidth,
                                                 imageUrl: item.itemImage,
                                                         posColor: item.posColor,
                                                 itemName:
@@ -718,6 +753,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                           }),
                                           AddItemCard(
                                             label: loc.addItems,
+                                            cardWidth: itemCardWidth,
                                             onTap: () => controller.addItem(
                                               controller.selectedCategory.value,
                                             ),
@@ -735,6 +771,8 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                         ],
                       );
                     }),
+                );
+              },
             ),
           ),
         ],
@@ -927,10 +965,11 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
             //     ),
             //   );
             // }),
-            IconButton(
-              icon: const Icon(Icons.settings_outlined, color: AppColor.white),
-              onPressed: controller.openSettings,
-            ),
+            if (StaffAccess.canManageSettings)
+              IconButton(
+                icon: const Icon(Icons.settings_outlined, color: AppColor.white),
+                onPressed: controller.openSettings,
+              ),
           ],
         ),
         body: Column(
@@ -980,6 +1019,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
           controller.pendingKotItemCount;
           controller.homeController.selectedOutlet.value;
           final kotEnabled = controller.isKotFeatureActive;
+          final showKotButton = kotEnabled && StaffAccess.canPrintKot;
 
           if (_isWindows) {
             return Container(
@@ -1021,7 +1061,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  if (kotEnabled) ...[
+                  if (showKotButton) ...[
                     OutlinedButton(
                       onPressed: controller.hasSelectedItems
                           ? () =>
@@ -1149,7 +1189,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                if (kotEnabled) ...[
+                if (showKotButton) ...[
                   ElevatedButton(
                     onPressed: controller.hasSelectedItems
                         ? () => controller.executePosAction(PosOrderAction.kot)
@@ -2102,21 +2142,48 @@ class _PaymentSection extends StatelessWidget {
   }
 }
 
+const double _wrapItemSpacing = 12;
+
+/// Fits item cards to the available row width so [Wrap] rows have no trailing gap.
+double resolveWrapItemCardWidth(
+  double availableWidth, {
+  double spacing = _wrapItemSpacing,
+  double minWidth = 130,
+}) {
+  if (availableWidth <= minWidth) return availableWidth;
+
+  var columns = 1;
+  for (var c = 2; c <= 20; c++) {
+    final width = (availableWidth - spacing * (c - 1)) / c;
+    if (width < minWidth) break;
+    columns = c;
+  }
+  return (availableWidth - spacing * (columns - 1)) / columns;
+}
+
 class AddItemCard extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
+  final double cardWidth;
 
-  const AddItemCard({super.key, required this.label, required this.onTap});
+  const AddItemCard({
+    super.key,
+    required this.label,
+    required this.onTap,
+    this.cardWidth = 150,
+  });
 
   @override
   Widget build(BuildContext context) {
+    if (!StaffAccess.canCreateProducts) return const SizedBox.shrink();
+
     final isDesktop =
         GetPlatform.isWindows || GetPlatform.isMacOS || GetPlatform.isLinux;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(isDesktop ? 10 : 16),
       child: Container(
-        width: 150,
+        width: cardWidth,
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(isDesktop ? 10 : 16),
@@ -2249,18 +2316,26 @@ class AddItemCard extends StatelessWidget {
 class AddMenuAiCard extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
+  final double cardWidth;
 
-  const AddMenuAiCard({super.key, required this.label, required this.onTap});
+  const AddMenuAiCard({
+    super.key,
+    required this.label,
+    required this.onTap,
+    this.cardWidth = 150,
+  });
 
   @override
   Widget build(BuildContext context) {
+    if (!StaffAccess.canCreateProducts) return const SizedBox.shrink();
+
     final isDesktop =
         GetPlatform.isWindows || GetPlatform.isMacOS || GetPlatform.isLinux;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(isDesktop ? 10 : 16),
       child: Container(
-        width: 150,
+        width: cardWidth,
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(isDesktop ? 10 : 16),
@@ -2396,6 +2471,7 @@ class OrderItemCard extends StatelessWidget {
   final String? imageUrl;
   final String posColor;
   final int quantity;
+  final double cardWidth;
   final VoidCallback onDelete;
   final VoidCallback onIncrement;
   final VoidCallback onDecrement;
@@ -2412,6 +2488,7 @@ class OrderItemCard extends StatelessWidget {
     this.imageUrl,
     this.posColor = '',
     this.quantity = 0,
+    this.cardWidth = 150,
   });
 
   Color? get _posColor {
@@ -2432,7 +2509,7 @@ class OrderItemCard extends StatelessWidget {
       onTap: onQuickAdd ?? onIncrement,
       borderRadius: BorderRadius.circular(isDesktop ? 10 : 16),
       child: Container(
-        width: 150,
+        width: cardWidth,
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(isDesktop ? 10 : 16),

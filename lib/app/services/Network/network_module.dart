@@ -14,8 +14,37 @@ class NetworkModule {
   // Flag to track if an error message is already shown
   static bool _isErrorBeingHandled = false;
 
-  // Flag to track manual logout to prevent session expired message
-  static bool _isManualLogout = false;
+  /// Login / signup / OTP calls are not an active session — skip forced logout.
+  static bool _isPublicAuthRequest(RequestOptions options) {
+    final path = '${options.uri.path} ${options.path}'.toLowerCase();
+    return path.contains('auth/login') ||
+        path.contains('auth/staff/login') ||
+        path.contains('auth/register') ||
+        path.contains('auth/forgot-password') ||
+        path.contains('auth/staff/forgot-password') ||
+        path.contains('auth/phone/') ||
+        path.contains('auth/staff/phone/') ||
+        path.contains('auth/resend-activation') ||
+        path.contains('auth/verify-email') ||
+        path.contains('auth/check-email') ||
+        path.contains('auth/check-mobile');
+  }
+
+  static Future<void> _handleUnauthorizedResponse({
+    required RequestOptions requestOptions,
+    dynamic data,
+  }) async {
+    final message = AuthSessionService.messageFromBody(data);
+    if (_isPublicAuthRequest(requestOptions)) {
+      showError(
+        description: (message != null && message.trim().isNotEmpty)
+            ? message
+            : 'Invalid credentials',
+      );
+      return;
+    }
+    await AuthSessionService.handleUnauthorized(message: message);
+  }
 
   // Helper method to safely dismiss loaders with error handling
   static void safelyDismissLoader() {
@@ -52,9 +81,14 @@ class NetworkModule {
             // Call API on successful response only when URL contains '/books' and user is logged in
             return handler.next(response);
           } else if (response.statusCode == 401) {
-            // ALWAYS dismiss loader first for 401 errors
             safelyDismissLoader();
-            showError(description: response.data['message']);
+            if (!_isErrorBeingHandled) {
+              _isErrorBeingHandled = true;
+              await _handleUnauthorizedResponse(
+                requestOptions: response.requestOptions,
+                data: response.data,
+              );
+            }
             return handler.reject(
               DioException(
                 requestOptions: response.requestOptions,
@@ -156,14 +190,16 @@ class NetworkModule {
             _isErrorBeingHandled = true;
 
             if (error.response?.statusCode == 401) {
-              // Handle token expiration
               try {
-                await _handleTokenExpiration();
+                await _handleUnauthorizedResponse(
+                  requestOptions: error.requestOptions,
+                  data: error.response?.data,
+                );
               } catch (e) {
                 debugPrint(
                   'Error handling token expiration in error handler: $e',
                 );
-                safelyDismissLoader(); // Ensure loader is dismissed even on error
+                safelyDismissLoader();
               }
             } else if (error.response?.statusCode == 502) {
               showError(
@@ -223,124 +259,28 @@ class NetworkModule {
     return dio;
   }
 
-  // Enhanced _handleTokenExpiration method with session expired dialog
+  // Clears session and returns to login without a dialog
   static Future<void> _handleTokenExpiration() async {
     try {
       debugPrint('Starting token expiration handling...');
 
-      // Ensure loader is dismissed at the start
       safelyDismissLoader();
-
       await AuthSessionService.clearSessionData();
-
-      debugPrint('User data cleared, showing session expired dialog...');
-
-      // Only show session expired dialog if it's not a manual logout
-      if (!_isManualLogout) {
-        await showSessionExpiredDialog();
-      } else {
-        // Navigate directly for manual logout
-        Get.offAllNamed(AppRoute.main);
-      }
-
-      // Reset the manual logout flag
-      _isManualLogout = false;
+      Get.offAllNamed(AppRoute.main);
 
       debugPrint('Token expiration handling completed');
     } catch (e) {
       debugPrint('Error in _handleTokenExpiration: $e');
-      // Ensure loader is dismissed even if there's an error
       safelyDismissLoader();
 
-      // Try to navigate to main screen even on error
       try {
         Get.offAllNamed(AppRoute.main);
       } catch (navError) {
         debugPrint('Error navigating to main screen: $navError');
       }
     } finally {
-      // Always reset flags and dismiss loader in finally block
       _isErrorBeingHandled = false;
-      _isManualLogout = false;
       safelyDismissLoader();
-    }
-  }
-
-  // Method to show session expired dialog
-  static Future<void> showSessionExpiredDialog() async {
-    try {
-      await Get.dialog(
-        WillPopScope(
-          onWillPop: () async => false, // Prevent back button dismissal
-          child: AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: Row(
-              children: [
-                Icon(
-                  Icons.warning_amber_rounded,
-                  color: Colors.orange,
-                  size: 28,
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Session Expired',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            content: Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'You will be redirected to the main screen to login again.',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.black54,
-                  height: 1.4,
-                ),
-              ),
-            ),
-            actions: [
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Close dialog and navigate to main screen
-                    Get.back();
-                    Get.offAllNamed(AppRoute.main);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColor.black,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 2,
-                  ),
-                  child: Text(
-                    'Login Again',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        barrierDismissible: false, // Prevent dismissing by tapping outside
-        barrierColor: Colors.black.withOpacity(0.7),
-      );
-    } catch (e) {
-      debugPrint('Error showing session expired dialog: $e');
-      // Fallback: navigate directly if dialog fails
-      Get.offAllNamed(AppRoute.main);
     }
   }
 

@@ -2,6 +2,7 @@ import 'package:billkaro/app/modules/AddOrder/add_order_controller.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/common_function.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:dotted_border/dotted_border.dart';
@@ -342,41 +343,42 @@ class _AddOrderListScreenState extends State<AddOrderListScreen> {
                         );
                       }),
 
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: InkWell(
-                            onTap: () =>
-                                widget.controller.showQuickAddItemBottomSheet(),
-                            child: DottedBorder(
-                              options: RoundedRectDottedBorderOptions(
-                                color: AppColor.primary.withOpacity(0.2),
-                                strokeWidth: 1,
-                                dashPattern: const [8, 4],
-                                radius: const Radius.circular(10),
-                              ),
-                              child: Container(
-                                height: 80,
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(10),
+                      if (StaffAccess.canCreateProducts)
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: InkWell(
+                              onTap: () => widget.controller
+                                  .showQuickAddItemBottomSheet(),
+                              child: DottedBorder(
+                                options: RoundedRectDottedBorderOptions(
+                                  color: AppColor.primary.withOpacity(0.2),
+                                  strokeWidth: 1,
+                                  dashPattern: const [8, 4],
+                                  radius: const Radius.circular(10),
                                 ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const SizedBox(height: 10),
-                                    Icon(Icons.add_circle_outline),
-                                    const SizedBox(height: 10),
-                                    Text('Quick Add Item'),
-                                    const SizedBox(height: 10),
-                                  ],
+                                child: Container(
+                                  height: 80,
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const SizedBox(height: 10),
+                                      Icon(Icons.add_circle_outline),
+                                      const SizedBox(height: 10),
+                                      Text('Quick Add Item'),
+                                      const SizedBox(height: 10),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),

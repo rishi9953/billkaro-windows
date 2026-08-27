@@ -66,7 +66,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get addStaffSecurely_title => 'स्टाफ सुरक्षित रूप से जोड़ें';
 
   @override
-  String get addStaffSecurely_desc => 'भूमिका के साथ स्टाफ जोड़ें;\nकहीं भी बिल बनाएं;\nसंपर्क में रहें।';
+  String get addStaffSecurely_desc =>
+      'भूमिका के साथ स्टाफ जोड़ें;\nकहीं भी बिल बनाएं;\nसंपर्क में रहें।';
 
   @override
   String get addStaffSecurely_btn => 'स्टाफ जोड़ें';
@@ -84,43 +85,51 @@ class AppLocalizationsHi extends AppLocalizations {
   String get yesterdaySales => 'कल की';
 
   @override
-  String get maintain_your_menu_items_effortlessly => 'अपने मेनू आइटम को सहजता से बनाए रखें';
+  String get maintain_your_menu_items_effortlessly =>
+      'अपने मेनू आइटम को सहजता से बनाए रखें';
 
   @override
   String get addMenuItem => 'मेनू आइटम जोड़ें';
 
   @override
-  String get scan_Menu_to_Add_Items_via_AI => 'AI के माध्यम से आइटम जोड़ने के लिए मेनू को स्कैन करें';
+  String get scan_Menu_to_Add_Items_via_AI =>
+      'AI के माध्यम से आइटम जोड़ने के लिए मेनू को स्कैन करें';
 
   @override
   String get feature_scanMenu_title => 'मेनू स्कैन कर आइटम जोड़ें';
 
   @override
-  String get feature_scanMenu_desc => 'अपना मेनू स्कैन करें और ऐप को आपके लिए आइटम जोड़ने दें—आसान और तेज़।';
+  String get feature_scanMenu_desc =>
+      'अपना मेनू स्कैन करें और ऐप को आपके लिए आइटम जोड़ने दें—आसान और तेज़।';
 
   @override
   String get feature_aiImages_title => 'AI के साथ छवियाँ जोड़ें';
 
   @override
-  String get feature_aiImages_desc => 'अपने मेनू को AI-संचालित छवियों से पेशेवर लुक दें।';
+  String get feature_aiImages_desc =>
+      'अपने मेनू को AI-संचालित छवियों से पेशेवर लुक दें।';
 
   @override
-  String get feature_manageFavourites_title => 'पसंदीदा और श्रेणियाँ प्रबंधित करें';
+  String get feature_manageFavourites_title =>
+      'पसंदीदा और श्रेणियाँ प्रबंधित करें';
 
   @override
-  String get feature_manageFavourites_desc => 'सबसे ज्यादा बिकने वाले आइटम स्वचालित रूप से पाएं और वस्तुओं को आसान पहुँच के लिए श्रेणियों में व्यवस्थित करें।';
+  String get feature_manageFavourites_desc =>
+      'सबसे ज्यादा बिकने वाले आइटम स्वचालित रूप से पाएं और वस्तुओं को आसान पहुँच के लिए श्रेणियों में व्यवस्थित करें।';
 
   @override
   String get add_images_ai_title => 'AI के साथ चित्र जोड़ें';
 
   @override
-  String get add_images_ai_description => 'अपने मेनू को पेशेवर लुक देने के लिए AI-संचालित चित्रों से बेहतर बनाएं।';
+  String get add_images_ai_description =>
+      'अपने मेनू को पेशेवर लुक देने के लिए AI-संचालित चित्रों से बेहतर बनाएं।';
 
   @override
   String get item_image_ai_chat_assistant => 'BillKaro AI';
 
   @override
-  String get item_image_ai_chat_message => 'AI आपके मेनू आइटम के लिए एक पेशेवर फूड फोटो बनाता है। आप इसे मेनू पर उपयोग कर सकते हैं या कभी भी गैलरी या कैमरे से अपनी फोटो अपलोड करके बदल सकते हैं।';
+  String get item_image_ai_chat_message =>
+      'AI आपके मेनू आइटम के लिए एक पेशेवर फूड फोटो बनाता है। आप इसे मेनू पर उपयोग कर सकते हैं या कभी भी गैलरी या कैमरे से अपनी फोटो अपलोड करके बदल सकते हैं।';
 
   @override
   String get generate_image => 'छवि जेनरेट करें';
@@ -129,16 +138,19 @@ class AppLocalizationsHi extends AppLocalizations {
   String get describe_image_for_ai => 'छवि का वर्णन करें';
 
   @override
-  String get describe_image_for_ai_hint => 'उदा. प्याज़ और मक्खन के साथ मटर पनीर की थाली';
+  String get describe_image_for_ai_hint =>
+      'उदा. प्याज़ और मक्खन के साथ मटर पनीर की थाली';
 
   @override
-  String get please_describe_image_for_ai => 'कृपया उस छवि का वर्णन करें जिसे आप जेनरेट करना चाहते हैं';
+  String get please_describe_image_for_ai =>
+      'कृपया उस छवि का वर्णन करें जिसे आप जेनरेट करना चाहते हैं';
 
   @override
   String get manage_favourites_title => 'पसंदीदा और श्रेणियों का प्रबंधन करें';
 
   @override
-  String get manage_favourites_description => 'स्वचालित रूप से सबसे अधिक बिकने वाली वस्तुएं प्राप्त करें और आसान पहुँच के लिए वस्तुओं को श्रेणियों में व्यवस्थित करें।';
+  String get manage_favourites_description =>
+      'स्वचालित रूप से सबसे अधिक बिकने वाली वस्तुएं प्राप्त करें और आसान पहुँच के लिए वस्तुओं को श्रेणियों में व्यवस्थित करें।';
 
   @override
   String get enter_restaurant_name => 'रेस्टोरेंट का नाम दर्ज करें';
@@ -216,7 +228,9 @@ class AppLocalizationsHi extends AppLocalizations {
   String get no_Data_Available => 'डेटा उपलब्ध नहीं है';
 
   @override
-  String get you_havent_added_any_orders_yet_Add_an_order_to_see_most_selling_items => 'आपने अभी तक कोई ऑर्डर नहीं जोड़ा है।\nसबसे अधिक बिकने वाली वस्तुएं देखने के लिए एक ऑर्डर जोड़ें।';
+  String
+  get you_havent_added_any_orders_yet_Add_an_order_to_see_most_selling_items =>
+      'आपने अभी तक कोई ऑर्डर नहीं जोड़ा है।\nसबसे अधिक बिकने वाली वस्तुएं देखने के लिए एक ऑर्डर जोड़ें।';
 
   @override
   String get view_Item_Reports => 'आइटम रिपोर्ट देखें';
@@ -231,7 +245,9 @@ class AppLocalizationsHi extends AppLocalizations {
   String get no_Orders_Available => 'कोई ऑर्डर उपलब्ध नहीं';
 
   @override
-  String get you_havent_added_any_orders_Please_add_an_order_to_see_their_reports => 'आपने अभी तक कोई ऑर्डर नहीं जोड़ा है।\nकृपया उनकी रिपोर्ट देखने के लिए एक ऑर्डर जोड़ें।';
+  String
+  get you_havent_added_any_orders_Please_add_an_order_to_see_their_reports =>
+      'आपने अभी तक कोई ऑर्डर नहीं जोड़ा है।\nकृपया उनकी रिपोर्ट देखने के लिए एक ऑर्डर जोड़ें।';
 
   @override
   String get add_Order => 'ऑर्डर जोड़ें';
@@ -240,10 +256,13 @@ class AppLocalizationsHi extends AppLocalizations {
   String get item_Reports => 'आइटम रिपोर्ट';
 
   @override
-  String get you_havent_added_any_orders_Please_add_an_order_to_see_item_reports => 'आपने अभी तक कोई ऑर्डर नहीं जोड़ा है।\nकृपया आइटम रिपोर्ट देखने के लिए एक ऑर्डर जोड़ें।';
+  String
+  get you_havent_added_any_orders_Please_add_an_order_to_see_item_reports =>
+      'आपने अभी तक कोई ऑर्डर नहीं जोड़ा है।\nकृपया आइटम रिपोर्ट देखने के लिए एक ऑर्डर जोड़ें।';
 
   @override
-  String get add_your_menu_using_photos => 'फोटो का उपयोग करके\nअपना मेन्यू जोड़ें';
+  String get add_your_menu_using_photos =>
+      'फोटो का उपयोग करके\nअपना मेन्यू जोड़ें';
 
   @override
   String get save_and_hold => 'सेव करें और रोकें';
@@ -276,7 +295,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get settings => 'सेटिंग्स';
 
   @override
-  String get manage_your_loyal_customers => 'अपने वफादार ग्राहकों को प्रबंधित करें';
+  String get manage_your_loyal_customers =>
+      'अपने वफादार ग्राहकों को प्रबंधित करें';
 
   @override
   String get send_bulk_messages => 'बुल्क मैसेज भेजें';
@@ -285,7 +305,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get sync_across_multiple_devices => 'कई डिवाइस पर सिंक करें';
 
   @override
-  String get add_and_manage_staff_members => 'स्टाफ सदस्यों को जोड़ें और प्रबंधित करें';
+  String get add_and_manage_staff_members =>
+      'स्टाफ सदस्यों को जोड़ें और प्रबंधित करें';
 
   @override
   String get configure_printer_settings => 'प्रिंटर सेटिंग्स कॉन्फ़िगर करें';
@@ -306,46 +327,54 @@ class AppLocalizationsHi extends AppLocalizations {
   String get unlock_premium_features => 'प्रीमियम फीचर्स अनलॉक करें';
 
   @override
-  String get are_you_sure_you_want_to_logout_from_your_account => 'क्या आप वाकई अपने अकाउंट से लॉगआउट करना चाहते हैं?';
+  String get are_you_sure_you_want_to_logout_from_your_account =>
+      'क्या आप वाकई अपने अकाउंट से लॉगआउट करना चाहते हैं?';
 
   @override
-  String get keep_track_of_your_best_customers => 'अपने सबसे अच्छे\nग्राहकों का रिकॉर्ड रखें';
+  String get keep_track_of_your_best_customers =>
+      'अपने सबसे अच्छे\nग्राहकों का रिकॉर्ड रखें';
 
   @override
   String get whatsapp_marketing_and_offers => 'व्हाट्सऐप मार्केटिंग और ऑफ़र';
 
   @override
-  String get engage_customers_whatsapp_customised_offers => 'कस्टमाइज्ड ऑफ़र और प्रमोशन्स के साथ व्हाट्सऐप के माध्यम से ग्राहकों को जोड़ें';
+  String get engage_customers_whatsapp_customised_offers =>
+      'कस्टमाइज्ड ऑफ़र और प्रमोशन्स के साथ व्हाट्सऐप के माध्यम से ग्राहकों को जोड़ें';
 
   @override
   String get loyalty_discounts => 'वफादारी छूट';
 
   @override
-  String get boost_repeat_business_loyalty_discount => 'वफादारी छूट के साथ बार-बार आने वाले ग्राहकों को बढ़ाएं';
+  String get boost_repeat_business_loyalty_discount =>
+      'वफादारी छूट के साथ बार-बार आने वाले ग्राहकों को बढ़ाएं';
 
   @override
   String get business_insights_and_growth => 'व्यवसाय अंतर्दृष्टि और विकास';
 
   @override
-  String get unlock_powerful_insights_smart_decisions => 'स्मार्ट निर्णय लेने और तेजी से विकास के लिए शक्तिशाली इनसाइट्स अनलॉक करें।';
+  String get unlock_powerful_insights_smart_decisions =>
+      'स्मार्ट निर्णय लेने और तेजी से विकास के लिए शक्तिशाली इनसाइट्स अनलॉक करें।';
 
   @override
   String get add_regular_customer => 'नियमित ग्राहक जोड़ें';
 
   @override
-  String get send_bulk_whatsapp_to_all_your_visitors => 'अपने सभी आगंतुकों को\nथोक में व्हाट्सऐप संदेश भेजें';
+  String get send_bulk_whatsapp_to_all_your_visitors =>
+      'अपने सभी आगंतुकों को\nथोक में व्हाट्सऐप संदेश भेजें';
 
   @override
   String get greeting_offers_new_launches => 'ग्रीटिंग, ऑफ़र और नए लॉन्च';
 
   @override
-  String get send_messages_about_greetings_offers_new_launches => 'हमारे पूर्व-स्वीकृत टेम्पलेट्स के साथ अपने आगंतुकों को ग्रीटिंग, ऑफ़र और नए लॉन्च के बारे में संदेश भेजें।';
+  String get send_messages_about_greetings_offers_new_launches =>
+      'हमारे पूर्व-स्वीकृत टेम्पलेट्स के साथ अपने आगंतुकों को ग्रीटिंग, ऑफ़र और नए लॉन्च के बारे में संदेश भेजें।';
 
   @override
   String get boost_repeat_business => 'दोबारा व्यवसाय बढ़ाएँ';
 
   @override
-  String get get_visitors_back_targeted_whatsapp => 'लक्षित व्हाट्सऐप संदेशों के साथ आगंतुकों को अपने रेस्टोरेंट में वापस लाएँ।';
+  String get get_visitors_back_targeted_whatsapp =>
+      'लक्षित व्हाट्सऐप संदेशों के साथ आगंतुकों को अपने रेस्टोरेंट में वापस लाएँ।';
 
   @override
   String get send_bulk_whatsapp => 'बुल्क व्हाट्सऐप भेजें';
@@ -375,7 +404,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get usb_device_not_connected => 'यूएसबी डिवाइस कनेक्ट नहीं है';
 
   @override
-  String get usb_device_not_found_message => 'हम कोई यूएसबी डिवाइस नहीं ढूंढ सके।\nकृपया केबल कनेक्शन जांचें या दोबारा कनेक्ट करने का प्रयास करें।';
+  String get usb_device_not_found_message =>
+      'हम कोई यूएसबी डिवाइस नहीं ढूंढ सके।\nकृपया केबल कनेक्शन जांचें या दोबारा कनेक्ट करने का प्रयास करें।';
 
   @override
   String get get_support => 'सपोर्ट प्राप्त करें';
@@ -414,7 +444,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get tax_percentage => 'टैक्स प्रतिशत';
 
   @override
-  String get make_this_items_tax_the_default_firm_tax => 'इस आइटम के टैक्स को फर्म का डिफ़ॉल्ट टैक्स बनाएं';
+  String get make_this_items_tax_the_default_firm_tax =>
+      'इस आइटम के टैक्स को फर्म का डिफ़ॉल्ट टैक्स बनाएं';
 
   @override
   String get mark_this_item_as_favourite => 'इस आइटम को पसंदीदा बनाएं';
@@ -444,7 +475,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get upi_id => 'यूपीआई आईडी';
 
   @override
-  String get this_will_be_used_to_print_qr_on_bills => 'यह बिलों पर QR प्रिंट करने के लिए उपयोग होगा';
+  String get this_will_be_used_to_print_qr_on_bills =>
+      'यह बिलों पर QR प्रिंट करने के लिए उपयोग होगा';
 
   @override
   String get custom_footer_message_on_bills => 'बिलों पर कस्टम फ़ुटर संदेश';
@@ -501,7 +533,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get payment_modes => 'भुगतान मोड';
 
   @override
-  String get quickly_choose_payment_mode => 'ऑर्डर बनाते समय जल्दी से भुगतान मोड चुनें';
+  String get quickly_choose_payment_mode =>
+      'ऑर्डर बनाते समय जल्दी से भुगतान मोड चुनें';
 
   @override
   String get kot_mode => 'KOT मोड';
@@ -510,28 +543,33 @@ class AppLocalizationsHi extends AppLocalizations {
   String get choose_your_language => 'अपनी भाषा चुनें';
 
   @override
-  String get select_preferred_language_for_app => 'एप के लिए अपनी पसंदीदा भाषा चुनें';
+  String get select_preferred_language_for_app =>
+      'एप के लिए अपनी पसंदीदा भाषा चुनें';
 
   @override
-  String get work_smarter_together => 'स्मार्ट तरीके से काम करें, साथ मिलकर\nकिसी भी डिवाइस से';
+  String get work_smarter_together =>
+      'स्मार्ट तरीके से काम करें, साथ मिलकर\nकिसी भी डिवाइस से';
 
   @override
   String get access_anytime_anywhere => 'कभी भी, कहीं भी एक्सेस करें';
 
   @override
-  String get your_outlet_always_with_you => 'आपका आउटलेट हमेशा आपके साथ है — एक बार सिंक करें और किसी भी डिवाइस से बिलिंग प्रबंधित करें।';
+  String get your_outlet_always_with_you =>
+      'आपका आउटलेट हमेशा आपके साथ है — एक बार सिंक करें और किसी भी डिवाइस से बिलिंग प्रबंधित करें।';
 
   @override
   String get add_staff_share_work => 'स्टाफ जोड़ें, काम साझा करें';
 
   @override
-  String get let_team_take_orders => 'अपनी टीम को अपने डिवाइस से ऑर्डर लेने, बिल प्रिंट करने और भुगतान लेने दें — काउंटर पर भीड़ नहीं।';
+  String get let_team_take_orders =>
+      'अपनी टीम को अपने डिवाइस से ऑर्डर लेने, बिल प्रिंट करने और भुगतान लेने दें — काउंटर पर भीड़ नहीं।';
 
   @override
   String get safe_cloud_data => 'सुरक्षित, क्लाउड-बैक्ड डेटा';
 
   @override
-  String get even_if_phone_lost => 'अगर आपका फोन खो जाए या खराब हो जाए, तो भी आपका डेटा क्लाउड में सुरक्षित रहता है — हमेशा अपडेटेड, हमेशा रिकवर करने योग्य।';
+  String get even_if_phone_lost =>
+      'अगर आपका फोन खो जाए या खराब हो जाए, तो भी आपका डेटा क्लाउड में सुरक्षित रहता है — हमेशा अपडेटेड, हमेशा रिकवर करने योग्य।';
 
   @override
   String get invite_staff => 'स्टाफ को आमंत्रित करें';
@@ -555,7 +593,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get biller => 'बिलर';
 
   @override
-  String get staff_access_info => 'सेकेंडरी एडमिन को आउटलेट की सभी सुविधाओं और अनुमतियों का पूरा एक्सेस है।';
+  String get staff_access_info =>
+      'सेकेंडरी एडमिन को आउटलेट की सभी सुविधाओं और अनुमतियों का पूरा एक्सेस है।';
 
   @override
   String get send_invite => 'इनवाइट भेजें';
@@ -606,19 +645,22 @@ class AppLocalizationsHi extends AppLocalizations {
   String get submit => 'जमा करें';
 
   @override
-  String get specify_primary_contact => 'अपने व्यवसाय के प्राथमिक संपर्क को निर्दिष्ट करें';
+  String get specify_primary_contact =>
+      'अपने व्यवसाय के प्राथमिक संपर्क को निर्दिष्ट करें';
 
   @override
   String get payment_successful => 'भुगतान सफल';
 
   @override
-  String get payment_successful_description => 'आपकी सदस्यता सफलतापूर्वक सक्रिय हो गई है!';
+  String get payment_successful_description =>
+      'आपकी सदस्यता सफलतापूर्वक सक्रिय हो गई है!';
 
   @override
   String get payment_failed => 'भुगतान विफल';
 
   @override
-  String get payment_failed_description => 'भुगतान पूरा नहीं किया जा सका। कृपया पुनः प्रयास करें।';
+  String get payment_failed_description =>
+      'भुगतान पूरा नहीं किया जा सका। कृपया पुनः प्रयास करें।';
 
   @override
   String wallet_selected(String walletName) {
@@ -626,7 +668,8 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get payment_gateway_error => 'भुगतान गेटवे खोलने में विफल। कृपया पुनः प्रयास करें।';
+  String get payment_gateway_error =>
+      'भुगतान गेटवे खोलने में विफल। कृपया पुनः प्रयास करें।';
 
   @override
   String get bill_number => 'बिल नंबर';
@@ -738,7 +781,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get please_enter_item_name => 'कृपया आइटम का नाम दर्ज करें';
 
   @override
-  String get please_enter_valid_sale_price => 'कृपया वैध विक्रय मूल्य दर्ज करें';
+  String get please_enter_valid_sale_price =>
+      'कृपया वैध विक्रय मूल्य दर्ज करें';
 
   @override
   String get item_added_successfully => 'आइटम सफलतापूर्वक जोड़ा गया';
@@ -849,7 +893,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get enter_category_name => 'श्रेणी का नाम दर्ज करें';
 
   @override
-  String get items_shown_by_category => 'ऑर्डर दर्ज करते समय आइटम श्रेणी के अनुसार दिखाए जाते हैं।';
+  String get items_shown_by_category =>
+      'ऑर्डर दर्ज करते समय आइटम श्रेणी के अनुसार दिखाए जाते हैं।';
 
   @override
   String get all_categories => 'सभी श्रेणियां';
@@ -960,7 +1005,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get delete_order => 'ऑर्डर हटाएं';
 
   @override
-  String get are_you_sure_delete_order => 'क्या आप वाकई इस ऑर्डर को हटाना चाहते हैं?';
+  String get are_you_sure_delete_order =>
+      'क्या आप वाकई इस ऑर्डर को हटाना चाहते हैं?';
 
   @override
   String get order_removed_successfully => 'ऑर्डर सफलतापूर्वक हटाया गया';
@@ -1092,7 +1138,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get no_items_to_export => 'निर्यात करने के लिए कोई आइटम नहीं';
 
   @override
-  String get storage_permission_needed => 'Excel फ़ाइल सहेजने के लिए स्टोरेज अनुमति आवश्यक';
+  String get storage_permission_needed =>
+      'Excel फ़ाइल सहेजने के लिए स्टोरेज अनुमति आवश्यक';
 
   @override
   String get item_reports => 'आइटम रिपोर्ट';
@@ -1112,7 +1159,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get total_items => 'कुल आइटम';
 
   @override
-  String get contact_permission_needed => 'संपर्क लाने के लिए संपर्क अनुमति आवश्यक है';
+  String get contact_permission_needed =>
+      'संपर्क लाने के लिए संपर्क अनुमति आवश्यक है';
 
   @override
   String get dashboard => 'डैशबोर्ड';
@@ -1121,7 +1169,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get dashboardOverview => 'बिज़नेस डैशबोर्ड';
 
   @override
-  String get dashboardOverviewSubtitle => 'बिक्री, भुगतान और अंतर्दृष्टि एक नज़र में देखें';
+  String get dashboardOverviewSubtitle =>
+      'बिक्री, भुगतान और अंतर्दृष्टि एक नज़र में देखें';
 
   @override
   String get quickInsights => 'त्वरित अंतर्दृष्टि';
@@ -1133,7 +1182,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get retry => 'पुनः प्रयास करें';
 
   @override
-  String get no_new_items_to_send_to_kitchen => 'रसोई में भेजने के लिए कोई नया आइटम नहीं';
+  String get no_new_items_to_send_to_kitchen =>
+      'रसोई में भेजने के लिए कोई नया आइटम नहीं';
 
   @override
   String get close => 'बंद करें';
@@ -1166,7 +1216,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get please_enter_order_details => 'कृपया ऑर्डर विवरण दर्ज करें';
 
   @override
-  String get please_select_table_for_dine_in => 'कृपया डाइन इन ऑर्डर के लिए टेबल चुनें';
+  String get please_select_table_for_dine_in =>
+      'कृपया डाइन इन ऑर्डर के लिए टेबल चुनें';
 
   @override
   String failed_to_share_pdf_error(String error) {
@@ -1174,7 +1225,8 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get pdf_generation_failed_empty => 'PDF जेनरेट करने में विफल - खाली दस्तावेज़';
+  String get pdf_generation_failed_empty =>
+      'PDF जेनरेट करने में विफल - खाली दस्तावेज़';
 
   @override
   String failed_to_pick_image(String error) {
@@ -1187,7 +1239,8 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get form_not_initialized => 'फॉर्म प्रारंभ नहीं हुआ। कृपया पुनः प्रयास करें।';
+  String get form_not_initialized =>
+      'फॉर्म प्रारंभ नहीं हुआ। कृपया पुनः प्रयास करें।';
 
   @override
   String get please_enter_user_name => 'कृपया उपयोगकर्ता नाम दर्ज करें';
@@ -1202,7 +1255,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get please_enter_phone_number => 'कृपया फोन नंबर दर्ज करें';
 
   @override
-  String get please_enter_valid_10_digit_phone => 'कृपया एक वैध 10 अंकों का फोन नंबर दर्ज करें';
+  String get please_enter_valid_10_digit_phone =>
+      'कृपया एक वैध 10 अंकों का फोन नंबर दर्ज करें';
 
   @override
   String failed_to_send_messages(String error) {
@@ -1210,13 +1264,15 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get please_enter_valid_10_digit_phone_alt => 'कृपया एक वैध 10 अंकों का फोन नंबर दर्ज करें';
+  String get please_enter_valid_10_digit_phone_alt =>
+      'कृपया एक वैध 10 अंकों का फोन नंबर दर्ज करें';
 
   @override
   String get add_payment_method => 'भुगतान विधि जोड़ें';
 
   @override
-  String get could_not_open_kitchen_display => 'किचन डिस्प्ले के लिए ब्राउज़र नहीं खोल सका';
+  String get could_not_open_kitchen_display =>
+      'किचन डिस्प्ले के लिए ब्राउज़र नहीं खोल सका';
 
   @override
   String get stay => 'रुकें';
@@ -1266,13 +1322,16 @@ class AppLocalizationsHi extends AppLocalizations {
   String get use_same_as_bill_printer => 'बिल प्रिंटर के समान उपयोग करें';
 
   @override
-  String get table_already_has_active_order => 'इस टेबल पर पहले से एक सक्रिय ऑर्डर है';
+  String get table_already_has_active_order =>
+      'इस टेबल पर पहले से एक सक्रिय ऑर्डर है';
 
   @override
-  String get kot_sent_continue_adding_items => 'KOT भेजा गया — आइटम जोड़ना जारी रखें';
+  String get kot_sent_continue_adding_items =>
+      'KOT भेजा गया — आइटम जोड़ना जारी रखें';
 
   @override
-  String get kot_sent_offline_continue_adding_items => 'KOT भेजा गया (ऑफलाइन) — आइटम जोड़ना जारी रखें';
+  String get kot_sent_offline_continue_adding_items =>
+      'KOT भेजा गया (ऑफलाइन) — आइटम जोड़ना जारी रखें';
 
   @override
   String get settle_bill => 'बिल निपटाएं';
@@ -1293,7 +1352,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get address_saved_successfully => 'पता सफलतापूर्वक सहेजा गया';
 
   @override
-  String get failed_to_load_business_details => 'व्यवसाय विवरण लोड करने में विफल';
+  String get failed_to_load_business_details =>
+      'व्यवसाय विवरण लोड करने में विफल';
 
   @override
   String get update_failed => 'अपडेट विफल';
@@ -1302,7 +1362,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get failed_to_delete_outlet => 'आउटलेट हटाने में विफल';
 
   @override
-  String get business_details_updated_successfully => 'व्यवसाय विवरण सफलतापूर्वक अपडेट किए गए';
+  String get business_details_updated_successfully =>
+      'व्यवसाय विवरण सफलतापूर्वक अपडेट किए गए';
 
   @override
   String get error_fetching_orders => 'ऑर्डर लाने में त्रुटि';
@@ -1366,7 +1427,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get invoice_printed_successfully => 'इनवॉइस सफलतापूर्वक प्रिंट हुआ';
 
   @override
-  String get invoice_saved_to_downloads => 'इनवॉइस डाउनलोड फ़ोल्डर में सहेजा गया';
+  String get invoice_saved_to_downloads =>
+      'इनवॉइस डाउनलोड फ़ोल्डर में सहेजा गया';
 
   @override
   String get preview => 'पूर्वावलोकन';
@@ -1375,7 +1437,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get generate_bill => 'बिल जेनरेट करें';
 
   @override
-  String get please_enter_item_name_for_image => 'छवि जेनरेट करने के लिए पहले आइटम का नाम दर्ज करें';
+  String get please_enter_item_name_for_image =>
+      'छवि जेनरेट करने के लिए पहले आइटम का नाम दर्ज करें';
 
   @override
   String get image_upload_failed => 'छवि अपलोड विफल। कृपया पुनः प्रयास करें।';
@@ -1396,7 +1459,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get failed_to_update_item => 'आइटम अपडेट करने में विफल';
 
   @override
-  String get failed_to_update_kitchen_status => 'किचन स्थिति अपडेट करने में विफल';
+  String get failed_to_update_kitchen_status =>
+      'किचन स्थिति अपडेट करने में विफल';
 
   @override
   String get dismiss => 'खारिज करें';
@@ -1414,13 +1478,15 @@ class AppLocalizationsHi extends AppLocalizations {
   String get bump => 'बम्प';
 
   @override
-  String get please_enable_location_permission => 'कृपया सेटिंग्स में लोकेशन अनुमति सक्षम करें';
+  String get please_enable_location_permission =>
+      'कृपया सेटिंग्स में लोकेशन अनुमति सक्षम करें';
 
   @override
   String get failed_to_get_address_details => 'पता विवरण प्राप्त करने में विफल';
 
   @override
-  String get please_select_location_on_map => 'कृपया मानचित्र पर एक स्थान चुनें';
+  String get please_select_location_on_map =>
+      'कृपया मानचित्र पर एक स्थान चुनें';
 
   @override
   String get notifications_cleared => 'सूचनाएं साफ़ की गईं';
@@ -1429,19 +1495,22 @@ class AppLocalizationsHi extends AppLocalizations {
   String get clear_notifications_title => 'सूचनाएं साफ़ करें?';
 
   @override
-  String get clear_notifications_message => 'यह आपके सूचना इतिहास से सभी आइटम हटा देगा।';
+  String get clear_notifications_message =>
+      'यह आपके सूचना इतिहास से सभी आइटम हटा देगा।';
 
   @override
   String get no_notifications_yet => 'अभी कोई सूचना नहीं';
 
   @override
-  String get notifications_empty_hint => 'किचन तैयार अलर्ट और अन्य अपडेट यहाँ दिखेंगे।';
+  String get notifications_empty_hint =>
+      'किचन तैयार अलर्ट और अन्य अपडेट यहाँ दिखेंगे।';
 
   @override
   String get mark_all_read => 'सभी को पढ़ा हुआ चिह्नित करें';
 
   @override
-  String get primary_contact_saved_successfully => 'प्राथमिक संपर्क सफलतापूर्वक सहेजा गया';
+  String get primary_contact_saved_successfully =>
+      'प्राथमिक संपर्क सफलतापूर्वक सहेजा गया';
 
   @override
   String failed_to_assign_printer(String error) {
@@ -1473,7 +1542,8 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get bluetooth_printer_not_connected => 'ब्लूटूथ प्रिंटर कनेक्ट नहीं है';
+  String get bluetooth_printer_not_connected =>
+      'ब्लूटूथ प्रिंटर कनेक्ट नहीं है';
 
   @override
   String failed_to_print_via_bluetooth(String error) {
@@ -1489,10 +1559,12 @@ class AppLocalizationsHi extends AppLocalizations {
   String get disconnected_from_printer => 'प्रिंटर से डिस्कनेक्ट हो गया';
 
   @override
-  String get bluetooth_test_receipt_printed => 'ब्लूटूथ टेस्ट रसीद सफलतापूर्वक प्रिंट हुई';
+  String get bluetooth_test_receipt_printed =>
+      'ब्लूटूथ टेस्ट रसीद सफलतापूर्वक प्रिंट हुई';
 
   @override
-  String get usb_test_receipt_printed => 'USB टेस्ट रसीद सफलतापूर्वक प्रिंट हुई';
+  String get usb_test_receipt_printed =>
+      'USB टेस्ट रसीद सफलतापूर्वक प्रिंट हुई';
 
   @override
   String get please_add_business_address => 'कृपया व्यवसाय का पता जोड़ें';
@@ -1504,7 +1576,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get please_complete_address_fields => 'कृपया सभी पता फ़ील्ड पूरे करें';
 
   @override
-  String get please_complete_contact_fields => 'कृपया सभी संपर्क फ़ील्ड पूरे करें';
+  String get please_complete_contact_fields =>
+      'कृपया सभी संपर्क फ़ील्ड पूरे करें';
 
   @override
   String get registration_failed => 'पंजीकरण विफल। कृपया पुनः प्रयास करें।';
@@ -1531,7 +1604,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get table_already_exists => 'यह टेबल पहले से मौजूद है';
 
   @override
-  String get cannot_delete_table_with_active_order => 'सक्रिय ऑर्डर वाली टेबल हटाई नहीं जा सकती';
+  String get cannot_delete_table_with_active_order =>
+      'सक्रिय ऑर्डर वाली टेबल हटाई नहीं जा सकती';
 
   @override
   String get table_added_successfully => 'टेबल सफलतापूर्वक जोड़ी गई';
@@ -1546,13 +1620,15 @@ class AppLocalizationsHi extends AppLocalizations {
   String get please_enter_a_phone_number => 'कृपया एक फोन नंबर दर्ज करें';
 
   @override
-  String get please_add_at_least_one_phone_number => 'कृपया कम से कम एक फोन नंबर जोड़ें';
+  String get please_add_at_least_one_phone_number =>
+      'कृपया कम से कम एक फोन नंबर जोड़ें';
 
   @override
   String get please_enter_a_message => 'कृपया एक संदेश दर्ज करें';
 
   @override
-  String get please_enter_restaurant_name => 'कृपया रेस्टोरेंट का नाम दर्ज करें';
+  String get please_enter_restaurant_name =>
+      'कृपया रेस्टोरेंट का नाम दर्ज करें';
 
   @override
   String get please_enter_discount_value => 'कृपया छूट मूल्य दर्ज करें';
@@ -1561,7 +1637,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get please_enter_festival_name => 'कृपया त्योहार का नाम दर्ज करें';
 
   @override
-  String get outlet_or_user_info_missing => 'आउटलेट या उपयोगकर्ता जानकारी अनुपलब्ध है';
+  String get outlet_or_user_info_missing =>
+      'आउटलेट या उपयोगकर्ता जानकारी अनुपलब्ध है';
 
   @override
   String get confirm_bulk_message => 'बल्क संदेश की पुष्टि करें';
@@ -1654,10 +1731,12 @@ class AppLocalizationsHi extends AppLocalizations {
   String get camera => 'कैमरा';
 
   @override
-  String get please_add_at_least_one_payment_method => 'कृपया कम से कम एक भुगतान विधि जोड़ें';
+  String get please_add_at_least_one_payment_method =>
+      'कृपया कम से कम एक भुगतान विधि जोड़ें';
 
   @override
-  String get camera_permission_denied_barcode => 'कैमरा अनुमति अस्वीकृत। बारकोड स्कैन नहीं कर सकते।';
+  String get camera_permission_denied_barcode =>
+      'कैमरा अनुमति अस्वीकृत। बारकोड स्कैन नहीं कर सकते।';
 
   @override
   String get camera_permission_needed => 'कैमरा अनुमति आवश्यक';
@@ -1672,7 +1751,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get set_as_bill_printer => 'बिल प्रिंटर के रूप में सेट करें';
 
   @override
-  String get seating_capacity_min_one => 'बैठने की क्षमता कम से कम 1 होनी चाहिए';
+  String get seating_capacity_min_one =>
+      'बैठने की क्षमता कम से कम 1 होनी चाहिए';
 
   @override
   String get filters => 'फ़िल्टर';
@@ -1746,22 +1826,27 @@ class AppLocalizationsHi extends AppLocalizations {
   String get bill_printer_not_configured => 'बिल प्रिंटर कॉन्फ़िगर नहीं है';
 
   @override
-  String get bill_printer_not_found => 'बिल प्रिंटर नहीं मिला। इसे चालू करें और पुनः प्रयास करें।';
+  String get bill_printer_not_found =>
+      'बिल प्रिंटर नहीं मिला। इसे चालू करें और पुनः प्रयास करें।';
 
   @override
-  String get kot_printer_same_as_bill => 'KOT प्रिंटर बिल प्रिंटर के समान सेट किया गया';
+  String get kot_printer_same_as_bill =>
+      'KOT प्रिंटर बिल प्रिंटर के समान सेट किया गया';
 
   @override
-  String get only_available_tables_can_be_deleted => 'केवल उपलब्ध टेबल हटाई जा सकती हैं';
+  String get only_available_tables_can_be_deleted =>
+      'केवल उपलब्ध टेबल हटाई जा सकती हैं';
 
   @override
   String get all_tables_reset_successfully => 'सभी टेबल सफलतापूर्वक रीसेट हुईं';
 
   @override
-  String get user_or_outlet_info_missing => 'उपयोगकर्ता या आउटलेट जानकारी अनुपलब्ध है।';
+  String get user_or_outlet_info_missing =>
+      'उपयोगकर्ता या आउटलेट जानकारी अनुपलब्ध है।';
 
   @override
-  String get payment_subscription_activated => 'भुगतान सफल। सदस्यता सक्रिय हो गई।';
+  String get payment_subscription_activated =>
+      'भुगतान सफल। सदस्यता सक्रिय हो गई।';
 
   @override
   String get stock_in => 'स्टॉक इन (+)';
@@ -1837,7 +1922,8 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get please_wait_sending => 'कृपया प्रतीक्षा करें, इसमें एक मिनट लग सकता है।';
+  String get please_wait_sending =>
+      'कृपया प्रतीक्षा करें, इसमें एक मिनट लग सकता है।';
 
   @override
   String get no_results_available => 'कोई परिणाम उपलब्ध नहीं';
@@ -1858,7 +1944,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get failed_to_delete_table => 'टेबल हटाने में विफल';
 
   @override
-  String get qr_menu_url_updated => 'QR मेनू URL अपडेट हुआ। टेबल QR कोड फिर से प्रिंट करें।';
+  String get qr_menu_url_updated =>
+      'QR मेनू URL अपडेट हुआ। टेबल QR कोड फिर से प्रिंट करें।';
 
   @override
   String get failed_to_load_orders_error => 'ऑर्डर लोड करने में विफल';
@@ -1885,7 +1972,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get kitchen_display => 'किचन डिस्प्ले';
 
   @override
-  String get open_kitchen_display_in_browser => 'ब्राउज़र में किचन डिस्प्ले खोलें';
+  String get open_kitchen_display_in_browser =>
+      'ब्राउज़र में किचन डिस्प्ले खोलें';
 
   @override
   String get profile => 'प्रोफ़ाइल';
@@ -1920,10 +2008,12 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get discard_order_message => 'आपके पास असहेजे ऑर्डर परिवर्तन हैं। क्या आप वाकई इस स्क्रीन को छोड़ना चाहते हैं?';
+  String get discard_order_message =>
+      'आपके पास असहेजे ऑर्डर परिवर्तन हैं। क्या आप वाकई इस स्क्रीन को छोड़ना चाहते हैं?';
 
   @override
-  String get no_permission_section => 'आपके पास इस अनुभाग तक पहुँचने की अनुमति नहीं है।';
+  String get no_permission_section =>
+      'आपके पास इस अनुभाग तक पहुँचने की अनुमति नहीं है।';
 
   @override
   String get settings_section_general => 'सामान्य';
@@ -1932,28 +2022,33 @@ class AppLocalizationsHi extends AppLocalizations {
   String get billing_list_view => 'बिलिंग सूची दृश्य';
 
   @override
-  String get billing_list_view_subtitle => 'ऑर्डर को छवि ग्रिड के बजाय सूची में दिखाएं';
+  String get billing_list_view_subtitle =>
+      'ऑर्डर को छवि ग्रिड के बजाय सूची में दिखाएं';
 
   @override
   String get show_qr_on_bill => 'बिल पर QR दिखाएं';
 
   @override
-  String get show_qr_on_bill_subtitle => 'इनवॉइस और प्रिंट पर UPI स्कैन-टू-पे QR दिखाएं';
+  String get show_qr_on_bill_subtitle =>
+      'इनवॉइस और प्रिंट पर UPI स्कैन-टू-पे QR दिखाएं';
 
   @override
   String get add_details_on_create_order => 'ऑर्डर बनाते समय विवरण जोड़ें';
 
   @override
-  String get add_details_on_create_order_subtitle => 'ग्राहक, टेबल, छूट और भुगतान के लिए विवरण जोड़ें दिखाएं';
+  String get add_details_on_create_order_subtitle =>
+      'ग्राहक, टेबल, छूट और भुगतान के लिए विवरण जोड़ें दिखाएं';
 
   @override
   String get kitchen_display_in_browser => 'ब्राउज़र में किचन डिस्प्ले';
 
   @override
-  String get kitchen_display_browser_subtitle => 'दूसरे मॉनिटर या TV पर वेब किचन स्क्रीन खोलें';
+  String get kitchen_display_browser_subtitle =>
+      'दूसरे मॉनिटर या TV पर वेब किचन स्क्रीन खोलें';
 
   @override
-  String get kitchen_display_browser_subtitle_device => 'दूसरे डिवाइस पर वेब किचन स्क्रीन खोलें';
+  String get kitchen_display_browser_subtitle_device =>
+      'दूसरे डिवाइस पर वेब किचन स्क्रीन खोलें';
 
   @override
   String get show_onboarding_again => 'ऑनबोर्डिंग फिर से दिखाएं';
@@ -1998,13 +2093,15 @@ class AppLocalizationsHi extends AppLocalizations {
   String get presets => 'प्रीसेट';
 
   @override
-  String get hex_format_error => '#RRGGBB (जैसे #2196F3) या #AARRGGBB उपयोग करें';
+  String get hex_format_error =>
+      '#RRGGBB (जैसे #2196F3) या #AARRGGBB उपयोग करें';
 
   @override
   String get download_path_updated => 'डाउनलोड पथ अपडेट हुआ';
 
   @override
-  String get unable_to_update_download_path => 'डाउनलोड पथ अपडेट करने में असमर्थ';
+  String get unable_to_update_download_path =>
+      'डाउनलोड पथ अपडेट करने में असमर्थ';
 
   @override
   String get select_folder => 'फ़ोल्डर चुनें';
@@ -2022,19 +2119,22 @@ class AppLocalizationsHi extends AppLocalizations {
   String get top_selling_items => 'सबसे ज्यादा बिकने वाले आइटम';
 
   @override
-  String get top_selling_items_subtitle => 'होम स्क्रीन पर सबसे ज्यादा बिकने वाले मेनू आइटम';
+  String get top_selling_items_subtitle =>
+      'होम स्क्रीन पर सबसे ज्यादा बिकने वाले मेनू आइटम';
 
   @override
-  String get recommended_items => 'अनुशंसित आइटम';
+  String get recommended_items => 'सबसे ज्यादा बिकने वाले आइटम';
 
   @override
-  String get features_for_you_subtitle => 'होम स्क्रीन पर अनुशंसित सेटअप और टूल';
+  String get features_for_you_subtitle =>
+      'होम स्क्रीन पर अनुशंसित सेटअप और टूल';
 
   @override
   String get what_our_users_say => 'हमारे उपयोगकर्ता क्या कहते हैं';
 
   @override
-  String get what_our_users_say_subtitle => 'होम स्क्रीन पर ग्राहक प्रशंसापत्र कैरोसेल';
+  String get what_our_users_say_subtitle =>
+      'होम स्क्रीन पर ग्राहक प्रशंसापत्र कैरोसेल';
 
   @override
   String get settings_section_haptic => 'हैप्टिक फीडबैक';
@@ -2049,7 +2149,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get home_outlet_showcase_title => 'आउटलेट';
 
   @override
-  String get home_outlet_showcase_desc => 'आउटलेट बदलने के लिए यहाँ टैप करें। चयनित आउटलेट के लिए आपकी टेबल, ऑर्डर, बिक्री और रिपोर्ट अपडेट होंगी।';
+  String get home_outlet_showcase_desc =>
+      'आउटलेट बदलने के लिए यहाँ टैप करें। चयनित आउटलेट के लिए आपकी टेबल, ऑर्डर, बिक्री और रिपोर्ट अपडेट होंगी।';
 
   @override
   String get home_ai_voice_add_items => 'AI वॉइस से आइटम जोड़ें';
@@ -2058,16 +2159,19 @@ class AppLocalizationsHi extends AppLocalizations {
   String get home_profile_business_title => 'प्रोफ़ाइल / व्यवसाय';
 
   @override
-  String get home_profile_business_desc => 'यहाँ से व्यवसाय सेटिंग्स, प्रोफ़ाइल और आउटलेट विवरण खोलें।';
+  String get home_profile_business_desc =>
+      'यहाँ से व्यवसाय सेटिंग्स, प्रोफ़ाइल और आउटलेट विवरण खोलें।';
 
   @override
-  String get home_profile_business_desc_short => 'यहाँ से व्यवसाय सेटिंग्स और आउटलेट विवरण खोलें।';
+  String get home_profile_business_desc_short =>
+      'यहाँ से व्यवसाय सेटिंग्स और आउटलेट विवरण खोलें।';
 
   @override
   String get home_printer_status_title => 'प्रिंटर स्थिति';
 
   @override
-  String get home_printer_status_desc => 'जब आपका प्रिंटर कनेक्ट हो, तो बिना रुकावट के इनवॉइस और KOT प्रिंट कर सकते हैं।';
+  String get home_printer_status_desc =>
+      'जब आपका प्रिंटर कनेक्ट हो, तो बिना रुकावट के इनवॉइस और KOT प्रिंट कर सकते हैं।';
 
   @override
   String get home_printer_connected_label => 'प्रिंटर कनेक्टेड';
@@ -2085,7 +2189,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get home_printer_connected_name => 'प्रिंटर कनेक्टेड';
 
   @override
-  String get home_quick_actions_showcase_desc => 'आइटम जोड़ें, KOT इतिहास आदि जैसी अक्सर उपयोग होने वाली सुविधाओं के शॉर्टकट।';
+  String get home_quick_actions_showcase_desc =>
+      'आइटम जोड़ें, KOT इतिहास आदि जैसी अक्सर उपयोग होने वाली सुविधाओं के शॉर्टकट।';
 
   @override
   String get home_frequently_used_shortcuts => 'अक्सर उपयोग होने वाले शॉर्टकट';
@@ -2094,19 +2199,24 @@ class AppLocalizationsHi extends AppLocalizations {
   String get home_kitchen_web => 'किचन (वेब)';
 
   @override
-  String get home_showcase_closed_orders => 'पूर्ण/भुगतान किए गए ऑर्डर देखें और कभी भी विवरण खोलें।';
+  String get home_showcase_closed_orders =>
+      'पूर्ण/भुगतान किए गए ऑर्डर देखें और कभी भी विवरण खोलें।';
 
   @override
-  String get home_showcase_hold_orders => 'होल्ड पर सहेजे ऑर्डर। कभी भी बिलिंग फिर से शुरू करें।';
+  String get home_showcase_hold_orders =>
+      'होल्ड पर सहेजे ऑर्डर। कभी भी बिलिंग फिर से शुरू करें।';
 
   @override
-  String get home_showcase_add_items => 'अपने इन्वेंटरी में मेनू आइटम जोड़ें (मैनुअल / वॉइस)।';
+  String get home_showcase_add_items =>
+      'अपने इन्वेंटरी में मेनू आइटम जोड़ें (मैनुअल / वॉइस)।';
 
   @override
-  String get home_showcase_kot_history => 'KOT इतिहास देखें, विवरण खोलें और KOT फिर से प्रिंट करें।';
+  String get home_showcase_kot_history =>
+      'KOT इतिहास देखें, विवरण खोलें और KOT फिर से प्रिंट करें।';
 
   @override
-  String get home_tap_to_access_feature => 'इस सुविधा तक पहुँचने के लिए टैप करें।';
+  String get home_tap_to_access_feature =>
+      'इस सुविधा तक पहुँचने के लिए टैप करें।';
 
   @override
   String get home_occupied_tables => 'व्यस्त टेबल';
@@ -2142,7 +2252,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get home_today_vs_yesterday => 'आज बनाम कल';
 
   @override
-  String get home_business_overview_showcase_desc => 'आज और कल की बिक्री, ऑर्डर और प्रदर्शन मेट्रिक्स सहित विस्तृत व्यवसाय अंतर्दृष्टि देखें।';
+  String get home_business_overview_showcase_desc =>
+      'आज और कल की बिक्री, ऑर्डर और प्रदर्शन मेट्रिक्स सहित विस्तृत व्यवसाय अंतर्दृष्टि देखें।';
 
   @override
   String get home_performance_summary => 'प्रदर्शन सारांश';
@@ -2176,7 +2287,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get home_quarterly_sales_trend => 'त्रैमासिक बिक्री रुझान';
 
   @override
-  String get home_last_4_quarters_sales => 'पिछले 4 तिमाहियों की बिक्री प्रदर्शन';
+  String get home_last_4_quarters_sales =>
+      'पिछले 4 तिमाहियों की बिक्री प्रदर्शन';
 
   @override
   String get home_yearly_sales_trend => 'वार्षिक बिक्री रुझान';
@@ -2188,13 +2300,15 @@ class AppLocalizationsHi extends AppLocalizations {
   String get home_sales_trend => 'बिक्री रुझान';
 
   @override
-  String get home_sales_trend_showcase_desc => 'सप्ताह/महीना/तिमाही/वर्ष के अनुसार बिक्री रुझान ट्रैक करें और कुल व औसत देखें।';
+  String get home_sales_trend_showcase_desc =>
+      'सप्ताह/महीना/तिमाही/वर्ष के अनुसार बिक्री रुझान ट्रैक करें और कुल व औसत देखें।';
 
   @override
   String get home_no_item_sales_yet => 'अभी तक कोई आइटम बिक्री नहीं';
 
   @override
-  String get home_features_showcase_desc => 'त्वरित सेटअप टूल और अनुशंसित सुविधाएँ जो आपके व्यवसाय को तेज़ चलाने में मदद करें।';
+  String get home_features_showcase_desc =>
+      'त्वरित सेटअप टूल और अनुशंसित सुविधाएँ जो आपके व्यवसाय को तेज़ चलाने में मदद करें।';
 
   @override
   String get home_recommended_setup_tools => 'अनुशंसित सेटअप और टूल';
@@ -2206,7 +2320,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get home_testimonials => 'प्रशंसापत्र';
 
   @override
-  String get home_testimonials_showcase_desc => 'बिलकरो का उपयोग करने वाले रेस्टोरेंट की प्रतिक्रिया देखें। और पढ़ने के लिए स्वाइप करें।';
+  String get home_testimonials_showcase_desc =>
+      'बिलकरो का उपयोग करने वाले रेस्टोरेंट की प्रतिक्रिया देखें। और पढ़ने के लिए स्वाइप करें।';
 
   @override
   String get home_payment_received => 'भुगतान प्राप्त';
@@ -2262,7 +2377,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get owner_panel_no_results => 'कोई मिलान नहीं';
 
   @override
-  String get owner_panel_no_results_subtitle => 'दूसरा नाम, पता या GSTIN आज़माएँ।';
+  String get owner_panel_no_results_subtitle =>
+      'दूसरा नाम, पता या GSTIN आज़माएँ।';
 
   @override
   String get owner_panel_active => 'सक्रिय';
@@ -2295,7 +2411,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get home_customize_home => 'होम कस्टमाइज़ करें';
 
   @override
-  String get home_customize_home_subtitle => 'होम स्क्रीन पर अनुभाग दिखाएँ या छिपाएँ';
+  String get home_customize_home_subtitle =>
+      'होम स्क्रीन पर अनुभाग दिखाएँ या छिपाएँ';
 
   @override
   String get home_section_on_home => 'होम पर अनुभाग';
@@ -2348,25 +2465,29 @@ class AppLocalizationsHi extends AppLocalizations {
   String get home_customize_sections_title => 'होम अनुभाग कस्टमाइज़ करें';
 
   @override
-  String get home_customize_sections_subtitle => 'चुनें कि होम स्क्रीन पर कौन से अनुभाग दिखें';
+  String get home_customize_sections_subtitle =>
+      'चुनें कि होम स्क्रीन पर कौन से अनुभाग दिखें';
 
   @override
   String get home_show_section => 'अनुभाग दिखाएँ';
 
   @override
-  String get testimonial_quote_1 => 'यह ऐप तेज़, उपयोग में आसान है, और परेशानी मुक्त रेस्टोरेंट प्रबंधन के लिए बिल्कुल सही है।';
+  String get testimonial_quote_1 =>
+      'यह ऐप तेज़, उपयोग में आसान है, और परेशानी मुक्त रेस्टोरेंट प्रबंधन के लिए बिल्कुल सही है।';
 
   @override
   String get testimonial_author_1 => 'अंकित कुमार';
 
   @override
-  String get testimonial_quote_2 => 'मैंने जो सबसे अच्छा बिलिंग समाधान इस्तेमाल किया है। मेरा रेस्टोरेंट चलाना बहुत आसान हो गया!';
+  String get testimonial_quote_2 =>
+      'मैंने जो सबसे अच्छा बिलिंग समाधान इस्तेमाल किया है। मेरा रेस्टोरेंट चलाना बहुत आसान हो गया!';
 
   @override
   String get testimonial_author_2 => 'प्रिया शर्मा';
 
   @override
-  String get testimonial_quote_3 => 'सरल, कुशल और विश्वसनीय। हर रेस्टोरेंट मालिक को बिल्कुल वही चाहिए।';
+  String get testimonial_quote_3 =>
+      'सरल, कुशल और विश्वसनीय। हर रेस्टोरेंट मालिक को बिल्कुल वही चाहिए।';
 
   @override
   String get testimonial_author_3 => 'राहुल वर्मा';
@@ -2375,7 +2496,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get search_outlets_hint => 'आउटलेट खोजें…';
 
   @override
-  String get qr_menu_description => 'टेबल के लिए QR कोड जनरेट करें ताकि ग्राहक स्कैन करके अपने फ़ोन से ऑर्डर और भुगतान कर सकें।';
+  String get qr_menu_description =>
+      'टेबल के लिए QR कोड जनरेट करें ताकि ग्राहक स्कैन करके अपने फ़ोन से ऑर्डर और भुगतान कर सकें।';
 
   @override
   String qr_menu_current_url_base(String url) {
@@ -2388,7 +2510,8 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get seating_capacity_not_set => 'इस आउटलेट के लिए बैठने की क्षमता सेट नहीं है।';
+  String get seating_capacity_not_set =>
+      'इस आउटलेट के लिए बैठने की क्षमता सेट नहीं है।';
 
   @override
   String get table_number_hint => 'जैसे 13 या टेबल 13';
@@ -2407,7 +2530,8 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get reset_all_tables_message => 'यह इस आउटलेट की सभी टेबल हटा देगा। क्या आप जारी रखना चाहते हैं?';
+  String get reset_all_tables_message =>
+      'यह इस आउटलेट की सभी टेबल हटा देगा। क्या आप जारी रखना चाहते हैं?';
 
   @override
   String get search_table => 'टेबल खोजें';
@@ -2488,7 +2612,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get table_status_empty => 'खाली';
 
   @override
-  String get no_tables_match_filter => 'कोई टेबल आपकी खोज/फ़िल्टर से मेल नहीं खाती';
+  String get no_tables_match_filter =>
+      'कोई टेबल आपकी खोज/फ़िल्टर से मेल नहीं खाती';
 
   @override
   String get no_tables_available => 'कोई टेबल उपलब्ध नहीं';
@@ -2503,19 +2628,23 @@ class AppLocalizationsHi extends AppLocalizations {
   String get tap_to_create_new_order => 'नया ऑर्डर बनाने के लिए टैप करें';
 
   @override
-  String get unable_to_load_tables_from_server => 'सर्वर से टेबल लोड नहीं हो सकीं';
+  String get unable_to_load_tables_from_server =>
+      'सर्वर से टेबल लोड नहीं हो सकीं';
 
   @override
-  String get no_tables_configured => 'इस आउटलेट के लिए कोई टेबल कॉन्फ़िगर नहीं है';
+  String get no_tables_configured =>
+      'इस आउटलेट के लिए कोई टेबल कॉन्फ़िगर नहीं है';
 
   @override
   String get unable_to_load_local_orders => 'स्थानीय ऑर्डर लोड नहीं हो सके';
 
   @override
-  String get set_outlet_seating_capacity_first => 'टेबल जोड़ने से पहले आउटलेट की बैठने की क्षमता सेट करें';
+  String get set_outlet_seating_capacity_first =>
+      'टेबल जोड़ने से पहले आउटलेट की बैठने की क्षमता सेट करें';
 
   @override
-  String get set_outlet_seating_capacity_first_short => 'पहले आउटलेट की बैठने की क्षमता सेट करें';
+  String get set_outlet_seating_capacity_first_short =>
+      'पहले आउटलेट की बैठने की क्षमता सेट करें';
 
   @override
   String cannot_add_more_tables(int limit) {
@@ -2531,7 +2660,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get failed_to_reset_all_tables => 'सभी टेबल रीसेट करने में विफल';
 
   @override
-  String get could_not_generate_qr_for_table => 'इस टेबल के लिए QR जनरेट नहीं हो सका';
+  String get could_not_generate_qr_for_table =>
+      'इस टेबल के लिए QR जनरेट नहीं हो सका';
 
   @override
   String print_failed_with_error(String error) {
@@ -2547,13 +2677,15 @@ class AppLocalizationsHi extends AppLocalizations {
   String get table_qr_printed_successfully => 'टेबल QR प्रिंटर पर भेजा गया';
 
   @override
-  String get all_table_qrs_printed_successfully => 'सभी टेबल QR प्रिंटर पर भेजे गए';
+  String get all_table_qrs_printed_successfully =>
+      'सभी टेबल QR प्रिंटर पर भेजे गए';
 
   @override
   String get table_management => 'टेबल प्रबंधन';
 
   @override
-  String get tables_not_available_no_seating => 'बिना बैठने की सुविधा वाले आउटलेट के लिए टेबल उपलब्ध नहीं हैं।';
+  String get tables_not_available_no_seating =>
+      'बिना बैठने की सुविधा वाले आउटलेट के लिए टेबल उपलब्ध नहीं हैं।';
 
   @override
   String get add_new_table => 'नई टेबल जोड़ें';
@@ -2608,10 +2740,12 @@ class AppLocalizationsHi extends AppLocalizations {
   String get unable_to_load_tables => 'टेबल लोड नहीं हो सकीं';
 
   @override
-  String get another_table_already_uses_number => 'एक अन्य टेबल पहले से यह नंबर उपयोग कर रही है';
+  String get another_table_already_uses_number =>
+      'एक अन्य टेबल पहले से यह नंबर उपयोग कर रही है';
 
   @override
-  String get only_empty_tables_can_be_deleted => 'केवल खाली टेबल हटाई जा सकती हैं';
+  String get only_empty_tables_can_be_deleted =>
+      'केवल खाली टेबल हटाई जा सकती हैं';
 
   @override
   String get table_updated_successfully => 'टेबल सफलतापूर्वक अपडेट हुई';
@@ -2628,7 +2762,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get loading_menu => 'मेनू लोड हो रहा है...';
 
   @override
-  String get note_hold_category_to_edit => 'नोट: श्रेणी चिप को दबाकर रखें संपादित करने के लिए।';
+  String get note_hold_category_to_edit =>
+      'नोट: श्रेणी चिप को दबाकर रखें संपादित करने के लिए।';
 
   @override
   String get select_items => 'आइटम चुनें';
@@ -2671,7 +2806,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get edit_selected_category => 'चयनित श्रेणी संपादित करें';
 
   @override
-  String get tip_right_click_category_edit => 'टिप: संपादित करने के लिए श्रेणी पर राइट-क्लिक / लंबा दबाएँ।';
+  String get tip_right_click_category_edit =>
+      'टिप: संपादित करने के लिए श्रेणी पर राइट-क्लिक / लंबा दबाएँ।';
 
   @override
   String get no_items_found => 'कोई आइटम नहीं मिला';
@@ -2720,7 +2856,8 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get select_at_least_one_item_to_delete => 'हटाने के लिए कम से कम एक आइटम चुनें';
+  String get select_at_least_one_item_to_delete =>
+      'हटाने के लिए कम से कम एक आइटम चुनें';
 
   @override
   String items_deleted_successfully(int count) {
@@ -2741,7 +2878,13 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get no_valid_import_rows => 'कोई मान्य पंक्ति नहीं मिली। हेडर जैसे: Item Name, Price / Price (₹), Category, Tax % या GST उपयोग करें। नाम के रूप में केवल Item Code / Description / Unit से बचें। कीमतें 0 से अधिक संख्या होनी चाहिए।';
+  String get no_valid_import_rows =>
+      'कोई मान्य पंक्ति नहीं मिली। हेडर जैसे: Item Name, Price / Price (₹), Category, Tax % या GST उपयोग करें। नाम के रूप में केवल Item Code / Description / Unit से बचें। कीमतें 0 से अधिक संख्या होनी चाहिए।';
+
+  @override
+  String import_item_missing_fields(int row, String fields) {
+    return 'आइटम #$row में फ़ील्ड गायब हैं: $fields';
+  }
 
   @override
   String items_imported_successfully(int count) {
@@ -2760,7 +2903,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get this_item => 'यह आइटम';
 
   @override
-  String get confirm_delete_item_message => 'क्या आप वाकई इस आइटम को हटाना चाहते हैं?';
+  String get confirm_delete_item_message =>
+      'क्या आप वाकई इस आइटम को हटाना चाहते हैं?';
 
   @override
   String get category_chip_label => 'श्रेणी';
@@ -2814,7 +2958,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get section_low_stock_alerts => 'कम स्टॉक अलर्ट';
 
   @override
-  String get all_materials_above_min => 'सभी सामग्री न्यूनतम स्टॉक स्तर से ऊपर हैं।';
+  String get all_materials_above_min =>
+      'सभी सामग्री न्यूनतम स्टॉक स्तर से ऊपर हैं।';
 
   @override
   String get section_quick_actions => 'त्वरित कार्य';
@@ -2852,7 +2997,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get status_ok => 'ठीक';
 
   @override
-  String get no_raw_materials_yet => 'अभी कोई कच्चा माल नहीं। अपनी पहली सामग्री जोड़ें।';
+  String get no_raw_materials_yet =>
+      'अभी कोई कच्चा माल नहीं। अपनी पहली सामग्री जोड़ें।';
 
   @override
   String get no_stock_movements => 'अभी कोई स्टॉक गतिविधि दर्ज नहीं।';
@@ -2893,12 +3039,18 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String purchase_order_line_item(String name, String quantity, String unit, String price) {
+  String purchase_order_line_item(
+    String name,
+    String quantity,
+    String unit,
+    String price,
+  ) {
     return '$name: $quantity $unit @ ₹$price';
   }
 
   @override
-  String get no_recipes_yet => 'अभी कोई रेसिपी मैप नहीं।\nबिक्री पर स्वचालित स्टॉक कटौती के लिए मेनू आइटम को कच्चे माल से लिंक करें।';
+  String get no_recipes_yet =>
+      'अभी कोई रेसिपी मैप नहीं।\nबिक्री पर स्वचालित स्टॉक कटौती के लिए मेनू आइटम को कच्चे माल से लिंक करें।';
 
   @override
   String get this_recipe => 'यह रेसिपी';
@@ -2922,7 +3074,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get min_stock_required => 'न्यूनतम स्टॉक अलर्ट आवश्यक है';
 
   @override
-  String get invalid_min_stock => 'मान्य न्यूनतम स्टॉक अलर्ट दर्ज करें (0 या अधिक)';
+  String get invalid_min_stock =>
+      'मान्य न्यूनतम स्टॉक अलर्ट दर्ज करें (0 या अधिक)';
 
   @override
   String get invalid_purchase_price => 'खरीद मूल्य 0 से अधिक होना चाहिए';
@@ -2943,13 +3096,15 @@ class AppLocalizationsHi extends AppLocalizations {
   String get supplier_name_required => 'आपूर्तिकर्ता का नाम *';
 
   @override
-  String get please_enter_supplier_name => 'कृपया आपूर्तिकर्ता का नाम दर्ज करें';
+  String get please_enter_supplier_name =>
+      'कृपया आपूर्तिकर्ता का नाम दर्ज करें';
 
   @override
   String get please_enter_vendor_no => 'कृपया विक्रेता संख्या दर्ज करें';
 
   @override
-  String get please_enter_contact_person => 'कृपया संपर्क व्यक्ति का नाम दर्ज करें';
+  String get please_enter_contact_person =>
+      'कृपया संपर्क व्यक्ति का नाम दर्ज करें';
 
   @override
   String get please_enter_address => 'कृपया पता दर्ज करें';
@@ -2983,7 +3138,12 @@ class AppLocalizationsHi extends AppLocalizations {
   String get notes_label => 'नोट्स';
 
   @override
-  String material_stock_subtitle(String current, String unit, String min, String price) {
+  String material_stock_subtitle(
+    String current,
+    String unit,
+    String min,
+    String price,
+  ) {
     return '$current $unit · न्यूनतम: $min · ₹$price/इकाई';
   }
 
@@ -2994,13 +3154,15 @@ class AppLocalizationsHi extends AppLocalizations {
   String get import_products_excel => 'उत्पाद आयात करें - Excel (.xlsx)';
 
   @override
-  String get import_products_description => 'BillKaro टेम्पलेट प्रारूप वाली Excel (.xlsx) फ़ाइल चुनें। आवश्यक कॉलम: Name और Price। वैकल्पिक: Category, Tax % और Image Link। गायब श्रेणियाँ स्वचालित रूप से बनाई जाएँगी।';
+  String get import_products_description =>
+      'BillKaro टेम्पलेट प्रारूप वाली Excel (.xlsx) फ़ाइल चुनें। आवश्यक कॉलम: Item Name और Price (₹)। वैकल्पिक: Item Code, Category, Description, Item Image, Unit, Tax %, Price Incl. Tax (₹)। गायब श्रेणियाँ स्वचालित रूप से बनाई जाएँगी।';
 
   @override
   String get export_products_excel => 'उत्पाद निर्यात करें - Excel (.xlsx)';
 
   @override
-  String get export_products_description => 'BillKaro टेम्पलेट प्रारूप में Excel (.xlsx) फ़ाइल में अपने मेनू आइटम निर्यात करें। कॉलम: Name, Price, Category, Tax % और Image Link शामिल हैं।';
+  String get export_products_description =>
+      'BillKaro टेम्पलेट प्रारूप में Excel (.xlsx) फ़ाइल में अपने मेनू आइटम निर्यात करें। कॉलम: Item Code, Category, Item Name, Description, Item Image, Unit, Price (₹), Tax % और Price Incl. Tax (₹) शामिल हैं।';
 
   @override
   String get export_file => 'फ़ाइल निर्यात करें';
@@ -3039,7 +3201,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get add_recipe => 'रेसिपी जोड़ें';
 
   @override
-  String get add_recipe_subtitle => 'इस आइटम की एक यूनिट बनाने के लिए सभी कच्चे माल जोड़ें (जैसे सैंडविच के लिए ब्रेड, चीज़, सलाद पत्ता)';
+  String get add_recipe_subtitle =>
+      'इस आइटम की एक यूनिट बनाने के लिए सभी कच्चे माल जोड़ें (जैसे सैंडविच के लिए ब्रेड, चीज़, सलाद पत्ता)';
 
   @override
   String get add_another_ingredient => 'और सामग्री जोड़ें';
@@ -3048,10 +3211,12 @@ class AppLocalizationsHi extends AppLocalizations {
   String get recipe_ingredients_section => 'सामग्री';
 
   @override
-  String get recipe_need_at_least_one_ingredient => 'कम से कम एक सामग्री मान्य मात्रा के साथ जोड़ें';
+  String get recipe_need_at_least_one_ingredient =>
+      'कम से कम एक सामग्री मान्य मात्रा के साथ जोड़ें';
 
   @override
-  String get recipe_duplicate_material => 'प्रत्येक कच्चा माल प्रति रेसिपी में केवल एक बार उपयोग किया जा सकता है';
+  String get recipe_duplicate_material =>
+      'प्रत्येक कच्चा माल प्रति रेसिपी में केवल एक बार उपयोग किया जा सकता है';
 
   @override
   String ingredient_number(int number) {
@@ -3071,7 +3236,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get recipe_quantity_hint => 'प्रति सर्विंग मात्रा *';
 
   @override
-  String get recipe_quantity_helper => 'आइटम बिकने पर कच्चे माल के स्टॉक से कटती है';
+  String get recipe_quantity_helper =>
+      'आइटम बिकने पर कच्चे माल के स्टॉक से कटती है';
 
   @override
   String get recipe_quantity_invalid => '0 से अधिक मान्य मात्रा दर्ज करें';
@@ -3086,7 +3252,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get recipe_ingredients => 'रेसिपी सामग्री';
 
   @override
-  String get recipe_ingredients_subtitle => 'बिक्री पर स्वचालित स्टॉक कटौती के लिए कच्चे माल को लिंक करें';
+  String get recipe_ingredients_subtitle =>
+      'बिक्री पर स्वचालित स्टॉक कटौती के लिए कच्चे माल को लिंक करें';
 
   @override
   String get add_ingredient => 'सामग्री जोड़ें';
@@ -3151,7 +3318,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get po_payment_terms_required => 'कृपया भुगतान की शर्तें दर्ज करें';
 
   @override
-  String get po_line_material_required => 'कृपया इन्वेंटरी में मौजूद सामग्री का नाम दर्ज करें';
+  String get po_line_material_required =>
+      'कृपया इन्वेंटरी में मौजूद सामग्री का नाम दर्ज करें';
 
   @override
   String get po_line_qty_required => '0 से अधिक मात्रा दर्ज करें';
@@ -3195,7 +3363,8 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get po_line_invalid => 'प्रत्येक लाइन में सामग्री, मात्रा > 0 और मान्य दर होनी चाहिए';
+  String get po_line_invalid =>
+      'प्रत्येक लाइन में सामग्री, मात्रा > 0 और मान्य दर होनी चाहिए';
 
   @override
   String get po_items_required => 'कम से कम एक लाइन आइटम जोड़ें';
@@ -3251,10 +3420,12 @@ class AppLocalizationsHi extends AppLocalizations {
   String get po_terms_heading => 'नियम और शर्तें :';
 
   @override
-  String get po_terms_intro => 'ये नियम और शर्तें खरीद आदेश (PO) का अभिन्न अंग होंगी।';
+  String get po_terms_intro =>
+      'ये नियम और शर्तें खरीद आदेश (PO) का अभिन्न अंग होंगी।';
 
   @override
-  String get po_terms_and_conditions_hint => 'खरीद आदेश के लिए नियम और शर्तें दर्ज करें। प्रत्येक बिंदु अलग पंक्ति में लिखें।';
+  String get po_terms_and_conditions_hint =>
+      'खरीद आदेश के लिए नियम और शर्तें दर्ज करें। प्रत्येक बिंदु अलग पंक्ति में लिखें।';
 
   @override
   String get settings_po_terms => 'PO नियम और शर्तें';
@@ -3266,7 +3437,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get settings_po_print_orientation => 'PO प्रिंट अभिविन्यास';
 
   @override
-  String get settings_po_print_orientation_subtitle => 'खरीद आदेश प्रिंट करते समय पेज लेआउट';
+  String get settings_po_print_orientation_subtitle =>
+      'खरीद आदेश प्रिंट करते समय पेज लेआउट';
 
   @override
   String get po_print_portrait => 'पोर्ट्रेट';
@@ -3369,10 +3541,12 @@ class AppLocalizationsHi extends AppLocalizations {
   String get modify_order_details_subtitle => 'ऑर्डर विवरण बदलें';
 
   @override
-  String get delete_order_permanently_subtitle => 'इस ऑर्डर को हटाए गए ऑर्डर में भेजें';
+  String get delete_order_permanently_subtitle =>
+      'इस ऑर्डर को हटाए गए ऑर्डर में भेजें';
 
   @override
-  String get delete_order_confirm_message => 'क्या आप वाकई इस ऑर्डर को हटाना चाहते हैं? आप इसे बाद में हटाए गए ऑर्डर से पुनर्स्थापित कर सकते हैं।';
+  String get delete_order_confirm_message =>
+      'क्या आप वाकई इस ऑर्डर को हटाना चाहते हैं? आप इसे बाद में हटाए गए ऑर्डर से पुनर्स्थापित कर सकते हैं।';
 
   @override
   String get deletedOrders => 'हटाए गए ऑर्डर';
@@ -3414,7 +3588,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get stock_summary_empty => 'कोई कच्चा माल नहीं मिला';
 
   @override
-  String get stock_summary_empty_hint => 'कच्चे माल का स्टॉक यहाँ दिखेगा। इन्वेंटरी से कच्चा माल जोड़ें।';
+  String get stock_summary_empty_hint =>
+      'कच्चे माल का स्टॉक यहाँ दिखेगा। इन्वेंटरी से कच्चा माल जोड़ें।';
 
   @override
   String get stock_status_in_stock => 'स्टॉक में';
@@ -3432,7 +3607,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get restore_order => 'ऑर्डर पुनर्स्थापित करें';
 
   @override
-  String get restore_order_confirm_message => 'इस ऑर्डर को पुनर्स्थापित करें? यह होल्ड ऑर्डर में वापस आ जाएगा।';
+  String get restore_order_confirm_message =>
+      'इस ऑर्डर को पुनर्स्थापित करें? यह होल्ड ऑर्डर में वापस आ जाएगा।';
 
   @override
   String get restore => 'पुनर्स्थापित करें';
@@ -3441,7 +3617,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get order_moved_to_deleted => 'ऑर्डर हटाए गए ऑर्डर में भेज दिया गया';
 
   @override
-  String get order_restored_successfully => 'ऑर्डर सफलतापूर्वक पुनर्स्थापित हुआ';
+  String get order_restored_successfully =>
+      'ऑर्डर सफलतापूर्वक पुनर्स्थापित हुआ';
 
   @override
   String customers_count(int count) {
@@ -3452,19 +3629,23 @@ class AppLocalizationsHi extends AppLocalizations {
   String get no_matching_customers => 'कोई मेल खाता ग्राहक नहीं';
 
   @override
-  String get unable_to_load_customers => 'ग्राहकों को लोड करने में असमर्थ। कृपया पुनः प्रयास करें।';
+  String get unable_to_load_customers =>
+      'ग्राहकों को लोड करने में असमर्थ। कृपया पुनः प्रयास करें।';
 
   @override
-  String get unable_to_load_customers_connection => 'ग्राहकों को लोड करने में असमर्थ। कृपया अपना कनेक्शन जांचें।';
+  String get unable_to_load_customers_connection =>
+      'ग्राहकों को लोड करने में असमर्थ। कृपया अपना कनेक्शन जांचें।';
 
   @override
-  String get fetch_customer_from_contacts => 'अपने संपर्कों से सीधे ग्राहक विवरण प्राप्त करें।';
+  String get fetch_customer_from_contacts =>
+      'अपने संपर्कों से सीधे ग्राहक विवरण प्राप्त करें।';
 
   @override
   String get loyalty_discount_label => 'लॉयल्टी छूट';
 
   @override
-  String get discount_applied_on_orders => 'इस ग्राहक के ऑर्डर पर छूट लागू की जाएगी।';
+  String get discount_applied_on_orders =>
+      'इस ग्राहक के ऑर्डर पर छूट लागू की जाएगी।';
 
   @override
   String get save_customer => 'ग्राहक सहेजें';
@@ -3479,7 +3660,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get no_contacts_match_search => 'आपकी खोज से कोई संपर्क मेल नहीं खाता';
 
   @override
-  String get contact_permission_permanently_denied => 'संपर्क अनुमति स्थायी रूप से अस्वीकृत है। कृपया इसे सेटिंग्स से सक्षम करें।';
+  String get contact_permission_permanently_denied =>
+      'संपर्क अनुमति स्थायी रूप से अस्वीकृत है। कृपया इसे सेटिंग्स से सक्षम करें।';
 
   @override
   String get customer_added => 'ग्राहक जोड़ा गया';
@@ -3497,13 +3679,15 @@ class AppLocalizationsHi extends AppLocalizations {
   String get staff_list_title => 'स्टाफ सूची';
 
   @override
-  String get manage_outlet_staff_access => 'अपने आउटलेट के स्टाफ की पहुँच प्रबंधित करें';
+  String get manage_outlet_staff_access =>
+      'अपने आउटलेट के स्टाफ की पहुँच प्रबंधित करें';
 
   @override
   String get check_staff_activity => 'स्टाफ गतिविधि देखें';
 
   @override
-  String get staff_activity_filter_hint => 'तारीख और उपयोगकर्ता के अनुसार गतिविधि फ़िल्टर करें';
+  String get staff_activity_filter_hint =>
+      'तारीख और उपयोगकर्ता के अनुसार गतिविधि फ़िल्टर करें';
 
   @override
   String get role_label => 'भूमिका';
@@ -3515,13 +3699,16 @@ class AppLocalizationsHi extends AppLocalizations {
   String get no_staff_found => 'कोई स्टाफ नहीं मिला';
 
   @override
-  String get try_different_staff_search => 'कोई अन्य नाम, भूमिका, फोन या ईमेल आज़माएँ।';
+  String get try_different_staff_search =>
+      'कोई अन्य नाम, भूमिका, फोन या ईमेल आज़माएँ।';
 
   @override
-  String get invite_staff_empty_hint => 'स्टाफ अनुमतियाँ प्रबंधित करने के लिए अपने पहले टीम सदस्य को आमंत्रित करें।';
+  String get invite_staff_empty_hint =>
+      'स्टाफ अनुमतियाँ प्रबंधित करने के लिए अपने पहले टीम सदस्य को आमंत्रित करें।';
 
   @override
-  String get unable_to_delete_staff_entry => 'इस स्टाफ प्रविष्टि को हटाने में असमर्थ';
+  String get unable_to_delete_staff_entry =>
+      'इस स्टाफ प्रविष्टि को हटाने में असमर्थ';
 
   @override
   String remove_staff_confirm(String name) {
@@ -3539,6 +3726,9 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get status_inactive_label => 'निष्क्रिय';
+
+  @override
+  String get status_deactivated_label => 'Deactivated';
 
   @override
   String get edit_staff => 'स्टाफ संपादित करें';
@@ -3613,46 +3803,57 @@ class AppLocalizationsHi extends AppLocalizations {
   String get please_enter_pincode => 'कृपया पिनकोड दर्ज करें';
 
   @override
-  String get please_enter_valid_pincode => 'कृपया एक वैध 6 अंकों का पिनकोड दर्ज करें';
+  String get please_enter_valid_pincode =>
+      'कृपया एक वैध 6 अंकों का पिनकोड दर्ज करें';
 
   @override
   String get tap_to_upload_image => 'छवि अपलोड करने के लिए टैप करें';
 
   @override
-  String get staff_member_updated_successfully => 'स्टाफ सदस्य सफलतापूर्वक अपडेट किया गया';
+  String get staff_member_updated_successfully =>
+      'स्टाफ सदस्य सफलतापूर्वक अपडेट किया गया';
 
   @override
   String get role_overview => 'भूमिका अवलोकन';
 
   @override
-  String get allow_biller_create_menu_items => 'बिलर को मेनू आइटम बनाने की अनुमति दें';
+  String get allow_biller_create_menu_items =>
+      'बिलर को मेनू आइटम बनाने की अनुमति दें';
 
   @override
-  String get allow_biller_edit_menu_items => 'बिलर को मौजूदा मेनू आइटम संपादित करने की अनुमति दें';
+  String get allow_biller_edit_menu_items =>
+      'बिलर को मौजूदा मेनू आइटम संपादित करने की अनुमति दें';
 
   @override
-  String get biller_overview_create_orders => 'ऑर्डर और KOT बनाएँ और प्रिंट करें।';
+  String get biller_overview_create_orders =>
+      'ऑर्डर और KOT बनाएँ और प्रिंट करें।';
 
   @override
-  String get biller_overview_view_items => 'सभी आइटम देखें और बिलिंग के लिए उपयोग करें।';
+  String get biller_overview_view_items =>
+      'सभी आइटम देखें और बिलिंग के लिए उपयोग करें।';
 
   @override
-  String get biller_overview_cannot_delete => 'कोई भी ऑर्डर (अपना या दूसरों का) हटा नहीं सकते।';
+  String get biller_overview_cannot_delete =>
+      'कोई भी ऑर्डर (अपना या दूसरों का) हटा नहीं सकते।';
 
   @override
-  String get biller_overview_cannot_access_others => 'दूसरे सदस्यों द्वारा बनाए गए ऑर्डर एक्सेस नहीं कर सकते।';
+  String get biller_overview_cannot_access_others =>
+      'दूसरे सदस्यों द्वारा बनाए गए ऑर्डर एक्सेस नहीं कर सकते।';
 
   @override
   String get select_user_role => 'उपयोगकर्ता भूमिका चुनें';
 
   @override
-  String get invite_team_member_subtitle => 'टीम सदस्य को आमंत्रित करें और भूमिका निर्धारित करें।';
+  String get invite_team_member_subtitle =>
+      'टीम सदस्य को आमंत्रित करें और भूमिका निर्धारित करें।';
 
   @override
-  String get update_team_member_subtitle => 'टीम सदस्य का विवरण और भूमिका अपडेट करें।';
+  String get update_team_member_subtitle =>
+      'टीम सदस्य का विवरण और भूमिका अपडेट करें।';
 
   @override
-  String get plans_pricing_subtitle => 'एक योजना चुनें — प्रिंटर बंडल में मुफ्त होम डिलीवरी शामिल है';
+  String get plans_pricing_subtitle =>
+      'एक योजना चुनें — प्रिंटर बंडल में मुफ्त होम डिलीवरी शामिल है';
 
   @override
   String get secure_payment => 'सुरक्षित भुगतान';
@@ -3679,7 +3880,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get printer_feature_one_year_warranty => '1 वर्ष वारंटी';
 
   @override
-  String get printer_not_included_in_plan => 'इस योजना में प्रिंटर शामिल नहीं है।';
+  String get printer_not_included_in_plan =>
+      'इस योजना में प्रिंटर शामिल नहीं है।';
 
   @override
   String get includes_thermal_printer => 'थर्मल प्रिंटर शामिल';
@@ -3697,7 +3899,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get already_subscribed => 'पहले से सदस्यता ली हुई है';
 
   @override
-  String get outlet_already_subscribed => 'इस आउटलेट की पहले से सक्रिय सदस्यता है।';
+  String get outlet_already_subscribed =>
+      'इस आउटलेट की पहले से सक्रिय सदस्यता है।';
 
   @override
   String get buy_now => 'अभी खरीदें';
@@ -3753,37 +3956,45 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get payment_activation_failed => 'भुगतान सफल रहा लेकिन सदस्यता सक्रिय नहीं हो सकी। कृपया सहायता से संपर्क करें।';
+  String get payment_activation_failed =>
+      'भुगतान सफल रहा लेकिन सदस्यता सक्रिय नहीं हो सकी। कृपया सहायता से संपर्क करें।';
 
   @override
-  String get failed_create_payment_order => 'भुगतान ऑर्डर बनाने में विफल। कृपया पुनः प्रयास करें।';
+  String get failed_create_payment_order =>
+      'भुगतान ऑर्डर बनाने में विफल। कृपया पुनः प्रयास करें।';
 
   @override
-  String get user_not_logged_in_retry => 'उपयोगकर्ता लॉग इन नहीं है। कृपया लॉग इन करके पुनः प्रयास करें।';
+  String get user_not_logged_in_retry =>
+      'उपयोगकर्ता लॉग इन नहीं है। कृपया लॉग इन करके पुनः प्रयास करें।';
 
   @override
-  String get no_outlet_selected_retry => 'कोई आउटलेट चयनित नहीं। कृपया आउटलेट चुनकर पुनः प्रयास करें।';
+  String get no_outlet_selected_retry =>
+      'कोई आउटलेट चयनित नहीं। कृपया आउटलेट चुनकर पुनः प्रयास करें।';
 
   @override
-  String get invalid_order_response => 'अमान्य ऑर्डर प्रतिक्रिया। कृपया पुनः प्रयास करें।';
+  String get invalid_order_response =>
+      'अमान्य ऑर्डर प्रतिक्रिया। कृपया पुनः प्रयास करें।';
 
   @override
   String get subscription_purchase => 'सदस्यता खरीद';
 
   @override
-  String get error_occurred_try_again => 'एक त्रुटि हुई। कृपया पुनः प्रयास करें।';
+  String get error_occurred_try_again =>
+      'एक त्रुटि हुई। कृपया पुनः प्रयास करें।';
 
   @override
   String get select_message_template => 'संदेश टेम्पलेट चुनें';
 
   @override
-  String get choose_whatsapp_template_hint => 'एक WhatsApp संदेश टेम्पलेट चुनें। भेजने से पहले आप इसे संपादित कर सकते हैं।';
+  String get choose_whatsapp_template_hint =>
+      'एक WhatsApp संदेश टेम्पलेट चुनें। भेजने से पहले आप इसे संपादित कर सकते हैं।';
 
   @override
   String get discount_offer => 'छूट ऑफर';
 
   @override
-  String get template_discount_preview_prefix => 'हमारे वफादार ग्राहकों के लिए विशेष ऑफर ';
+  String get template_discount_preview_prefix =>
+      'हमारे वफादार ग्राहकों के लिए विशेष ऑफर ';
 
   @override
   String get restaurant_name_placeholder => 'रेस्टोरेंट का नाम';
@@ -3795,13 +4006,15 @@ class AppLocalizationsHi extends AppLocalizations {
   String get discount_value_placeholder => 'छूट मूल्य';
 
   @override
-  String get template_discount_suffix => ' की छूट अपनी अगली यात्रा पर। छूट के लिए रेस्टोरेंट पर यह संदेश दिखाएँ।';
+  String get template_discount_suffix =>
+      ' की छूट अपनी अगली यात्रा पर। छूट के लिए रेस्टोरेंट पर यह संदेश दिखाएँ।';
 
   @override
   String get new_menu => 'नया मेनू';
 
   @override
-  String get template_new_menu_suffix => ' ने अपने मेनू में नए आइटम जोड़े हैं। आज ही आकर इन्हें आज़माएँ!';
+  String get template_new_menu_suffix =>
+      ' ने अपने मेनू में नए आइटम जोड़े हैं। आज ही आकर इन्हें आज़माएँ!';
 
   @override
   String get festival_wishes => 'त्योहार की शुभकामनाएँ';
@@ -3813,7 +4026,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get festival_name_placeholder => 'त्योहार का नाम';
 
   @override
-  String get template_festival_suffix => '। नए त्योहार मेनू और छूट के लिए रेस्टोरेंट पर आएँ!';
+  String get template_festival_suffix =>
+      '। नए त्योहार मेनू और छूट के लिए रेस्टोरेंट पर आएँ!';
 
   @override
   String get use_template => 'टेम्पलेट उपयोग करें';
@@ -3834,7 +4048,8 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get no_customers_with_phone => 'फ़ोन नंबर वाला कोई ग्राहक नहीं मिला। पहले नियमित ग्राहक जोड़ें।';
+  String get no_customers_with_phone =>
+      'फ़ोन नंबर वाला कोई ग्राहक नहीं मिला। पहले नियमित ग्राहक जोड़ें।';
 
   @override
   String send_whatsapp_confirm(int count) {
@@ -3842,7 +4057,8 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get request_timed_out_bulk => 'अनुरोध समय समाप्त या विफल। यदि आपके पास कई ग्राहक हैं, तो पुनः भेजने से पहले प्रतीक्षा करें और डेटाबेस में अभियान इतिहास जांचें।';
+  String get request_timed_out_bulk =>
+      'अनुरोध समय समाप्त या विफल। यदि आपके पास कई ग्राहक हैं, तो पुनः भेजने से पहले प्रतीक्षा करें और डेटाबेस में अभियान इतिहास जांचें।';
 
   @override
   String successfully_sent_messages(int count) {
@@ -3924,7 +4140,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get available_printers => 'उपलब्ध प्रिंटर';
 
   @override
-  String get printer_help_assign_bill_kot => 'काउंटर रसीदों के लिए बिल और रसोई टिकट के लिए KOT असाइन करें। अपने सेटअप के अनुसार USB, ब्लूटूथ या ईथरनेट (LAN) उपयोग करें।';
+  String get printer_help_assign_bill_kot =>
+      'काउंटर रसीदों के लिए बिल और रसोई टिकट के लिए KOT असाइन करें। अपने सेटअप के अनुसार USB, ब्लूटूथ या ईथरनेट (LAN) उपयोग करें।';
 
   @override
   String get print_routing => 'प्रिंट रूटिंग';
@@ -3945,7 +4162,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get multiple_printer_settings => 'एकाधिक प्रिंटर सेटिंग्स';
 
   @override
-  String get tap_bill_or_kot_below => 'नीचे किसी डिवाइस पर Bill या KOT टैप करें।';
+  String get tap_bill_or_kot_below =>
+      'नीचे किसी डिवाइस पर Bill या KOT टैप करें।';
 
   @override
   String get not_assigned_pick_below => 'असाइन नहीं — नीचे Bill या KOT चुनें';
@@ -3981,7 +4199,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get ethernet_lan => 'ईथरनेट / LAN';
 
   @override
-  String get no_bluetooth_printer_connected => 'कोई ब्लूटूथ प्रिंटर कनेक्ट नहीं';
+  String get no_bluetooth_printer_connected =>
+      'कोई ब्लूटूथ प्रिंटर कनेक्ट नहीं';
 
   @override
   String get no_usb_printer_connected => 'कोई USB प्रिंटर कनेक्ट नहीं';
@@ -4020,7 +4239,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get scanning_nearby_printers => 'पास के प्रिंटर स्कैन हो रहे हैं…';
 
   @override
-  String get no_bluetooth_printers_found => 'कोई ब्लूटूथ प्रिंटर नहीं मिला।\nप्रिंटर चालू करें और स्कैन टैप करें।';
+  String get no_bluetooth_printers_found =>
+      'कोई ब्लूटूथ प्रिंटर नहीं मिला।\nप्रिंटर चालू करें और स्कैन टैप करें।';
 
   @override
   String get no_devices_match_search => 'आपकी खोज से कोई डिवाइस मेल नहीं खाता।';
@@ -4038,10 +4258,12 @@ class AppLocalizationsHi extends AppLocalizations {
   String get looking_for_usb_printers => 'USB प्रिंटर खोजे जा रहे हैं…';
 
   @override
-  String get no_usb_printers_found => 'कोई USB प्रिंटर नहीं मिला।\nकेबल कनेक्ट करें और स्कैन टैप करें।';
+  String get no_usb_printers_found =>
+      'कोई USB प्रिंटर नहीं मिला।\nकेबल कनेक्ट करें और स्कैन टैप करें।';
 
   @override
-  String get no_usb_printers_match_search => 'आपकी खोज से कोई USB प्रिंटर मेल नहीं खाता।';
+  String get no_usb_printers_match_search =>
+      'आपकी खोज से कोई USB प्रिंटर मेल नहीं खाता।';
 
   @override
   String get usb_printers => 'USB प्रिंटर';
@@ -4053,7 +4275,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get scanning_ellipsis => 'स्कैन हो रहा है…';
 
   @override
-  String get printer_ip_network_hint => 'आपके नेटवर्क पर प्रिंटर IP (पोर्ट 9100)।';
+  String get printer_ip_network_hint =>
+      'आपके नेटवर्क पर प्रिंटर IP (पोर्ट 9100)।';
 
   @override
   String get ip_address => 'IP पता';
@@ -4079,7 +4302,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get paper_size => 'कागज़ का आकार';
 
   @override
-  String get paper_size_subtitle => 'बिल और KOT रसीदों के लिए थर्मल रोल चौड़ाई चुनें।';
+  String get paper_size_subtitle =>
+      'बिल और KOT रसीदों के लिए थर्मल रोल चौड़ाई चुनें।';
 
   @override
   String get paper_size_2inch => '2\" (58mm)';
@@ -4105,7 +4329,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get auto_connect_on_launch => 'लॉन्च पर ऑटो-कनेक्ट';
 
   @override
-  String get remove_saved_printer_message => 'यह सहेजा प्रिंटर हटाता है और ऑटो-कनेक्ट बंद करता है।';
+  String get remove_saved_printer_message =>
+      'यह सहेजा प्रिंटर हटाता है और ऑटो-कनेक्ट बंद करता है।';
 
   @override
   String bill_role_summary(String name) {
@@ -4133,7 +4358,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get bluetooth_off => 'ब्लूटूथ बंद';
 
   @override
-  String get turn_on_bluetooth_to_scan => 'प्रिंटर स्कैन के लिए ब्लूटूथ चालू करें।';
+  String get turn_on_bluetooth_to_scan =>
+      'प्रिंटर स्कैन के लिए ब्लूटूथ चालू करें।';
 
   @override
   String get scan_devices_action => 'डिवाइस स्कैन करें';
@@ -4157,10 +4383,12 @@ class AppLocalizationsHi extends AppLocalizations {
   String get auto_connect_disabled => 'ऑटो-कनेक्ट अक्षम';
 
   @override
-  String get enter_valid_ip_example => 'मान्य IP पता दर्ज करें (जैसे 192.168.1.100)';
+  String get enter_valid_ip_example =>
+      'मान्य IP पता दर्ज करें (जैसे 192.168.1.100)';
 
   @override
-  String get enter_valid_port_default => 'मान्य पोर्ट दर्ज करें (डिफ़ॉल्ट 9100)';
+  String get enter_valid_port_default =>
+      'मान्य पोर्ट दर्ज करें (डिफ़ॉल्ट 9100)';
 
   @override
   String get ethernet_printer_disconnected => 'ईथरनेट प्रिंटर डिस्कनेक्ट';
@@ -4171,7 +4399,8 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get could_not_connect_network_printer => 'कनेक्ट नहीं हो सका। IP, पोर्ट जांचें और प्रिंटर उसी नेटवर्क पर हो।';
+  String get could_not_connect_network_printer =>
+      'कनेक्ट नहीं हो सका। IP, पोर्ट जांचें और प्रिंटर उसी नेटवर्क पर हो।';
 
   @override
   String get enter_valid_ip_first => 'पहले मान्य IP पता दर्ज करें';
@@ -4251,7 +4480,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get order_history => 'ऑर्डर इतिहास';
 
   @override
-  String get no_orders_yet_for_customer => 'इस ग्राहक के लिए अभी कोई ऑर्डर नहीं';
+  String get no_orders_yet_for_customer =>
+      'इस ग्राहक के लिए अभी कोई ऑर्डर नहीं';
 
   @override
   String get status_closed => 'बंद';
@@ -4268,7 +4498,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get unable_to_load_customer_details => 'ग्राहक विवरण लोड नहीं हो सका।';
 
   @override
-  String get unable_to_load_customer_details_retry => 'ग्राहक विवरण लोड नहीं हो सका। कृपया पुनः प्रयास करें।';
+  String get unable_to_load_customer_details_retry =>
+      'ग्राहक विवरण लोड नहीं हो सका। कृपया पुनः प्रयास करें।';
 
   @override
   String get invalid_customer => 'अमान्य ग्राहक';
@@ -4291,13 +4522,16 @@ class AppLocalizationsHi extends AppLocalizations {
   String get introducing_kot_mode => 'KOT मोड का परिचय';
 
   @override
-  String get kot_mode_choose_handling => 'रसोई ऑर्डर और बिलिंग कैसे संभालें, चुनें';
+  String get kot_mode_choose_handling =>
+      'रसोई ऑर्डर और बिलिंग कैसे संभालें, चुनें';
 
   @override
-  String get kot_and_hold_description => 'बिलिंग के बिना KOT जनरेट करें। उसी ऑर्डर में और KOT जोड़ सकते हैं और बाद में बिल कर सकते हैं।';
+  String get kot_and_hold_description =>
+      'बिलिंग के बिना KOT जनरेट करें। उसी ऑर्डर में और KOT जोड़ सकते हैं और बाद में बिल कर सकते हैं।';
 
   @override
-  String get kot_and_bill_description => 'एक ही चरण में KOT और अंतिम बिल एक साथ जनरेट करें।';
+  String get kot_and_bill_description =>
+      'एक ही चरण में KOT और अंतिम बिल एक साथ जनरेट करें।';
 
   @override
   String get kot_buttons_update_info => 'ऑर्डर स्क्रीन पर बटन अपडेट होंगे:';
@@ -4324,7 +4558,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get listening_ellipsis => 'सुन रहे हैं...';
 
   @override
-  String get voice_add_menu_hint => 'माइक टैप करें और बोलें, जैसे \"Tea 15 in Beverages, Coffee 40 category Beverages\"।\nहम श्रेणियों के साथ पंक्तियाँ बना देंगे, सबमिट से पहले आप संपादित कर सकते हैं।';
+  String get voice_add_menu_hint =>
+      'माइक टैप करें और बोलें, जैसे \"Tea 15 in Beverages, Coffee 40 category Beverages\"।\nहम श्रेणियों के साथ पंक्तियाँ बना देंगे, सबमिट से पहले आप संपादित कर सकते हैं।';
 
   @override
   String get item_name_label => 'आइटम का नाम';
@@ -4333,10 +4568,12 @@ class AppLocalizationsHi extends AppLocalizations {
   String get price_label => 'कीमत';
 
   @override
-  String get microphone_permission_required => 'वॉइस इनपुट के लिए माइक्रोफ़ोन अनुमति आवश्यक है।';
+  String get microphone_permission_required =>
+      'वॉइस इनपुट के लिए माइक्रोफ़ोन अनुमति आवश्यक है।';
 
   @override
-  String get voice_input_requires_internet => 'वॉइस इनपुट के लिए इंटरनेट कनेक्शन आवश्यक है। कृपया कनेक्शन जांचें और पुनः प्रयास करें।';
+  String get voice_input_requires_internet =>
+      'वॉइस इनपुट के लिए इंटरनेट कनेक्शन आवश्यक है। कृपया कनेक्शन जांचें और पुनः प्रयास करें।';
 
   @override
   String voice_error(String error) {
@@ -4371,7 +4608,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get activity_log => 'गतिविधि लॉग';
 
   @override
-  String get staff_activity_filters_hint => 'समय, उपयोगकर्ता और गतिविधि प्रकार के अनुसार गतिविधि संकीर्ण करें।';
+  String get staff_activity_filters_hint =>
+      'समय, उपयोगकर्ता और गतिविधि प्रकार के अनुसार गतिविधि संकीर्ण करें।';
 
   @override
   String get no_activities_yet => 'अभी कोई गतिविधि नहीं';
@@ -4434,6 +4672,15 @@ class AppLocalizationsHi extends AppLocalizations {
   String get item_edited => 'आइटम संपादित';
 
   @override
+  String get staff_added => 'स्टाफ जोड़ा गया';
+
+  @override
+  String get staff_deleted => 'स्टाफ हटाया गया';
+
+  @override
+  String get staff_updated => 'स्टाफ अपडेट किया गया';
+
+  @override
   String get activity_fallback => 'गतिविधि';
 
   @override
@@ -4456,7 +4703,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get time_period => 'समय अवधि';
 
   @override
-  String get time_period_sheet_hint => 'गतिविधि और फ़िल्टर के लिए उपयोग की जाने वाली सीमा चुनें।';
+  String get time_period_sheet_hint =>
+      'गतिविधि और फ़िल्टर के लिए उपयोग की जाने वाली सीमा चुनें।';
 
   @override
   String get time_period_today_subtitle => 'आज आधी रात से दिन के अंत तक';
@@ -4465,22 +4713,26 @@ class AppLocalizationsHi extends AppLocalizations {
   String get time_period_this_week_subtitle => 'इस सप्ताह का सोमवार से रविवार';
 
   @override
-  String get time_period_this_month_subtitle => 'इस महीने का पहला दिन से अंतिम दिन';
+  String get time_period_this_month_subtitle =>
+      'इस महीने का पहला दिन से अंतिम दिन';
 
   @override
   String get time_period_this_quarter_subtitle => 'वर्तमान कैलेंडर तिमाही';
 
   @override
-  String get time_period_financial_year_subtitle => 'अप्रैल–मार्च वित्तीय वर्ष (भारत)';
+  String get time_period_financial_year_subtitle =>
+      'अप्रैल–मार्च वित्तीय वर्ष (भारत)';
 
   @override
-  String get time_period_custom_subtitle => 'तिथियाँ चुनने के लिए तारीख सीमा चिप का उपयोग करें';
+  String get time_period_custom_subtitle =>
+      'तिथियाँ चुनने के लिए तारीख सीमा चिप का उपयोग करें';
 
   @override
   String get activity_type_sheet_title => 'गतिविधि प्रकार';
 
   @override
-  String get activity_type_sheet_hint => 'आउटलेट में क्या बदला, उसके अनुसार लॉग फ़िल्टर करें।';
+  String get activity_type_sheet_hint =>
+      'आउटलेट में क्या बदला, उसके अनुसार लॉग फ़िल्टर करें।';
 
   @override
   String get show_every_activity_type => 'हर गतिविधि प्रकार दिखाएँ';
@@ -4492,7 +4744,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get staff_filter_hint => 'लॉग में किसकी गतिविधि दिखे, चुनें।';
 
   @override
-  String get no_staff_found_hint => 'इस आउटलेट में स्टाफ जोड़ें या कनेक्शन जाँचें।';
+  String get no_staff_found_hint =>
+      'इस आउटलेट में स्टाफ जोड़ें या कनेक्शन जाँचें।';
 
   @override
   String get all_users_title => 'सभी उपयोगकर्ता';
@@ -4504,7 +4757,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get date_range => 'तारीख सीमा';
 
   @override
-  String get date_range_sheet_hint => 'प्रारंभ और अंत तिथि चुनें। लागू करने पर समय अवधि कस्टम हो जाएगी।';
+  String get date_range_sheet_hint =>
+      'प्रारंभ और अंत तिथि चुनें। लागू करने पर समय अवधि कस्टम हो जाएगी।';
 
   @override
   String get from_date_short => 'से';
@@ -4590,7 +4844,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get reservation_or_switch_table => 'या बड़ी टेबल चुनें';
 
   @override
-  String get reservation_no_tables_for_party => 'इस समूह के लिए कोई उपलब्ध टेबल नहीं है। छोटा समूह या दूसरा समय आज़माएँ।';
+  String get reservation_no_tables_for_party =>
+      'इस समूह के लिए कोई उपलब्ध टेबल नहीं है। छोटा समूह या दूसरा समय आज़माएँ।';
 
   @override
   String reservation_party_size_exceeds_capacity(int capacity) {
@@ -4598,7 +4853,8 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get reservation_tap_hint => 'ऑर्डर के लिए टैप · आरक्षण के लिए सीट आइकन';
+  String get reservation_tap_hint =>
+      'ऑर्डर के लिए टैप · आरक्षण के लिए सीट आइकन';
 
   @override
   String get reservation_created_successfully => 'टेबल सफलतापूर्वक आरक्षित';
@@ -4625,13 +4881,16 @@ class AppLocalizationsHi extends AppLocalizations {
   String get merge_tables_title => 'टेबल मर्ज करें';
 
   @override
-  String get merge_tables_message => 'मुख्य टेबल चुनें, फिर उसमें मिलाने के लिए अन्य व्यस्त टेबल चुनें।';
+  String get merge_tables_message =>
+      'मुख्य टेबल चुनें, फिर उसमें मिलाने के लिए अन्य व्यस्त टेबल चुनें।';
 
   @override
-  String get merge_tables_select_primary => 'पहले प्राथमिक टेबल, फिर मर्ज करने वाली टेबल चुनें';
+  String get merge_tables_select_primary =>
+      'पहले प्राथमिक टेबल, फिर मर्ज करने वाली टेबल चुनें';
 
   @override
-  String get merge_select_primary_table => '1. मुख्य टेबल चुनें (ऑर्डर यहाँ मर्ज होंगे)';
+  String get merge_select_primary_table =>
+      '1. मुख्य टेबल चुनें (ऑर्डर यहाँ मर्ज होंगे)';
 
   @override
   String get merge_select_other_tables => '2. मर्ज करने के लिए अन्य टेबल चुनें';
@@ -4643,10 +4902,12 @@ class AppLocalizationsHi extends AppLocalizations {
   String get merge_step_join => 'टेबल जोड़ें';
 
   @override
-  String get merge_join_hint => 'मुख्य टेबल के साथ मिलाने के लिए एक या अधिक टेबल चुनें';
+  String get merge_join_hint =>
+      'मुख्य टेबल के साथ मिलाने के लिए एक या अधिक टेबल चुनें';
 
   @override
-  String get merge_dialog_subtitle => 'बड़े समूह के लिए टेबल मिलाएँ — ऑर्डर से पहले या बाद में';
+  String get merge_dialog_subtitle =>
+      'बड़े समूह के लिए टेबल मिलाएँ — ऑर्डर से पहले या बाद में';
 
   @override
   String get merge_preview_label => 'संयुक्त परिणाम';
@@ -4658,7 +4919,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get no_other_tables_to_merge => 'कोई अन्य टेबल उपलब्ध नहीं';
 
   @override
-  String get merge_available_hint => 'ऑर्डर से पहले उपलब्ध टेबल मर्ज कर सकते हैं';
+  String get merge_available_hint =>
+      'ऑर्डर से पहले उपलब्ध टेबल मर्ज कर सकते हैं';
 
   @override
   String get table_merged_with_others => 'अन्य टेबल के साथ मर्ज';
@@ -4690,16 +4952,19 @@ class AppLocalizationsHi extends AppLocalizations {
   String get edit_merged_tables_subtitle => 'इस समूह में टेबल जोड़ें या हटाएँ';
 
   @override
-  String get edit_merged_tables_hint => 'सभी टेबल अनचेक करें तो समूह अलग हो जाएगा';
+  String get edit_merged_tables_hint =>
+      'सभी टेबल अनचेक करें तो समूह अलग हो जाएगा';
 
   @override
   String get merged_tables_updated_success => 'मर्ज की टेबल अपडेट हो गईं';
 
   @override
-  String get select_at_least_two_tables_to_merge => 'प्राथमिक और कम से कम एक अन्य व्यस्त टेबल चुनें';
+  String get select_at_least_two_tables_to_merge =>
+      'प्राथमिक और कम से कम एक अन्य व्यस्त टेबल चुनें';
 
   @override
-  String get whatsapp_bot_reservation_hint => 'ग्राहक WhatsApp बॉट कोड से टेबल बुक कर सकते हैं';
+  String get whatsapp_bot_reservation_hint =>
+      'ग्राहक WhatsApp बॉट कोड से टेबल बुक कर सकते हैं';
 
   @override
   String get whatsapp_bot_code => 'WhatsApp बॉट कोड';
@@ -4737,25 +5002,29 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get merged_tables_hint => 'ऑर्डर के लिए टैप · अलग करने के लिए स्प्लिट आइकन';
+  String get merged_tables_hint =>
+      'ऑर्डर के लिए टैप · अलग करने के लिए स्प्लिट आइकन';
 
   @override
   String get cash_drawer => 'कैश ड्रॉअर (RJ11)';
 
   @override
-  String get cash_drawer_subtitle => 'ड्रॉअर केबल बिल प्रिंटर के DK पोर्ट से जोड़ें। ESC/POS सिग्नल से खुलता है।';
+  String get cash_drawer_subtitle =>
+      'ड्रॉअर केबल बिल प्रिंटर के DK पोर्ट से जोड़ें। ESC/POS सिग्नल से खुलता है।';
 
   @override
   String get open_cash_drawer_on_cash_payment => 'नकद भुगतान पर ड्रॉअर खोलें';
 
   @override
-  String get open_cash_drawer_on_cash_payment_subtitle => 'Cash भुगतान पर बिल प्रिंट होने पर स्वचालित रूप से ड्रॉअर खोलें';
+  String get open_cash_drawer_on_cash_payment_subtitle =>
+      'Cash भुगतान पर बिल प्रिंट होने पर स्वचालित रूप से ड्रॉअर खोलें';
 
   @override
   String get cash_drawer_kick_pin => 'ड्रॉअर किक पिन';
 
   @override
-  String get cash_drawer_kick_pin_subtitle => 'अधिकांश RJ11 POS ड्रॉअर Pin 2 उपयोग करते हैं। न खुले तो Pin 5 आज़माएँ।';
+  String get cash_drawer_kick_pin_subtitle =>
+      'अधिकांश RJ11 POS ड्रॉअर Pin 2 उपयोग करते हैं। न खुले तो Pin 5 आज़माएँ।';
 
   @override
   String get cash_drawer_pin_2 => 'पिन 2';
@@ -4775,10 +5044,12 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get cash_drawer_printer_help => 'आपके असाइन किए बिल प्रिंटर का उपयोग करता है। RJ11 केबल प्रिंटर के ड्रॉअर पोर्ट में लगाएँ।';
+  String get cash_drawer_printer_help =>
+      'आपके असाइन किए बिल प्रिंटर का उपयोग करता है। RJ11 केबल प्रिंटर के ड्रॉअर पोर्ट में लगाएँ।';
 
   @override
-  String get cash_drawer_assign_bill_printer_first => 'ड्रॉअर टेस्ट से पहले ऊपर बिल प्रिंटर असाइन करें।';
+  String get cash_drawer_assign_bill_printer_first =>
+      'ड्रॉअर टेस्ट से पहले ऊपर बिल प्रिंटर असाइन करें।';
 
   @override
   String get remove_image => 'इमेज हटाएँ';
@@ -4796,7 +5067,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get close_store => 'Close Store';
 
   @override
-  String get open_store_subtitle => 'Start your business day and enable billing';
+  String get open_store_subtitle =>
+      'Start your business day and enable billing';
 
   @override
   String get close_store_subtitle => 'End day, reconcile cash and reset tables';
@@ -4820,16 +5092,19 @@ class AppLocalizationsHi extends AppLocalizations {
   String get store_closed_banner_title => 'Store is closed';
 
   @override
-  String get store_closed_banner_subtitle => 'Open the store to start taking orders';
+  String get store_closed_banner_subtitle =>
+      'Open the store to start taking orders';
 
   @override
-  String get store_closed_order_blocked => 'Store is closed. Open the store before billing.';
+  String get store_closed_order_blocked =>
+      'Store is closed. Open the store before billing.';
 
   @override
   String get close_store_confirm_title => 'Confirm day end?';
 
   @override
-  String get close_store_confirm_message => 'This will close the business day, save the summary and reset all tables to available.';
+  String get close_store_confirm_message =>
+      'This will close the business day, save the summary and reset all tables to available.';
 
   @override
   String get opened_at => 'Opened at';
@@ -4856,10 +5131,12 @@ class AppLocalizationsHi extends AppLocalizations {
   String get store_history_title => 'Store Day History';
 
   @override
-  String get store_history_subtitle => 'View open and close records with cash summary';
+  String get store_history_subtitle =>
+      'View open and close records with cash summary';
 
   @override
-  String get store_history_empty => 'No store day records yet. Open and close the store to build history.';
+  String get store_history_empty =>
+      'No store day records yet. Open and close the store to build history.';
 
   @override
   String get closed_at => 'Closed at';
@@ -4871,7 +5148,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get wallet_balance => 'उपलब्ध बैलेंस';
 
   @override
-  String get wallet_balance_subtitle => 'प्लेटफ़ॉर्म शुल्क के लिए प्रीपेड क्रेडिट';
+  String get wallet_balance_subtitle =>
+      'प्लेटफ़ॉर्म शुल्क के लिए प्रीपेड क्रेडिट';
 
   @override
   String get wallet_add_money => 'पैसे जोड़ें';
@@ -4886,7 +5164,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get wallet_enter_amount_hint => 'राशि दर्ज करें';
 
   @override
-  String get wallet_enter_valid_amount => 'कृपया शून्य से अधिक वैध राशि दर्ज करें।';
+  String get wallet_enter_valid_amount =>
+      'कृपया शून्य से अधिक वैध राशि दर्ज करें।';
 
   @override
   String get wallet_history => 'लेनदेन इतिहास';
@@ -4895,13 +5174,16 @@ class AppLocalizationsHi extends AppLocalizations {
   String get wallet_transactions => 'लेनदेन';
 
   @override
-  String get wallet_no_transactions => 'अभी कोई लेनदेन नहीं। शुरू करने के लिए वॉलेट रिचार्ज करें।';
+  String get wallet_no_transactions =>
+      'अभी कोई लेनदेन नहीं। शुरू करने के लिए वॉलेट रिचार्ज करें।';
 
   @override
-  String get wallet_demo_note => 'डेमो मोड: बैलेंस केवल इस डिवाइस पर संग्रहीत है। पैसे जोड़ने के लिए Razorpay टेस्ट चेकआउट का उपयोग होता है — कोई बैकएंड सत्यापन नहीं।';
+  String get wallet_demo_note =>
+      'डेमो मोड: बैलेंस केवल इस डिवाइस पर संग्रहीत है। पैसे जोड़ने के लिए Razorpay टेस्ट चेकआउट का उपयोग होता है — कोई बैकएंड सत्यापन नहीं।';
 
   @override
-  String get wallet_low_balance_warning => 'वॉलेट बैलेंस कम है। बिलिंग रुकने से बचने के लिए जल्द रिचार्ज करें।';
+  String get wallet_low_balance_warning =>
+      'वॉलेट बैलेंस कम है। बिलिंग रुकने से बचने के लिए जल्द रिचार्ज करें।';
 
   @override
   String get wallet_recharge_demo => 'वॉलेट रिचार्ज (डेमो)';
@@ -4918,13 +5200,16 @@ class AppLocalizationsHi extends AppLocalizations {
   String get wallet_welcome_credit => 'स्वागत क्रेडिट';
 
   @override
-  String get wallet_no_cards_available => 'अभी कोई रिचार्ज कार्ड कॉन्फ़िगर नहीं है। कस्टम राशि का उपयोग करें या एडमिन से कार्ड जोड़ने को कहें।';
+  String get wallet_no_cards_available =>
+      'अभी कोई रिचार्ज कार्ड कॉन्फ़िगर नहीं है। कस्टम राशि का उपयोग करें या एडमिन से कार्ड जोड़ने को कहें।';
 
   @override
-  String get wallet_secure_payment_note => 'भुगतान Razorpay द्वारा सुरक्षित हैं।';
+  String get wallet_secure_payment_note =>
+      'भुगतान Razorpay द्वारा सुरक्षित हैं।';
 
   @override
-  String get wallet_menu_subtitle => 'प्लेटफ़ॉर्म शुल्क के लिए प्रीपेड बैलेंस रिचार्ज करें';
+  String get wallet_menu_subtitle =>
+      'प्लेटफ़ॉर्म शुल्क के लिए प्रीपेड बैलेंस रिचार्ज करें';
 
   @override
   String get settings_section_billing => 'बिलिंग प्लान';
@@ -4933,22 +5218,26 @@ class AppLocalizationsHi extends AppLocalizations {
   String get billing_mode_title => 'एक्सेस मोड';
 
   @override
-  String get billing_mode_subtitle => 'चुनें कि यह आउटलेट BillKaro के लिए कैसे भुगतान करेगा';
+  String get billing_mode_subtitle =>
+      'चुनें कि यह आउटलेट BillKaro के लिए कैसे भुगतान करेगा';
 
   @override
   String get billing_mode_subscription => 'सब्सक्रिप्शन';
 
   @override
-  String get billing_mode_subscription_desc => 'सक्रिय प्लान या ट्रायल के साथ असीमित एक्सेस';
+  String get billing_mode_subscription_desc =>
+      'सक्रिय प्लान या ट्रायल के साथ असीमित एक्सेस';
 
   @override
   String get billing_mode_wallet => 'वॉलेट';
 
   @override
-  String get billing_mode_wallet_desc => 'पे-एज़-यू-गो — हर बिल पर प्रीपेड बैलेंस कटेगा';
+  String get billing_mode_wallet_desc =>
+      'पे-एज़-यू-गो — हर बिल पर प्रीपेड बैलेंस कटेगा';
 
   @override
-  String get billing_mode_switched_subscription => 'सब्सक्रिप्शन मोड में स्विच किया गया';
+  String get billing_mode_switched_subscription =>
+      'सब्सक्रिप्शन मोड में स्विच किया गया';
 
   @override
   String get billing_mode_switched_wallet => 'वॉलेट मोड में स्विच किया गया';
@@ -4957,16 +5246,19 @@ class AppLocalizationsHi extends AppLocalizations {
   String get billing_mode_switch_confirm_title => 'बिलिंग मोड बदलें?';
 
   @override
-  String get billing_mode_switch_to_wallet_body => 'आप सब्सक्रिप्शन की जगह प्रीपेड वॉलेट क्रेडिट इस्तेमाल करेंगे। बिल बनाने से पहले वॉलेट में बैलेंस रखें।';
+  String get billing_mode_switch_to_wallet_body =>
+      'आप सब्सक्रिप्शन की जगह प्रीपेड वॉलेट क्रेडिट इस्तेमाल करेंगे। बिल बनाने से पहले वॉलेट में बैलेंस रखें।';
 
   @override
-  String get billing_mode_switch_to_subscription_body => 'गेटेड फीचर्स के लिए सक्रिय सब्सक्रिप्शन या ट्रायल चाहिए। वॉलेट बैलेंस ऐप को अनलॉक नहीं करेगा।';
+  String get billing_mode_switch_to_subscription_body =>
+      'गेटेड फीचर्स के लिए सक्रिय सब्सक्रिप्शन या ट्रायल चाहिए। वॉलेट बैलेंस ऐप को अनलॉक नहीं करेगा।';
 
   @override
   String get billing_mode_confirm_switch => 'स्विच करें';
 
   @override
-  String get billing_mode_owner_only => 'केवल आउटलेट ओनर बिलिंग मोड बदल सकते हैं';
+  String get billing_mode_owner_only =>
+      'केवल आउटलेट ओनर बिलिंग मोड बदल सकते हैं';
 
   @override
   String get notifications => 'नोटिफ़िकेशन';
@@ -4975,7 +5267,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get internet_speed_test => 'इंटरनेट स्पीड टेस्ट';
 
   @override
-  String get internet_speed_test_subtitle => 'पिंग, डाउनलोड और अपलोड स्पीड मापें';
+  String get internet_speed_test_subtitle =>
+      'पिंग, डाउनलोड और अपलोड स्पीड मापें';
 
   @override
   String get internet_speed_start_test => 'टेस्ट शुरू करें';
@@ -5026,11 +5319,65 @@ class AppLocalizationsHi extends AppLocalizations {
   String get internet_speed_phase_upload => 'अपलोड मापा जा रहा है…';
 
   @override
-  String get internet_speed_offline => 'इंटरनेट कनेक्शन नहीं है। नेटवर्क जाँचें और फिर कोशिश करें।';
+  String get internet_speed_offline =>
+      'इंटरनेट कनेक्शन नहीं है। नेटवर्क जाँचें और फिर कोशिश करें।';
 
   @override
-  String get internet_speed_failed => 'स्पीड टेस्ट विफल रहा। कृपया फिर कोशिश करें।';
+  String get internet_speed_failed =>
+      'स्पीड टेस्ट विफल रहा। कृपया फिर कोशिश करें।';
 
   @override
-  String get internet_speed_tap_to_test => 'इंटरनेट स्पीड टेस्ट के लिए टैप करें';
+  String get internet_speed_tap_to_test =>
+      'इंटरनेट स्पीड टेस्ट के लिए टैप करें';
+
+  @override
+  String get help_and_setup => 'मदद और सेटअप';
+
+  @override
+  String get help_were_here => 'हम मदद के लिए यहाँ हैं';
+
+  @override
+  String get help_subtitle => 'त्वरित सेटअप चरण और सीधे सपोर्ट विकल्प';
+
+  @override
+  String get help_your_account => 'आपका अकाउंट';
+
+  @override
+  String get help_user_id => 'यूज़र ID';
+
+  @override
+  String get help_name => 'नाम';
+
+  @override
+  String get help_restaurant => 'रेस्टोरेंट';
+
+  @override
+  String get help_quick_setup => 'क्विक सेटअप';
+
+  @override
+  String get help_setup_step_1 =>
+      'प्रिंटर कनेक्ट करें: मेन्यू → प्रिंटर → अपना प्रिंटर चुनें → पेयर और टेस्ट प्रिंट।';
+
+  @override
+  String get help_setup_step_2 =>
+      'ऑनलाइन ऑर्डर सक्षम करें: अपने रेस्टोरेंट के लिए QR मेन्यू सक्रिय करने हेतु सपोर्ट से संपर्क करें। ऑर्डर डैशबोर्ड में अपने आप दिखेंगे।';
+
+  @override
+  String get help_setup_step_3 =>
+      'ऑर्डर का टेस्ट प्रिंट: कोई भी ऑर्डर खोलें → \'View Order\' → प्रिंट स्क्रीन से प्रिंट करें।';
+
+  @override
+  String get help_contact_support => 'सपोर्ट से संपर्क करें';
+
+  @override
+  String get help_call_us => 'कॉल करें';
+
+  @override
+  String get help_whatsapp => 'WhatsApp';
+
+  @override
+  String get help_live_chat => 'लाइव चैट';
+
+  @override
+  String get help_support_hours => 'उपलब्ध सुबह 10 बजे–शाम 6 बजे IST';
 }

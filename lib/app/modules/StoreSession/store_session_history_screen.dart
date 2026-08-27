@@ -49,13 +49,14 @@ class _StoreSessionHistoryScreenState extends State<StoreSessionHistoryScreen> {
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
         ),
         actions: [
-          // Refresh button
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            tooltip: loc.refresh,
-            onPressed: controller.isLoading.value
-                ? null
-                : () => controller.loadHistory(showLoader: true),
+          Obx(
+            () => IconButton(
+              icon: const Icon(Icons.refresh_rounded),
+              tooltip: loc.refresh,
+              onPressed: controller.isLoading.value
+                  ? null
+                  : () => controller.loadHistory(),
+            ),
           ),
         ],
       ),
@@ -69,8 +70,7 @@ class _StoreSessionHistoryScreenState extends State<StoreSessionHistoryScreen> {
                   : controller.sessions.isEmpty
                   ? _emptyState(loc)
                   : RefreshIndicator(
-                      onRefresh: () =>
-                          controller.loadHistory(showLoader: false),
+                      onRefresh: () => controller.loadHistory(),
                       child: Scrollbar(
                         thumbVisibility: isDesktop,
                         child: ListView.separated(
@@ -231,11 +231,18 @@ class _StoreSessionHistoryScreenState extends State<StoreSessionHistoryScreen> {
               ? Container(
                   height: 48,
                   decoration: appFilterDropdownDecoration(),
-                  child: const Center(
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        loc.all_users,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[600],
+                        ),
+                      ),
                     ),
                   ),
                 )
@@ -390,22 +397,20 @@ class _StoreSessionHistoryScreenState extends State<StoreSessionHistoryScreen> {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  Expanded(
-                    child: _metric(
-                      loc.closing_cash,
-                      _currency.format(session.closingCash!),
-                    ),
+                  _metric(
+                    loc.closing_cash,
+                    _currency.format(session.closingCash!),
                   ),
-                  if (session.cashVariance != null)
-                    Expanded(
-                      child: _metric(
-                        loc.cash_variance,
-                        _currency.format(session.cashVariance!),
-                        valueColor: session.cashVariance! >= 0
-                            ? const Color(0xFF1B7F4B)
-                            : const Color(0xFFC62828),
-                      ),
-                    ),
+                  session.cashVariance != null
+                      ? _metric(
+                          loc.cash_variance,
+                          _currency.format(session.cashVariance!),
+                          valueColor: session.cashVariance! >= 0
+                              ? const Color(0xFF1B7F4B)
+                              : const Color(0xFFC62828),
+                        )
+                      : const Expanded(child: SizedBox.shrink()),
+                  const Expanded(child: SizedBox.shrink()),
                 ],
               ),
             ],

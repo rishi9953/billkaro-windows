@@ -223,6 +223,16 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                                   Expanded(
                                     flex: 1,
                                     child: Text(
+                                      'GST',
+                                      textAlign: TextAlign.right,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 1,
+                                    child: Text(
                                       'Amount',
                                       textAlign: TextAlign.right,
                                       style: TextStyle(
@@ -242,6 +252,12 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                               final quantity = item.quantity;
                               final price = item.salePrice;
                               final amount = price * quantity;
+                              final gstRate = item.gst;
+                              final gstLabel = gstRate <= 0
+                                  ? '-'
+                                  : gstRate == gstRate.roundToDouble()
+                                      ? '${gstRate.toInt()}%'
+                                      : '${gstRate.toStringAsFixed(1)}%';
                               final isZebra = index.isOdd;
 
                               return Container(
@@ -286,6 +302,14 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                                       child: Text(
                                         '₹${price.toStringAsFixed(2)}',
                                         textAlign: TextAlign.right,
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 1,
+                                      child: Text(
+                                        gstLabel,
+                                        textAlign: TextAlign.right,
+                                        style: const TextStyle(fontSize: 12),
                                       ),
                                     ),
                                     Expanded(

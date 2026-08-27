@@ -16,8 +16,43 @@ void mergeRemoteOrders(
 }) {
   for (final order in remote) {
     if (unsyncedIds.contains(order.id)) continue;
-    target[order.id] = order;
+    target[order.id] = preserveOrderDiscountMeta(order, target[order.id]);
   }
+}
+
+/// Keeps local UI discount type/value when the server order has none.
+OrderModel preserveOrderDiscountMeta(OrderModel remote, OrderModel? local) {
+  if (local == null) return remote;
+  if (remote.discountType != null || remote.discountValue != null) {
+    return remote;
+  }
+  if (local.discountType == null && local.discountValue == null) {
+    return remote;
+  }
+  return OrderModel(
+    id: remote.id,
+    createdAt: remote.createdAt,
+    updatedAt: remote.updatedAt,
+    billNumber: remote.billNumber,
+    userId: remote.userId,
+    tableNumber: remote.tableNumber,
+    outletId: remote.outletId,
+    customerName: remote.customerName,
+    phoneNumber: remote.phoneNumber,
+    subtotal: remote.subtotal,
+    totalTax: remote.totalTax,
+    discount: remote.discount,
+    discountType: local.discountType,
+    discountValue: local.discountValue,
+    serviceCharge: remote.serviceCharge,
+    totalAmount: remote.totalAmount,
+    paymentReceivedIn: remote.paymentReceivedIn,
+    splitPayments: remote.splitPayments,
+    status: remote.status,
+    orderFrom: remote.orderFrom,
+    items: remote.items,
+    specialInstructions: remote.specialInstructions,
+  );
 }
 
 /// Builds a server-safe order payload (strips local-only IDs and billNumber).
@@ -30,6 +65,8 @@ Map<String, dynamic> buildOrderSyncPayload(OrderModel order) {
 
   // Backend always assigns bill numbers; sending one can cause conflicts.
   payload.remove('billNumber');
+  // Client-only fields for hold/reopen UI — not stored on the server.
+  payload.remove('discountValue');
 
   final items = payload['items'];
   if (items is List) {
@@ -67,6 +104,8 @@ OrderModel? parseSyncedOrderFromResponse(
   if (map['items'] == null) {
     map['items'] = localFallback.items.map((e) => e.toJson()).toList();
   }
+  map['discountType'] ??= localFallback.discountType;
+  map['discountValue'] ??= localFallback.discountValue;
 
   try {
     return OrderModel.fromJson(map);
@@ -91,6 +130,10 @@ OrderModel? parseSyncedOrderFromResponse(
           (map['totalTax'] as num?)?.toDouble() ?? localFallback.totalTax,
       discount:
           (map['discount'] as num?)?.toDouble() ?? localFallback.discount,
+      discountType:
+          map['discountType']?.toString() ?? localFallback.discountType,
+      discountValue: (map['discountValue'] as num?)?.toDouble() ??
+          localFallback.discountValue,
       serviceCharge: (map['serviceCharge'] as num?)?.toDouble() ??
           localFallback.serviceCharge,
       totalAmount:

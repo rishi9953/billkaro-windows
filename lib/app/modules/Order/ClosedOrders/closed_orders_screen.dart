@@ -56,7 +56,7 @@ class ClosedOrdersScreen extends StatelessWidget {
         ],
       ),
       body: const ClosedOrdersContent(),
-      floatingActionButton: StaffAccess.canCreateSales
+      floatingActionButton: StaffAccess.canShowCreateOrder
           ? FloatingActionButton.extended(
         onPressed: () => Modular.to.navigate(HomeMainRoutes.createOrder),
         backgroundColor: AppColor.secondaryPrimary,
@@ -76,7 +76,7 @@ class ClosedOrdersScreen extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(right: 12),
       child: TextButton.icon(
-        onPressed: StaffAccess.canCreateSales
+        onPressed: StaffAccess.canShowCreateOrder
             ? () => Modular.to.navigate(HomeMainRoutes.createOrder)
             : null,
         icon: const Icon(Icons.add, color: Colors.white),
@@ -779,7 +779,7 @@ class _OrderCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (StaffAccess.canUpdateSales) ...[
+                    if (StaffAccess.isOwnerSession) ...[
                       const SizedBox(width: 8),
                       Tooltip(
                         message: loc.delete_order,
@@ -808,7 +808,8 @@ class _OrderCard extends StatelessWidget {
   }
 
   void _confirmDelete(OrderModel order, AppLocalizations loc) {
-    if (!StaffAccess.ensure(StaffAccess.canUpdateSales)) return;
+    if (!StaffAccess.ensure(StaffAccess.isOwnerSession,
+        message: 'Only the owner can delete closed orders.')) return;
     Get.dialog(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),

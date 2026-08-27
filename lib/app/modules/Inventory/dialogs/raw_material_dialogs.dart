@@ -1,5 +1,26 @@
 part of 'inventory_dialogs.dart';
 
+String? _initialRawMaterialCategory(
+  InventoryController c,
+  RawMaterialData? material,
+) {
+  final existing = (material?.category ?? '').trim();
+  if (existing.isNotEmpty) {
+    return c.rawMaterialListCategories.firstWhereOrNull(
+          (cat) => cat.toLowerCase() == existing.toLowerCase(),
+        ) ??
+        existing;
+  }
+
+  // Prefill from Stock tab category filter (empty = All).
+  final filter = c.rawMaterialCategoryFilter.value.trim();
+  if (filter.isEmpty) return null;
+  return c.rawMaterialListCategories.firstWhereOrNull(
+        (cat) => cat.toLowerCase() == filter.toLowerCase(),
+      ) ??
+      filter;
+}
+
 Future<void> showAddRawMaterialDialog(InventoryController c) async {
   await _showRawMaterialDialog(c);
 }
@@ -28,13 +49,7 @@ Future<void> _showRawMaterialDialog(
 
   final activeSuppliers = c.suppliers.where((s) => s.isActive).toList();
   final nameCtrl = TextEditingController(text: material?.name ?? '');
-  final existingCategory = (material?.category ?? '').trim();
-  String? selectedCategory = existingCategory.isEmpty
-      ? null
-      : c.rawMaterialListCategories.firstWhereOrNull(
-              (cat) => cat.toLowerCase() == existingCategory.toLowerCase(),
-            ) ??
-            existingCategory;
+  String? selectedCategory = _initialRawMaterialCategory(c, material);
   final qtyCtrl = TextEditingController(
     text: material == null
         ? ''
@@ -163,17 +178,18 @@ Future<void> _showRawMaterialDialog(
                                 selectedCategory!.toLowerCase(),
                           ) ??
                           selectedCategory;
-                return AppDropdownFormField2<String>(
+                return SearchableCategoryDropdown(
+                  categories: cats,
                   value: dropdownValue,
-                  isExpanded: true,
-                  hint: Text(loc.enter_category_name),
+                  label: loc.category,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                   ),
-                  items: cats
-                      .map((cat) => DropdownItem(value: cat, child: Text(cat)))
-                      .toList(),
-                  onChanged: (v) => setDrawerState(() => selectedCategory = v),
+                  onChanged: (v) {
+                    setDrawerState(() {
+                      selectedCategory = (v == null || v.isEmpty) ? null : v;
+                    });
+                  },
                   validator: (value) {
                     if ((value ?? '').trim().isEmpty) {
                       return loc.category_example_hint;

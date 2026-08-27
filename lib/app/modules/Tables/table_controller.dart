@@ -1078,6 +1078,7 @@ class TableController extends BaseController {
     }
 
     if (tws.isAvailable) {
+      if (!StaffAccess.ensure(StaffAccess.canShowCreateOrder)) return;
       await Modular.to.pushNamed(
         HomeMainRoutes.createOrder,
         arguments: {
@@ -1093,6 +1094,7 @@ class TableController extends BaseController {
     }
 
     if (tws.currentOrder != null) {
+      if (!StaffAccess.ensure(StaffAccess.canShowEditOrder)) return;
       await Modular.to.pushNamed(
         HomeMainRoutes.createOrder,
         arguments: {
@@ -1116,6 +1118,7 @@ class TableController extends BaseController {
         (t) => t.table.id == tws.table.id,
       );
       if (updated?.currentOrder != null) {
+        if (!StaffAccess.ensure(StaffAccess.canShowEditOrder)) return;
         await Modular.to.pushNamed(
           HomeMainRoutes.createOrder,
           arguments: {
@@ -1129,6 +1132,7 @@ class TableController extends BaseController {
       }
     }
 
+    if (!StaffAccess.ensure(StaffAccess.canShowCreateOrder)) return;
     await Modular.to.pushNamed(
       HomeMainRoutes.createOrder,
       arguments: {
@@ -1618,6 +1622,11 @@ class TableController extends BaseController {
                     Expanded(
                       child: FilledButton.icon(
                         onPressed: () async {
+                          if (!StaffAccess.ensure(
+                            StaffAccess.canShowCreateOrder,
+                          )) {
+                            return;
+                          }
                           if (Get.isDialogOpen == true) Get.back();
                           await seatReservation(reservation);
                           await Modular.to.pushNamed(

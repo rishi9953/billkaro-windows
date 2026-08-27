@@ -260,74 +260,58 @@ Widget _poDatePickerTile({
   VoidCallback? onClear,
 }) {
   final hasValue = value != null;
-  return Material(
-    color: Colors.transparent,
+  return SizedBox(
+    height: 56,
     child: InkWell(
       onTap: onPick,
       borderRadius: BorderRadius.circular(12),
-      child: Ink(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-        decoration: BoxDecoration(
-          color: hasValue ? _poSoft : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: hasValue ? const Color(0xFFFFD7AE) : _poLine,
+      child: InputDecorator(
+        isEmpty: !hasValue,
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: 'Optional — pick a date',
+          floatingLabelBehavior: FloatingLabelBehavior.always,
+          prefixIcon: Icon(
+            Icons.event_outlined,
+            size: 20,
+            color: hasValue ? _poAccent : _poMuted,
+          ),
+          suffixIcon: hasValue && onClear != null
+              ? IconButton(
+                  tooltip: 'Clear',
+                  onPressed: onClear,
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.close, size: 18, color: _poMuted),
+                )
+              : const Icon(Icons.chevron_right, color: _poMuted),
+          filled: true,
+          fillColor: hasValue ? _poSoft : Colors.white,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: hasValue ? const Color(0xFFFFD7AE) : _poLine,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: _poAccent, width: 1.6),
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 14,
           ),
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: hasValue
-                    ? _poAccent.withValues(alpha: 0.12)
-                    : const Color(0xFFF3F4F6),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                Icons.event_outlined,
-                size: 18,
-                color: hasValue ? _poAccent : _poMuted,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: _poMuted,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    hasValue
-                        ? DateFormat('dd MMM yyyy').format(value)
-                        : 'Optional — pick a date',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: hasValue ? _poInk : _poMuted,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (hasValue && onClear != null)
-              IconButton(
-                tooltip: 'Clear',
-                onPressed: onClear,
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.close, size: 18, color: _poMuted),
-              )
-            else
-              const Icon(Icons.chevron_right, color: _poMuted),
-          ],
+        child: Text(
+          hasValue ? DateFormat('dd MMM yyyy').format(value) : '',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 16,
+            height: 1.2,
+            fontWeight: FontWeight.w500,
+            color: hasValue ? _poInk : _poMuted,
+          ),
         ),
       ),
     ),
@@ -2479,24 +2463,6 @@ Widget _poInfoBox(String title, List<List<String>> rows, {int minRows = 0}) {
   );
 }
 
-Widget _poHorizontallyScrollable({required Widget child}) {
-  return LayoutBuilder(
-    builder: (context, constraints) {
-      final width = constraints.maxWidth.isFinite
-          ? constraints.maxWidth
-          : MediaQuery.of(context).size.width;
-      return SizedBox(
-        width: width,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          clipBehavior: Clip.hardEdge,
-          child: child,
-        ),
-      );
-    },
-  );
-}
-
 Widget _poLineItemsTable(PurchaseOrderDisplay display, String effectiveDate) {
   const headers = [
     'Sl. No',
@@ -2512,19 +2478,21 @@ Widget _poLineItemsTable(PurchaseOrderDisplay display, String effectiveDate) {
     'Tax\nAmount',
     'Gross\nAmount',
   ];
+
+  // Relative widths so the table fills the dialog width.
   const columnWidths = <int, TableColumnWidth>{
-    0: FixedColumnWidth(48),
-    1: FixedColumnWidth(100),
-    2: FixedColumnWidth(120),
-    3: FixedColumnWidth(64),
-    4: FixedColumnWidth(40),
-    5: FixedColumnWidth(40),
-    6: FixedColumnWidth(72),
-    7: FixedColumnWidth(72),
-    8: FixedColumnWidth(72),
-    9: FixedColumnWidth(44),
-    10: FixedColumnWidth(64),
-    11: FixedColumnWidth(72),
+    0: FlexColumnWidth(0.7),
+    1: FlexColumnWidth(1.5),
+    2: FlexColumnWidth(2.0),
+    3: FlexColumnWidth(1.0),
+    4: FlexColumnWidth(0.7),
+    5: FlexColumnWidth(0.7),
+    6: FlexColumnWidth(1.1),
+    7: FlexColumnWidth(1.1),
+    8: FlexColumnWidth(1.1),
+    9: FlexColumnWidth(0.8),
+    10: FlexColumnWidth(1.0),
+    11: FlexColumnWidth(1.1),
   };
 
   Widget cell(
@@ -2545,51 +2513,70 @@ Widget _poLineItemsTable(PurchaseOrderDisplay display, String effectiveDate) {
     );
   }
 
-  return _poHorizontallyScrollable(
-    child: DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Table(
-          defaultColumnWidth: const FixedColumnWidth(48),
-          border: TableBorder.all(color: Colors.grey.shade200, width: 0.5),
-          columnWidths: columnWidths,
-          children: [
-            TableRow(
-              decoration: BoxDecoration(color: _poAccent.withOpacity(0.12)),
-              children: headers.map((h) => cell(h, header: true)).toList(),
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      const minTableWidth = 900.0;
+      final available = constraints.maxWidth.isFinite
+          ? constraints.maxWidth
+          : MediaQuery.of(context).size.width;
+      final tableWidth = math.max(available, minTableWidth);
+
+      final table = SizedBox(
+        width: tableWidth,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Table(
+              defaultColumnWidth: const FlexColumnWidth(1),
+              border: TableBorder.all(color: Colors.grey.shade200, width: 0.5),
+              columnWidths: columnWidths,
+              children: [
+                TableRow(
+                  decoration: BoxDecoration(color: _poAccent.withOpacity(0.12)),
+                  children: headers.map((h) => cell(h, header: true)).toList(),
+                ),
+                ...display.lines.map((line) {
+                  final desc = line.description.isNotEmpty
+                      ? line.description
+                      : line.rawMaterialName;
+                  final delivery = line.deliveryDate != null
+                      ? _poFmtShortDate(line.deliveryDate!)
+                      : effectiveDate;
+                  return TableRow(
+                    children: [
+                      cell('${line.lineNumber}'),
+                      cell(line.rawMaterialName),
+                      cell(desc),
+                      cell(line.hsnSacCode.isEmpty ? '—' : line.hsnSacCode),
+                      cell(_poFmtNum(line.quantity)),
+                      cell(line.unit),
+                      cell(delivery),
+                      cell(_poFmtMoney(line.unitPrice)),
+                      cell(_poFmtMoney(line.basicAmount)),
+                      cell('${line.taxRate.toStringAsFixed(0)}%'),
+                      cell(_poFmtMoney(line.taxAmount)),
+                      cell(_poFmtMoney(line.grossAmount)),
+                    ],
+                  );
+                }),
+              ],
             ),
-            ...display.lines.map((line) {
-              final desc = line.description.isNotEmpty
-                  ? line.description
-                  : line.rawMaterialName;
-              final delivery = line.deliveryDate != null
-                  ? _poFmtShortDate(line.deliveryDate!)
-                  : effectiveDate;
-              return TableRow(
-                children: [
-                  cell('${line.lineNumber}'),
-                  cell(line.rawMaterialName),
-                  cell(desc),
-                  cell(line.hsnSacCode.isEmpty ? '—' : line.hsnSacCode),
-                  cell(_poFmtNum(line.quantity), align: TextAlign.right),
-                  cell(line.unit),
-                  cell(delivery),
-                  cell(_poFmtMoney(line.unitPrice), align: TextAlign.right),
-                  cell(_poFmtMoney(line.basicAmount), align: TextAlign.right),
-                  cell('${line.taxRate.toStringAsFixed(0)}%'),
-                  cell(_poFmtMoney(line.taxAmount), align: TextAlign.right),
-                  cell(_poFmtMoney(line.grossAmount), align: TextAlign.right),
-                ],
-              );
-            }),
-          ],
+          ),
         ),
-      ),
-    ),
+      );
+
+      if (available >= minTableWidth) return table;
+
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.hardEdge,
+        child: table,
+      );
+    },
   );
 }
 
@@ -2721,9 +2708,17 @@ Widget _buildPoAddressForm(
               fields.contactCtrl,
               loc.po_contact_no,
               required: true,
-              validator: (v) => (v ?? '').trim().isEmpty
-                  ? loc.please_enter_phone_number
-                  : null,
+              keyboardType: TextInputType.phone,
+              maxLength: 10,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              validator: (v) {
+                final phone = (v ?? '').trim();
+                if (phone.isEmpty) return loc.please_enter_phone_number;
+                if (phone.length != 10) {
+                  return loc.please_enter_valid_10_digit_phone;
+                }
+                return null;
+              },
             ),
           ),
           const SizedBox(width: 10),

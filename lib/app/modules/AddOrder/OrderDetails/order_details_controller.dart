@@ -176,7 +176,9 @@ class OrderDetailsController extends BaseController {
         if (customerName.text.trim().isEmpty) {
           customerName.text = customer.customerName;
         }
-        if (customer.loyalityDiscount > 0) {
+        final existingDiscount = double.tryParse(discount.text.trim()) ?? 0.0;
+        // Don't overwrite a discount already set on this order (e.g. hold reopen).
+        if (customer.loyalityDiscount > 0 && existingDiscount <= 0) {
           discountType.value = customer.loyalityDiscountType == 'amount'
               ? 'amount'
               : 'percentage';

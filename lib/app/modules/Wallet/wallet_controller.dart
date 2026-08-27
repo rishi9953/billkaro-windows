@@ -1,3 +1,4 @@
+import 'package:billkaro/app/Widgets/payment_success_dialog.dart';
 import 'package:billkaro/app/services/Modals/wallet/wallet_api_models.dart';
 import 'package:billkaro/app/services/Modals/wallet/wallet_transaction.dart';
 import 'package:billkaro/app/modules/Shell/Sidebar/app_shell_sidebar_controller.dart';
@@ -265,7 +266,10 @@ class WalletController extends BaseController {
         return;
       }
 
-      razorpayService.openCheckout(
+      // Re-bind callbacks so subscription/other screens don't steal success events.
+      _initializeRazorpay();
+
+      razorpayService.openWalletCheckout(
         orderId: _orderId,
         amountInPaise: amountInPaise,
         name: user?.brandName ?? user?.firstName ?? 'BillKaro User',
@@ -278,7 +282,6 @@ class WalletController extends BaseController {
           if (walletCardId != null) 'walletCardId': walletCardId,
         },
         prefill: {'name': user?.firstName ?? 'Customer'},
-        instantPaymentsOnly: true,
       );
     } catch (e) {
       debugPrint('Wallet recharge order error: $e');
@@ -286,7 +289,6 @@ class WalletController extends BaseController {
         title: loc.payment_failed,
         description: loc.failed_create_payment_order,
       );
-    } finally {
       isProcessingPayment.value = false;
     }
   }
@@ -382,7 +384,7 @@ class WalletController extends BaseController {
 
       debugPrint('Wallet confirm request: $confirmRequest');
 
-      final confirmResponse = await _confirmWalletRecharge(
+      final confirmResponse = await _confirmWalletRechargeWithRetry(
         outletId,
         confirmRequest,
       );
@@ -430,6 +432,27 @@ class WalletController extends BaseController {
       _pendingWalletCardId = null;
       _orderId = '';
     }
+  }
+
+  Future<dynamic> _confirmWalletRechargeWithRetry(
+    String outletId,
+    Map<String, dynamic> confirmRequest,
+  ) async {
+    Object? lastError;
+    for (var attempt = 0; attempt < 4; attempt++) {
+      try {
+        return await _confirmWalletRecharge(outletId, confirmRequest);
+      } catch (e) {
+        lastError = e;
+        final message = e.toString().toLowerCase();
+        final retryable = message.contains('not captured') ||
+            message.contains('network') ||
+            message.contains('timeout');
+        if (!retryable || attempt == 3) rethrow;
+        await Future.delayed(Duration(milliseconds: 1500 * (attempt + 1)));
+      }
+    }
+    throw lastError ?? Exception('Wallet recharge confirmation failed');
   }
 
   Future<dynamic> _confirmWalletRecharge(
@@ -498,88 +521,12 @@ class WalletController extends BaseController {
   }) async {
     final context = Get.context;
     if (context == null) return;
-    final isWindowsDesktop =
-        Theme.of(context).platform == TargetPlatform.windows;
 
-    await Get.dialog(
-      isWindowsDesktop
-          ? Dialog(
-              insetPadding: const EdgeInsets.symmetric(
-                horizontal: 56,
-                vertical: 40,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 460),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 28,
-                            height: 28,
-                            decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            alignment: Alignment.center,
-                            child: const Icon(
-                              Icons.check_circle_outline,
-                              color: Colors.green,
-                              size: 18,
-                            ),
-                          ),
-                          const Gap(10),
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Gap(10),
-                      Text(
-                        description,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade700,
-                          height: 1.4,
-                        ),
-                      ),
-                      const Gap(16),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: FilledButton(
-                          onPressed: () => Get.back(),
-                          child: Text(AppLocalizations.of(context)!.ok),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            )
-          : AlertDialog(
-              title: Text(title),
-              content: Text(description),
-              actions: [
-                TextButton(
-                  onPressed: () => Get.back(),
-                  child: Text(AppLocalizations.of(context)!.ok),
-                ),
-              ],
-            ),
-      barrierDismissible: false,
+    await PaymentSuccessDialog.show(
+      context: context,
+      title: title,
+      description: description,
+      okLabel: AppLocalizations.of(context)!.ok,
     );
   }
 }

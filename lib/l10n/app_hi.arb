@@ -906,7 +906,7 @@
   "tutorial_subtitle": "होम स्क्रीन पर वीडियो गाइड अनुभाग",
   "top_selling_items": "सबसे ज्यादा बिकने वाले आइटम",
   "top_selling_items_subtitle": "होम स्क्रीन पर सबसे ज्यादा बिकने वाले मेनू आइटम",
-  "recommended_items": "अनुशंसित आइटम",
+  "recommended_items": "सबसे ज्यादा बिकने वाले आइटम",
   "features_for_you_subtitle": "होम स्क्रीन पर अनुशंसित सेटअप और टूल",
   "what_our_users_say": "हमारे उपयोगकर्ता क्या कहते हैं",
   "what_our_users_say_subtitle": "होम स्क्रीन पर ग्राहक प्रशंसापत्र कैरोसेल",
@@ -1325,6 +1325,17 @@
     }
   },
   "no_valid_import_rows": "कोई मान्य पंक्ति नहीं मिली। हेडर जैसे: Item Name, Price / Price (₹), Category, Tax % या GST उपयोग करें। नाम के रूप में केवल Item Code / Description / Unit से बचें। कीमतें 0 से अधिक संख्या होनी चाहिए।",
+  "import_item_missing_fields": "आइटम #{row} में फ़ील्ड गायब हैं: {fields}",
+  "@import_item_missing_fields": {
+    "placeholders": {
+      "row": {
+        "type": "int"
+      },
+      "fields": {
+        "type": "String"
+      }
+    }
+  },
   "items_imported_successfully": "{count} आइटम सफलतापूर्वक आयात हुए",
   "@items_imported_successfully": {
     "placeholders": {
@@ -1508,9 +1519,9 @@
   },
   "adjust_stock_tooltip": "स्टॉक समायोजित करें",
   "import_products_excel": "उत्पाद आयात करें - Excel (.xlsx)",
-  "import_products_description": "BillKaro टेम्पलेट प्रारूप वाली Excel (.xlsx) फ़ाइल चुनें। आवश्यक कॉलम: Name और Price। वैकल्पिक: Category, Tax % और Image Link। गायब श्रेणियाँ स्वचालित रूप से बनाई जाएँगी।",
+  "import_products_description": "BillKaro टेम्पलेट प्रारूप वाली Excel (.xlsx) फ़ाइल चुनें। आवश्यक कॉलम: Item Name और Price (₹)। वैकल्पिक: Item Code, Category, Description, Item Image, Unit, Tax %, Price Incl. Tax (₹)। गायब श्रेणियाँ स्वचालित रूप से बनाई जाएँगी।",
   "export_products_excel": "उत्पाद निर्यात करें - Excel (.xlsx)",
-  "export_products_description": "BillKaro टेम्पलेट प्रारूप में Excel (.xlsx) फ़ाइल में अपने मेनू आइटम निर्यात करें। कॉलम: Name, Price, Category, Tax % और Image Link शामिल हैं।",
+  "export_products_description": "BillKaro टेम्पलेट प्रारूप में Excel (.xlsx) फ़ाइल में अपने मेनू आइटम निर्यात करें। कॉलम: Item Code, Category, Item Name, Description, Item Image, Unit, Price (₹), Tax % और Price Incl. Tax (₹) शामिल हैं।",
   "export_file": "फ़ाइल निर्यात करें",
   "select_file": "फ़ाइल चुनें",
   "import_preview": "आयात पूर्वावलोकन",
@@ -2294,6 +2305,9 @@
   "item_added": "आइटम जोड़ा गया",
   "item_deleted": "आइटम हटाया गया",
   "item_edited": "आइटम संपादित",
+  "staff_added": "स्टाफ जोड़ा गया",
+  "staff_deleted": "स्टाफ हटाया गया",
+  "staff_updated": "स्टाफ अपडेट किया गया",
   "activity_fallback": "गतिविधि",
   "users_label": "उपयोगकर्ता",
   "activity_entity_name": "नाम : {name}",
@@ -2510,5 +2524,22 @@
   "internet_speed_phase_upload": "अपलोड मापा जा रहा है…",
   "internet_speed_offline": "इंटरनेट कनेक्शन नहीं है। नेटवर्क जाँचें और फिर कोशिश करें।",
   "internet_speed_failed": "स्पीड टेस्ट विफल रहा। कृपया फिर कोशिश करें।",
-  "internet_speed_tap_to_test": "इंटरनेट स्पीड टेस्ट के लिए टैप करें"
+  "internet_speed_tap_to_test": "इंटरनेट स्पीड टेस्ट के लिए टैप करें",
+  "help_and_setup": "मदद और सेटअप",
+  "help_were_here": "हम मदद के लिए यहाँ हैं",
+  "help_subtitle": "त्वरित सेटअप चरण और सीधे सपोर्ट विकल्प",
+  "help_your_account": "आपका अकाउंट",
+  "help_user_id": "यूज़र ID",
+  "help_name": "नाम",
+  "help_restaurant": "रेस्टोरेंट",
+  "help_quick_setup": "क्विक सेटअप",
+  "help_setup_step_1": "प्रिंटर कनेक्ट करें: मेन्यू → प्रिंटर → अपना प्रिंटर चुनें → पेयर और टेस्ट प्रिंट।",
+  "help_setup_step_2": "ऑनलाइन ऑर्डर सक्षम करें: अपने रेस्टोरेंट के लिए QR मेन्यू सक्रिय करने हेतु सपोर्ट से संपर्क करें। ऑर्डर डैशबोर्ड में अपने आप दिखेंगे।",
+  "help_setup_step_3": "ऑर्डर का टेस्ट प्रिंट: कोई भी ऑर्डर खोलें → 'View Order' → प्रिंट स्क्रीन से प्रिंट करें।",
+  "help_contact_support": "सपोर्ट से संपर्क करें",
+  "help_call_us": "कॉल करें",
+  "help_whatsapp": "WhatsApp",
+  "help_live_chat": "लाइव चैट",
+  "help_support_hours": "उपलब्ध सुबह 10 बजे–शाम 6 बजे IST"
+
 }

@@ -14,12 +14,18 @@ class MenuProductsTemplateService {
   MenuProductsTemplateService._();
 
   static const templateFileName = 'products_template.xlsx';
+
+  /// Matches the BillKaro products Excel column layout used on import.
   static const _headers = [
-    'Name',
-    'Price',
+    'Item Code',
     'Category',
+    'Item Name',
+    'Description',
+    'Item Image',
+    'Unit',
+    'Price (₹)',
     'Tax %',
-    'Image Link',
+    'Price Incl. Tax (₹)',
   ];
 
   static Workbook buildTemplateWorkbook() {
@@ -28,13 +34,18 @@ class MenuProductsTemplateService {
     sheet.name = 'Products';
     _writeHeaderRow(sheet);
 
-    sheet.getRangeByIndex(2, 1).setText('Sample Item');
-    sheet.getRangeByIndex(2, 2).setNumber(100);
-    sheet.getRangeByIndex(2, 3).setText('beverages');
-    sheet.getRangeByIndex(2, 4).setNumber(5);
+    // Sample row so users see the expected format.
+    sheet.getRangeByIndex(2, 1).setText('ITM001');
+    sheet.getRangeByIndex(2, 2).setText('beverages');
+    sheet.getRangeByIndex(2, 3).setText('Sample Item');
+    sheet.getRangeByIndex(2, 4).setText('Sample description');
     sheet
         .getRangeByIndex(2, 5)
         .setText('https://example.com/images/sample-item.jpg');
+    sheet.getRangeByIndex(2, 6).setText('Each');
+    sheet.getRangeByIndex(2, 7).setNumber(100);
+    sheet.getRangeByIndex(2, 8).setNumber(5);
+    sheet.getRangeByIndex(2, 9).setNumber(105);
 
     _autoFitColumns(sheet);
     return workbook;
@@ -49,18 +60,40 @@ class MenuProductsTemplateService {
     for (var i = 0; i < items.length; i++) {
       final item = items[i];
       final row = i + 2;
-      sheet.getRangeByIndex(row, 1).setText(item.itemName);
-      sheet.getRangeByIndex(row, 2).setNumber(item.salePrice);
+      final code = item.sku.trim().isNotEmpty
+          ? item.sku.trim()
+          : item.barcode.trim();
+      if (code.isNotEmpty) {
+        sheet.getRangeByIndex(row, 1).setText(code);
+      }
+
       final category =
           item.category.toLowerCase() == 'none' ? '' : item.category;
       if (category.isNotEmpty) {
-        sheet.getRangeByIndex(row, 3).setText(category);
+        sheet.getRangeByIndex(row, 2).setText(category);
       }
-      if (item.gst > 0) {
-        sheet.getRangeByIndex(row, 4).setNumber(item.gst.toDouble());
-      }
+
+      sheet.getRangeByIndex(row, 3).setText(item.itemName);
+
       if (item.itemImage.trim().isNotEmpty) {
         sheet.getRangeByIndex(row, 5).setText(item.itemImage.trim());
+      }
+
+      if (item.soldBy.trim().isNotEmpty) {
+        sheet.getRangeByIndex(row, 6).setText(item.soldBy.trim());
+      }
+
+      sheet.getRangeByIndex(row, 7).setNumber(item.salePrice);
+
+      if (item.gst > 0) {
+        sheet.getRangeByIndex(row, 8).setNumber(item.gst.toDouble());
+      }
+
+      if (item.withTax) {
+        sheet.getRangeByIndex(row, 9).setNumber(item.salePrice);
+      } else if (item.gst > 0) {
+        final incl = item.salePrice * (1 + item.gst / 100);
+        sheet.getRangeByIndex(row, 9).setNumber(incl);
       }
     }
 
@@ -116,12 +149,13 @@ class MenuProductsTemplateService {
     return file.path;
   }
 
-  static Future<void> _notifyExcelSaved(String fullPath, String body) {
+  static Future<void> _notifyExcelSaved(String fullPath, String title) {
+    final name = p.basename(fullPath);
     return DownloadNotificationService.instance.notifyComplete(
-      fileName: p.basename(fullPath),
+      fileName: name,
       filePath: fullPath,
-      title: 'Excel downloaded',
-      body: body,
+      title: title,
+      body: '$name saved to Downloads',
     );
   }
 
@@ -131,7 +165,7 @@ class MenuProductsTemplateService {
       showAppLoader();
       final workbook = buildTemplateWorkbook();
       final fullPath = await _saveWorkbook(workbook, templateFileName);
-      await _notifyExcelSaved(fullPath, loc.excel_saved_to_downloads);
+      await _notifyExcelSaved(fullPath, 'Products template downloaded');
       await OpenFile.open(fullPath);
     } catch (e) {
       showError(description: loc.failed_to_import_file_error(e.toString()));
@@ -148,10 +182,9 @@ class MenuProductsTemplateService {
     }
 
     final workbook = buildExportWorkbook(items);
-    final fileName =
-        'BillKaro_Products_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+    const fileName = 'products-export.xlsx';
     final fullPath = await _saveWorkbook(workbook, fileName);
-    await _notifyExcelSaved(fullPath, loc.excel_saved_to_downloads);
+    await _notifyExcelSaved(fullPath, 'Products export downloaded');
     await OpenFile.open(fullPath);
   }
 }

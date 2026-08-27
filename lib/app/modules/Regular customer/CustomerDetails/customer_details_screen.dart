@@ -19,25 +19,24 @@ class CustomerDetailsScreen extends StatelessWidget {
         elevation: 0,
         title: Text(loc.customer_details),
         actions: [
-          if (StaffAccess.canUpdateCustomers)
-            IconButton(
+          IconButton(
             icon: Assets.svg.whatsapp.svg(width: 24, height: 24),
             onPressed: () => openWhatsApp(controller.phoneNumber.value),
           ),
           if (StaffAccess.canUpdateCustomers)
             IconButton(
-            icon: const Icon(Icons.edit_outlined),
-            onPressed: () {
-              if (!StaffAccess.ensure(StaffAccess.canUpdateCustomers)) return;
-              Modular.to.pushNamed(
-                HomeMainRoutes.addRegularCustomer,
-                arguments: {
-                  'isEdit': true,
-                  'customerData': controller.customer,
-                },
-              );
-            },
-          ),
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () {
+                if (!StaffAccess.ensure(StaffAccess.canUpdateCustomers)) return;
+                Modular.to.pushNamed(
+                  HomeMainRoutes.addRegularCustomer,
+                  arguments: {
+                    'isEdit': true,
+                    'customerData': controller.customer,
+                  },
+                );
+              },
+            ),
           // Refresh button
           IconButton(
             onPressed: () => controller.loadCustomerDetails(),

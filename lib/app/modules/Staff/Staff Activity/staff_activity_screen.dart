@@ -69,7 +69,39 @@ IconData _activityTypeIcon(String type) {
   if (t.contains('order')) return Icons.receipt_long_rounded;
   if (t.contains('customer')) return Icons.person_outline_rounded;
   if (t.contains('item')) return Icons.inventory_2_outlined;
+  if (t.contains('staff')) return Icons.badge_outlined;
   return Icons.edit_notifications_outlined;
+}
+
+IconData _activityFilterSheetIcon(String option) {
+  switch (option) {
+    case StaffActivityController.activityTypeAll:
+      return Icons.layers_outlined;
+    case StaffActivityController.activityTypeOrderAdded:
+      return Icons.add_shopping_cart_outlined;
+    case StaffActivityController.activityTypeOrderDeleted:
+      return Icons.remove_shopping_cart_outlined;
+    case StaffActivityController.activityTypeCustomerAdded:
+      return Icons.person_add_alt_1_outlined;
+    case StaffActivityController.activityTypeCustomerDeleted:
+      return Icons.person_off_outlined;
+    case StaffActivityController.activityTypeCustomerEdited:
+      return Icons.manage_accounts_outlined;
+    case StaffActivityController.activityTypeItemAdded:
+      return Icons.add_box_outlined;
+    case StaffActivityController.activityTypeItemDeleted:
+      return Icons.delete_outline_rounded;
+    case StaffActivityController.activityTypeItemEdited:
+      return Icons.edit_note_rounded;
+    case StaffActivityController.activityTypeStaffAdded:
+      return Icons.person_add_alt_outlined;
+    case StaffActivityController.activityTypeStaffDeleted:
+      return Icons.person_remove_outlined;
+    case StaffActivityController.activityTypeStaffUpdated:
+      return Icons.badge_outlined;
+    default:
+      return Icons.tune_rounded;
+  }
 }
 
 class StaffActivityScreen extends StatelessWidget {
@@ -574,7 +606,9 @@ class StaffActivityScreen extends StatelessWidget {
         );
       },
       resetLabel: loc.reset,
-      onReset: () => StaffActivityController.timePeriodToday,
+      onReset: () => StaffActivityController.timePeriodAll,
+      showReset: () =>
+          tempSelected != StaffActivityController.timePeriodAll,
       onApply: () => tempSelected,
       isWindows: isWindows,
     );
@@ -686,45 +720,463 @@ class StaffActivityScreen extends StatelessWidget {
     final loc = AppLocalizations.of(context)!;
     final isWindows = _isWindows(context);
     String tempSelected = controller.selectedActivityType.value;
+    final searchController = TextEditingController();
+    final listScrollController = ScrollController();
+    var searchQuery = '';
 
-    final selected = await _presentChooser<String>(
-      context: context,
-      title: loc.select_activity_type,
-      builder: (setState) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: StaffActivityController.activityTypes.map((option) {
-            final isSelected = option == tempSelected;
-            return InkWell(
-              onTap: () => setState(() => tempSelected = option),
-              child: Container(
-                width: double.infinity,
-                color: isSelected ? AppColor.primary : Colors.transparent,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 12,
-                ),
-                child: Text(
-                  StaffActivityController.activityTypeLabel(loc, option),
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w400,
-                    color: isSelected ? Colors.white : Colors.black,
+    try {
+      final String? selected;
+      if (isWindows) {
+        selected = await Get.dialog<String>(
+          Dialog(
+            backgroundColor: Colors.white,
+            insetPadding: const EdgeInsets.symmetric(
+              horizontal: 28,
+              vertical: 24,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 520,
+                maxHeight: MediaQuery.sizeOf(context).height * 0.82,
+              ),
+              child: StatefulBuilder(
+                builder: (context, setModalState) {
+                  final filteredTypes = StaffActivityController.activityTypes
+                      .where((option) {
+                        if (searchQuery.trim().isEmpty) return true;
+                        final q = searchQuery.trim().toLowerCase();
+                        final label = StaffActivityController.activityTypeLabel(
+                          loc,
+                          option,
+                        ).toLowerCase();
+                        return label.contains(q) ||
+                            option.toLowerCase().contains(q);
+                      })
+                      .toList();
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 18, 8, 0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: AppColor.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.category_outlined,
+                                color: AppColor.primary,
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    loc.select_activity_type,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    loc.activity_type_sheet_hint,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      height: 1.35,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () => Get.back(),
+                              icon: Icon(
+                                Icons.close,
+                                color: Colors.grey.shade700,
+                              ),
+                              tooltip: MaterialLocalizations.of(
+                                context,
+                              ).closeButtonTooltip,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
+                        child: TextField(
+                          controller: searchController,
+                          onChanged: (value) =>
+                              setModalState(() => searchQuery = value),
+                          decoration: InputDecoration(
+                            hintText: loc.search_default_hint,
+                            prefixIcon: const Icon(Icons.search, size: 20),
+                            suffixIcon: searchQuery.isEmpty
+                                ? null
+                                : IconButton(
+                                    tooltip: MaterialLocalizations.of(
+                                      context,
+                                    ).deleteButtonTooltip,
+                                    onPressed: () {
+                                      searchController.clear();
+                                      setModalState(() => searchQuery = '');
+                                    },
+                                    icon: const Icon(Icons.clear, size: 18),
+                                  ),
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: AppColor.primary,
+                                width: 1.4,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: filteredTypes.isEmpty
+                            ? Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24),
+                                  child: Text(
+                                    loc.no_users_found,
+                                    style: TextStyle(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : RawScrollbar(
+                                controller: listScrollController,
+                                thumbVisibility: true,
+                                trackVisibility: true,
+                                thickness: 8,
+                                radius: const Radius.circular(8),
+                                thumbColor: AppColor.primary.withValues(
+                                  alpha: 0.55,
+                                ),
+                                trackColor: Colors.grey.shade200,
+                                trackBorderColor: Colors.grey.shade300,
+                                child: ListView.separated(
+                                  controller: listScrollController,
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    4,
+                                    12,
+                                    8,
+                                  ),
+                                  itemCount: filteredTypes.length,
+                                  separatorBuilder: (_, __) =>
+                                      const SizedBox(height: 8),
+                                  itemBuilder: (_, index) {
+                                    final option = filteredTypes[index];
+                                    final isSelected = option == tempSelected;
+                                    final isAll =
+                                        option ==
+                                        StaffActivityController
+                                            .activityTypeAll;
+                                    return Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: () => setModalState(
+                                          () => tempSelected = option,
+                                        ),
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: AnimatedContainer(
+                                          duration: const Duration(
+                                            milliseconds: 160,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 12,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: isSelected
+                                                ? AppColor.primary.withValues(
+                                                    alpha: 0.1,
+                                                  )
+                                                : const Color(0xFFF8FAFC),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            border: Border.all(
+                                              color: isSelected
+                                                  ? AppColor.primary
+                                                  : Colors.grey.shade200,
+                                              width: isSelected ? 1.6 : 1,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                width: 38,
+                                                height: 38,
+                                                decoration: BoxDecoration(
+                                                  color: isSelected
+                                                      ? AppColor.primary
+                                                            .withValues(
+                                                              alpha: 0.14,
+                                                            )
+                                                      : Colors.white,
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                  border: Border.all(
+                                                    color: isSelected
+                                                        ? AppColor.primary
+                                                              .withValues(
+                                                                alpha: 0.25,
+                                                              )
+                                                        : Colors.grey.shade200,
+                                                  ),
+                                                ),
+                                                child: Icon(
+                                                  _activityFilterSheetIcon(
+                                                    option,
+                                                  ),
+                                                  size: 20,
+                                                  color: isSelected
+                                                      ? AppColor.primary
+                                                      : Colors.grey.shade700,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      StaffActivityController
+                                                          .activityTypeLabel(
+                                                            loc,
+                                                            option,
+                                                          ),
+                                                      style: TextStyle(
+                                                        fontSize: 15,
+                                                        fontWeight: isAll
+                                                            ? FontWeight.w700
+                                                            : FontWeight.w600,
+                                                        color: isSelected
+                                                            ? AppColor.primary
+                                                            : Colors.black87,
+                                                      ),
+                                                    ),
+                                                    if (isAll) ...[
+                                                      const SizedBox(height: 2),
+                                                      Text(
+                                                        loc
+                                                            .show_every_activity_type,
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          color: Colors
+                                                              .grey
+                                                              .shade600,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ],
+                                                ),
+                                              ),
+                                              Icon(
+                                                isSelected
+                                                    ? Icons
+                                                          .check_circle_rounded
+                                                    : Icons.circle_outlined,
+                                                size: 22,
+                                                color: isSelected
+                                                    ? AppColor.primary
+                                                    : Colors.grey.shade400,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(18, 12, 18, 16),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Get.back(
+                                  result:
+                                      StaffActivityController.activityTypeAll,
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(46),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text(loc.reset),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () =>
+                                    Get.back(result: tempSelected),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColor.primary,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  minimumSize: const Size.fromHeight(46),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text(loc.apply),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+          barrierDismissible: true,
+        );
+      } else {
+        selected = await _presentChooser<String>(
+          context: context,
+          title: loc.select_activity_type,
+          builder: (setState) {
+            final filteredTypes = StaffActivityController.activityTypes.where((
+              option,
+            ) {
+              if (searchQuery.trim().isEmpty) return true;
+              final label = StaffActivityController.activityTypeLabel(
+                loc,
+                option,
+              ).toLowerCase();
+              return label.contains(searchQuery.trim().toLowerCase()) ||
+                  option.toLowerCase().contains(
+                    searchQuery.trim().toLowerCase(),
+                  );
+            }).toList();
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+                  child: TextField(
+                    controller: searchController,
+                    onChanged: (value) => setState(() => searchQuery = value),
+                    decoration: InputDecoration(
+                      hintText: loc.search_default_hint,
+                      prefixIcon: const Icon(Icons.search, size: 20),
+                      suffixIcon: searchQuery.isEmpty
+                          ? null
+                          : IconButton(
+                              onPressed: () {
+                                searchController.clear();
+                                setState(() => searchQuery = '');
+                              },
+                              icon: const Icon(Icons.clear, size: 18),
+                            ),
+                      isDense: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                if (filteredTypes.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 8, 18, 16),
+                    child: Text(
+                      loc.no_users_found,
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  )
+                else
+                  ...filteredTypes.map((option) {
+                    final isSelected = option == tempSelected;
+                    return InkWell(
+                      onTap: () => setState(() => tempSelected = option),
+                      child: Container(
+                        width: double.infinity,
+                        color: isSelected
+                            ? AppColor.primary
+                            : Colors.transparent,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 12,
+                        ),
+                        child: Text(
+                          StaffActivityController.activityTypeLabel(
+                            loc,
+                            option,
+                          ),
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w400,
+                            color: isSelected ? Colors.white : Colors.black,
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+              ],
             );
-          }).toList(),
+          },
+          resetLabel: loc.reset,
+          onReset: () => StaffActivityController.activityTypeAll,
+          onApply: () => tempSelected,
+          isWindows: false,
         );
-      },
-      resetLabel: loc.reset,
-      onReset: () => StaffActivityController.activityTypeAll,
-      onApply: () => tempSelected,
-      isWindows: isWindows,
-    );
+      }
 
-    if (selected == null) return;
-    await controller.applyActivityType(selected);
+      if (selected == null) return;
+      await controller.applyActivityType(selected);
+    } finally {
+      searchController.dispose();
+      listScrollController.dispose();
+    }
   }
 
   Future<void> _showDateRangeSheet(
@@ -840,6 +1292,7 @@ class StaffActivityScreen extends StatelessWidget {
     required T? Function() onReset,
     required T? Function() onApply,
     required bool isWindows,
+    bool Function()? showReset,
   }) async {
     final loc = AppLocalizations.of(context)!;
     if (isWindows) {
@@ -852,6 +1305,7 @@ class StaffActivityScreen extends StatelessWidget {
             constraints: const BoxConstraints(maxWidth: 460),
             child: StatefulBuilder(
               builder: (context, setModalState) {
+                final resetVisible = showReset?.call() ?? true;
                 return Padding(
                   padding: const EdgeInsets.fromLTRB(0, 18, 0, 14),
                   child: Column(
@@ -895,19 +1349,22 @@ class StaffActivityScreen extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 18),
                         child: Row(
                           children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () => Get.back(result: onReset()),
-                                style: OutlinedButton.styleFrom(
-                                  minimumSize: const Size.fromHeight(44),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
+                            if (resetVisible) ...[
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () =>
+                                      Get.back(result: onReset()),
+                                  style: OutlinedButton.styleFrom(
+                                    minimumSize: const Size.fromHeight(44),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
                                   ),
+                                  child: Text(resetLabel),
                                 ),
-                                child: Text(resetLabel),
                               ),
-                            ),
-                            const SizedBox(width: 12),
+                              const SizedBox(width: 12),
+                            ],
                             Expanded(
                               child: ElevatedButton(
                                 onPressed: () {
@@ -946,6 +1403,7 @@ class StaffActivityScreen extends StatelessWidget {
       builder: (sheetContext) {
         return StatefulBuilder(
           builder: (sheetContext, setModalState) {
+            final resetVisible = showReset?.call() ?? true;
             return Stack(
               clipBehavior: Clip.none,
               children: [
@@ -983,26 +1441,29 @@ class StaffActivityScreen extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 18),
                         child: Row(
                           children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () =>
-                                    Navigator.of(sheetContext).pop(onReset()),
-                                style: OutlinedButton.styleFrom(
-                                  minimumSize: const Size.fromHeight(52),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
+                            if (resetVisible) ...[
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => Navigator.of(
+                                    sheetContext,
+                                  ).pop(onReset()),
+                                  style: OutlinedButton.styleFrom(
+                                    minimumSize: const Size.fromHeight(52),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
                                   ),
-                                ),
-                                child: Text(
-                                  resetLabel,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w500,
+                                  child: Text(
+                                    resetLabel,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 16),
+                              const SizedBox(width: 16),
+                            ],
                             Expanded(
                               child: ElevatedButton(
                                 onPressed: () {

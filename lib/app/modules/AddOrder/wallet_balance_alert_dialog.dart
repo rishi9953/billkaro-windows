@@ -7,14 +7,17 @@ import 'package:flutter_modular/flutter_modular.dart';
 import 'package:intl/intl.dart';
 
 /// Alert when wallet balance is ₹100 or less on Create Order (wallet mode).
-Future<void> maybeShowWalletBalanceAlert({
+///
+/// Returns `true` when the caller should exit the order screen (insufficient
+/// balance and user dismissed / tapped recharge).
+Future<bool> maybeShowWalletBalanceAlert({
   required AppPref appPref,
   ApiClient? apiClient,
 }) async {
-  if (!_shouldShowWalletAlert(appPref)) return;
+  if (!_shouldShowWalletAlert(appPref)) return false;
 
   final context = Get.context;
-  if (context == null || !context.mounted) return;
+  if (context == null || !context.mounted) return false;
 
   final loc = AppLocalizations.of(context)!;
   var balance = PlatformFeeService.currentBalance(appPref);
@@ -35,9 +38,9 @@ Future<void> maybeShowWalletBalanceAlert({
   }
 
   // Only alert when credit is ≤ ₹100.
-  if (balance > PlatformFeeService.lowBalanceAlertThreshold) return;
+  if (balance > PlatformFeeService.lowBalanceAlertThreshold) return false;
 
-  if (!context.mounted) return;
+  if (!context.mounted) return false;
 
   final currency = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
   final amountText = currency.format(balance);
@@ -47,7 +50,14 @@ Future<void> maybeShowWalletBalanceAlert({
     context: context,
     barrierDismissible: !isEmpty,
     builder: (dialogCtx) {
-      return AlertDialog(
+      return PopScope(
+        canPop: !isEmpty,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop && isEmpty) {
+            Navigator.of(dialogCtx).pop();
+          }
+        },
+        child: AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
         contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
@@ -145,9 +155,12 @@ Future<void> maybeShowWalletBalanceAlert({
             label: Text(loc.wallet_recharge),
           ),
         ],
+      ),
       );
     },
   );
+
+  return isEmpty;
 }
 
 bool _shouldShowWalletAlert(AppPref appPref) {

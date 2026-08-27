@@ -4,6 +4,7 @@ import 'package:billkaro/app/services/printerService.dart/thermal_printer/therma
 import 'package:billkaro/app/services/download/file_download_service.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/date_util.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -109,6 +110,11 @@ class KOTPreviewController extends BaseController {
 
   // NEW: Print KOT using thermal printer
   Future<void> onPrintKOT() async {
+    if (!StaffAccess.ensure(
+      StaffAccess.canPrintKot || StaffAccess.canReprintKot,
+    )) {
+      return;
+    }
     try {
       showAppLoader();
 
@@ -220,6 +226,11 @@ class KOTPreviewController extends BaseController {
   }
 
   Future<void> onGenerateKOTPdf() async {
+    if (!StaffAccess.ensure(
+      StaffAccess.canPrintKot || StaffAccess.canReprintKot,
+    )) {
+      return;
+    }
     try {
       Get.dialog(
         const Center(child: CircularProgressIndicator()),
@@ -564,15 +575,18 @@ class KOTPreviewController extends BaseController {
   Future<void> _saveKOT(pw.Document pdf) async {
     try {
       final bytes = await pdf.save();
-      final fileName =
-          'KOT_${kotNumber.value}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final safe = kotNumber.value
+          .trim()
+          .replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+      final id = safe.isEmpty ? 'unknown' : safe;
+      final fileName = 'kot-$id.pdf';
 
       final file = await FileDownloadService.instance.saveBytes(
         bytes: bytes,
         fileName: fileName,
         preferredDirectory: appPref.downloadPath,
-        notificationTitle: 'KOT downloaded',
-        notificationBody: 'KOT PDF saved to Downloads folder',
+        notificationTitle: 'KOT $id downloaded',
+        notificationBody: '$fileName saved to Downloads',
       );
 
       if (file == null) {
@@ -585,9 +599,13 @@ class KOTPreviewController extends BaseController {
 
   Future<void> _shareKOT(pw.Document pdf) async {
     try {
+      final safe = kotNumber.value
+          .trim()
+          .replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+      final id = safe.isEmpty ? 'unknown' : safe;
       await Printing.sharePdf(
         bytes: await pdf.save(),
-        filename: 'KOT_${kotNumber.value}.pdf',
+        filename: 'kot-$id.pdf',
       );
     } catch (e) {
       showError(description: 'Failed to share KOT: $e');

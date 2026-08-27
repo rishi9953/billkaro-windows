@@ -114,19 +114,28 @@ class InvoicePrintJob extends PrintJob {
 
     builder.bold(
       '${TextHelper.padRight('Item', 12)}'
-      '${TextHelper.padRight('Qty', 12)}'
-      '${TextHelper.padRight('Price', 12)}'
+      '${TextHelper.padRight('Qty', 8)}'
+      '${TextHelper.padRight('Price', 10)}'
+      '${TextHelper.padRight('GST', 6)}'
       '${TextHelper.padLeft('Amount', 12)}\n',
     );
 
     for (final item in items) {
-      final name = item.name.length > 14
-          ? item.name.substring(0, 14)
+      final name = item.name.length > 12
+          ? item.name.substring(0, 12)
           : item.name;
+      final gstRate = item.gstRate;
+      var gst = gstRate <= 0
+          ? '-'
+          : gstRate == gstRate.roundToDouble()
+              ? '${gstRate.toInt()}%'
+              : '${gstRate.toStringAsFixed(1)}%';
+      if (gst.length > 6) gst = gst.substring(0, 6);
       final row =
           '${TextHelper.padRight(name, 12)}'
-          '${TextHelper.padRight('x${item.quantity}', 12)}'
-          '${TextHelper.padRight(item.price.toStringAsFixed(0), 12)}'
+          '${TextHelper.padRight('x${item.quantity}', 8)}'
+          '${TextHelper.padRight(item.price.toStringAsFixed(0), 10)}'
+          '${TextHelper.padRight(gst, 6)}'
           '${TextHelper.padLeft((item.total).toStringAsFixed(2), 12)}';
       builder.text('$row\n');
     }
@@ -248,8 +257,13 @@ class InvoicePrintJob extends PrintJob {
               (e) => pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text(e.name),
-                  pw.Text('x${e.quantity}'),
+                  pw.Expanded(child: pw.Text(e.name)),
+                  pw.Text('x${e.quantity}  '),
+                  pw.Text(
+                    e.gstRate <= 0
+                        ? '-  '
+                        : '${e.gstRate == e.gstRate.roundToDouble() ? e.gstRate.toInt() : e.gstRate.toStringAsFixed(1)}%  ',
+                  ),
                   pw.Text('Rs ${e.total.toStringAsFixed(2)}'),
                 ],
               ),
@@ -285,6 +299,7 @@ class InvoiceItem {
   final int quantity;
   final double price;
   final double taxAmount;
+  final double gstRate;
   final String? category;
 
   InvoiceItem({
@@ -292,6 +307,7 @@ class InvoiceItem {
     required this.quantity,
     required this.price,
     this.taxAmount = 0,
+    this.gstRate = 0,
     this.category,
   });
 
@@ -305,6 +321,8 @@ class InvoiceItem {
       ),
       quantity: item.quantity,
       price: item.salePrice,
+      gstRate: item.gst,
+      taxAmount: item.salePrice * item.quantity * item.gst / 100.0,
       category: item.category,
     );
   }

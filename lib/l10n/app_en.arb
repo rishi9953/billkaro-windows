@@ -906,7 +906,7 @@
   "tutorial_subtitle": "Video guide section on the home screen",
   "top_selling_items": "Top selling items",
   "top_selling_items_subtitle": "Best-selling menu items on the home screen",
-  "recommended_items": "Recommended items",
+  "recommended_items": "Most selling items",
   "features_for_you_subtitle": "Recommended setup and tools on the home screen",
   "what_our_users_say": "What our users say",
   "what_our_users_say_subtitle": "Customer testimonials carousel on the home screen",
@@ -1349,6 +1349,17 @@
     }
   },
   "no_valid_import_rows": "No valid rows found. Use headers like: Item Name, Price / Price (₹), Category, Tax % or GST. Avoid Item Code / Description / Unit only as names. Prices must be numbers greater than 0.",
+  "import_item_missing_fields": "Missing fields in item #{row}: {fields}",
+  "@import_item_missing_fields": {
+    "placeholders": {
+      "row": {
+        "type": "int"
+      },
+      "fields": {
+        "type": "String"
+      }
+    }
+  },
   "items_imported_successfully": "{count} item(s) imported successfully",
   "@items_imported_successfully": {
     "placeholders": {
@@ -1532,9 +1543,9 @@
   },
   "adjust_stock_tooltip": "Adjust Stock",
   "import_products_excel": "Import Products - Excel (.xlsx)",
-  "import_products_description": "Select an Excel (.xlsx) file following the BillKaro template format. Required columns: Name and Price. Optional: Category, Tax %, and Image Link. Missing categories will be created automatically.",
+  "import_products_description": "Select an Excel (.xlsx) file following the BillKaro template format. Required columns: Item Name and Price (₹). Optional: Item Code, Category, Description, Item Image, Unit, Tax %, Price Incl. Tax (₹). Missing categories will be created automatically.",
   "export_products_excel": "Export Products - Excel (.xlsx)",
-  "export_products_description": "Export your menu items to an Excel (.xlsx) file using the BillKaro template format. Columns include Name, Price, Category, Tax %, and Image Link.",
+  "export_products_description": "Export your menu items to an Excel (.xlsx) file using the BillKaro template format. Columns include Item Code, Category, Item Name, Description, Item Image, Unit, Price (₹), Tax %, and Price Incl. Tax (₹).",
   "export_file": "Export File",
   "select_file": "Select File",
   "import_preview": "Import preview",
@@ -1791,6 +1802,7 @@
   "status_pending": "Pending",
   "status_active_label": "Active",
   "status_inactive_label": "Inactive",
+  "status_deactivated_label": "Deactivated",
   "edit_staff": "Edit Staff",
   "update_staff": "Update Staff",
   "invite_sent_successfully": "Invite sent successfully",
@@ -2325,6 +2337,9 @@
   "item_added": "Item Added",
   "item_deleted": "Item Deleted",
   "item_edited": "Item Edited",
+  "staff_added": "Staff Added",
+  "staff_deleted": "Staff Deleted",
+  "staff_updated": "Staff Updated",
   "activity_fallback": "Activity",
   "users_label": "Users",
   "activity_entity_name": "Name : {name}",
@@ -2624,5 +2639,22 @@
   "internet_speed_phase_upload": "Measuring upload…",
   "internet_speed_offline": "No internet connection. Check your network and try again.",
   "internet_speed_failed": "Speed test failed. Please try again.",
-  "internet_speed_tap_to_test": "Tap to test internet speed"
+  "internet_speed_tap_to_test": "Tap to test internet speed",
+  "help_and_setup": "Help & Setup",
+  "help_were_here": "We're here to help",
+  "help_subtitle": "Quick setup steps and direct support options",
+  "help_your_account": "Your Account",
+  "help_user_id": "User ID",
+  "help_name": "Name",
+  "help_restaurant": "Restaurant",
+  "help_quick_setup": "Quick Setup",
+  "help_setup_step_1": "Connect a printer: Menu → Printer → Select your printer → Pair & Test print.",
+  "help_setup_step_2": "Enable online orders: Ask support to activate QR menu for your restaurant. Orders will appear in Dashboard automatically.",
+  "help_setup_step_3": "Test print an order: Open any order → 'View Order' → Print from the print screen.",
+  "help_contact_support": "Contact Support",
+  "help_call_us": "Call Us",
+  "help_whatsapp": "WhatsApp",
+  "help_live_chat": "Live Chat",
+  "help_support_hours": "Available 10am–6pm IST"
+
 }

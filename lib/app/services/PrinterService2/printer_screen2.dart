@@ -76,12 +76,17 @@ class _PrinterScreen2State extends State<PrinterScreen2>
   /// One BLE scan when the screen opens (manual reconnect stays disabled).
   void _scanBleOnceOnOpen() {
     if (!mounted) return;
-    if (thermalPrinter.isScanning.value ||
-        thermalPrinter.isBleConnecting.value ||
-        thermalPrinter.connectedBleDeviceId.value != null) {
+    // Leftover Windows app-loader overlay blocks the whole shell after print.
+    dismissAllAppLoader();
+    // Prior hung scan/connect leaves these true and freezes the Bluetooth tab.
+    if (thermalPrinter.isScanning.value || thermalPrinter.isBleConnecting.value) {
+      thermalPrinter.recoverStuckBleUiState();
+      unawaited(thermalPrinter.stopScan());
+    }
+    if (thermalPrinter.connectedBleDeviceId.value != null) {
       return;
     }
-    thermalPrinter.startScan();
+    unawaited(thermalPrinter.startScan());
   }
 
   @override
@@ -93,7 +98,7 @@ class _PrinterScreen2State extends State<PrinterScreen2>
     _classicBtScrollController.dispose();
     _tabController.dispose();
     if (Platform.isWindows) {
-      thermalPrinter.stopScan();
+      unawaited(thermalPrinter.stopScan());
     }
     super.dispose();
   }

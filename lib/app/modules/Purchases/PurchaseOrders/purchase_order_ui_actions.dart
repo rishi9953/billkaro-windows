@@ -44,10 +44,7 @@ extension PurchaseOrderUiActions on PurchaseOrderController {
             'Close Purchase Orders tab $tabNumber? Any unsaved changes in this tab will be lost.',
           ),
           actions: [
-            TextButton(
-              onPressed: () => close(false),
-              child: Text(loc.cancel),
-            ),
+            TextButton(onPressed: () => close(false), child: Text(loc.cancel)),
             ElevatedButton(
               onPressed: () => close(true),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),

@@ -7,6 +7,7 @@ import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/download/download_notification_service.dart';
 import 'package:billkaro/app/services/download/file_download_service.dart';
 import 'package:billkaro/config/config.dart';
+import 'package:billkaro/utils/staff_access.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:syncfusion_flutter_xlsio/xlsio.dart' hide Column, Row, Border;
@@ -254,17 +255,22 @@ class OrderReportsController extends BaseController {
         debugPrint('📴 No internet → loading from SQLite');
         _hasLoadedFromApi = false;
 
-        final localOrders = await db.getAllOrders(
-          outletId: appPref.selectedOutlet!.id!,
+        final pageResult = await db.getOrdersPage(
+          outletId: outletId,
+          limit: limit,
+          offset: loadMore ? allOrders.length : 0,
+          status: 'closed',
         );
-        allOrders.value = localOrders
-            .where((e) => e.status == 'closed')
-            .toList();
 
-        // No pagination for offline mode
-        hasMoreData.value = false;
+        if (loadMore) {
+          allOrders.addAll(pageResult.items);
+        } else {
+          allOrders.value = pageResult.items;
+        }
+        hasMoreData.value = pageResult.hasMore;
+        if (pageResult.hasMore) page++;
 
-        debugPrint('✅ Loaded ${allOrders.length} orders from SQLite');
+        debugPrint('✅ Loaded ${pageResult.items.length} orders from SQLite');
         applyAllFilters();
       }
     } catch (e) {
@@ -619,8 +625,10 @@ class OrderReportsController extends BaseController {
     return null;
   }
 
-  /// 🗑️ Delete order
+  /// 🗑️ Delete order — owner only
   Future<void> deleteItem(String id) async {
+    if (!StaffAccess.ensure(StaffAccess.isOwnerSession,
+        message: 'Only the owner can delete closed orders.')) return;
     try {
       final loc = AppLocalizations.of(Get.context!)!;
       Get.dialog(
@@ -656,6 +664,12 @@ class OrderReportsController extends BaseController {
   String formatExportDateRange(DateTimeRange? range, AppLocalizations loc) {
     if (range == null) return loc.all;
     return '${_formatDate(range.start)} TO ${_formatDate(range.end)}';
+  }
+
+  String _exportFileSlug(DateTimeRange? range) {
+    if (range == null) return 'all';
+    final fmt = DateFormat('yyyy-MM-dd');
+    return '${fmt.format(range.start)}_to_${fmt.format(range.end)}';
   }
 
   /// Fetch orders from API for a given date range (for export). Applies same payment/order type filters.
@@ -1192,16 +1206,16 @@ class OrderReportsController extends BaseController {
 
       // Download only — no options dialog, open, or share
       final bytes = await pdf.save();
-      final fileName =
-          'orders_report_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final rangeSlug = _exportFileSlug(exportDateRange);
+      final fileName = 'order-report-$rangeSlug.pdf';
 
       final file = await FileDownloadService.instance.saveBytes(
         bytes: bytes,
         fileName: fileName,
         preferredDirectory: appPref.downloadPath,
         notificationId: notificationId,
-        notificationTitle: 'PDF downloaded',
-        notificationBody: loc.pdf_saved_to_downloads,
+        notificationTitle: 'Order report downloaded',
+        notificationBody: '$fileName saved to Downloads',
       );
 
       if (file == null) {
@@ -1425,16 +1439,16 @@ class OrderReportsController extends BaseController {
       final bytes = workbook.saveAsStream();
       workbook.dispose();
 
-      final fileName =
-          'BillKaro_Orders_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+      final rangeSlug = _exportFileSlug(exportDateRange);
+      final fileName = 'order-report-$rangeSlug.xlsx';
 
       final file = await FileDownloadService.instance.saveBytes(
         bytes: Uint8List.fromList(bytes),
         fileName: fileName,
         preferredDirectory: appPref.downloadPath,
         notificationId: notificationId,
-        notificationTitle: 'Excel downloaded',
-        notificationBody: loc.excel_saved_to_downloads,
+        notificationTitle: 'Order report downloaded',
+        notificationBody: '$fileName saved to Downloads',
       );
 
       if (file == null) {

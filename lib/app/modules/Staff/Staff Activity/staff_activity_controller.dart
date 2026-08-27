@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 class StaffActivityController extends BaseController {
   static const int _activityPageLimit = 20;
 
+  static const timePeriodAll = 'All';
   static const timePeriodToday = 'Today';
   static const timePeriodThisWeek = 'This week';
   static const timePeriodThisMonth = 'This month';
@@ -22,6 +23,9 @@ class StaffActivityController extends BaseController {
   static const activityTypeItemAdded = 'Item Added';
   static const activityTypeItemDeleted = 'Item Deleted';
   static const activityTypeItemEdited = 'Item Edited';
+  static const activityTypeStaffAdded = 'Staff Added';
+  static const activityTypeStaffDeleted = 'Staff Deleted';
+  static const activityTypeStaffUpdated = 'Staff Updated';
 
   final isLoading = false.obs;
   final isLoadingMore = false.obs;
@@ -32,6 +36,7 @@ class StaffActivityController extends BaseController {
 
   final staffList = <Map<String, dynamic>>[].obs;
   static const List<String> timePeriods = <String>[
+    timePeriodAll,
     timePeriodToday,
     timePeriodThisWeek,
     timePeriodThisMonth,
@@ -40,9 +45,9 @@ class StaffActivityController extends BaseController {
     timePeriodCustom,
   ];
 
-  final RxString selectedTimePeriod = timePeriodToday.obs;
-  final Rxn<DateTime> selectedFromDate = Rxn<DateTime>(DateTime.now());
-  final Rxn<DateTime> selectedToDate = Rxn<DateTime>(DateTime.now());
+  final RxString selectedTimePeriod = timePeriodAll.obs;
+  final Rxn<DateTime> selectedFromDate = Rxn<DateTime>();
+  final Rxn<DateTime> selectedToDate = Rxn<DateTime>();
   final RxString selectedUserName = usersFilterLabel.obs;
   final RxString selectedUserId = ''.obs;
 
@@ -56,12 +61,17 @@ class StaffActivityController extends BaseController {
     activityTypeItemAdded,
     activityTypeItemDeleted,
     activityTypeItemEdited,
+    activityTypeStaffAdded,
+    activityTypeStaffDeleted,
+    activityTypeStaffUpdated,
   ];
 
   final RxString selectedActivityType = activityTypeAll.obs;
 
   String timePeriodLabel(AppLocalizations loc, String key) {
     switch (key) {
+      case timePeriodAll:
+        return loc.all_time;
       case timePeriodToday:
         return loc.today;
       case timePeriodThisWeek:
@@ -81,6 +91,8 @@ class StaffActivityController extends BaseController {
 
   String? timePeriodSubtitle(AppLocalizations loc, String key) {
     switch (key) {
+      case timePeriodAll:
+        return null;
       case timePeriodToday:
         return loc.time_period_today_subtitle;
       case timePeriodThisWeek:
@@ -118,6 +130,12 @@ class StaffActivityController extends BaseController {
         return loc.item_deleted;
       case activityTypeItemEdited:
         return loc.item_edited;
+      case activityTypeStaffAdded:
+        return loc.staff_added;
+      case activityTypeStaffDeleted:
+        return loc.staff_deleted;
+      case activityTypeStaffUpdated:
+        return loc.staff_updated;
       default:
         return key;
     }
@@ -152,6 +170,7 @@ class StaffActivityController extends BaseController {
       : selectedUserName.value;
 
   String selectedDateRangeLabelLocalized(AppLocalizations loc) {
+    if (selectedTimePeriod.value == timePeriodAll) return loc.all_time;
     final from = selectedFromDate.value;
     final to = selectedToDate.value;
     if (from == null || to == null) return loc.select_date;
@@ -192,7 +211,9 @@ class StaffActivityController extends BaseController {
     return (start: s, end: e);
   }
 
-  ({DateTime start, DateTime end}) _activityDateBounds() {
+  ({DateTime start, DateTime end})? _activityDateBounds() {
+    if (selectedTimePeriod.value == timePeriodAll) return null;
+
     final now = DateTime.now();
     if (selectedTimePeriod.value == timePeriodCustom) {
       var from = _dateOnly(selectedFromDate.value ?? now);
@@ -244,15 +265,14 @@ class StaffActivityController extends BaseController {
   bool get hasActiveFilters {
     if (selectedActivityType.value != activityTypeAll) return true;
     if (selectedUserId.value.trim().isNotEmpty) return true;
-    if (selectedTimePeriod.value != timePeriodToday) return true;
+    if (selectedTimePeriod.value != timePeriodAll) return true;
     return false;
   }
 
   Future<void> resetFilters() async {
-    selectedTimePeriod.value = timePeriodToday;
-    final today = _dateOnly(DateTime.now());
-    selectedFromDate.value = today;
-    selectedToDate.value = today;
+    selectedTimePeriod.value = timePeriodAll;
+    selectedFromDate.value = null;
+    selectedToDate.value = null;
     selectedUserId.value = '';
     selectedUserName.value = usersFilterLabel;
     selectedActivityType.value = activityTypeAll;
@@ -261,16 +281,23 @@ class StaffActivityController extends BaseController {
 
   Future<void> applyTimePeriod(String value) async {
     selectedTimePeriod.value = value;
-    if (value != timePeriodCustom) {
+    if (value == timePeriodAll) {
+      selectedFromDate.value = null;
+      selectedToDate.value = null;
+    } else if (value != timePeriodCustom) {
       final bounds = _activityDateBounds();
-      selectedFromDate.value = bounds.start;
-      selectedToDate.value = bounds.end;
+      if (bounds != null) {
+        selectedFromDate.value = bounds.start;
+        selectedToDate.value = bounds.end;
+      }
     }
     await getStaffActivities();
   }
 
   void resetTimePeriod() {
-    selectedTimePeriod.value = timePeriodToday;
+    selectedTimePeriod.value = timePeriodAll;
+    selectedFromDate.value = null;
+    selectedToDate.value = null;
   }
 
   Future<void> applyUserSelection(StaffMember? member) async {
@@ -287,6 +314,7 @@ class StaffActivityController extends BaseController {
   }
 
   String get selectedDateRangeLabel {
+    if (selectedTimePeriod.value == timePeriodAll) return 'All Time';
     final from = selectedFromDate.value;
     final to = selectedToDate.value;
     if (from == null || to == null) return 'Select Date';
@@ -312,11 +340,9 @@ class StaffActivityController extends BaseController {
   }
 
   Future<void> resetDateRange() async {
-    final now = DateTime.now();
-    final d = _dateOnly(now);
-    selectedFromDate.value = d;
-    selectedToDate.value = d;
-    selectedTimePeriod.value = timePeriodToday;
+    selectedFromDate.value = null;
+    selectedToDate.value = null;
+    selectedTimePeriod.value = timePeriodAll;
     await getStaffActivities();
   }
 
@@ -355,8 +381,8 @@ class StaffActivityController extends BaseController {
       final typeFilter = _activitiesTypeQueryParam(selectedActivityType.value);
       final bounds = _activityDateBounds();
       final fmt = DateFormat('yyyy-MM-dd');
-      final startDate = fmt.format(bounds.start);
-      final endDate = fmt.format(bounds.end);
+      final startDate = bounds == null ? null : fmt.format(bounds.start);
+      final endDate = bounds == null ? null : fmt.format(bounds.end);
       final response = await callApi(
         apiClient.getActivities(
           outletId,
@@ -523,18 +549,31 @@ class StaffActivityController extends BaseController {
         userMap?['email'],
         userMap?['mail'],
       ]),
-      isActive: _asBool(
-        raw['activated'] ??
-            raw['isActive'] ??
-            raw['active'] ??
-            raw['status'] ??
-            raw['is_active'] ??
-            userMap?['isActive'] ??
-            userMap?['active'],
-        defaultValue: true,
-      ),
+      status: _resolveStaffStatus(raw, userMap),
       permissions: _asStringList(raw['permissions'] ?? userMap?['permissions']),
     );
+  }
+
+  String _resolveStaffStatus(
+    Map<String, dynamic> raw,
+    Map<String, dynamic>? userMap,
+  ) {
+    final status = _asString(raw['status'] ?? userMap?['status']).toLowerCase();
+    if (status == 'active' ||
+        status == 'pending' ||
+        status == 'deactivated' ||
+        status == 'deleted') {
+      return status == 'deleted' ? 'deactivated' : status;
+    }
+    final activated = _asBool(
+      raw['activated'] ??
+          raw['isActive'] ??
+          raw['active'] ??
+          userMap?['activated'] ??
+          userMap?['isActive'],
+      defaultValue: false,
+    );
+    return activated ? 'active' : 'pending';
   }
 
   String _firstNonEmpty(List<dynamic> values) {

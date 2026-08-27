@@ -2,7 +2,9 @@ import 'package:billkaro/app/modules/AddOrder/AddCategory/add_category_screen.da
 import 'package:billkaro/app/modules/AddOrder/OrderDetails/order_details_screen.dart';
 import 'package:billkaro/app/modules/AddOrder/add_order_screen.dart';
 import 'package:billkaro/app/modules/AppSettings/app_settings_screen.dart';
+import 'package:billkaro/app/modules/HelpSetup/help_setup_screen.dart';
 import 'package:billkaro/app/modules/BusinessDetails/business_details_screen.dart';
+import 'package:billkaro/app/modules/StaffProfile/staff_profile_screen.dart';
 import 'package:billkaro/app/modules/BusinessOverview/business_overview_screen.dart';
 import 'package:billkaro/app/modules/Home/home_screen.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
@@ -33,6 +35,7 @@ import 'package:billkaro/app/modules/Reports/reports_screen.dart';
 import 'package:billkaro/app/modules/Staff/Staff%20Activity/staff_activity_screen.dart';
 import 'package:billkaro/app/modules/Staff/add_staff_screen.dart';
 import 'package:billkaro/app/modules/Staff/staff_details_screen.dart';
+import 'package:billkaro/app/modules/Staff/StaffMemberDetails/staff_member_details_screen.dart';
 import 'package:billkaro/app/modules/Tables/table_screen.dart';
 import 'package:billkaro/app/modules/Whatsapp%20Marketing/whatsapp_marketing_screen.dart';
 import 'package:billkaro/app/modules/Wallet/wallet_screen.dart';
@@ -42,7 +45,6 @@ import 'package:billkaro/app/modules/subscription/subscription_screen.dart';
 import 'package:billkaro/app/services/PrinterService2/printer_screen2.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/staff_access.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 
 Widget _staffGatedRoute({required bool allowed, required Widget child}) {
@@ -97,28 +99,28 @@ class HomeMainModule extends Module {
         ChildRoute(
           HomeMainRoutes.closedOrders,
           child: (_) => _staffGatedRoute(
-            allowed: StaffAccess.canAccessSales,
+            allowed: StaffAccess.canShowOrdersList,
             child: const ClosedOrdersScreen(),
           ),
         ),
         ChildRoute(
           HomeMainRoutes.holdOrders,
           child: (_) => _staffGatedRoute(
-            allowed: StaffAccess.canAccessSales,
+            allowed: StaffAccess.canShowOrdersList,
             child: HoldOrdersScreen(),
           ),
         ),
         ChildRoute(
           HomeMainRoutes.deletedOrders,
           child: (_) => _staffGatedRoute(
-            allowed: StaffAccess.canAccessSales,
+            allowed: StaffAccess.canAccessDeletedOrders,
             child: const DeletedOrdersScreen(),
           ),
         ),
         ChildRoute(
           HomeMainRoutes.stockSummary,
           child: (_) => _staffGatedRoute(
-            allowed: StaffAccess.canAccessSales,
+            allowed: StaffAccess.canAccessStockSummary,
             child: const StockSummaryScreen(),
           ),
         ),
@@ -133,8 +135,8 @@ class HomeMainModule extends Module {
           HomeMainRoutes.createOrder,
           child: (_) => _staffGatedRoute(
             allowed: _isEditRouteArgs()
-                ? StaffAccess.canUpdateSales
-                : StaffAccess.canCreateSales,
+                ? StaffAccess.canShowEditOrder
+                : StaffAccess.canShowCreateOrder,
             child: AddOrderScreen(),
           ),
         ),
@@ -176,10 +178,19 @@ class HomeMainModule extends Module {
             child: BusinessOverviewScreen(),
           ),
         ),
-        ChildRoute(HomeMainRoutes.kotHistory, child: (_) => KotHistoryScreen()),
+        ChildRoute(
+          HomeMainRoutes.kotHistory,
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canViewKot || StaffAccess.canReprintKot,
+            child: const KotHistoryScreen(),
+          ),
+        ),
         ChildRoute(
           HomeMainRoutes.kitchenDisplay,
-          child: (_) => const KitchenDisplayScreen(),
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canOpenKitchenDisplay,
+            child: const KitchenDisplayScreen(),
+          ),
         ),
         ChildRoute(
           HomeMainRoutes.kotReceipt,
@@ -228,7 +239,9 @@ class HomeMainModule extends Module {
         ChildRoute(HomeMainRoutes.menu, child: (_) => MenuScreen()),
         ChildRoute(
           HomeMainRoutes.profile,
-          child: (_) => BusinessDetailsScreen(),
+          child: (_) => StaffAccess.isStaffSession
+              ? StaffProfileScreen()
+              : BusinessDetailsScreen(),
         ),
         ChildRoute(
           HomeMainRoutes.category,
@@ -241,7 +254,10 @@ class HomeMainModule extends Module {
         ),
         ChildRoute(
           HomeMainRoutes.orderSettings,
-          child: (_) => OrderPreferencesScreen(),
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canManageSettings,
+            child: OrderPreferencesScreen(),
+          ),
         ),
         ChildRoute(
           HomeMainRoutes.orderDetails,
@@ -271,6 +287,13 @@ class HomeMainModule extends Module {
           ),
         ),
         ChildRoute(
+          HomeMainRoutes.staffMemberDetails,
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canManageStaff,
+            child: const StaffMemberDetailsScreen(),
+          ),
+        ),
+        ChildRoute(
           HomeMainRoutes.staffActivityScreen,
           child: (_) => _staffGatedRoute(
             allowed: StaffAccess.canManageStaff,
@@ -291,6 +314,7 @@ class HomeMainModule extends Module {
             child: AppSettingsScreen(),
           ),
         ),
+        ChildRoute(HomeMainRoutes.helpSetup, child: (_) => HelpSetupScreen()),
         ChildRoute(
           HomeMainRoutes.notifications,
           child: (_) => AppNotificationsScreen(),

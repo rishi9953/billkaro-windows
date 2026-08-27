@@ -847,24 +847,25 @@ class _OrderCard extends StatelessWidget {
                             ],
                           ),
                         ),
-                        DropdownItem<String>(
-                          value: 'delete',
-                          height: 44,
-                          child: Row(
-                            children: [
-                              Assets.svg.delete.svg(
-                                color: Colors.red,
-                                height: 18,
-                                width: 18,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                loc.delete,
-                                style: const TextStyle(color: Colors.red),
-                              ),
-                            ],
+                        if (StaffAccess.isOwnerSession)
+                          DropdownItem<String>(
+                            value: 'delete',
+                            height: 44,
+                            child: Row(
+                              children: [
+                                Assets.svg.delete.svg(
+                                  color: Colors.red,
+                                  height: 18,
+                                  width: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  loc.delete,
+                                  style: const TextStyle(color: Colors.red),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
                       ],
                       onChanged: (value) {
                         if (value == 'print') {

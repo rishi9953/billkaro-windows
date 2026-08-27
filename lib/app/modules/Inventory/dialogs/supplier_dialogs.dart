@@ -489,39 +489,35 @@ Future<void> _showSupplierDialog(
               ),
             ),
           ),
-          Row(
-            children: [
-              Obx(
-                () => RadioGroup<String>(
-                  groupValue: supplierType.value,
-                  onChanged: (value) {
-                    if (value != null) supplierType.value = value;
-                  },
-                  child: const Column(
-                    children: [
-                      RadioListTile<String>(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        title: Text('Both'),
-                        value: 'both',
-                      ),
-                      RadioListTile<String>(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        title: Text('Purchase'),
-                        value: 'purchase',
-                      ),
-                      RadioListTile<String>(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        title: Text('Sale'),
-                        value: 'sale',
-                      ),
-                    ],
+          Obx(
+            () => RadioGroup<String>(
+              groupValue: supplierType.value,
+              onChanged: (value) {
+                if (value != null) supplierType.value = value;
+              },
+              child: const Column(
+                children: [
+                  RadioListTile<String>(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text('Both'),
+                    value: 'both',
                   ),
-                ),
+                  RadioListTile<String>(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text('Purchase'),
+                    value: 'purchase',
+                  ),
+                  RadioListTile<String>(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text('Sale'),
+                    value: 'sale',
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
 
           _supplierFieldGap(),

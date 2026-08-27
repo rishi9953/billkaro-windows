@@ -94,6 +94,13 @@ class HoldOrdersController extends BaseController {
             _hasLoadedFromApi = true;
           }
 
+          final localById = {
+            for (final order in localOrders) order.id: order,
+          };
+          apiOrders = apiOrders
+              .map((order) => preserveOrderDiscountMeta(order, localById[order.id]))
+              .toList();
+
           await db.insertOrders(apiOrders, outletId, isSyncedFromApi: true);
         }
       } else if (!isOnline) {

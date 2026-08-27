@@ -159,22 +159,32 @@ class PurchaseOrderPdfService {
     }
   }
 
+  static String _purchaseOrderFileName(String orderNumber) {
+    final safe = orderNumber.trim().replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+    final po = safe.isEmpty ? 'unknown' : safe;
+    return 'purchase-order-$po.pdf';
+  }
+
+  static String _purchaseOrderTitle(String orderNumber) {
+    final safe = orderNumber.trim().replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+    final po = safe.isEmpty ? 'unknown' : safe;
+    return 'Purchase order $po downloaded';
+  }
+
   static Future<void> _savePdf(
     Uint8List bytes,
     String orderNumber,
     AppLocalizations loc,
   ) async {
     try {
-      final safeName = orderNumber.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
-      final fileName =
-          'PO_${safeName}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final fileName = _purchaseOrderFileName(orderNumber);
 
       final file = await FileDownloadService.instance.saveBytes(
         bytes: bytes,
         fileName: fileName,
         preferredDirectory: Get.find<AppPref>().downloadPath,
-        notificationTitle: 'PDF downloaded',
-        notificationBody: loc.pdf_saved_to_downloads,
+        notificationTitle: _purchaseOrderTitle(orderNumber),
+        notificationBody: '$fileName saved to Downloads',
       );
 
       if (file == null) {
@@ -191,8 +201,10 @@ class PurchaseOrderPdfService {
     AppLocalizations loc,
   ) async {
     try {
-      final safeName = orderNumber.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
-      await Printing.sharePdf(bytes: bytes, filename: 'PO_$safeName.pdf');
+      await Printing.sharePdf(
+        bytes: bytes,
+        filename: _purchaseOrderFileName(orderNumber),
+      );
     } catch (e) {
       showError(description: '${loc.failed_to_share_pdf}: $e');
     }

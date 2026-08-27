@@ -2,7 +2,7 @@ import 'package:billkaro/app/Widgets/app_dropdowns.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:billkaro/app/modules/Staff/staff_details_controller.dart';
-import 'package:billkaro/app/modules/Staff/staff_view_dialog.dart';
+import 'package:billkaro/app/modules/Staff/StaffMemberDetails/staff_member_details_screen.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:intl/intl.dart';
@@ -134,7 +134,8 @@ class StaffListScreen extends StatelessWidget {
                                     ),
                                     child: _EmptyStaffState(
                                       isSearching: isSearching,
-                                      onInviteTap: isSearching ||
+                                      onInviteTap:
+                                          isSearching ||
                                               !StaffAccess.canCreateStaff
                                           ? null
                                           : controller.onAddStaff,
@@ -204,7 +205,7 @@ class StaffListScreen extends StatelessWidget {
             ),
           ),
           Expanded(
-            flex: 3,
+            flex: 2,
             child: Text(
               loc.email,
               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
@@ -218,6 +219,7 @@ class StaffListScreen extends StatelessWidget {
             ),
           ),
           Expanded(
+            flex: 2,
             child: Text(
               loc.status,
               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
@@ -500,7 +502,12 @@ class _StaffCard extends StatelessWidget {
     final loc = AppLocalizations.of(context)!;
     final roleTitle = _localizedRoleTitle(loc, member.role);
     final isSecondaryAdmin = _isSecondaryAdminRole(member.role);
-    return Container(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => openStaffMemberDetails(member),
+        child: Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -532,7 +539,7 @@ class _StaffCard extends StatelessWidget {
                       title: roleTitle,
                       isSecondaryAdmin: isSecondaryAdmin,
                     ),
-                    _StatusChip(isActive: member.isActive),
+                    _StatusChip(member: member),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -556,6 +563,8 @@ class _StaffCard extends StatelessWidget {
           _StaffActionMenu(member: member, controller: controller),
         ],
       ),
+    ),
+    ),
     );
   }
 }
@@ -570,7 +579,12 @@ class _WindowsStaffRow extends StatelessWidget {
     final loc = AppLocalizations.of(context)!;
     final roleTitle = _localizedRoleTitle(loc, member.role);
     final isSecondaryAdmin = _isSecondaryAdminRole(member.role);
-    return Container(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => openStaffMemberDetails(member),
+        child: Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
@@ -592,7 +606,9 @@ class _WindowsStaffRow extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        member.name.isEmpty ? '-' : member.name,
+                        member.name.isEmpty
+                            ? '-'
+                            : member.name.capitalize ?? '',
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
@@ -620,7 +636,7 @@ class _WindowsStaffRow extends StatelessWidget {
                 ),
               ),
               Expanded(
-                flex: 3,
+                flex: 2,
                 child: Text(
                   member.email.isEmpty ? '-' : member.email,
                   overflow: TextOverflow.ellipsis,
@@ -636,7 +652,11 @@ class _WindowsStaffRow extends StatelessWidget {
                 ),
               ),
               Expanded(
-                child: Center(child: _StatusChip(isActive: member.isActive)),
+                flex: 2,
+                child: Align(
+                  alignment: Alignment.center,
+                  child: _StatusChip(member: member),
+                ),
               ),
               SizedBox(
                 width: 56,
@@ -652,6 +672,8 @@ class _WindowsStaffRow extends StatelessWidget {
           ),
         ],
       ),
+    ),
+    ),
     );
   }
 }
@@ -675,7 +697,9 @@ class _StaffActionMenu extends StatelessWidget {
           staffId.isNotEmpty && controller.deletingStaffIds.contains(staffId);
       final reinviting =
           staffId.isNotEmpty && controller.reinvitingStaffIds.contains(staffId);
-      if (deleting || reinviting) {
+      final toggling =
+          staffId.isNotEmpty && controller.activationStaffIds.contains(staffId);
+      if (deleting || reinviting || toggling) {
         return const SizedBox(
           width: 24,
           height: 24,
@@ -684,7 +708,7 @@ class _StaffActionMenu extends StatelessWidget {
       }
 
       return AppActionDropdown2<String>(
-        width: isWindows ? 180 : 160,
+        width: isWindows ? 200 : 180,
         customButton: Icon(
           Icons.more_vert,
           size: isWindows ? 20 : 22,
@@ -700,7 +724,7 @@ class _StaffActionMenu extends StatelessWidget {
               iconColor: Colors.blueGrey.shade700,
             ),
           ),
-          if (!member.isActive && StaffAccess.canUpdateStaff)
+          if (member.canReinvite && StaffAccess.canUpdateStaff)
             DropdownItem(
               value: 'reinvite',
               height: 44,
@@ -710,35 +734,85 @@ class _StaffActionMenu extends StatelessWidget {
                 iconColor: Colors.orange.shade800,
               ),
             ),
+          if (member.canActivate && StaffAccess.canUpdateStaff)
+            DropdownItem(
+              value: 'activate',
+              height: 44,
+              child: _staffActionMenuItem(
+                icon: Icons.check_circle_outline,
+                label: 'Activate',
+                iconColor: Colors.green.shade700,
+              ),
+            ),
+          if (member.canDeactivate && StaffAccess.canUpdateStaff)
+            DropdownItem(
+              value: 'deactivate',
+              height: 44,
+              child: _staffActionMenuItem(
+                icon: Icons.block,
+                label: 'Deactivate',
+                iconColor: Colors.orange.shade800,
+              ),
+            ),
           if (StaffAccess.canUpdateStaff)
             DropdownItem(
-            value: 'edit',
-            height: 44,
-            child: _staffActionMenuItem(
-              icon: Icons.edit_outlined,
-              label: loc.edit,
-              iconColor: AppColor.primary,
+              value: 'edit',
+              height: 44,
+              child: _staffActionMenuItem(
+                icon: Icons.edit_outlined,
+                label: loc.edit,
+                iconColor: AppColor.primary,
+              ),
             ),
-          ),
           if (StaffAccess.canDeleteStaff)
             DropdownItem(
-            value: 'remove',
-            height: 44,
-            child: _staffActionMenuItem(
-              icon: Icons.delete_outline,
-              label: loc.remove,
-              iconColor: Colors.red,
+              value: 'remove',
+              height: 44,
+              child: _staffActionMenuItem(
+                icon: Icons.delete_outline,
+                label: loc.remove,
+                iconColor: Colors.red,
+              ),
             ),
-          ),
         ],
         onChanged: (value) async {
           if (value == 'view') {
-            await showStaffViewDialog(context, member);
+            await openStaffMemberDetails(member);
             return;
           }
           if (value == 'reinvite') {
             if (!StaffAccess.ensure(StaffAccess.canUpdateStaff)) return;
             await controller.reinviteStaff(member);
+            return;
+          }
+          if (value == 'activate') {
+            if (!StaffAccess.ensure(StaffAccess.canUpdateStaff)) return;
+            await controller.setStaffActive(member, true);
+            return;
+          }
+          if (value == 'deactivate') {
+            if (!StaffAccess.ensure(StaffAccess.canUpdateStaff)) return;
+            final ok = await Get.dialog<bool>(
+              AlertDialog(
+                title: const Text('Deactivate Staff'),
+                content: Text(
+                  'Deactivate ${member.name.isEmpty ? 'this staff' : member.name}? They will be logged out immediately.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Get.back(result: false),
+                    child: Text(loc.cancel),
+                  ),
+                  TextButton(
+                    onPressed: () => Get.back(result: true),
+                    child: const Text('Deactivate'),
+                  ),
+                ],
+              ),
+            );
+            if (ok == true) {
+              await controller.setStaffActive(member, false);
+            }
             return;
           }
           if (value == 'edit' &&
@@ -836,27 +910,56 @@ class _RoleChip extends StatelessWidget {
 }
 
 class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.isActive});
-  final bool isActive;
+  const _StatusChip({required this.member});
+  final StaffMember member;
 
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
-    final bg = isActive
-        ? Colors.green.withValues(alpha: 0.12)
-        : Colors.orange.withValues(alpha: 0.12);
-    final fg = isActive ? Colors.green.shade700 : Colors.orange.shade800;
+    final Color bg;
+    final Color fg;
+    final IconData icon;
+    if (member.isActive) {
+      bg = const Color(0xFFD1FAE5);
+      fg = const Color(0xFF047857);
+      icon = Icons.check_circle_outline;
+    } else if (member.isInvitePending) {
+      bg = const Color(0xFFFEF3C7);
+      fg = const Color(0xFFB45309);
+      icon = Icons.hourglass_empty_outlined;
+    } else {
+      bg = const Color(0xFFFEE2E2);
+      fg = const Color(0xFFB91C1C);
+      icon = Icons.block_outlined;
+    }
+
     return Container(
-      height: 24,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      constraints: const BoxConstraints(minHeight: 26, maxWidth: 120),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(
-        isActive ? loc.status_active_label : loc.status_pending,
-        style: TextStyle(fontSize: 11, color: fg, fontWeight: FontWeight.w600),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: fg),
+            const SizedBox(width: 4),
+            Text(
+              member.statusLabel(loc),
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                color: fg,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

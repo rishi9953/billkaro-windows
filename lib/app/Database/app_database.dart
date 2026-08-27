@@ -9,6 +9,7 @@ import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
 import 'package:billkaro/app/services/Modals/addItem/menu_item_variant.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/Modals/orders/split_payment.dart';
+import 'package:billkaro/app/services/sync/item_sync_util.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:drift_flutter/drift_flutter.dart';
@@ -27,7 +28,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// 🔹 SCHEMA VERSION
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   /// 🔹 MIGRATION STRATEGY (CRITICAL FIX)
   @override
@@ -48,9 +49,18 @@ class AppDatabase extends _$AppDatabase {
       if (from < 8) {
         await _tryAddColumn(m, orders, orders.orderJson);
       }
+      if (from < 9) {
+        await _tryAddColumn(m, items, items.barcode);
+        await _tryAddColumn(m, items, items.sku);
+        await _tryAddColumn(m, items, items.showItem);
+        await _tryAddColumn(m, items, items.isDeleted);
+        await _tryAddColumn(m, items, items.isSync);
+        await _tryAddColumn(m, items, items.itemJson);
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
+      await _ensurePerformanceIndexes();
     },
   );
 
@@ -87,6 +97,81 @@ class AppDatabase extends _$AppDatabase {
       debugPrint('Error deserializing item variants: $e');
       return const [];
     }
+  }
+
+  String _encodeItemJson(ItemData item) {
+    try {
+      return jsonEncode(item.toJson());
+    } catch (e) {
+      debugPrint('Error serializing item ${item.id}: $e');
+      return '';
+    }
+  }
+
+  ItemData _itemFromRow(Item item) {
+    final raw = item.itemJson;
+    if (raw != null && raw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) {
+          return ItemData.fromJson(Map<String, dynamic>.from(decoded));
+        }
+      } catch (e) {
+        debugPrint('Error parsing stored item JSON ${item.id}: $e');
+      }
+    }
+
+    final variants = _decodeVariants(item.variantsJson);
+    return ItemData(
+      id: item.id,
+      category: item.category,
+      createdAt: item.createdAt,
+      gst: item.gst,
+      itemImage: item.itemImage,
+      itemName: item.itemName,
+      orderFrom: item.orderFrom,
+      salePrice: item.salePrice,
+      outletId: item.outletId,
+      userId: item.userId,
+      withTax: item.withTax,
+      updatedAt: item.updatedAt,
+      barcode: item.barcode,
+      sku: item.sku,
+      showItem: item.showItem,
+      hasVariants: variants.isNotEmpty,
+      variants: variants,
+    );
+  }
+
+  ItemsCompanion _itemCompanion(
+    ItemData item,
+    String outletId, {
+    required bool isSynced,
+    bool isDeleted = false,
+  }) {
+    return ItemsCompanion(
+      id: Value(item.id),
+      category: Value(item.category),
+      createdAt: Value(item.createdAt),
+      gst: Value(item.gst),
+      itemImage: Value(item.itemImage),
+      itemName: Value(item.itemName),
+      orderFrom: Value(item.orderFrom),
+      salePrice: Value(item.salePrice),
+      outletId: Value(outletId),
+      userId: Value(item.userId),
+      withTax: Value(item.withTax),
+      updatedAt: Value(item.updatedAt),
+      variantsJson: Value(
+        jsonEncode(item.variants.map((v) => v.toJson()).toList()),
+      ),
+      barcode: Value(item.barcode),
+      sku: Value(item.sku),
+      showItem: Value(item.showItem),
+      isDeleted: Value(isDeleted),
+      isSync: Value(isSynced ? 'synced' : 'pending'),
+      itemJson: Value(_encodeItemJson(item)),
+    );
   }
 
   Future<void> _tryAddColumn(
@@ -262,8 +347,14 @@ class AppDatabase extends _$AppDatabase {
     required int limit,
     int offset = 0,
     String? searchQuery,
+    String? status,
   }) async {
     final query = select(orders)..where((tbl) => tbl.outletId.equals(outletId));
+
+    final normalizedStatus = status?.trim().toLowerCase();
+    if (normalizedStatus != null && normalizedStatus.isNotEmpty) {
+      query.where((tbl) => tbl.status.lower().equals(normalizedStatus));
+    }
 
     final trimmed = searchQuery?.trim();
     if (trimmed != null && trimmed.isNotEmpty) {
@@ -450,64 +541,278 @@ class AppDatabase extends _$AppDatabase {
 
   // ===================== ITEMS ===================== //
 
-  Future<void> saveItems(List<ItemData> itemsData, String outletId) async {
-    await batch((batch) {
-      for (final item in itemsData) {
-        batch.insert(
-          items,
-          ItemsCompanion(
-            id: Value(item.id),
-            category: Value(item.category),
-            createdAt: Value(item.createdAt),
-            gst: Value(item.gst),
-            itemImage: Value(item.itemImage),
-            itemName: Value(item.itemName),
-            orderFrom: Value(item.orderFrom),
-            salePrice: Value(item.salePrice),
-            outletId: Value(outletId),
-            userId: Value(item.userId),
-            withTax: Value(item.withTax),
-            updatedAt: Value(item.updatedAt),
-            variantsJson: Value(
-              jsonEncode(item.variants.map((v) => v.toJson()).toList()),
-            ),
-          ),
-          mode: InsertMode.insertOrReplace,
-        );
+  Future<void> saveItems(
+    List<ItemData> itemsData,
+    String outletId, {
+    bool protectUnsynced = true,
+  }) async {
+    final protectedIds = protectUnsynced
+        ? await getUnsyncedItemIds(outletId: outletId)
+        : <String>{};
+
+    const chunkSize = 1000;
+    for (var i = 0; i < itemsData.length; i += chunkSize) {
+      final chunk = itemsData.skip(i).take(chunkSize);
+      await batch((batch) {
+        for (final item in chunk) {
+          if (protectedIds.contains(item.id)) continue;
+          batch.insert(
+            items,
+            _itemCompanion(item, outletId, isSynced: true),
+            mode: InsertMode.insertOrReplace,
+          );
+        }
+      });
+
+      if (itemsData.length > chunkSize) {
+        await Future<void>.delayed(Duration.zero);
       }
-    });
+    }
   }
 
   Future<List<ItemData>> getItems({String? outletId}) async {
-    final query = select(items);
+    final query = select(items)..where((tbl) => tbl.isDeleted.equals(false));
 
     if (outletId != null) {
       query.where((tbl) => tbl.outletId.equals(outletId));
     }
 
     final rows = await query.get();
+    return rows.map(_itemFromRow).toList();
+  }
 
+  Future<({List<ItemData> items, bool hasMore})> getItemsPage({
+    required String outletId,
+    required int limit,
+    int offset = 0,
+    String? searchQuery,
+    String? categoryId,
+    bool showItemOnly = false,
+  }) async {
+    final query = select(items)
+      ..where((tbl) => tbl.outletId.equals(outletId) & tbl.isDeleted.equals(false));
+
+    if (showItemOnly) {
+      query.where((tbl) => tbl.showItem.equals(true));
+    }
+
+    final normalizedCategory = categoryId?.trim().toLowerCase();
+    if (normalizedCategory != null &&
+        normalizedCategory.isNotEmpty &&
+        normalizedCategory != 'none') {
+      query.where((tbl) => tbl.category.lower().equals(normalizedCategory));
+    }
+
+    final trimmedSearch = searchQuery?.trim();
+    if (trimmedSearch != null && trimmedSearch.isNotEmpty) {
+      final pattern = '%$trimmedSearch%';
+      query.where(
+        (tbl) =>
+            tbl.itemName.like(pattern) |
+            tbl.barcode.like(pattern) |
+            tbl.sku.like(pattern),
+      );
+    }
+
+    query
+      ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)])
+      ..limit(limit + 1, offset: offset);
+
+    final rows = await query.get();
+    final hasMore = rows.length > limit;
+    final slice = hasMore ? rows.sublist(0, limit) : rows;
+    return (items: slice.map(_itemFromRow).toList(), hasMore: hasMore);
+  }
+
+  Future<ItemData?> getItemById(String itemId) async {
+    final row = await (select(
+      items,
+    )..where((tbl) => tbl.id.equals(itemId))).getSingleOrNull();
+    return row == null ? null : _itemFromRow(row);
+  }
+
+  Future<ItemData?> getItemByBarcode({
+    required String outletId,
+    required String barcode,
+  }) async {
+    final code = barcode.trim();
+    if (code.isEmpty) return null;
+    final rows = await (select(items)..where(
+          (tbl) =>
+              tbl.outletId.equals(outletId) &
+              tbl.isDeleted.equals(false) &
+              (tbl.barcode.equals(code) | tbl.sku.equals(code)),
+        ))
+        .get();
+    if (rows.isEmpty) return null;
+    return _itemFromRow(rows.first);
+  }
+
+  Future<void> upsertLocalItem(
+    ItemData item, {
+    required bool isSynced,
+    bool isDeleted = false,
+  }) async {
+    await into(items).insert(
+      _itemCompanion(
+        item,
+        item.outletId,
+        isSynced: isSynced,
+        isDeleted: isDeleted,
+      ),
+      mode: InsertMode.insertOrReplace,
+    );
+  }
+
+  Future<Set<String>> getUnsyncedItemIds({String? outletId}) async {
+    final query = select(items)
+      ..where((tbl) => tbl.isSync.isIn(['pending', 'failed']));
+    if (outletId != null) {
+      query.where((tbl) => tbl.outletId.equals(outletId));
+    }
+    final rows = await query.get();
+    return rows.map((e) => e.id).toSet();
+  }
+
+  Future<List<PendingCatalogItem>> getPendingItems() async {
+    final rows = await (select(
+      items,
+    )..where((tbl) => tbl.isSync.equals('pending'))).get();
     return rows
         .map(
-          (item) => ItemData(
-            id: item.id,
-            category: item.category,
-            createdAt: item.createdAt,
-            gst: item.gst,
-            itemImage: item.itemImage,
-            itemName: item.itemName,
-            orderFrom: item.orderFrom,
-            salePrice: item.salePrice,
-            outletId: item.outletId,
-            userId: item.userId,
-            withTax: item.withTax,
-            updatedAt: item.updatedAt,
-            showItem: true,
-            hasVariants: _decodeVariants(item.variantsJson).isNotEmpty,
-            variants: _decodeVariants(item.variantsJson),
+          (row) => PendingCatalogItem(
+            item: _itemFromRow(row),
+            isDeleted: row.isDeleted,
           ),
         )
         .toList();
+  }
+
+  Future<int> countPendingItems() async {
+    final rows = await (select(
+      items,
+    )..where((tbl) => tbl.isSync.equals('pending'))).get();
+    return rows.length;
+  }
+
+  Future<int> resetFailedItemsToPending() async {
+    final failed = await (select(
+      items,
+    )..where((tbl) => tbl.isSync.equals('failed'))).get();
+    if (failed.isEmpty) return 0;
+    await (update(items)..where((tbl) => tbl.isSync.equals('failed'))).write(
+      const ItemsCompanion(isSync: Value('pending')),
+    );
+    return failed.length;
+  }
+
+  Future<void> markItemAsSynced(String itemId) async {
+    await (update(items)..where((tbl) => tbl.id.equals(itemId))).write(
+      const ItemsCompanion(isSync: Value('synced'), isDeleted: Value(false)),
+    );
+  }
+
+  Future<void> markItemSyncFailed(String itemId) async {
+    await (update(items)..where((tbl) => tbl.id.equals(itemId))).write(
+      const ItemsCompanion(isSync: Value('failed')),
+    );
+  }
+
+  Future<void> markItemDeleted(String itemId) async {
+    await (update(items)..where((tbl) => tbl.id.equals(itemId))).write(
+      const ItemsCompanion(isDeleted: Value(true), isSync: Value('pending')),
+    );
+  }
+
+  Future<void> deleteItemCompletely(String itemId) async {
+    await (delete(items)..where((tbl) => tbl.id.equals(itemId))).go();
+  }
+
+  Future<void> replaceItemId(String localId, ItemData serverItem) async {
+    if (localId != serverItem.id) {
+      await remapItemIdInPendingOrders(localId, serverItem.id);
+    }
+    await transaction(() async {
+      await deleteItemCompletely(localId);
+      await upsertLocalItem(serverItem, isSynced: true);
+    });
+  }
+
+  Future<void> remapItemIdInPendingOrders(
+    String localItemId,
+    String serverItemId,
+  ) async {
+    if (localItemId == serverItemId) return;
+
+    final pendingOrders = await getPendingOrders();
+    for (final order in pendingOrders) {
+      if (!order.items.any((line) => line.itemId == localItemId)) continue;
+
+      final updatedItems = order.items
+          .map(
+            (line) => line.itemId == localItemId
+                ? OrderItem(
+                    itemId: serverItemId,
+                    itemName: line.itemName,
+                    category: line.category,
+                    quantity: line.quantity,
+                    salePrice: line.salePrice,
+                    gst: line.gst,
+                    kotSentQuantity: line.kotSentQuantity,
+                    itemRemark: line.itemRemark,
+                    variantId: line.variantId,
+                    variantName: line.variantName,
+                    variantSku: line.variantSku,
+                  )
+                : line,
+          )
+          .toList();
+
+      await insertOrders(
+        [
+          OrderModel(
+            id: order.id,
+            createdAt: order.createdAt,
+            updatedAt: DateTime.now().toIso8601String(),
+            billNumber: order.billNumber,
+            userId: order.userId,
+            tableNumber: order.tableNumber,
+            customerName: order.customerName,
+            phoneNumber: order.phoneNumber,
+            outletId: order.outletId,
+            subtotal: order.subtotal,
+            totalTax: order.totalTax,
+            discount: order.discount,
+            serviceCharge: order.serviceCharge,
+            totalAmount: order.totalAmount,
+            paymentReceivedIn: order.paymentReceivedIn,
+            splitPayments: order.splitPayments,
+            status: order.status,
+            items: updatedItems,
+            orderFrom: order.orderFrom,
+            specialInstructions: order.specialInstructions,
+          ),
+        ],
+        order.outletId,
+        isSyncedFromApi: false,
+        protectUnsynced: false,
+      );
+    }
+  }
+
+  Future<void> upsertCategory(CategoryData category) async {
+    await into(categoriesTable).insert(
+      CategoriesTableCompanion(
+        id: Value(category.id),
+        userId: Value(category.userId),
+        outletId: Value(category.outletId),
+        categoryName: Value(category.categoryName),
+        imageURL: Value(category.imageURL),
+        createdAt: Value(category.createdAt),
+        updatedAt: Value(category.updatedAt),
+      ),
+      mode: InsertMode.insertOrReplace,
+    );
   }
 
   Future<void> saveCategories(
@@ -576,6 +881,27 @@ class AppDatabase extends _$AppDatabase {
     await delete(items).go();
     await delete(categoriesTable).go();
     debugPrint('🗑️ All database data cleared');
+  }
+
+  Future<void> _ensurePerformanceIndexes() async {
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_items_outlet_updated ON items (outlet_id, updated_at DESC)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_items_outlet_category ON items (outlet_id, category)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_items_outlet_name ON items (outlet_id, item_name)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_items_outlet_barcode ON items (outlet_id, barcode)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_items_outlet_sku ON items (outlet_id, sku)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_items_sync ON items (is_sync)',
+    );
   }
 }
 

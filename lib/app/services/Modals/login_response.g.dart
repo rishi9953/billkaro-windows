@@ -34,6 +34,8 @@ User _$UserFromJson(Map<String, dynamic> json) => User(
   title: json['title'] as String?,
   mobile: json['mobile'] as String?,
   isTrial: _readUserIsTrial(json, 'isTrial') as bool?,
+  accessModeChosen: _readAccessModeChosen(json, 'accessModeChosen') as bool?,
+  billingAccessMode: json['billingAccessMode'] as String?,
   outletData: (json['outletData'] as List<dynamic>?)
       ?.map((e) => OutletData.fromJson(e as Map<String, dynamic>))
       .toList(),
@@ -43,6 +45,14 @@ User _$UserFromJson(Map<String, dynamic> json) => User(
       ?.map((e) => e as String)
       .toList(),
   userId: json['userId'] as String?,
+  userName: json['userName'] as String?,
+  uniqueId: json['uniqueId'] as String?,
+  district: json['district'] as String?,
+  pincode: json['pincode'] as String?,
+  dateOfBirth: json['dateOfBirth'] as String?,
+  gender: json['gender'] as String?,
+  profileImage: json['profileImage'] as String?,
+  activated: json['activated'] as bool?,
 );
 
 Map<String, dynamic> _$UserToJson(User instance) => <String, dynamic>{
@@ -61,11 +71,21 @@ Map<String, dynamic> _$UserToJson(User instance) => <String, dynamic>{
   'title': instance.title,
   'mobile': instance.mobile,
   'isTrial': instance.isTrial,
+  'accessModeChosen': instance.accessModeChosen,
+  'billingAccessMode': instance.billingAccessMode,
   'outletData': instance.outletData?.map((e) => e.toJson()).toList(),
   'role': instance.role,
   'staffRole': instance.staffRole,
   'permissions': instance.permissions,
   'userId': instance.userId,
+  'userName': instance.userName,
+  'uniqueId': instance.uniqueId,
+  'district': instance.district,
+  'pincode': instance.pincode,
+  'dateOfBirth': instance.dateOfBirth,
+  'gender': instance.gender,
+  'profileImage': instance.profileImage,
+  'activated': instance.activated,
 };
 
 OutletData _$OutletDataFromJson(Map<String, dynamic> json) =>

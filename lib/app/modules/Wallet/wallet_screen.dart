@@ -1,5 +1,6 @@
 import 'package:billkaro/app/modules/Wallet/wallet_controller.dart';
 import 'package:billkaro/app/services/Modals/wallet/wallet_transaction.dart';
+import 'package:billkaro/app/services/razorpay/razorpay_service.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:intl/intl.dart';
 
@@ -620,7 +621,9 @@ class _QuickAddCard extends StatelessWidget {
               const Gap(8),
               Expanded(
                 child: Text(
-                  loc.wallet_secure_payment_note,
+                  RazorpayService.isTestMode
+                      ? 'Test mode: select UPI and enter ${RazorpayService.testUpiId}'
+                      : loc.wallet_secure_payment_note,
                   style: TextStyle(
                     fontSize: 11.5,
                     color: Colors.grey.shade600,
