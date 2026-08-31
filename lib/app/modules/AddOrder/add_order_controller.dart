@@ -12,6 +12,14 @@ import 'package:billkaro/app/services/Modals/addItem/addItem_modal.dart';
 import 'package:billkaro/app/modules/AddOrder/widgets/variant_picker_dialog.dart';
 import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
 import 'package:billkaro/app/services/Modals/addItem/menu_item_variant.dart';
+import 'package:billkaro/app/modules/Promotions/promotion_picker_dialog.dart';
+import 'package:billkaro/app/services/Modals/promotions/promotion_response.dart';
+import 'package:billkaro/app/services/sync/promotion_sync.dart';
+import 'package:billkaro/app/utils/promotion_apply_result.dart';
+import 'package:billkaro/app/utils/cart_line_display.dart';
+import 'package:billkaro/app/utils/combo_display.dart';
+import 'package:billkaro/app/utils/promotion_engine.dart';
+import 'package:billkaro/app/utils/promo_cart_line.dart';
 import 'package:billkaro/app/utils/pos_cart_line.dart';
 import 'package:billkaro/app/services/Modals/login_response.dart';
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
@@ -77,6 +85,11 @@ class AddOrderController extends BaseController {
 
   /// Per-line remarks (itemId → note), sent as `itemRemark` on each order item.
   final RxMap<String, String> itemRemarks = <String, String>{}.obs;
+  final List<PromotionData> activePromotions = <PromotionData>[];
+  final Set<String> _skippedPromoIds = <String>{};
+  final Set<String> _promptedPromoIds = <String>{};
+  bool _syncingPromotions = false;
+  double promoDiscountAmount = 0;
   final RxString selectedTaxOption = 'Without Tax'.obs;
   final RxString selectedGSTRate = 'None'.obs;
   final RxString selectedOrderSource = ''.obs;
@@ -144,10 +157,10 @@ class AddOrderController extends BaseController {
 
   double appliedDiscountAmount() {
     final raw = _rawDiscountValue();
-    if (_orderDiscountType() == 'percentage') {
-      return (subtotal.value + totalTax.value) * raw / 100.0;
-    }
-    return raw;
+    final manual = _orderDiscountType() == 'percentage'
+        ? (subtotal.value + totalTax.value) * raw / 100.0
+        : raw;
+    return manual + promoDiscountAmount;
   }
 
   void _applyDiscountFromOrder(api.OrderModel order) {
@@ -312,6 +325,7 @@ class AddOrderController extends BaseController {
     subtotal.value = 0.0;
     totalTax.value = 0.0;
     totalAmount.value = 0.0;
+    promoDiscountAmount = 0;
     paymentReceivedIn.value = 'cash';
     useSplitPayment.value = false;
     splitPayments.clear();
@@ -393,6 +407,7 @@ class AddOrderController extends BaseController {
 
     await getCategories();
     await getItems();
+    await _loadPromotions();
     await ensureMissingItemCategories();
     await loadRecommendedItems();
     if (HomeMainRoutes.outletShowsTables()) {
@@ -702,10 +717,21 @@ class AddOrderController extends BaseController {
 
   /// Catalog is keyed by parent item id. Cart rows use `itemId` or `itemId::variantId`.
   ItemData? _catalogItemForLine(String lineKey) {
-    return allItemsMap[PosCartLine.fromKey(lineKey).itemId];
+    final itemId = PromoCartLine.isPromo(lineKey)
+        ? PromoCartLine.itemId(lineKey)
+        : PosCartLine.fromKey(lineKey).itemId;
+    return allItemsMap[itemId];
   }
 
   ({ItemData item, MenuItemVariant? variant})? _tryResolveLine(String lineKey) {
+    if (PromoCartLine.isPromo(lineKey)) {
+      final item = allItemsMap[PromoCartLine.itemId(lineKey)];
+      if (item == null) return null;
+      return (
+        item: item,
+        variant: _findVariant(item, PromoCartLine.variantId(lineKey)),
+      );
+    }
     final parsed = PosCartLine.fromKey(lineKey);
     final item = _catalogItemForLine(lineKey);
     if (item == null) return null;
@@ -755,6 +781,8 @@ class AddOrderController extends BaseController {
   }
 
   void incrementItemQuantity(String lineKey) {
+    if (PromoCartLine.isPromo(lineKey)) return;
+    _resetPromoPromptState();
     final parsed = PosCartLine.fromKey(lineKey);
     final item = _catalogItemForLine(lineKey);
     if (item == null) return;
@@ -797,6 +825,11 @@ class AddOrderController extends BaseController {
   }
 
   void decrementItemQuantity(String lineKey) {
+    if (PromoCartLine.isPromo(lineKey)) {
+      removeItemCompletely(lineKey);
+      return;
+    }
+    _resetPromoPromptState();
     var key = lineKey;
     if (!itemQuantities.containsKey(key)) {
       final parentLine = _latestLineKeyForItem(key);
@@ -814,6 +847,8 @@ class AddOrderController extends BaseController {
   }
 
   void removeItemCompletely(String lineKey) {
+    final promoId = PromoCartLine.promotionId(lineKey);
+    if (promoId != null) _skippedPromoIds.add(promoId);
     if (itemQuantities.containsKey(lineKey)) {
       itemQuantities.remove(lineKey);
       itemRemarks.remove(lineKey);
@@ -843,7 +878,9 @@ class AddOrderController extends BaseController {
     final resolved = _resolveLine(lineKey);
     final item = resolved.item;
     final variant = resolved.variant;
-    final unitPrice = variant?.salePrice ?? item.salePrice;
+    final unitPrice = PromoCartLine.isPromo(lineKey)
+        ? 0.0
+        : (variant?.salePrice ?? item.salePrice);
     return OrderItem(
       itemId: item.id,
       itemName: item.itemName,
@@ -852,10 +889,13 @@ class AddOrderController extends BaseController {
       salePrice: unitPrice,
       gst: item.gst.toDouble(),
       kotSentQuantity: kotSentQuantity,
-      itemRemark: _itemRemarkFor(lineKey),
+      itemRemark: PromoCartLine.isPromo(lineKey)
+          ? (_itemRemarkFor(lineKey) ?? 'Promo item')
+          : _itemRemarkFor(lineKey),
       variantId: variant?.id,
       variantName: variant?.name,
       variantSku: variant?.sku,
+      comboIncludes: ComboDisplay.labelForItem(item, allItemsMap),
     );
   }
 
@@ -868,8 +908,336 @@ class AddOrderController extends BaseController {
   }
 
   double cartLineUnitPrice(String lineKey) {
+    if (PromoCartLine.isPromo(lineKey)) return 0;
     final resolved = _resolveLine(lineKey);
     return resolved.variant?.salePrice ?? resolved.item.salePrice;
+  }
+
+  List<CartLineDisplay> get cartLines {
+    final lines = <CartLineDisplay>[];
+    for (final entry in itemQuantities.entries) {
+      if (entry.value < 1) continue;
+      final lineKey = entry.key;
+      final resolved = _tryResolveLine(lineKey);
+      if (resolved == null) continue;
+
+      final isPromo = PromoCartLine.isPromo(lineKey);
+      PromotionData? promoRule;
+      if (isPromo) {
+        final promoId = PromoCartLine.promotionId(lineKey);
+        for (final rule in activePromotions) {
+          if (rule.id == promoId) {
+            promoRule = rule;
+            break;
+          }
+        }
+      }
+
+      final remark = itemRemarks[lineKey] ?? '';
+      final offerName = promoRule?.name ??
+          (isPromo && remark.startsWith('Promo: ')
+              ? remark.substring(7).trim()
+              : null);
+
+      lines.add(
+        CartLineDisplay(
+          lineKey: lineKey,
+          name: cartLineLabel(lineKey),
+          unitPrice: cartLineUnitPrice(lineKey),
+          quantity: entry.value,
+          remark: remark,
+          imageUrl: resolved.item.itemImage,
+          isPromo: isPromo,
+          offerName: offerName,
+          offerDetail:
+              promoRule != null ? PromotionEngine.summary(promoRule) : null,
+          pendingKot: entry.value - (kotPrintedQuantities[lineKey] ?? 0),
+          comboIncludes:
+              ComboDisplay.labelForItem(resolved.item, allItemsMap),
+        ),
+      );
+    }
+    return lines;
+  }
+
+  /// Paid catalog items currently in the cart (for list/grid views).
+  List<ItemData> get selectedOrderItems {
+    final seen = <String>{};
+    final result = <ItemData>[];
+    for (final line in cartLines) {
+      if (line.isPromo) continue;
+      final itemId = PosCartLine.fromKey(line.lineKey).itemId;
+      if (!seen.add(itemId)) continue;
+      final item = allItemsMap[itemId];
+      if (item != null) result.add(item);
+    }
+    return result;
+  }
+
+  Future<void> reloadPromotions() => _loadPromotions();
+
+  Future<void> _loadPromotions() async {
+    final outletId = appPref.selectedOutlet?.id;
+    if (outletId == null) return;
+    try {
+      final rules = await PromotionSync(apiClient: apiClient, db: db).load(
+        outletId: outletId,
+      );
+      activePromotions
+        ..clear()
+        ..addAll(rules.where((rule) => rule.active));
+    } catch (e, st) {
+      debugPrint('Failed to load promotions: $e\n$st');
+    }
+  }
+
+  void _resetPromoPromptState() {
+    _promptedPromoIds.clear();
+    for (final rule in activePromotions) {
+      if (PromoCartLine.findLineKey(itemQuantities, rule.id) == null) {
+        _skippedPromoIds.remove(rule.id);
+      }
+    }
+  }
+
+  double _paidSubtotalOnly() {
+    var total = 0.0;
+    for (final entry in itemQuantities.entries) {
+      if (PromoCartLine.isPromo(entry.key)) continue;
+      final resolved = _tryResolveLine(entry.key);
+      if (resolved == null) continue;
+      final price = resolved.variant?.salePrice ?? resolved.item.salePrice;
+      total += price * entry.value;
+    }
+    return total;
+  }
+
+  double _paidTaxOnly() {
+    var total = 0.0;
+    for (final entry in itemQuantities.entries) {
+      if (PromoCartLine.isPromo(entry.key)) continue;
+      final resolved = _tryResolveLine(entry.key);
+      if (resolved == null) continue;
+      final item = resolved.item;
+      final price = resolved.variant?.salePrice ?? item.salePrice;
+      final gstRate = item.gst.toDouble();
+      final withTax = item.withTax || gstRate > 0;
+      if (!withTax) continue;
+      total += price * entry.value * gstRate / 100.0;
+    }
+    return total;
+  }
+
+  PromotionCartContext _buildPromotionContext() {
+    return PromotionCartContext(
+      itemQuantities: itemQuantities,
+      linePrice: (lineKey) {
+        if (PromoCartLine.isPromo(lineKey)) return 0;
+        final resolved = _tryResolveLine(lineKey);
+        if (resolved == null) return 0;
+        return resolved.variant?.salePrice ?? resolved.item.salePrice;
+      },
+      lineCategory: (lineKey) => _tryResolveLine(lineKey)?.item.category,
+      lineItemId: (lineKey) {
+        if (PromoCartLine.isPromo(lineKey)) {
+          return PromoCartLine.itemId(lineKey);
+        }
+        return PosCartLine.fromKey(lineKey).itemId;
+      },
+      lineVariantId: (lineKey) {
+        if (PromoCartLine.isPromo(lineKey)) {
+          return PromoCartLine.variantId(lineKey);
+        }
+        return PosCartLine.fromKey(lineKey).variantId;
+      },
+      subtotal: _paidSubtotalOnly(),
+      totalTax: _paidTaxOnly(),
+      now: DateTime.now(),
+    );
+  }
+
+  int _quantityInCart(String itemId, {String? variantId}) {
+    var total = 0;
+    for (final entry in itemQuantities.entries) {
+      final lineItemId = PromoCartLine.isPromo(entry.key)
+          ? PromoCartLine.itemId(entry.key)
+          : PosCartLine.fromKey(entry.key).itemId;
+      if (lineItemId != itemId) continue;
+      final lineVariantId = PromoCartLine.isPromo(entry.key)
+          ? PromoCartLine.variantId(entry.key)
+          : PosCartLine.fromKey(entry.key).variantId;
+      if (variantId != null &&
+          variantId.isNotEmpty &&
+          lineVariantId != variantId) {
+        continue;
+      }
+      total += entry.value;
+    }
+    return total;
+  }
+
+  int _committedStockFor(String itemId, {String? variantId}) {
+    var total = 0;
+    for (final entry in committedStockQuantities.entries) {
+      final lineItemId = PromoCartLine.isPromo(entry.key)
+          ? PromoCartLine.itemId(entry.key)
+          : PosCartLine.fromKey(entry.key).itemId;
+      if (lineItemId != itemId) continue;
+      final lineVariantId = PromoCartLine.isPromo(entry.key)
+          ? PromoCartLine.variantId(entry.key)
+          : PosCartLine.fromKey(entry.key).variantId;
+      if (variantId != null &&
+          variantId.isNotEmpty &&
+          lineVariantId != variantId) {
+        continue;
+      }
+      total += entry.value;
+    }
+    return total;
+  }
+
+  bool _canAddPromoQuantity({
+    required String itemId,
+    String? variantId,
+    required int targetQty,
+  }) {
+    final item = allItemsMap[itemId];
+    if (item == null) return false;
+
+    final variant = _findVariant(item, variantId);
+    final trackStock = variant?.trackStock == true
+        ? true
+        : (variant == null && item.trackStock);
+    if (!trackStock) return true;
+
+    final available = variant?.trackStock == true
+        ? variant!.stockQuantity
+        : item.stockQuantity;
+    final committed = _committedStockFor(itemId, variantId: variantId);
+    return targetQty <= available + committed;
+  }
+
+  void _removePromoLine(String? lineKey) {
+    if (lineKey == null) return;
+    itemQuantities.remove(lineKey);
+    itemRemarks.remove(lineKey);
+  }
+
+  Future<void> _applyPromotionRules() async {
+    if (_syncingPromotions || isEdit.value || activePromotions.isEmpty) {
+      promoDiscountAmount = 0;
+      return;
+    }
+
+    _syncingPromotions = true;
+    promoDiscountAmount = 0;
+    try {
+      final ctx = _buildPromotionContext();
+
+      for (final rule in activePromotions) {
+        final existingKey = PromoCartLine.findLineKey(itemQuantities, rule.id);
+        final result = PromotionEngine.evaluate(
+          rule: rule,
+          ctx: ctx,
+        );
+
+        if (result == null) {
+          _removePromoLine(existingKey);
+          _promptedPromoIds.remove(rule.id);
+          continue;
+        }
+
+        if (result.kind == PromotionApplyKind.discount) {
+          _removePromoLine(existingKey);
+          promoDiscountAmount += result.discountAmount;
+          continue;
+        }
+
+        if (result.kind == PromotionApplyKind.autoFreeLine) {
+          final itemId = result.sameAsTrigger
+              ? rule.conditions.itemId
+              : (rule.rewards.freeItems.isNotEmpty
+                  ? rule.rewards.freeItems.first.itemId
+                  : null);
+          if (itemId == null || itemId.isEmpty) {
+            _removePromoLine(existingKey);
+            continue;
+          }
+          final variantId = result.sameAsTrigger
+              ? rule.conditions.variantId
+              : (rule.rewards.freeItems.isNotEmpty
+                  ? rule.rewards.freeItems.first.variantId
+                  : null);
+
+          final currentPromoQty =
+              existingKey != null ? (itemQuantities[existingKey] ?? 0) : 0;
+          final totalAfter =
+              _quantityInCart(itemId, variantId: variantId) -
+              currentPromoQty +
+              result.freeQuantity;
+
+          if (!_canAddPromoQuantity(
+            itemId: itemId,
+            variantId: variantId,
+            targetQty: totalAfter,
+          )) {
+            _removePromoLine(existingKey);
+            continue;
+          }
+
+          final lineKey = PromoCartLine.key(
+            promotionId: rule.id,
+            itemId: itemId,
+            variantId: variantId,
+          );
+          itemQuantities[lineKey] = result.freeQuantity;
+          itemRemarks[lineKey] = 'Promo: ${rule.name}';
+          continue;
+        }
+
+        if (existingKey != null) {
+          final currentQty = itemQuantities[existingKey] ?? 0;
+          if (currentQty != result.freeQuantity) {
+            itemQuantities[existingKey] = result.freeQuantity;
+          }
+          continue;
+        }
+        if (_skippedPromoIds.contains(rule.id)) continue;
+        if (_promptedPromoIds.contains(rule.id)) continue;
+
+        _promptedPromoIds.add(rule.id);
+        final choice = await showPromotionPickerDialog(
+          promotion: rule,
+          itemsById: allItemsMap,
+        );
+        if (choice == null) {
+          _skippedPromoIds.add(rule.id);
+          continue;
+        }
+
+        if (!_canAddPromoQuantity(
+          itemId: choice.itemId,
+          variantId: choice.variantId,
+          targetQty:
+              _quantityInCart(choice.itemId, variantId: choice.variantId) +
+              result.freeQuantity,
+        )) {
+          _skippedPromoIds.add(rule.id);
+          showError(description: 'Not enough stock for the free item');
+          continue;
+        }
+
+        final lineKey = PromoCartLine.key(
+          promotionId: rule.id,
+          itemId: choice.itemId,
+          variantId: choice.variantId,
+        );
+        itemQuantities[lineKey] = result.freeQuantity;
+        itemRemarks[lineKey] = 'Promo: ${rule.name}';
+      }
+    } finally {
+      _syncingPromotions = false;
+    }
   }
 
   /// Get count of selected items (items with quantity >= 1)
@@ -3065,6 +3433,8 @@ class AddOrderController extends BaseController {
   // Totals calculation
   // --------------------
   Future<void> calculateTotals() async {
+    await _applyPromotionRules();
+
     double s = 0.0;
     double t = 0.0;
 
@@ -3077,7 +3447,8 @@ class AddOrderController extends BaseController {
       final catalogPrice = resolved == null
           ? null
           : (resolved.variant?.salePrice ?? resolved.item.salePrice);
-      final price = frozen?.salePrice ?? catalogPrice;
+      final isPromo = PromoCartLine.isPromo(entry.key);
+      final price = isPromo ? 0.0 : (frozen?.salePrice ?? catalogPrice);
       if (price == null) continue;
 
       final gstRate = frozen?.gst ?? resolved?.item.gst.toDouble() ?? 0.0;

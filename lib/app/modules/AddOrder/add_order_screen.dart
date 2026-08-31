@@ -6,7 +6,8 @@ import 'package:billkaro/app/modules/AddOrder/add_order_list_screen.dart';
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
 import 'package:billkaro/app/services/Modals/orders/split_payment.dart';
-import 'package:billkaro/app/utils/pos_cart_line.dart';
+import 'package:billkaro/app/modules/AddOrder/widgets/cart_line_offer_details.dart';
+import 'package:billkaro/app/utils/combo_display.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/staff_access.dart';
 import 'package:flutter/material.dart';
@@ -1442,28 +1443,7 @@ class _CartPanel extends StatelessWidget {
       controller.orderDetailsVersion.value;
       controller.selectedOrderSource.value;
       controller.showAddDetailsOnCreateOrder.value;
-      final entries = controller.itemQuantities.entries
-          .where((e) => e.value > 0)
-          .toList();
-
-      final cartItems = <Map<String, dynamic>>[];
-      for (final entry in entries) {
-        final parsed = PosCartLine.fromKey(entry.key);
-        if (!controller.allItemsMap.containsKey(parsed.itemId)) continue;
-        final price = controller.cartLineUnitPrice(entry.key);
-        final sent = controller.kotPrintedQuantities[entry.key] ?? 0;
-        final pending = entry.value - sent;
-        cartItems.add({
-          'id': entry.key,
-          'name': controller.cartLineLabel(entry.key),
-          'qty': entry.value,
-          'pendingKot': pending,
-          'price': price,
-          'total': price * entry.value,
-          'image': controller.allItemsMap[parsed.itemId]?.itemImage ?? '',
-          'remark': controller.itemRemarks[entry.key] ?? '',
-        });
-      }
+      final cartItems = controller.cartLines;
 
       final selectedTable = (controller.orderDetails['tableNumber'] ?? '')
           .toString()
@@ -1615,38 +1595,94 @@ class _CartPanel extends StatelessWidget {
                       itemCount: cartItems.length,
                       separatorBuilder: (_, __) => const Divider(height: 14),
                       itemBuilder: (context, index) {
-                        final item = cartItems[index];
-                        final pendingKot = item['pendingKot'] as int;
-                        return Row(
+                        final line = cartItems[index];
+                        return Container(
+                          padding: line.isPromo
+                              ? const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 6,
+                                )
+                              : EdgeInsets.zero,
+                          decoration: line.isPromo
+                              ? BoxDecoration(
+                                  color: AppColor.success.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: AppColor.success.withValues(alpha: 0.25),
+                                  ),
+                                )
+                              : null,
+                          child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    item['name'] as String,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13.5,
-                                    ),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          line.name,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 13.5,
+                                          ),
+                                        ),
+                                      ),
+                                      if (line.isPromo)
+                                        Container(
+                                          margin: const EdgeInsets.only(left: 6),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColor.success
+                                                .withValues(alpha: 0.15),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: const Text(
+                                            'FREE',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColor.success,
+                                            ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
+                                  if (line.comboIncludes != null) ...[
+                                    const SizedBox(height: 2),
+                                    ComboIncludesLabel(text: line.comboIncludes!),
+                                  ],
+                                  if (line.hasOfferInfo) ...[
+                                    const SizedBox(height: 4),
+                                    CartLineOfferDetails(
+                                      offerName: line.offerName,
+                                      offerDetail: line.offerDetail,
+                                    ),
+                                  ],
                                   const SizedBox(height: 4),
                                   Text(
-                                    '₹${(item['price'] as double).toStringAsFixed(2)} × ${item['qty']}',
+                                    line.isPromo
+                                        ? 'Offer item × ${line.quantity}'
+                                        : '₹${line.unitPrice.toStringAsFixed(2)} × ${line.quantity}',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: theme.colorScheme.onSurfaceVariant,
                                     ),
                                   ),
-                                  if (pendingKot > 0 &&
+                                  if (line.pendingKot > 0 &&
                                       controller.isKotFeatureActive)
                                     Padding(
                                       padding: const EdgeInsets.only(top: 4),
                                       child: Text(
-                                        '$pendingKot new for kitchen',
+                                        '${line.pendingKot} new for kitchen',
                                         style: const TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w600,
@@ -1654,11 +1690,12 @@ class _CartPanel extends StatelessWidget {
                                         ),
                                       ),
                                     ),
-                                  if ((item['remark'] as String).isNotEmpty)
+                                  if (line.remark.isNotEmpty &&
+                                      !line.remark.startsWith('Promo: '))
                                     Padding(
                                       padding: const EdgeInsets.only(top: 4),
                                       child: Text(
-                                        '📝 ${item['remark']}',
+                                        '📝 ${line.remark}',
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontStyle: FontStyle.italic,
@@ -1670,22 +1707,23 @@ class _CartPanel extends StatelessWidget {
                                 ],
                               ),
                             ),
-                            IconButton(
-                              tooltip: 'Item remark',
-                              icon: Icon(
-                                (item['remark'] as String).isNotEmpty
-                                    ? Icons.chat_bubble
-                                    : Icons.chat_bubble_outline,
-                                size: 20,
-                                color: (item['remark'] as String).isNotEmpty
-                                    ? AppColor.primary
-                                    : Colors.grey,
+                            if (!line.isPromo)
+                              IconButton(
+                                tooltip: 'Item remark',
+                                icon: Icon(
+                                  line.remark.isNotEmpty
+                                      ? Icons.chat_bubble
+                                      : Icons.chat_bubble_outline,
+                                  size: 20,
+                                  color: line.remark.isNotEmpty
+                                      ? AppColor.primary
+                                      : Colors.grey,
+                                ),
+                                onPressed: () => controller.showItemRemarkDialog(
+                                  line.lineKey,
+                                  line.name,
+                                ),
                               ),
-                              onPressed: () => controller.showItemRemarkDialog(
-                                item['id'] as String,
-                                item['name'] as String,
-                              ),
-                            ),
                             Container(
                               decoration: BoxDecoration(
                                 color: theme.colorScheme.surfaceContainerHighest
@@ -1699,35 +1737,42 @@ class _CartPanel extends StatelessWidget {
                                     splashRadius: 16,
                                     onPressed: () =>
                                         controller.decrementItemQuantity(
-                                          item['id'] as String,
+                                          line.lineKey,
                                         ),
                                   ),
                                   Text(
-                                    '${item['qty']}',
+                                    '${line.quantity}',
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
-                                  IconButton(
-                                    icon: const Icon(Icons.add, size: 16),
-                                    splashRadius: 16,
-                                    onPressed: () =>
-                                        controller.incrementItemQuantity(
-                                          item['id'] as String,
-                                        ),
-                                  ),
+                                  if (!line.isPromo)
+                                    IconButton(
+                                      icon: const Icon(Icons.add, size: 16),
+                                      splashRadius: 16,
+                                      onPressed: () =>
+                                          controller.incrementItemQuantity(
+                                            line.lineKey,
+                                          ),
+                                    ),
                                 ],
                               ),
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              '₹${(item['total'] as double).toStringAsFixed(2)}',
-                              style: const TextStyle(
+                              line.isPromo
+                                  ? 'FREE'
+                                  : '₹${line.lineTotal.toStringAsFixed(2)}',
+                              style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 13,
+                                color: line.isPromo
+                                    ? AppColor.success
+                                    : theme.colorScheme.onSurface,
                               ),
                             ),
                           ],
+                        ),
                         );
                       },
                     ),

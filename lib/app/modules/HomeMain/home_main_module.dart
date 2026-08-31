@@ -25,6 +25,7 @@ import 'package:billkaro/app/modules/Order/DeletedOrders/deleted_orders_screen.d
 import 'package:billkaro/app/modules/Order/StockSummary/stock_summary_screen.dart';
 import 'package:billkaro/app/modules/Order/HoldOrders/hold_orders_screen.dart';
 import 'package:billkaro/app/modules/OrderPrefrences/order_prefrences_screen.dart';
+import 'package:billkaro/app/modules/Promotions/promotions_screen.dart';
 import 'package:billkaro/app/modules/Regular%20customer/AddRegularCustomer/addregular_customer_screen.dart';
 import 'package:billkaro/app/modules/Regular%20customer/CustomerDetails/customer_details_screen.dart';
 import 'package:billkaro/app/modules/Regular%20customer/CustomerList/customer_list_Screen.dart';
@@ -312,6 +313,13 @@ class HomeMainModule extends Module {
           child: (_) => _staffGatedRoute(
             allowed: StaffAccess.canManageSettings,
             child: AppSettingsScreen(),
+          ),
+        ),
+        ChildRoute(
+          HomeMainRoutes.promotions,
+          child: (_) => _staffGatedRoute(
+            allowed: StaffAccess.canManageSettings,
+            child: PromotionsScreen(),
           ),
         ),
         ChildRoute(HomeMainRoutes.helpSetup, child: (_) => HelpSetupScreen()),

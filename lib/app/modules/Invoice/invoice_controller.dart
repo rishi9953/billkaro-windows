@@ -182,11 +182,30 @@ class InvoicePreviewController extends BaseController {
                 padding: const pw.EdgeInsets.symmetric(vertical: 4),
                 child: pw.Row(
                   children: [
-                    pw.Expanded(flex: 3, child: pw.Text(PosCartLine.invoiceLineName(itemName: item.itemName, variantName: item.variantName), style: const pw.TextStyle(fontSize: 12))),
+                    pw.Expanded(
+                      flex: 3,
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            PosCartLine.invoiceLineName(
+                              itemName: item.itemName,
+                              variantName: item.variantName,
+                            ),
+                            style: const pw.TextStyle(fontSize: 12),
+                          ),
+                          if (item.comboIncludes != null)
+                            pw.Text(
+                              item.comboIncludes!,
+                              style: const pw.TextStyle(fontSize: 10),
+                            ),
+                        ],
+                      ),
+                    ),
                     pw.Expanded(flex: 1, child: pw.Text('x$quantity', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 12))),
-                    pw.Expanded(flex: 1, child: pw.Text('Rs ${price.toStringAsFixed(2)}', textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 12))),
+                    pw.Expanded(flex: 1, child: pw.Text(PosCartLine.invoicePriceLabel(price, itemRemark: item.itemRemark, pdfStyle: true), textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 12))),
                     pw.Expanded(flex: 1, child: pw.Text(gstLabel, textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 12))),
-                    pw.Expanded(flex: 1, child: pw.Text('Rs ${amount.toStringAsFixed(2)}', textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 12))),
+                    pw.Expanded(flex: 1, child: pw.Text(PosCartLine.invoiceAmountLabel(price, quantity, itemRemark: item.itemRemark, pdfStyle: true), textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 12))),
                   ],
                 ),
               );

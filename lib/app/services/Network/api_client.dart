@@ -14,6 +14,7 @@ import 'package:billkaro/app/services/Modals/kds/kds_bump_events_response.dart';
 import 'package:billkaro/app/services/Modals/kds/kds_response.dart';
 import 'package:billkaro/app/services/Modals/login_modal.dart';
 import 'package:billkaro/app/services/Modals/login_response.dart';
+import 'package:billkaro/app/services/Modals/promotions/promotion_response.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/Modals/outlets/outlet_request.dart';
 import 'package:billkaro/app/services/Modals/registration_modal.dart';
@@ -150,6 +151,33 @@ abstract class ApiClient {
   Future<dynamic> deleteBulkCategories(
     @Path('outletId') String outletId,
     @Body() BulkDeleteCategoriesRequest request,
+  );
+
+  // -------------------- PROMOTIONS --------------------
+
+  @GET('$outlets/{outletId}/promotions')
+  Future<PromotionResponse> getPromotions(
+    @Path('outletId') String outletId,
+    @Query('active') String? active,
+  );
+
+  @POST('$outlets/{outletId}/promotions')
+  Future<dynamic> createPromotion(
+    @Path('outletId') String outletId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @PATCH('$outlets/{outletId}/promotions/{id}')
+  Future<dynamic> updatePromotion(
+    @Path('outletId') String outletId,
+    @Path('id') String id,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @DELETE('$outlets/{outletId}/promotions/{id}')
+  Future<dynamic> deletePromotion(
+    @Path('outletId') String outletId,
+    @Path('id') String id,
   );
 
   // -------------------- RAW MATERIAL CATEGORIES --------------------

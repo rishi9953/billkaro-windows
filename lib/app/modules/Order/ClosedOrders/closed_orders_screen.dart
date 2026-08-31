@@ -6,6 +6,7 @@ import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart'
     hide OrderItem;
 import 'package:billkaro/app/modules/HomeMain/home_main_routes.dart';
 import 'package:billkaro/app/services/common_function.dart';
+import 'package:billkaro/app/utils/table_display.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/date_util.dart';
 import 'package:flutter_modular/flutter_modular.dart';
@@ -673,7 +674,11 @@ class _OrderCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              loc.home_table_number(order.tableNumber!),
+                              loc.home_table_number(
+                                TableDisplay.numberForLabel(
+                                  order.tableNumber!,
+                                ),
+                              ),
                               style: TextStyle(
                                 color: Colors.grey[700],
                                 fontSize: 12,
@@ -956,7 +961,8 @@ class _OrderCard extends StatelessWidget {
     );
   }
 
-  void _printOrder(OrderModel order) {
-    _viewOrderDetails(order);
+  Future<void> _printOrder(OrderModel order) async {
+    if (!Get.isRegistered<ClosedOrdersController>()) return;
+    await Get.find<ClosedOrdersController>().printOrder(order);
   }
 }

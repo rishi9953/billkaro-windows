@@ -1,5 +1,8 @@
 import 'package:billkaro/app/Widgets/app_date_picker.dart';
+import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart'
+    as create_req;
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
+import 'package:billkaro/app/services/printerService.dart/thermal_printer/thermal_printer_service.dart';
 import 'package:billkaro/app/services/sync/order_sync_util.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/date_util.dart';
@@ -462,6 +465,70 @@ class ClosedOrdersController extends BaseController {
       debugPrint('❌ Error soft-deleting order: $e');
       showError(description: 'Failed to delete order.');
       return false;
+    }
+  }
+
+  Future<void> printOrder(OrderModel order) async {
+    dismissAllAppLoader();
+
+    try {
+      final printerService = ThermalPrinterService.instance;
+      final connected = await printerService.ensureConnectedForRole(
+        PrintRole.bill,
+      );
+      if (!connected) return;
+
+      final user = appPref.user;
+      final outlet = appPref.selectedOutlet;
+      if (user == null || outlet == null) {
+        showError(description: 'No outlet selected');
+        return;
+      }
+
+      final items = order.items
+          .where((i) => i.quantity > 0)
+          .map(
+            (i) => create_req.OrderItem(
+              itemId: i.itemId,
+              itemName: i.itemName,
+              category: i.category,
+              quantity: i.quantity,
+              salePrice: i.salePrice,
+              gst: i.gst,
+              itemRemark: i.itemRemark,
+            ),
+          )
+          .toList(growable: false);
+
+      await printerService.printInvoice(
+        brandName: user.brandName ?? '',
+        businessName: outlet.businessName ?? '',
+        address: user.address ?? '',
+        city: user.city ?? '',
+        zipcode: user.zipcode ?? '',
+        state: user.state ?? '',
+        gstinNumber: outlet.gstinNumber,
+        fssaiNumber: outlet.fssaiNumber,
+        phoneNumber: outlet.phoneNumber,
+        orderFrom: order.orderFrom,
+        customerName: order.customerName ?? '',
+        paymentMode: order.paymentReceivedIn ?? '',
+        date: formatDate(order.createdAt),
+        time: formatTime(order.createdAt),
+        invoiceNo: order.billNumber,
+        items: items,
+        subtotal: order.subtotal,
+        totalTax: order.totalTax,
+        serviceCharge: order.serviceCharge,
+        discount: order.discount,
+        totalAmount: order.totalAmount,
+        upiId: outlet.upiId,
+      );
+
+      showSuccess(description: 'Invoice printed successfully');
+    } catch (e) {
+      debugPrint('⚠️ Bill print failed: $e');
+      showError(description: 'Failed to print bill: $e');
     }
   }
 

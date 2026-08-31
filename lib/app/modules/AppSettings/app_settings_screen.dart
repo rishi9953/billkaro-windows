@@ -81,6 +81,13 @@ class AppSettingsScreen extends StatelessWidget {
                     value: controller.autoSyncEnabled,
                     onChanged: controller.setAutoSyncEnabled,
                   ),
+                  _buildActionOrNavTile(
+                    icon: Icons.local_offer_outlined,
+                    title: 'Offers & Promotions',
+                    subtitle: 'BOGO, discounts, free items & time offers',
+                    onTap: () => Modular.to.pushNamed(HomeMainRoutes.promotions),
+                    showChevron: true,
+                  ),
 
                   Column(
                     mainAxisSize: MainAxisSize.min,

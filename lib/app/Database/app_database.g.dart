@@ -3150,6 +3150,566 @@ class CategoriesTableCompanion extends UpdateCompanion<CategoriesTableData> {
   }
 }
 
+class $PromotionRulesTableTable extends PromotionRulesTable
+    with TableInfo<$PromotionRulesTableTable, PromotionRulesTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PromotionRulesTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<String> userId = GeneratedColumn<String>(
+    'user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _outletIdMeta = const VerificationMeta(
+    'outletId',
+  );
+  @override
+  late final GeneratedColumn<String> outletId = GeneratedColumn<String>(
+    'outlet_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _activeMeta = const VerificationMeta('active');
+  @override
+  late final GeneratedColumn<bool> active = GeneratedColumn<bool>(
+    'active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("active" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _ruleJsonMeta = const VerificationMeta(
+    'ruleJson',
+  );
+  @override
+  late final GeneratedColumn<String> ruleJson = GeneratedColumn<String>(
+    'rule_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    userId,
+    outletId,
+    name,
+    type,
+    active,
+    ruleJson,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'promotion_rules_table';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PromotionRulesTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(
+        _userIdMeta,
+        userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_userIdMeta);
+    }
+    if (data.containsKey('outlet_id')) {
+      context.handle(
+        _outletIdMeta,
+        outletId.isAcceptableOrUnknown(data['outlet_id']!, _outletIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_outletIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('active')) {
+      context.handle(
+        _activeMeta,
+        active.isAcceptableOrUnknown(data['active']!, _activeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_activeMeta);
+    }
+    if (data.containsKey('rule_json')) {
+      context.handle(
+        _ruleJsonMeta,
+        ruleJson.isAcceptableOrUnknown(data['rule_json']!, _ruleJsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ruleJsonMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PromotionRulesTableData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PromotionRulesTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      userId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}user_id'],
+      )!,
+      outletId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}outlet_id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
+      active: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}active'],
+      )!,
+      ruleJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}rule_json'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PromotionRulesTableTable createAlias(String alias) {
+    return $PromotionRulesTableTable(attachedDatabase, alias);
+  }
+}
+
+class PromotionRulesTableData extends DataClass
+    implements Insertable<PromotionRulesTableData> {
+  final String id;
+  final String userId;
+  final String outletId;
+  final String name;
+  final String type;
+  final bool active;
+  final String ruleJson;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const PromotionRulesTableData({
+    required this.id,
+    required this.userId,
+    required this.outletId,
+    required this.name,
+    required this.type,
+    required this.active,
+    required this.ruleJson,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['user_id'] = Variable<String>(userId);
+    map['outlet_id'] = Variable<String>(outletId);
+    map['name'] = Variable<String>(name);
+    map['type'] = Variable<String>(type);
+    map['active'] = Variable<bool>(active);
+    map['rule_json'] = Variable<String>(ruleJson);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  PromotionRulesTableCompanion toCompanion(bool nullToAbsent) {
+    return PromotionRulesTableCompanion(
+      id: Value(id),
+      userId: Value(userId),
+      outletId: Value(outletId),
+      name: Value(name),
+      type: Value(type),
+      active: Value(active),
+      ruleJson: Value(ruleJson),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory PromotionRulesTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PromotionRulesTableData(
+      id: serializer.fromJson<String>(json['id']),
+      userId: serializer.fromJson<String>(json['userId']),
+      outletId: serializer.fromJson<String>(json['outletId']),
+      name: serializer.fromJson<String>(json['name']),
+      type: serializer.fromJson<String>(json['type']),
+      active: serializer.fromJson<bool>(json['active']),
+      ruleJson: serializer.fromJson<String>(json['ruleJson']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'userId': serializer.toJson<String>(userId),
+      'outletId': serializer.toJson<String>(outletId),
+      'name': serializer.toJson<String>(name),
+      'type': serializer.toJson<String>(type),
+      'active': serializer.toJson<bool>(active),
+      'ruleJson': serializer.toJson<String>(ruleJson),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  PromotionRulesTableData copyWith({
+    String? id,
+    String? userId,
+    String? outletId,
+    String? name,
+    String? type,
+    bool? active,
+    String? ruleJson,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => PromotionRulesTableData(
+    id: id ?? this.id,
+    userId: userId ?? this.userId,
+    outletId: outletId ?? this.outletId,
+    name: name ?? this.name,
+    type: type ?? this.type,
+    active: active ?? this.active,
+    ruleJson: ruleJson ?? this.ruleJson,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  PromotionRulesTableData copyWithCompanion(PromotionRulesTableCompanion data) {
+    return PromotionRulesTableData(
+      id: data.id.present ? data.id.value : this.id,
+      userId: data.userId.present ? data.userId.value : this.userId,
+      outletId: data.outletId.present ? data.outletId.value : this.outletId,
+      name: data.name.present ? data.name.value : this.name,
+      type: data.type.present ? data.type.value : this.type,
+      active: data.active.present ? data.active.value : this.active,
+      ruleJson: data.ruleJson.present ? data.ruleJson.value : this.ruleJson,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PromotionRulesTableData(')
+          ..write('id: $id, ')
+          ..write('userId: $userId, ')
+          ..write('outletId: $outletId, ')
+          ..write('name: $name, ')
+          ..write('type: $type, ')
+          ..write('active: $active, ')
+          ..write('ruleJson: $ruleJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    userId,
+    outletId,
+    name,
+    type,
+    active,
+    ruleJson,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PromotionRulesTableData &&
+          other.id == this.id &&
+          other.userId == this.userId &&
+          other.outletId == this.outletId &&
+          other.name == this.name &&
+          other.type == this.type &&
+          other.active == this.active &&
+          other.ruleJson == this.ruleJson &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class PromotionRulesTableCompanion
+    extends UpdateCompanion<PromotionRulesTableData> {
+  final Value<String> id;
+  final Value<String> userId;
+  final Value<String> outletId;
+  final Value<String> name;
+  final Value<String> type;
+  final Value<bool> active;
+  final Value<String> ruleJson;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const PromotionRulesTableCompanion({
+    this.id = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.outletId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.type = const Value.absent(),
+    this.active = const Value.absent(),
+    this.ruleJson = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PromotionRulesTableCompanion.insert({
+    required String id,
+    required String userId,
+    required String outletId,
+    required String name,
+    required String type,
+    required bool active,
+    required String ruleJson,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       userId = Value(userId),
+       outletId = Value(outletId),
+       name = Value(name),
+       type = Value(type),
+       active = Value(active),
+       ruleJson = Value(ruleJson),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<PromotionRulesTableData> custom({
+    Expression<String>? id,
+    Expression<String>? userId,
+    Expression<String>? outletId,
+    Expression<String>? name,
+    Expression<String>? type,
+    Expression<bool>? active,
+    Expression<String>? ruleJson,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (userId != null) 'user_id': userId,
+      if (outletId != null) 'outlet_id': outletId,
+      if (name != null) 'name': name,
+      if (type != null) 'type': type,
+      if (active != null) 'active': active,
+      if (ruleJson != null) 'rule_json': ruleJson,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PromotionRulesTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? userId,
+    Value<String>? outletId,
+    Value<String>? name,
+    Value<String>? type,
+    Value<bool>? active,
+    Value<String>? ruleJson,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return PromotionRulesTableCompanion(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      outletId: outletId ?? this.outletId,
+      name: name ?? this.name,
+      type: type ?? this.type,
+      active: active ?? this.active,
+      ruleJson: ruleJson ?? this.ruleJson,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<String>(userId.value);
+    }
+    if (outletId.present) {
+      map['outlet_id'] = Variable<String>(outletId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (active.present) {
+      map['active'] = Variable<bool>(active.value);
+    }
+    if (ruleJson.present) {
+      map['rule_json'] = Variable<String>(ruleJson.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PromotionRulesTableCompanion(')
+          ..write('id: $id, ')
+          ..write('userId: $userId, ')
+          ..write('outletId: $outletId, ')
+          ..write('name: $name, ')
+          ..write('type: $type, ')
+          ..write('active: $active, ')
+          ..write('ruleJson: $ruleJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3159,6 +3719,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CategoriesTableTable categoriesTable = $CategoriesTableTable(
     this,
   );
+  late final $PromotionRulesTableTable promotionRulesTable =
+      $PromotionRulesTableTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3168,6 +3730,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     orderItems,
     items,
     categoriesTable,
+    promotionRulesTable,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -4857,6 +5420,298 @@ typedef $$CategoriesTableTableProcessedTableManager =
       CategoriesTableData,
       PrefetchHooks Function()
     >;
+typedef $$PromotionRulesTableTableCreateCompanionBuilder =
+    PromotionRulesTableCompanion Function({
+      required String id,
+      required String userId,
+      required String outletId,
+      required String name,
+      required String type,
+      required bool active,
+      required String ruleJson,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$PromotionRulesTableTableUpdateCompanionBuilder =
+    PromotionRulesTableCompanion Function({
+      Value<String> id,
+      Value<String> userId,
+      Value<String> outletId,
+      Value<String> name,
+      Value<String> type,
+      Value<bool> active,
+      Value<String> ruleJson,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$PromotionRulesTableTableFilterComposer
+    extends Composer<_$AppDatabase, $PromotionRulesTableTable> {
+  $$PromotionRulesTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get outletId => $composableBuilder(
+    column: $table.outletId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get active => $composableBuilder(
+    column: $table.active,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ruleJson => $composableBuilder(
+    column: $table.ruleJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PromotionRulesTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $PromotionRulesTableTable> {
+  $$PromotionRulesTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get outletId => $composableBuilder(
+    column: $table.outletId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get active => $composableBuilder(
+    column: $table.active,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get ruleJson => $composableBuilder(
+    column: $table.ruleJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PromotionRulesTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PromotionRulesTableTable> {
+  $$PromotionRulesTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
+
+  GeneratedColumn<String> get outletId =>
+      $composableBuilder(column: $table.outletId, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<bool> get active =>
+      $composableBuilder(column: $table.active, builder: (column) => column);
+
+  GeneratedColumn<String> get ruleJson =>
+      $composableBuilder(column: $table.ruleJson, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$PromotionRulesTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PromotionRulesTableTable,
+          PromotionRulesTableData,
+          $$PromotionRulesTableTableFilterComposer,
+          $$PromotionRulesTableTableOrderingComposer,
+          $$PromotionRulesTableTableAnnotationComposer,
+          $$PromotionRulesTableTableCreateCompanionBuilder,
+          $$PromotionRulesTableTableUpdateCompanionBuilder,
+          (
+            PromotionRulesTableData,
+            BaseReferences<
+              _$AppDatabase,
+              $PromotionRulesTableTable,
+              PromotionRulesTableData
+            >,
+          ),
+          PromotionRulesTableData,
+          PrefetchHooks Function()
+        > {
+  $$PromotionRulesTableTableTableManager(
+    _$AppDatabase db,
+    $PromotionRulesTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PromotionRulesTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PromotionRulesTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$PromotionRulesTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> userId = const Value.absent(),
+                Value<String> outletId = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<bool> active = const Value.absent(),
+                Value<String> ruleJson = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PromotionRulesTableCompanion(
+                id: id,
+                userId: userId,
+                outletId: outletId,
+                name: name,
+                type: type,
+                active: active,
+                ruleJson: ruleJson,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String userId,
+                required String outletId,
+                required String name,
+                required String type,
+                required bool active,
+                required String ruleJson,
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => PromotionRulesTableCompanion.insert(
+                id: id,
+                userId: userId,
+                outletId: outletId,
+                name: name,
+                type: type,
+                active: active,
+                ruleJson: ruleJson,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PromotionRulesTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PromotionRulesTableTable,
+      PromotionRulesTableData,
+      $$PromotionRulesTableTableFilterComposer,
+      $$PromotionRulesTableTableOrderingComposer,
+      $$PromotionRulesTableTableAnnotationComposer,
+      $$PromotionRulesTableTableCreateCompanionBuilder,
+      $$PromotionRulesTableTableUpdateCompanionBuilder,
+      (
+        PromotionRulesTableData,
+        BaseReferences<
+          _$AppDatabase,
+          $PromotionRulesTableTable,
+          PromotionRulesTableData
+        >,
+      ),
+      PromotionRulesTableData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4869,4 +5724,6 @@ class $AppDatabaseManager {
       $$ItemsTableTableManager(_db, _db.items);
   $$CategoriesTableTableTableManager get categoriesTable =>
       $$CategoriesTableTableTableManager(_db, _db.categoriesTable);
+  $$PromotionRulesTableTableTableManager get promotionRulesTable =>
+      $$PromotionRulesTableTableTableManager(_db, _db.promotionRulesTable);
 }

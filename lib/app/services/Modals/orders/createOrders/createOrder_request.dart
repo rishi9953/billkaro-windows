@@ -66,6 +66,8 @@ class OrderItem {
   final String? variantId;
   final String? variantName;
   final String? variantSku;
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  final String? comboIncludes;
 
   OrderItem({
     required this.itemId,
@@ -79,6 +81,7 @@ class OrderItem {
     this.variantId,
     this.variantName,
     this.variantSku,
+    this.comboIncludes,
   });
 
   String get displayName {

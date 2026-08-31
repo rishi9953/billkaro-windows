@@ -1,4 +1,5 @@
 import 'package:billkaro/app/modules/Invoice/invoice_controller.dart';
+import 'package:billkaro/app/utils/combo_display.dart';
 import 'package:billkaro/app/utils/pos_cart_line.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -279,14 +280,26 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                                   children: [
                                     Expanded(
                                       flex: 3,
-                                      child: Text(
-                                        PosCartLine.invoiceLineName(
-                                          itemName: item.itemName,
-                                          variantName: item.variantName,
-                                        ),
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            PosCartLine.invoiceLineName(
+                                              itemName: item.itemName,
+                                              variantName: item.variantName,
+                                            ),
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          if (item.comboIncludes != null) ...[
+                                            const SizedBox(height: 2),
+                                            ComboIncludesLabel(
+                                              text: item.comboIncludes!,
+                                            ),
+                                          ],
+                                        ],
                                       ),
                                     ),
                                     Expanded(
@@ -300,7 +313,10 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                                     Expanded(
                                       flex: 1,
                                       child: Text(
-                                        '₹${price.toStringAsFixed(2)}',
+                                        PosCartLine.invoicePriceLabel(
+                                          price,
+                                          itemRemark: item.itemRemark,
+                                        ),
                                         textAlign: TextAlign.right,
                                       ),
                                     ),
@@ -315,7 +331,11 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                                     Expanded(
                                       flex: 1,
                                       child: Text(
-                                        '₹${amount.toStringAsFixed(2)}',
+                                        PosCartLine.invoiceAmountLabel(
+                                          price,
+                                          quantity,
+                                          itemRemark: item.itemRemark,
+                                        ),
                                         textAlign: TextAlign.right,
                                       ),
                                     ),

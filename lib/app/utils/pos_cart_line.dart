@@ -38,6 +38,43 @@ class PosCartLine {
     return displayName(itemName: itemName, variantName: variantName);
   }
 
+  static bool isPromoFreeItem({
+    required double salePrice,
+    String? itemRemark,
+  }) {
+    final remark = itemRemark?.trim() ?? '';
+    if (remark.toLowerCase().startsWith('promo:')) return true;
+    return salePrice <= 0 && remark.toLowerCase().contains('promo');
+  }
+
+  static String invoicePriceLabel(
+    double price, {
+    String? itemRemark,
+    bool pdfStyle = false,
+  }) {
+    if (isPromoFreeItem(salePrice: price, itemRemark: itemRemark)) {
+      return '(FREE)';
+    }
+    return pdfStyle
+        ? 'Rs ${price.toStringAsFixed(2)}'
+        : '₹${price.toStringAsFixed(2)}';
+  }
+
+  static String invoiceAmountLabel(
+    double price,
+    int quantity, {
+    String? itemRemark,
+    bool pdfStyle = false,
+  }) {
+    if (isPromoFreeItem(salePrice: price, itemRemark: itemRemark)) {
+      return '(FREE)';
+    }
+    final amount = price * quantity;
+    return pdfStyle
+        ? 'Rs ${amount.toStringAsFixed(2)}'
+        : '₹${amount.toStringAsFixed(2)}';
+  }
+
   static String reportGroupKey({
     required String itemName,
     String? variantName,

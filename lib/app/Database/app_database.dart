@@ -9,6 +9,8 @@ import 'package:billkaro/app/services/Modals/addItem/item_response.dart';
 import 'package:billkaro/app/services/Modals/addItem/menu_item_variant.dart';
 import 'package:billkaro/app/services/Modals/orders/orders/orderResponse.dart';
 import 'package:billkaro/app/services/Modals/orders/split_payment.dart';
+import 'package:billkaro/app/Database/promotion_table.dart';
+import 'package:billkaro/app/services/Modals/promotions/promotion_response.dart';
 import 'package:billkaro/app/services/sync/item_sync_util.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
@@ -20,7 +22,7 @@ import 'package:sqlite3/sqlite3.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Orders, OrderItems, Items, CategoriesTable])
+@DriftDatabase(tables: [Orders, OrderItems, Items, CategoriesTable, PromotionRulesTable])
 class AppDatabase extends _$AppDatabase {
   AppDatabase._internal() : super(_executorForPlatform());
   static final AppDatabase _instance = AppDatabase._internal();
@@ -28,7 +30,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// 🔹 SCHEMA VERSION
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   /// 🔹 MIGRATION STRATEGY (CRITICAL FIX)
   @override
@@ -56,6 +58,9 @@ class AppDatabase extends _$AppDatabase {
         await _tryAddColumn(m, items, items.isDeleted);
         await _tryAddColumn(m, items, items.isSync);
         await _tryAddColumn(m, items, items.itemJson);
+      }
+      if (from < 10) {
+        await m.createTable(promotionRulesTable);
       }
     },
     beforeOpen: (details) async {
@@ -868,10 +873,75 @@ class AppDatabase extends _$AppDatabase {
         .toList();
   }
 
+  Future<void> savePromotions(
+    List<PromotionData> list, {
+    required String outletId,
+  }) async {
+    await transaction(() async {
+      await (delete(promotionRulesTable)
+            ..where((tbl) => tbl.outletId.equals(outletId)))
+          .go();
+
+      await batch((batch) {
+        for (final rule in list) {
+          batch.insert(
+            promotionRulesTable,
+            PromotionRulesTableCompanion(
+              id: Value(rule.id),
+              userId: Value(rule.userId),
+              outletId: Value(
+                rule.outletId.isNotEmpty ? rule.outletId : outletId,
+              ),
+              name: Value(rule.name),
+              type: Value(rule.type),
+              active: Value(rule.active),
+              ruleJson: Value(jsonEncode(rule.toJson())),
+              createdAt: Value(rule.createdAt),
+              updatedAt: Value(rule.updatedAt),
+            ),
+            mode: InsertMode.insertOrReplace,
+          );
+        }
+      });
+    });
+  }
+
+  Future<List<PromotionData>> getPromotions({
+    String? outletId,
+    bool activeOnly = false,
+  }) async {
+    final query = select(promotionRulesTable);
+    if (outletId != null) {
+      query.where((tbl) => tbl.outletId.equals(outletId));
+    }
+    if (activeOnly) {
+      query.where((tbl) => tbl.active.equals(true));
+    }
+
+    final rows = await query.get();
+    return rows
+        .map((row) {
+          try {
+            final decoded = jsonDecode(row.ruleJson);
+            if (decoded is Map<String, dynamic>) {
+              return PromotionData.fromJson(decoded);
+            }
+          } catch (e) {
+            debugPrint('Error parsing promotion ${row.id}: $e');
+          }
+          return null;
+        })
+        .whereType<PromotionData>()
+        .toList();
+  }
+
   /// 🔹 CLEAR ALL DATA FOR OUTLET
   Future<void> clearOutletData(String outletId) async {
     await clearOrders(outletId: outletId);
     await (delete(items)..where((tbl) => tbl.outletId.equals(outletId))).go();
+    await (delete(promotionRulesTable)
+          ..where((tbl) => tbl.outletId.equals(outletId)))
+        .go();
   }
 
   /// 🔹 CLEAR ALL DATA FROM DATABASE (for logout)
@@ -880,6 +950,7 @@ class AppDatabase extends _$AppDatabase {
     await delete(orders).go();
     await delete(items).go();
     await delete(categoriesTable).go();
+    await delete(promotionRulesTable).go();
     debugPrint('🗑️ All database data cleared');
   }
 

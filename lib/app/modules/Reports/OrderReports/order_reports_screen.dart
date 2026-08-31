@@ -4,6 +4,7 @@ import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:billkaro/app/modules/Reports/OrderReports/order_reports_controller.dart';
 import 'package:billkaro/app/services/Modals/orders/createOrders/createOrder_request.dart';
 import 'package:billkaro/app/services/common_function.dart';
+import 'package:billkaro/app/utils/table_display.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/date_util.dart' as date_util;
 import 'package:flutter_modular/flutter_modular.dart';
@@ -702,12 +703,28 @@ class _OrderCard extends StatelessWidget {
     }
   }
 
+  static String? _getTableNumber(dynamic order) {
+    if (order == null) return null;
+    try {
+      final v =
+          order.tableNumber ??
+          (order is Map
+              ? (order['tableNumber'] ?? order['table_number'])
+              : null);
+      final s = v?.toString().trim();
+      return (s != null && s.isNotEmpty) ? s : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final time = date_util.formatDate(
       order.createdAt.toString(),
       format: 'MMM dd, hh:mm a',
     );
+    final tableNumber = _getTableNumber(order);
 
     return Container(
       decoration: BoxDecoration(
@@ -811,6 +828,40 @@ class _OrderCard extends StatelessWidget {
                         letterSpacing: -0.3,
                       ),
                     ),
+                    if (tableNumber != null) ...[
+                      const SizedBox(width: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.table_restaurant,
+                              size: 14,
+                              color: Colors.grey[700],
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              loc.home_table_number(
+                                TableDisplay.numberForLabel(tableNumber),
+                              ),
+                              style: TextStyle(
+                                color: Colors.grey[700],
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const Spacer(),
                     // More Menu
                     AppActionDropdown2<String>(

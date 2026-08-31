@@ -1,4 +1,7 @@
 import 'package:billkaro/app/modules/AddOrder/add_order_controller.dart';
+import 'package:billkaro/app/modules/AddOrder/widgets/cart_line_offer_details.dart';
+import 'package:billkaro/app/utils/cart_line_display.dart';
+import 'package:billkaro/app/utils/combo_display.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:flutter/material.dart';
 
@@ -63,7 +66,7 @@ class _ConfirmOrderDialogState extends State<ConfirmOrderDialog> {
           // Every observable the dialog depends on must be read here: GetX only
           // tracks reads made while this builder runs, not reads inside the
           // child widgets it returns.
-          final lines = _buildLines(controller);
+          final lines = controller.cartLines;
           final totals = _Totals.of(controller);
 
           return Column(
@@ -90,13 +93,17 @@ class _ConfirmOrderDialogState extends State<ConfirmOrderDialog> {
                           position: index + 1,
                           line: lines[index],
                           compact: compact,
-                          onRemark: () => controller.showItemRemarkDialog(
-                            lines[index].lineKey,
-                            lines[index].name,
-                          ),
-                          onIncrement: () => controller.incrementItemQuantity(
-                            lines[index].lineKey,
-                          ),
+                          onRemark: lines[index].isPromo
+                              ? () {}
+                              : () => controller.showItemRemarkDialog(
+                                    lines[index].lineKey,
+                                    lines[index].name,
+                                  ),
+                          onIncrement: lines[index].isPromo
+                              ? () {}
+                              : () => controller.incrementItemQuantity(
+                                    lines[index].lineKey,
+                                  ),
                           onDecrement: () => controller.decrementItemQuantity(
                             lines[index].lineKey,
                           ),
@@ -120,31 +127,11 @@ class _ConfirmOrderDialogState extends State<ConfirmOrderDialog> {
     );
   }
 
-  String _subtitleFor(List<_OrderLine> lines, AppLocalizations loc) {
+  String _subtitleFor(List<CartLineDisplay> lines, AppLocalizations loc) {
     if (lines.isEmpty) return loc.add_items;
     final units = lines.fold<int>(0, (sum, line) => sum + line.quantity);
     return '${lines.length} ${loc.items} · $units ${loc.quantity}';
   }
-}
-
-/// Resolves every cart entry against [AddOrderController.allItemsMap], which
-/// holds items across all categories. The visible `items` list is paginated and
-/// category-filtered, so looking up there drops lines from the review.
-List<_OrderLine> _buildLines(AddOrderController controller) {
-  final lines = <_OrderLine>[];
-  for (final entry in controller.itemQuantities.entries) {
-    if (entry.value < 1) continue;
-    lines.add(
-      _OrderLine(
-        lineKey: entry.key,
-        name: controller.cartLineLabel(entry.key),
-        unitPrice: controller.cartLineUnitPrice(entry.key),
-        quantity: entry.value,
-        remark: controller.itemRemarks[entry.key] ?? '',
-      ),
-    );
-  }
-  return lines;
 }
 
 /// Snapshot of the bill totals, read eagerly inside the reactive builder.
@@ -174,26 +161,6 @@ class _Totals {
   final double serviceCharge;
   final double discount;
   final double total;
-}
-
-class _OrderLine {
-  const _OrderLine({
-    required this.lineKey,
-    required this.name,
-    required this.unitPrice,
-    required this.quantity,
-    required this.remark,
-  });
-
-  final String lineKey;
-  final String name;
-  final double unitPrice;
-  final int quantity;
-  final String remark;
-
-  bool get isResolved => true;
-  String get imageUrl => '';
-  double get lineTotal => unitPrice * quantity;
 }
 
 class _DialogHeader extends StatelessWidget {
@@ -338,7 +305,7 @@ class _OrderLineTile extends StatelessWidget {
   static const double actionsWidth = 76;
 
   final int position;
-  final _OrderLine line;
+  final CartLineDisplay line;
   final bool compact;
   final VoidCallback onRemark;
   final VoidCallback onIncrement;
@@ -365,7 +332,7 @@ class _OrderLineTile extends StatelessWidget {
           child: Center(
             child: _QuantityStepper(
               quantity: line.quantity,
-              onIncrement: onIncrement,
+              onIncrement: line.isPromo ? null : onIncrement,
               onDecrement: onDecrement,
             ),
           ),
@@ -373,12 +340,13 @@ class _OrderLineTile extends StatelessWidget {
         const SizedBox(width: 12),
         SizedBox(
           width: amountWidth,
-          child: _AmountLabel(amount: line.lineTotal),
+          child: _AmountLabel(line: line),
         ),
         SizedBox(
           width: actionsWidth,
           child: _LineActions(
-            hasRemark: line.remark.trim().isNotEmpty,
+            hasRemark: !line.isPromo && line.remark.trim().isNotEmpty,
+            showRemark: !line.isPromo,
             onRemark: onRemark,
             onDelete: onDelete,
           ),
@@ -400,7 +368,7 @@ class _OrderLineTile extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(child: _ItemDescription(line: line)),
             const SizedBox(width: 8),
-            _AmountLabel(amount: line.lineTotal),
+            _AmountLabel(line: line),
           ],
         ),
         const SizedBox(height: 10),
@@ -408,12 +376,13 @@ class _OrderLineTile extends StatelessWidget {
           children: [
             _QuantityStepper(
               quantity: line.quantity,
-              onIncrement: onIncrement,
+              onIncrement: line.isPromo ? null : onIncrement,
               onDecrement: onDecrement,
             ),
             const Spacer(),
             _LineActions(
-              hasRemark: line.remark.trim().isNotEmpty,
+              hasRemark: !line.isPromo && line.remark.trim().isNotEmpty,
+              showRemark: !line.isPromo,
               onRemark: onRemark,
               onDelete: onDelete,
             ),
@@ -447,39 +416,71 @@ class _IndexLabel extends StatelessWidget {
 class _ItemDescription extends StatelessWidget {
   const _ItemDescription({required this.line});
 
-  final _OrderLine line;
+  final CartLineDisplay line;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final remark = line.remark.trim();
+    final showRemark = remark.isNotEmpty && !remark.startsWith('Promo: ');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          line.name,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: line.isResolved ? null : theme.colorScheme.error,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                line.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            if (line.isPromo)
+              Container(
+                margin: const EdgeInsets.only(left: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColor.success.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'FREE',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: AppColor.success,
+                  ),
+                ),
+              ),
+          ],
         ),
+        if (line.comboIncludes != null) ...[
+          const SizedBox(height: 2),
+          ComboIncludesLabel(text: line.comboIncludes!),
+        ],
         const SizedBox(height: 2),
         Text(
-          line.isResolved
-              ? '₹${line.unitPrice.toStringAsFixed(2)} × ${line.quantity}'
-              : 'This item is no longer available and will be skipped.',
-          maxLines: 1,
+          line.isPromo
+              ? 'Offer item × ${line.quantity}'
+              : '₹${line.unitPrice.toStringAsFixed(2)} × ${line.quantity}',
+          maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: theme.textTheme.bodySmall?.copyWith(
-            color: line.isResolved
-                ? theme.colorScheme.onSurfaceVariant
-                : theme.colorScheme.error,
+            color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
-        if (remark.isNotEmpty)
+        if (line.hasOfferInfo) ...[
+          const SizedBox(height: 4),
+          CartLineOfferDetails(
+            offerName: line.offerName,
+            offerDetail: line.offerDetail,
+          ),
+        ],
+        if (showRemark)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Row(
@@ -566,7 +567,7 @@ class _QuantityStepper extends StatelessWidget {
   static const int maxQuantity = 100;
 
   final int quantity;
-  final VoidCallback onIncrement;
+  final VoidCallback? onIncrement;
   final VoidCallback onDecrement;
 
   @override
@@ -594,7 +595,9 @@ class _QuantityStepper extends StatelessWidget {
           ),
           _StepperButton(
             icon: Icons.add,
-            onTap: quantity >= maxQuantity ? null : onIncrement,
+            onTap: onIncrement == null || quantity >= maxQuantity
+                ? null
+                : onIncrement,
           ),
         ],
       ),
@@ -630,14 +633,24 @@ class _StepperButton extends StatelessWidget {
 }
 
 class _AmountLabel extends StatelessWidget {
-  const _AmountLabel({required this.amount});
+  const _AmountLabel({required this.line});
 
-  final double amount;
+  final CartLineDisplay line;
 
   @override
   Widget build(BuildContext context) {
+    if (line.isPromo) {
+      return const Text(
+        'FREE',
+        textAlign: TextAlign.right,
+        style: TextStyle(
+          fontWeight: FontWeight.w700,
+          color: AppColor.success,
+        ),
+      );
+    }
     return Text(
-      '₹${amount.toStringAsFixed(2)}',
+      '₹${line.lineTotal.toStringAsFixed(2)}',
       textAlign: TextAlign.right,
       style: Theme.of(
         context,
@@ -649,11 +662,13 @@ class _AmountLabel extends StatelessWidget {
 class _LineActions extends StatelessWidget {
   const _LineActions({
     required this.hasRemark,
+    required this.showRemark,
     required this.onRemark,
     required this.onDelete,
   });
 
   final bool hasRemark;
+  final bool showRemark;
   final VoidCallback onRemark;
   final VoidCallback onDelete;
 
@@ -664,21 +679,22 @@ class _LineActions extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        IconButton(
-          onPressed: onRemark,
-          icon: Icon(
-            hasRemark ? Icons.chat_bubble : Icons.chat_bubble_outline,
-            size: 18,
+        if (showRemark)
+          IconButton(
+            onPressed: onRemark,
+            icon: Icon(
+              hasRemark ? Icons.chat_bubble : Icons.chat_bubble_outline,
+              size: 18,
+            ),
+            color: hasRemark
+                ? AppColor.primary
+                : Theme.of(context).colorScheme.onSurfaceVariant,
+            tooltip: loc.remark,
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            padding: EdgeInsets.zero,
           ),
-          color: hasRemark
-              ? AppColor.primary
-              : Theme.of(context).colorScheme.onSurfaceVariant,
-          tooltip: loc.remark,
-          visualDensity: VisualDensity.compact,
-          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          padding: EdgeInsets.zero,
-        ),
-        const SizedBox(width: 4),
+        if (showRemark) const SizedBox(width: 4),
         IconButton(
           onPressed: onDelete,
           icon: const Icon(Icons.delete_outline, size: 18),

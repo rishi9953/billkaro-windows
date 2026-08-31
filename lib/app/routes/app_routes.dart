@@ -18,8 +18,9 @@ import 'package:billkaro/app/modules/Order/ClosedOrders/closed_orders_screen.dar
 import 'package:billkaro/app/modules/Order/DeletedOrders/deleted_orders_screen.dart';
 import 'package:billkaro/app/modules/Order/StockSummary/stock_summary_screen.dart';
 import 'package:billkaro/app/modules/Order/HoldOrders/hold_orders_screen.dart';
-import 'package:billkaro/app/modules/Tables/table_screen.dart';
 import 'package:billkaro/app/modules/OrderPrefrences/order_prefrences_screen.dart';
+import 'package:billkaro/app/modules/Tables/table_screen.dart';
+import 'package:billkaro/app/modules/Promotions/promotions_screen.dart';
 import 'package:billkaro/app/modules/Outlets/outlet_controller.dart';
 import 'package:billkaro/app/modules/Outlets/outlet_screen.dart';
 import 'package:billkaro/app/modules/OwnerPanel/owner_panel_screen.dart';
@@ -74,6 +75,7 @@ abstract class AppRoute {
   static const itemReports = '/itemReports';
   static const changeLanguage = '/changeLanguage';
   static const appSettings = '/appSettings';
+  static const promotions = '/promotions';
   static const staffDetailsScreen = '/staffDetailsScreen';
   static const addStaff = '/addStaff';
   static const holdOrders = '/holdOrders';
@@ -181,6 +183,11 @@ abstract class AppRoute {
     GetPage(
       name: appSettings,
       page: AppSettingsScreen.new,
+      transition: transition,
+    ),
+    GetPage(
+      name: promotions,
+      page: PromotionsScreen.new,
       transition: transition,
     ),
     GetPage(

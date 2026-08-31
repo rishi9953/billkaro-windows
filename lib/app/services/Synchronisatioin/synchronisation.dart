@@ -5,6 +5,7 @@ import 'package:billkaro/app/services/billing/platform_fee_service.dart';
 import 'package:billkaro/app/services/notification/sync_notification_service.dart';
 import 'package:billkaro/app/services/sync/item_catalog_sync.dart';
 import 'package:billkaro/app/services/sync/order_sync_util.dart';
+import 'package:billkaro/app/services/sync/promotion_sync.dart';
 import 'package:billkaro/app/services/sync/refresh_online_data.dart';
 import 'package:billkaro/config/config.dart';
 import 'package:billkaro/utils/offline/offline_category_loader.dart';
@@ -371,6 +372,11 @@ class Synchronisation {
               return null;
             }
           },
+        );
+
+        await PromotionSync(apiClient: apiClient, db: db).load(
+          outletId: outletId,
+          activeOnly: false,
         );
       } catch (e) {
         debugPrint('⚠️ [SYNC] Pull failed for outlet $outletId: $e');

@@ -6,12 +6,9 @@ import 'package:billkaro/app/Widgets/billing_mode_selector.dart';
 import 'package:billkaro/app/Widgets/windows_desktop_title_bar.dart';
 import 'package:billkaro/config/config.dart';
 
-/// Blocking dialog for new users to pick subscription (1-week trial) or wallet (₹100 credits).
+/// Blocking dialog for new users to pick subscription or wallet billing mode.
 class AccessModeSelectionDialog extends StatefulWidget {
-  const AccessModeSelectionDialog({
-    super.key,
-    required this.onCompleted,
-  });
+  const AccessModeSelectionDialog({super.key, required this.onCompleted});
 
   final ValueChanged<BillingAccessMode> onCompleted;
 
@@ -60,9 +57,7 @@ class AccessModeSelectionDialog extends StatefulWidget {
                 right: 0,
                 bottom: 0,
                 child: Center(
-                  child: AccessModeSelectionDialog(
-                    onCompleted: close,
-                  ),
+                  child: AccessModeSelectionDialog(onCompleted: close),
                 ),
               ),
             ],
@@ -98,7 +93,10 @@ class _AccessModeSelectionDialogState extends State<AccessModeSelectionDialog> {
     final userId = user?.userId ?? user?.id;
     final outletId = appPref.selectedOutlet?.id;
 
-    if (userId == null || userId.isEmpty || outletId == null || outletId.isEmpty) {
+    if (userId == null ||
+        userId.isEmpty ||
+        outletId == null ||
+        outletId.isEmpty) {
       showError(description: 'Unable to select access mode. Please try again.');
       return;
     }
@@ -128,8 +126,8 @@ class _AccessModeSelectionDialogState extends State<AccessModeSelectionDialog> {
     setState(() => _submitting = false);
 
     final message = _selected.isSubscription
-        ? 'Subscription mode selected. Enjoy 1 week free access.'
-        : 'Wallet mode selected. ₹100 free credits added to your outlet.';
+        ? 'Subscription mode selected.'
+        : 'Wallet mode selected.';
     showSuccess(description: message);
 
     widget.onCompleted(_selected);
@@ -169,7 +167,7 @@ class _AccessModeSelectionDialogState extends State<AccessModeSelectionDialog> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
-                    'Pick how you want to use BillKaro. This is a one-time choice for your welcome offer.',
+                    'Pick how you want to use BillKaro. This is a one-time choice.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
@@ -184,10 +182,10 @@ class _AccessModeSelectionDialogState extends State<AccessModeSelectionDialog> {
                   onSelected: (mode) => setState(() => _selected = mode),
                   subscriptionTitle: 'Subscription',
                   subscriptionSubtitle:
-                      'Get 1 week free access to all features',
+                      'Pay a plan and unlock all features for your outlet',
                   walletTitle: 'Wallet',
                   walletSubtitle:
-                      'Get ₹100 free credits for your outlet (no free trial)',
+                      'Add credits and pay as you use BillKaro features',
                   enabled: !_submitting,
                 ),
                 Padding(
